@@ -119,6 +119,8 @@ def decline_signup(signup: Signup) -> Signup:
 def list_signups(raid_event_id: int) -> list[Signup]:
     return list(
         db.session.execute(
-            sa.select(Signup).where(Signup.raid_event_id == raid_event_id)
-        ).scalars().all()
+            sa.select(Signup)
+            .where(Signup.raid_event_id == raid_event_id)
+            .options(sa.orm.joinedload(Signup.character))
+        ).scalars().unique().all()
     )

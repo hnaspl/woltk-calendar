@@ -52,7 +52,7 @@ class Signup(db.Model):
     character = relationship("Character", foreign_keys=[character_id], lazy="select")
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "raid_event_id": self.raid_event_id,
             "user_id": self.user_id,
@@ -64,6 +64,9 @@ class Signup(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        if self.character is not None:
+            result["character"] = self.character.to_dict()
+        return result
 
     def __repr__(self) -> str:
         return f"<Signup id={self.id} event={self.raid_event_id} user={self.user_id} status={self.status}>"
@@ -102,7 +105,7 @@ class LineupSlot(db.Model):
     confirmer = relationship("User", foreign_keys=[confirmed_by], lazy="select")
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "raid_event_id": self.raid_event_id,
             "slot_group": self.slot_group,
@@ -112,6 +115,11 @@ class LineupSlot(db.Model):
             "confirmed_by": self.confirmed_by,
             "confirmed_at": self.confirmed_at.isoformat() if self.confirmed_at else None,
         }
+        if self.character is not None:
+            result["character"] = self.character.to_dict()
+        if self.signup is not None:
+            result["signup"] = self.signup.to_dict()
+        return result
 
     def __repr__(self) -> str:
         return f"<LineupSlot id={self.id} event={self.raid_event_id} group={self.slot_group} idx={self.slot_index}>"

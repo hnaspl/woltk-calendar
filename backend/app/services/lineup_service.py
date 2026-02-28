@@ -8,7 +8,7 @@ from typing import Optional
 import sqlalchemy as sa
 
 from app.extensions import db
-from app.models.signup import LineupSlot
+from app.models.signup import LineupSlot, Signup
 
 
 def get_lineup(raid_event_id: int) -> list[LineupSlot]:
@@ -16,8 +16,12 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
         db.session.execute(
             sa.select(LineupSlot)
             .where(LineupSlot.raid_event_id == raid_event_id)
+            .options(
+                sa.orm.joinedload(LineupSlot.character),
+                sa.orm.joinedload(LineupSlot.signup).joinedload(Signup.character),
+            )
             .order_by(LineupSlot.slot_group, LineupSlot.slot_index)
-        ).scalars().all()
+        ).scalars().unique().all()
     )
 
 
