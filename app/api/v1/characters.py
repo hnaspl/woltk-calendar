@@ -15,7 +15,10 @@ bp = Blueprint("characters", __name__, url_prefix="/characters")
 @login_required
 def list_characters():
     guild_id = request.args.get("guild_id", type=int)
-    chars = character_service.list_characters(current_user.id, guild_id)
+    include_archived = request.args.get("include_archived", "false").lower() == "true"
+    chars = character_service.list_characters(
+        current_user.id, guild_id, include_archived=include_archived
+    )
     return jsonify([c.to_dict() for c in chars]), 200
 
 
@@ -85,4 +88,16 @@ def archive_character(char_id: int):
     if char.user_id != current_user.id:
         return jsonify({"error": "Forbidden"}), 403
     char = character_service.archive_character(char)
+    return jsonify(char.to_dict()), 200
+
+
+@bp.post("/<int:char_id>/unarchive")
+@login_required
+def unarchive_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": "Character not found"}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": "Forbidden"}), 403
+    char = character_service.unarchive_character(char)
     return jsonify(char.to_dict()), 200

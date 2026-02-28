@@ -139,7 +139,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -164,10 +164,10 @@ const kickTarget = ref(null)
 const form = reactive({ name: '', realm: '', description: '' })
 const warmaneRealms = WARMANE_REALMS
 
-onMounted(async () => {
+async function loadGuildData() {
   loading.value = true
+  error.value = null
   try {
-    if (!guildStore.currentGuild) await guildStore.fetchGuilds()
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
@@ -179,7 +179,22 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+onMounted(async () => {
+  if (!guildStore.currentGuild) await guildStore.fetchGuilds()
+  await loadGuildData()
 })
+
+// Reload settings when guild changes from sidebar dropdown
+watch(
+  () => guildStore.currentGuild?.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      loadGuildData()
+    }
+  }
+)
 
 async function saveGuild() {
   saveError.value = null

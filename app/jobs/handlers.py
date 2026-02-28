@@ -38,6 +38,58 @@ def handle_send_notification(payload: dict) -> None:
     )
 
 
+@register_handler("sync_all_characters")
+def handle_sync_all_characters(payload: dict) -> None:
+    """Sync all active characters from the Warmane armory."""
+    from datetime import datetime, timezone as tz
+
+    from app.extensions import db
+    from app.services import character_service, warmane_service
+
+    guild_id = payload.get("guild_id")
+    import sqlalchemy as sa
+    from app.models.character import Character
+
+    stmt = sa.select(Character).where(Character.is_active.is_(True))
+    if guild_id:
+        stmt = stmt.where(Character.guild_id == guild_id)
+
+    chars = list(db.session.execute(stmt).scalars().all())
+    synced = 0
+    for char in chars:
+        try:
+            data = warmane_service.fetch_character(char.realm_name, char.name)
+            if data is None or (isinstance(data, dict) and "error" in data):
+                continue
+            char_data = warmane_service.build_character_dict(data, char.realm_name)
+            if char_data.get("class_name"):
+                char.class_name = char_data["class_name"]
+            char.armory_url = char_data["armory_url"]
+            talents = char_data.get("talents", [])
+            if talents:
+                char.primary_spec = talents[0].get("tree")
+                if len(talents) > 1:
+                    char.secondary_spec = talents[1].get("tree")
+            meta = char.char_metadata or {}
+            meta["level"] = char_data.get("level")
+            meta["race"] = char_data.get("race")
+            meta["gender"] = char_data.get("gender")
+            meta["faction"] = char_data.get("faction")
+            meta["guild"] = char_data.get("guild")
+            meta["achievement_points"] = char_data.get("achievement_points")
+            meta["honorable_kills"] = char_data.get("honorable_kills")
+            meta["professions"] = char_data.get("professions", [])
+            meta["talents"] = char_data.get("talents", [])
+            meta["equipment"] = char_data.get("equipment", [])
+            meta["last_synced"] = datetime.now(tz.utc).isoformat()
+            char.char_metadata = meta
+            synced += 1
+        except Exception as exc:
+            logger.warning("Failed to sync character %s: %s", char.name, exc)
+    db.session.commit()
+    logger.info("Synced %d/%d characters", synced, len(chars))
+
+
 def process_job_queue(app: Flask) -> None:
     """Entry point called by the scheduler to drain queued jobs."""
     from app.jobs.worker import claim_next_job, complete_job, fail_job

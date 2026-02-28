@@ -13,6 +13,9 @@ from app.utils.permissions import get_membership, is_officer_or_admin
 
 bp = Blueprint("events", __name__)
 
+# Separate blueprint for cross-guild event listing
+all_events_bp = Blueprint("all_events", __name__, url_prefix="/events")
+
 
 def _check_membership(guild_id: int):
     return get_membership(guild_id, current_user.id)
@@ -137,3 +140,28 @@ def duplicate_event(guild_id: int, event_id: int):
         new_starts_at = datetime.fromisoformat(data["starts_at_utc"])
     new_event = event_service.duplicate_event(event, current_user.id, new_starts_at)
     return jsonify(new_event.to_dict()), 201
+
+
+# ---------------------------------------------------------------------------
+# Cross-guild events endpoint (realm & guild agnostic)
+# ---------------------------------------------------------------------------
+
+@all_events_bp.get("")
+@login_required
+def list_all_events():
+    """Return events from all guilds the current user belongs to."""
+    from app.services import guild_service
+
+    guild_ids = guild_service.get_user_guild_ids(current_user.id)
+    start = request.args.get("start")
+    end = request.args.get("end")
+    if start and end:
+        try:
+            start_dt = datetime.fromisoformat(start)
+            end_dt = datetime.fromisoformat(end)
+        except ValueError:
+            return jsonify({"error": "Invalid date format"}), 400
+        events = event_service.list_events_for_guilds_by_range(guild_ids, start_dt, end_dt)
+    else:
+        events = event_service.list_events_for_guilds(guild_ids)
+    return jsonify([e.to_dict() for e in events]), 200

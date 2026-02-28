@@ -11,6 +11,20 @@
         </WowButton>
       </div>
 
+      <!-- Tabs: Active / Archived -->
+      <div class="flex gap-4 border-b border-border-default">
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
+          :class="activeTab === 'active' ? 'text-accent-gold border-accent-gold' : 'text-text-muted border-transparent hover:text-text-primary'"
+          @click="activeTab = 'active'"
+        >Active</button>
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
+          :class="activeTab === 'archived' ? 'text-accent-gold border-accent-gold' : 'text-text-muted border-transparent hover:text-text-primary'"
+          @click="switchToArchived"
+        >Archived <span v-if="archivedCharacters.length" class="text-xs opacity-60">({{ archivedCharacters.length }})</span></button>
+      </div>
+
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="i in 3" :key="i" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
@@ -19,80 +33,132 @@
         {{ error }}
       </div>
 
-      <div v-else-if="characters.length === 0" class="text-center py-12 text-text-muted">
-        <p class="mb-4">You haven't added any characters yet.</p>
-        <WowButton @click="openAddModal">Add your first character</WowButton>
-      </div>
+      <!-- Active characters -->
+      <template v-else-if="activeTab === 'active'">
+        <div v-if="characters.length === 0" class="text-center py-12 text-text-muted">
+          <p class="mb-4">You haven't added any characters yet.</p>
+          <WowButton @click="openAddModal">Add your first character</WowButton>
+        </div>
 
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <WowCard
-          v-for="char in characters"
-          :key="char.id"
-          :gold="char.is_main"
-          class="relative"
-        >
-          <!-- Main badge -->
-          <span
-            v-if="char.is_main"
-            class="absolute top-3 right-3 text-[10px] font-bold text-accent-gold bg-accent-gold/10 border border-accent-gold/30 px-1.5 py-0.5 rounded"
-          >MAIN</span>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <WowCard
+            v-for="char in characters"
+            :key="char.id"
+            :gold="char.is_main"
+            class="relative"
+          >
+            <!-- Main badge -->
+            <span
+              v-if="char.is_main"
+              class="absolute top-3 right-3 text-[10px] font-bold text-accent-gold bg-accent-gold/10 border border-accent-gold/30 px-1.5 py-0.5 rounded"
+            >MAIN</span>
 
-          <div class="flex items-center gap-3 mb-3">
-            <img
-              :src="getClassIcon(char.class)"
-              :alt="char.class"
-              class="w-12 h-12 rounded border border-border-default"
-            />
-            <div>
-              <div class="font-bold text-text-primary">{{ char.name }}</div>
-              <div class="text-xs text-text-muted">{{ char.realm }}</div>
-              <div v-if="char.metadata?.level" class="text-xs text-text-muted">
-                Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
+            <div class="flex items-center gap-3 mb-3">
+              <img
+                :src="getClassIcon(char.class)"
+                :alt="char.class"
+                class="w-12 h-12 rounded border border-border-default"
+              />
+              <div>
+                <div class="font-bold text-text-primary">{{ char.name }}</div>
+                <div class="text-xs text-text-muted">{{ char.realm }}</div>
+                <div v-if="char.metadata?.level" class="text-xs text-text-muted">
+                  Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="flex flex-wrap gap-1.5 mb-2">
-            <ClassBadge :class-name="char.class" />
-            <RoleBadge v-if="char.role" :role="char.role" />
-            <SpecBadge v-if="char.spec" :spec="char.spec" />
-          </div>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <ClassBadge :class-name="char.class" />
+              <RoleBadge v-if="char.role" :role="char.role" />
+              <SpecBadge v-if="char.spec" :spec="char.spec" />
+            </div>
 
-          <!-- Synced metadata -->
-          <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
-            {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
-          </div>
-          <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
-            Synced {{ new Date(char.metadata.last_synced).toLocaleDateString() }}
-          </div>
-          <div v-else class="mb-3"></div>
+            <!-- Synced metadata -->
+            <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
+              {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
+            </div>
+            <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
+              Synced {{ new Date(char.metadata.last_synced).toLocaleDateString() }}
+            </div>
+            <div v-else class="mb-3"></div>
 
-          <div class="flex gap-2">
-            <WowButton
-              v-if="!char.is_main"
-              variant="secondary"
-              class="flex-1 text-xs py-1.5"
-              @click="setMain(char)"
-            >Set Main</WowButton>
-            <WowButton
-              variant="secondary"
-              class="flex-1 text-xs py-1.5"
-              @click="syncFromWarmane(char)"
-              :loading="syncing === char.id"
-            >Sync</WowButton>
-            <WowButton
-              variant="secondary"
-              class="flex-1 text-xs py-1.5"
-              @click="openEditModal(char)"
-            >Edit</WowButton>
-            <WowButton
-              variant="danger"
-              class="text-xs py-1.5 px-3"
-              @click="confirmArchive(char)"
-            >✕</WowButton>
-          </div>
-        </WowCard>
-      </div>
+            <div class="flex gap-2">
+              <WowButton
+                v-if="!char.is_main"
+                variant="secondary"
+                class="flex-1 text-xs py-1.5"
+                @click="setMain(char)"
+              >Set Main</WowButton>
+              <WowButton
+                variant="secondary"
+                class="flex-1 text-xs py-1.5"
+                @click="syncFromWarmane(char)"
+                :loading="syncing === char.id"
+              >Sync</WowButton>
+              <WowButton
+                variant="secondary"
+                class="flex-1 text-xs py-1.5"
+                @click="openEditModal(char)"
+              >Edit</WowButton>
+              <WowButton
+                variant="danger"
+                class="text-xs py-1.5 px-3"
+                @click="confirmRemove(char)"
+              >✕</WowButton>
+            </div>
+          </WowCard>
+        </div>
+      </template>
+
+      <!-- Archived characters -->
+      <template v-else>
+        <div v-if="archivedCharacters.length === 0" class="text-center py-12 text-text-muted">
+          <p>No archived characters.</p>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <WowCard
+            v-for="char in archivedCharacters"
+            :key="char.id"
+            class="relative opacity-70"
+          >
+            <span class="absolute top-3 right-3 text-[10px] font-bold text-red-400 bg-red-900/20 border border-red-600/30 px-1.5 py-0.5 rounded">ARCHIVED</span>
+
+            <div class="flex items-center gap-3 mb-3">
+              <img
+                :src="getClassIcon(char.class)"
+                :alt="char.class"
+                class="w-12 h-12 rounded border border-border-default"
+              />
+              <div>
+                <div class="font-bold text-text-primary">{{ char.name }}</div>
+                <div class="text-xs text-text-muted">{{ char.realm }}</div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 mb-3">
+              <ClassBadge :class-name="char.class" />
+              <RoleBadge v-if="char.role" :role="char.role" />
+              <SpecBadge v-if="char.spec" :spec="char.spec" />
+            </div>
+
+            <div class="flex gap-2">
+              <WowButton
+                variant="secondary"
+                class="flex-1 text-xs py-1.5"
+                @click="doUnarchive(char)"
+                :loading="saving"
+              >Unarchive</WowButton>
+              <WowButton
+                variant="danger"
+                class="text-xs py-1.5 px-3"
+                @click="confirmDelete(char)"
+              >Delete</WowButton>
+            </div>
+          </WowCard>
+        </div>
+      </template>
     </div>
 
     <!-- Add / Edit modal -->
@@ -115,7 +181,7 @@
             <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
               Lookup on Warmane
             </WowButton>
-            <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ Found — class & armory URL filled in</span>
+            <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ Found — fields populated from armory</span>
             <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">Not found on Warmane — fill in manually below</span>
           </div>
         </div>
@@ -171,13 +237,29 @@
       </template>
     </WowModal>
 
-    <!-- Archive confirmation -->
-    <WowModal v-model="showArchiveConfirm" title="Archive Character" size="sm">
-      <p class="text-text-muted">Archive <strong class="text-text-primary">{{ archiveTarget?.name }}</strong>? They will no longer appear in signups.</p>
+    <!-- Remove confirmation (Archive or Delete) -->
+    <WowModal v-model="showRemoveConfirm" title="Remove Character" size="sm">
+      <p class="text-text-muted mb-4">What would you like to do with <strong class="text-text-primary">{{ removeTarget?.name }}</strong>?</p>
+      <div class="space-y-2">
+        <p class="text-xs text-text-muted"><strong class="text-text-primary">Archive</strong> — hide from signups; can be restored later.</p>
+        <p class="text-xs text-text-muted"><strong class="text-red-400">Delete</strong> — permanently remove. This cannot be undone.</p>
+      </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showArchiveConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doArchive">Archive</WowButton>
+          <WowButton variant="secondary" @click="showRemoveConfirm = false">Cancel</WowButton>
+          <WowButton variant="secondary" :loading="saving" @click="doArchive">Archive</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDelete">Delete</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Delete confirmation for archived chars -->
+    <WowModal v-model="showDeleteConfirm" title="Delete Character" size="sm">
+      <p class="text-text-muted">Permanently delete <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>? This cannot be undone.</p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDeleteArchived">Delete</WowButton>
         </div>
       </template>
     </WowModal>
@@ -205,6 +287,8 @@ const uiStore = useUiStore()
 const { getClassIcon } = useWowIcons()
 
 const characters = ref([])
+const archivedCharacters = ref([])
+const activeTab = ref('active')
 const loading = ref(true)
 const saving = ref(false)
 const syncing = ref(null)
@@ -213,9 +297,11 @@ const lookupResult = ref(null)
 const error = ref(null)
 const formError = ref(null)
 const showModal = ref(false)
-const showArchiveConfirm = ref(false)
+const showRemoveConfirm = ref(false)
+const showDeleteConfirm = ref(false)
 const editingChar = ref(null)
-const archiveTarget = ref(null)
+const removeTarget = ref(null)
+const deleteTarget = ref(null)
 
 const wowClasses = WOW_CLASSES
 const warmaneRealms = WARMANE_REALMS
@@ -248,6 +334,21 @@ onMounted(async () => {
   }
 })
 
+async function loadArchivedCharacters() {
+  try {
+    const all = await charApi.getArchivedCharacters(guildStore.currentGuild?.id)
+    const allMapped = (Array.isArray(all) ? all : []).map(mapChar)
+    archivedCharacters.value = allMapped.filter(c => !c.is_active)
+  } catch {
+    // ignore
+  }
+}
+
+async function switchToArchived() {
+  activeTab.value = 'archived'
+  await loadArchivedCharacters()
+}
+
 function openAddModal() {
   editingChar.value = null
   Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
@@ -264,9 +365,14 @@ function openEditModal(char) {
   showModal.value = true
 }
 
-function confirmArchive(char) {
-  archiveTarget.value = char
-  showArchiveConfirm.value = true
+function confirmRemove(char) {
+  removeTarget.value = char
+  showRemoveConfirm.value = true
+}
+
+function confirmDelete(char) {
+  deleteTarget.value = char
+  showDeleteConfirm.value = true
 }
 
 async function lookupFromWarmane() {
@@ -279,6 +385,15 @@ async function lookupFromWarmane() {
     if (data?.class_name) form.class = data.class_name
     if (data?.armory_url) form.armory_url = data.armory_url
     if (data?.name) form.name = data.name
+    // Auto-fill spec from talents
+    if (data?.talents?.length) {
+      form.spec = data.talents[0]?.tree || ''
+      if (data.talents.length > 1) {
+        form.secondary_spec = data.talents[1]?.tree || ''
+      }
+    }
+    // Store warmane data for metadata on save
+    warmaneData.value = data
     lookupResult.value = 'found'
   } catch {
     lookupResult.value = 'not_found'
@@ -286,6 +401,8 @@ async function lookupFromWarmane() {
     lookingUp.value = false
   }
 }
+
+const warmaneData = ref(null)
 
 async function saveChar() {
   formError.value = null
@@ -301,6 +418,22 @@ async function saveChar() {
       secondary_spec: form.secondary_spec || undefined,
       armory_url: form.armory_url || undefined,
     }
+    // Include warmane metadata when creating from lookup
+    if (!editingChar.value && warmaneData.value) {
+      payload.metadata = {
+        level: warmaneData.value.level,
+        race: warmaneData.value.race,
+        gender: warmaneData.value.gender,
+        faction: warmaneData.value.faction,
+        guild: warmaneData.value.guild,
+        achievement_points: warmaneData.value.achievement_points,
+        honorable_kills: warmaneData.value.honorable_kills,
+        professions: warmaneData.value.professions || [],
+        talents: warmaneData.value.talents || [],
+        equipment: warmaneData.value.equipment || [],
+        last_synced: new Date().toISOString(),
+      }
+    }
     if (editingChar.value) {
       const updated = await charApi.updateCharacter(guildStore.currentGuild.id, editingChar.value.id, payload)
       const idx = characters.value.findIndex(c => c.id === editingChar.value.id)
@@ -311,6 +444,7 @@ async function saveChar() {
       characters.value.push(mapChar(created))
       uiStore.showToast('Character added', 'success')
     }
+    warmaneData.value = null
     showModal.value = false
   } catch (err) {
     formError.value = err?.response?.data?.error ?? 'Failed to save character'
@@ -346,12 +480,54 @@ async function syncFromWarmane(char) {
 async function doArchive() {
   saving.value = true
   try {
-    await charApi.archiveCharacter(guildStore.currentGuild.id, archiveTarget.value.id)
-    characters.value = characters.value.filter(c => c.id !== archiveTarget.value.id)
-    showArchiveConfirm.value = false
+    await charApi.archiveCharacter(guildStore.currentGuild.id, removeTarget.value.id)
+    characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
+    showRemoveConfirm.value = false
     uiStore.showToast('Character archived', 'success')
   } catch {
     uiStore.showToast('Failed to archive character', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function doDelete() {
+  saving.value = true
+  try {
+    await charApi.deleteCharacter(guildStore.currentGuild.id, removeTarget.value.id)
+    characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
+    showRemoveConfirm.value = false
+    uiStore.showToast('Character permanently deleted', 'success')
+  } catch {
+    uiStore.showToast('Failed to delete character', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function doUnarchive(char) {
+  saving.value = true
+  try {
+    const restored = await charApi.unarchiveCharacter(guildStore.currentGuild.id, char.id)
+    archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== char.id)
+    characters.value.push(mapChar(restored))
+    uiStore.showToast(`${char.name} restored`, 'success')
+  } catch {
+    uiStore.showToast('Failed to restore character', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function doDeleteArchived() {
+  saving.value = true
+  try {
+    await charApi.deleteCharacter(guildStore.currentGuild.id, deleteTarget.value.id)
+    archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== deleteTarget.value.id)
+    showDeleteConfirm.value = false
+    uiStore.showToast('Character permanently deleted', 'success')
+  } catch {
+    uiStore.showToast('Failed to delete character', 'error')
   } finally {
     saving.value = false
   }

@@ -71,6 +71,48 @@
             </table>
           </div>
         </WowCard>
+
+        <!-- Auto-Sync Settings -->
+        <WowCard>
+          <h2 class="wow-heading text-base mb-4">Warmane Character Auto-Sync</h2>
+          <p class="text-text-muted text-sm mb-4">Automatically sync all active characters from the Warmane armory at a scheduled interval.</p>
+
+          <div v-if="autosyncLoading" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+          <div v-else class="space-y-4 max-w-lg">
+            <div class="flex items-center gap-4">
+              <label class="text-sm text-text-primary">Auto-Sync Enabled</label>
+              <button
+                type="button"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                :class="autosyncForm.enabled ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+                @click="autosyncForm.enabled = !autosyncForm.enabled"
+              >
+                <span
+                  class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                  :class="autosyncForm.enabled ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-xs text-text-muted mb-1">Sync Interval (minutes)</label>
+              <select v-model.number="autosyncForm.interval_minutes" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option :value="15">Every 15 minutes</option>
+                <option :value="30">Every 30 minutes</option>
+                <option :value="60">Every hour</option>
+                <option :value="120">Every 2 hours</option>
+                <option :value="360">Every 6 hours</option>
+                <option :value="720">Every 12 hours</option>
+                <option :value="1440">Every 24 hours</option>
+              </select>
+            </div>
+
+            <div class="flex gap-3">
+              <WowButton :loading="autosyncSaving" @click="saveAutosync">Save Settings</WowButton>
+              <WowButton variant="secondary" :loading="syncing" @click="triggerManualSync">Sync Now</WowButton>
+            </div>
+          </div>
+        </WowCard>
       </template>
     </div>
 
@@ -107,6 +149,12 @@ const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const deleting = ref(false)
 
+// Auto-sync state
+const autosyncLoading = ref(true)
+const autosyncSaving = ref(false)
+const syncing = ref(false)
+const autosyncForm = ref({ enabled: false, interval_minutes: 60 })
+
 onMounted(async () => {
   if (!authStore.user?.is_admin) return
   loading.value = true
@@ -116,6 +164,17 @@ onMounted(async () => {
     error.value = err?.response?.data?.message ?? 'Failed to load users'
   } finally {
     loading.value = false
+  }
+
+  // Load auto-sync settings
+  autosyncLoading.value = true
+  try {
+    const config = await adminApi.getAutosyncSettings()
+    autosyncForm.value = { enabled: config.enabled ?? false, interval_minutes: config.interval_minutes ?? 60 }
+  } catch {
+    // ignore – defaults are fine
+  } finally {
+    autosyncLoading.value = false
   }
 })
 
@@ -146,6 +205,31 @@ async function doDelete() {
     uiStore.showToast('Failed to delete user', 'error')
   } finally {
     deleting.value = false
+  }
+}
+
+async function saveAutosync() {
+  autosyncSaving.value = true
+  try {
+    const config = await adminApi.updateAutosyncSettings(autosyncForm.value)
+    autosyncForm.value = { enabled: config.enabled, interval_minutes: config.interval_minutes }
+    uiStore.showToast('Auto-sync settings saved', 'success')
+  } catch {
+    uiStore.showToast('Failed to save auto-sync settings', 'error')
+  } finally {
+    autosyncSaving.value = false
+  }
+}
+
+async function triggerManualSync() {
+  syncing.value = true
+  try {
+    await adminApi.triggerSync()
+    uiStore.showToast('Character sync completed', 'success')
+  } catch {
+    uiStore.showToast('Sync failed', 'error')
+  } finally {
+    syncing.value = false
   }
 }
 

@@ -117,6 +117,7 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
+import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
@@ -127,6 +128,9 @@ const logoIcon = getRaidIcon('icc')
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
+const permissions = usePermissions()
+
+const isOfficerOrAdmin = computed(() => permissions.isOfficer.value || authStore.user?.is_admin)
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
@@ -172,22 +176,28 @@ const navGroups = computed(() => {
         { label: 'Characters', to: '/characters', icon: icons.chars },
         { label: 'Attendance', to: '/attendance', icon: icons.attendance }
       ]
-    },
-    {
-      label: 'Guild',
+    }
+  ]
+
+  // Guild management only visible to officers/admins
+  if (isOfficerOrAdmin.value) {
+    groups.push({
+      label: 'Guild Management',
       items: [
         { label: 'Settings', to: '/guild/settings', icon: icons.settings },
         { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
         { label: 'Templates', to: '/guild/templates', icon: icons.templates }
       ]
-    },
-    {
-      label: 'Account',
-      items: [
-        { label: 'Profile', to: '/profile', icon: icons.profile }
-      ]
-    }
-  ]
+    })
+  }
+
+  groups.push({
+    label: 'Account',
+    items: [
+      { label: 'Profile', to: '/profile', icon: icons.profile }
+    ]
+  })
+
   if (authStore.user?.is_admin) {
     groups.push({
       label: 'Administration',

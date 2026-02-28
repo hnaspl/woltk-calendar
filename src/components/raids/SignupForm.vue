@@ -17,6 +17,7 @@
           v-model="form.characterId"
           class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
           required
+          @change="onCharacterChange"
         >
           <option value="">Select character…</option>
           <option
@@ -31,7 +32,16 @@
 
       <!-- Role -->
       <div>
-        <label class="block text-xs text-text-muted mb-1">Role *</label>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-xs text-text-muted">Role *</label>
+          <button
+            v-if="!editingRoleSpec && form.characterId"
+            type="button"
+            class="text-xs text-accent-gold hover:text-yellow-300 transition-colors"
+            @click="editingRoleSpec = true"
+          >Edit</button>
+          <span v-if="editingRoleSpec" class="text-xs text-text-muted italic">Custom role/spec</span>
+        </div>
         <div class="flex gap-2">
           <button
             v-for="r in roles"
@@ -41,6 +51,7 @@
             :class="form.chosenRole === r.value
               ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
               : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+            :disabled="!editingRoleSpec && form.characterId !== ''"
             @click="form.chosenRole = r.value"
           >
             <RoleBadge :role="r.value" />
@@ -56,6 +67,7 @@
           type="text"
           placeholder="e.g. Holy, Frost, Balance…"
           class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+          :disabled="!editingRoleSpec && form.characterId !== ''"
         />
       </div>
 
@@ -113,6 +125,7 @@ const characters = ref([])
 const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
+const editingRoleSpec = ref(false)
 
 const roles = [
   { value: 'tank' },
@@ -136,6 +149,16 @@ onMounted(async () => {
   }
 })
 
+// Auto-fill role & spec from selected character
+function onCharacterChange() {
+  const selected = characters.value.find(c => c.id === Number(form.characterId))
+  if (selected && !props.existingSignup) {
+    form.chosenRole = selected.default_role || 'dps'
+    form.chosenSpec = selected.primary_spec || ''
+    editingRoleSpec.value = false
+  }
+}
+
 // Populate form if editing existing signup
 watch(
   () => props.existingSignup,
@@ -146,6 +169,7 @@ watch(
       form.chosenSpec  = s.chosen_spec   ?? ''
       form.status      = s.status        ?? 'going'
       form.note        = s.note          ?? ''
+      editingRoleSpec.value = true
     }
   },
   { immediate: true }

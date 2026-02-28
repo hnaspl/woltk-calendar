@@ -238,6 +238,36 @@ def list_events(guild_id: int) -> list[RaidEvent]:
     )
 
 
+def list_events_for_guilds(guild_ids: list[int]) -> list[RaidEvent]:
+    """Return events for multiple guilds (realm/guild agnostic view)."""
+    if not guild_ids:
+        return []
+    return list(
+        db.session.execute(
+            sa.select(RaidEvent).where(
+                RaidEvent.guild_id.in_(guild_ids)
+            ).order_by(RaidEvent.starts_at_utc)
+        ).scalars().all()
+    )
+
+
+def list_events_for_guilds_by_range(
+    guild_ids: list[int], start: datetime, end: datetime
+) -> list[RaidEvent]:
+    """Return events for multiple guilds within a date range."""
+    if not guild_ids:
+        return []
+    return list(
+        db.session.execute(
+            sa.select(RaidEvent).where(
+                RaidEvent.guild_id.in_(guild_ids),
+                RaidEvent.starts_at_utc >= start,
+                RaidEvent.starts_at_utc <= end,
+            ).order_by(RaidEvent.starts_at_utc)
+        ).scalars().all()
+    )
+
+
 def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[RaidEvent]:
     """Return events within a date range."""
     return list(

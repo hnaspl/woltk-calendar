@@ -66,10 +66,23 @@ def archive_character(character: Character) -> Character:
     return character
 
 
-def list_characters(user_id: int, guild_id: Optional[int] = None) -> list[Character]:
+def unarchive_character(character: Character) -> Character:
+    """Restore an archived character by setting is_active to True."""
+    character.is_active = True
+    db.session.commit()
+    return character
+
+
+def list_characters(
+    user_id: int,
+    guild_id: Optional[int] = None,
+    include_archived: bool = False,
+) -> list[Character]:
     stmt = sa.select(Character).where(Character.user_id == user_id)
     if guild_id is not None:
         stmt = stmt.where(Character.guild_id == guild_id)
+    if not include_archived:
+        stmt = stmt.where(Character.is_active.is_(True))
     return list(db.session.execute(stmt).scalars().all())
 
 
