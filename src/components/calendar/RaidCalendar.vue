@@ -151,7 +151,8 @@ const fcEvents = computed(() =>
       id: String(ev.id),
       title: ev.title ?? ev.name ?? 'Raid',
       start: ev.starts_at_utc ?? ev.start_time ?? ev.date,
-      end: ev.ends_at_utc ?? ev.end_time ?? null,
+      // Do not pass end time to prevent multi-day stretching in month view
+      allDay: false,
       backgroundColor: 'transparent',
       borderColor: 'transparent',
       textColor: '#e2e8f0',
@@ -300,26 +301,26 @@ watch(() => props.events, () => {
 .wow-event-content {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 4px;
+  gap: 6px;
+  padding: 3px 6px;
   border-left: 3px solid;
   border-radius: 3px;
   background: rgba(26, 26, 46, 0.85);
   overflow: hidden;
   cursor: pointer;
-  min-height: 22px;
+  min-height: 28px;
 }
 .wow-event-content:hover {
   background: rgba(42, 42, 74, 0.95);
 }
 .wow-event-icon {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 .wow-event-title {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: #e2e8f0;
   white-space: nowrap;

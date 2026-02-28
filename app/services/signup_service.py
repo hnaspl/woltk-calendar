@@ -6,9 +6,35 @@ from typing import Optional
 
 import sqlalchemy as sa
 
+from app.constants import CLASS_ROLES
 from app.enums import SignupStatus
 from app.extensions import db
 from app.models.signup import Signup, RaidBan, CharacterReplacement
+
+
+def _validate_class_role(character_id: int, chosen_role: str) -> None:
+    """Validate that the character's class is allowed to take the chosen role.
+
+    Raises ValueError if the role is not valid for the character's class.
+    """
+    from app.models.character import Character
+
+    character = db.session.get(Character, character_id)
+    if character is None:
+        return  # Let other validation handle missing character
+    class_name = character.class_name
+    if not class_name:
+        return
+    allowed = [r.value for roles in CLASS_ROLES.values()
+               for r in roles]  # fallback: allow all
+    for wow_class, roles in CLASS_ROLES.items():
+        if wow_class.value == class_name:
+            allowed = [r.value for r in roles]
+            break
+    if chosen_role not in allowed:
+        raise ValueError(
+            f"{class_name} cannot take the {chosen_role} role"
+        )
 
 
 def _count_going(raid_event_id: int) -> int:
@@ -165,6 +191,9 @@ def create_signup(
     if ban is not None:
         raise ValueError("This character has been permanently kicked from this raid. Contact a raid officer to appeal.")
 
+    # Validate class-role constraint
+    _validate_class_role(character_id, chosen_role)
+
     # Check role-specific slot limits (with row-level locking to prevent race
     # conditions when two players sign up for the last slot simultaneously)
     if event is not None:
@@ -220,6 +249,11 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     from app.services import lineup_service
 
     old_role = signup.chosen_role
+
+    # Validate class-role constraint when role is changing
+    new_role_val = data.get("chosen_role")
+    if new_role_val and new_role_val != old_role:
+        _validate_class_role(signup.character_id, new_role_val)
 
     allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
     for key, value in data.items():

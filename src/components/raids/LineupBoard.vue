@@ -158,6 +158,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
+import { CLASS_ROLES } from '@/constants'
 
 const props = defineProps({
   signups:        { type: Array,          default: () => [] },
@@ -234,6 +235,15 @@ function findSignupById(id) {
   return null
 }
 
+/** Check if a character's class is allowed to take a given role */
+function isClassAllowedForRole(signup, role) {
+  const className = signup?.character?.class_name
+  if (!className) return true // allow if class unknown
+  const allowed = CLASS_ROLES[className]
+  if (!allowed) return true // allow if class not in map
+  return allowed.includes(role)
+}
+
 function onDropColumn(e, targetKey) {
   dragOverTarget.value = null
   // Use Vue reactive state as primary source; dataTransfer as fallback
@@ -249,6 +259,12 @@ function onDropColumn(e, targetKey) {
 
   // Role mismatch: show confirmation modal to change role
   if (col && signupRole !== col.role) {
+    // Block if class cannot take the target role
+    if (!isClassAllowedForRole(found.signup, col.role)) {
+      const className = found.signup?.character?.class_name ?? 'This class'
+      uiStore.showToast(`${className} cannot be assigned to ${col.label}.`, 'error')
+      return
+    }
     roleChangePending.value = { signup: found.signup, sourceKey: found.key, sourceIdx: found.idx, targetKey, targetCol: col }
     showRoleChangeModal.value = true
     return

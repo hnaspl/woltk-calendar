@@ -56,3 +56,17 @@ export const CLASS_SPECS = {
   'Druid':         ['Balance', 'Feral', 'Restoration'],
   'Death Knight':  ['Blood', 'Frost', 'Unholy'],
 }
+
+/** Class → allowed roles (backend role values) */
+export const CLASS_ROLES = {
+  'Death Knight':  ['main_tank', 'off_tank', 'tank'],
+  'Druid':         ['main_tank', 'off_tank', 'healer', 'tank', 'dps'],
+  'Hunter':        ['dps'],
+  'Mage':          ['dps'],
+  'Paladin':       ['main_tank', 'off_tank', 'healer', 'tank'],
+  'Priest':        ['healer', 'dps'],
+  'Rogue':         ['tank'],
+  'Shaman':        ['healer', 'tank', 'dps'],
+  'Warlock':       ['dps'],
+  'Warrior':       ['main_tank', 'off_tank', 'tank'],
+}

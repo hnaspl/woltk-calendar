@@ -7,6 +7,7 @@ from typing import Optional
 
 import sqlalchemy as sa
 
+from app.constants import CLASS_ROLES
 from app.extensions import db
 from app.models.signup import LineupSlot, Signup
 
@@ -142,6 +143,23 @@ def upsert_slot(
     return slot
 
 
+def _validate_class_role_lineup(signup: Signup, new_role: str) -> None:
+    """Validate class-role constraint for lineup changes (best-effort, logs warning)."""
+    if signup.character is None:
+        return
+    class_name = signup.character.class_name
+    if not class_name:
+        return
+    for wow_class, roles in CLASS_ROLES.items():
+        if wow_class.value == class_name:
+            allowed = [r.value for r in roles]
+            if new_role not in allowed:
+                raise ValueError(
+                    f"{class_name} cannot take the {new_role} role"
+                )
+            return
+
+
 class LineupConflictError(Exception):
     """Raised when the lineup was modified by another officer since last load."""
     pass
@@ -177,6 +195,8 @@ def update_lineup_grouped(
                 continue
             # Sync signup's chosen_role to match the lineup column
             if signup.chosen_role != slot_group:
+                # Validate class-role constraint before changing role
+                _validate_class_role_lineup(signup, slot_group)
                 signup.chosen_role = slot_group
             slot = LineupSlot(
                 raid_event_id=raid_event_id,

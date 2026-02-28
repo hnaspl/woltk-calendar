@@ -161,7 +161,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS } from '@/constants'
+import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
 
 const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
@@ -192,18 +192,33 @@ const roleFullIsOfficer = ref(false)
 const roleFullLabel = computed(() => ROLE_LABEL_MAP[roleFullRole.value] || roleFullRole.value)
 
 const alternativeRoles = computed(() => {
-  // Show only roles that have available slots (not full)
+  // Show only roles that have available slots (not full) and are valid for the character's class
   return ROLE_OPTIONS.filter(r => {
     if (r.value === roleFullRole.value) return false
     if (!props.availableRoles.includes(r.value)) return false
+    // Filter by class constraint
+    if (classAllowedRoles.value && !classAllowedRoles.value.includes(r.value)) return false
     const maxSlots = roleFullSlots.value[r.value] ?? 0
     const currentCount = roleFullCounts.value[r.value] ?? 0
     return maxSlots > 0 && currentCount < maxSlots
   })
 })
 
+/** Allowed roles for the selected character's class */
+const classAllowedRoles = computed(() => {
+  if (!form.characterId) return null
+  const selected = characters.value.find(c => String(c.id) === String(form.characterId))
+  if (!selected || !selected.class_name) return null
+  return CLASS_ROLES[selected.class_name] ?? null
+})
+
 const roles = computed(() =>
-  ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
+  ROLE_OPTIONS.filter(r => {
+    if (!props.availableRoles.includes(r.value)) return false
+    // If a character is selected, only show roles valid for their class
+    if (classAllowedRoles.value && !classAllowedRoles.value.includes(r.value)) return false
+    return true
+  })
 )
 
 function isRoleFull(role) {
@@ -271,7 +286,10 @@ function onCharacterChange() {
   if (!charId) return
   const selected = characters.value.find(c => String(c.id) === String(charId))
   if (selected && !props.existingSignup) {
-    form.chosenRole = selected.default_role || ''
+    // Only auto-fill role if it's valid for the character's class
+    const allowed = CLASS_ROLES[selected.class_name] ?? []
+    const defaultRole = selected.default_role || ''
+    form.chosenRole = allowed.includes(defaultRole) ? defaultRole : ''
     form.chosenSpec = selected.primary_spec || ''
   }
 }

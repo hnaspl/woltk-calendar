@@ -8,16 +8,16 @@ from app.enums import WowClass, Role
 # Class → available roles mapping
 # ---------------------------------------------------------------------------
 CLASS_ROLES: dict[WowClass, list[Role]] = {
-    WowClass.DEATH_KNIGHT: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
-    WowClass.DRUID: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
+    WowClass.DEATH_KNIGHT: [Role.MAIN_TANK, Role.OFF_TANK, Role.TANK],
+    WowClass.DRUID: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.TANK, Role.DPS],
     WowClass.HUNTER: [Role.DPS],
     WowClass.MAGE: [Role.DPS],
-    WowClass.PALADIN: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
+    WowClass.PALADIN: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.TANK],
     WowClass.PRIEST: [Role.HEALER, Role.DPS],
-    WowClass.ROGUE: [Role.DPS],
-    WowClass.SHAMAN: [Role.HEALER, Role.DPS],
+    WowClass.ROGUE: [Role.TANK],
+    WowClass.SHAMAN: [Role.HEALER, Role.TANK, Role.DPS],
     WowClass.WARLOCK: [Role.DPS],
-    WowClass.WARRIOR: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
+    WowClass.WARRIOR: [Role.MAIN_TANK, Role.OFF_TANK, Role.TANK],
 }
 
 # ---------------------------------------------------------------------------
