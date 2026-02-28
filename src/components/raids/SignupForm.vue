@@ -116,7 +116,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS } from '@/constants'
+import { ROLE_OPTIONS, CLASS_SPECS } from '@/constants'
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -134,15 +134,12 @@ const success = ref(false)
 
 const roles = ROLE_OPTIONS
 
-/** Available spec options from the selected character's primary and secondary specs */
+/** Available spec options from the selected character's class */
 const specOptions = computed(() => {
   if (!form.characterId) return []
   const selected = characters.value.find(c => String(c.id) === String(form.characterId))
   if (!selected) return []
-  const specs = []
-  if (selected.primary_spec) specs.push(selected.primary_spec)
-  if (selected.secondary_spec && selected.secondary_spec !== selected.primary_spec) specs.push(selected.secondary_spec)
-  return specs
+  return CLASS_SPECS[selected.class_name] || []
 })
 
 /** Characters not yet signed up for this event (unless editing) */

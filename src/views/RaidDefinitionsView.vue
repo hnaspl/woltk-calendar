@@ -200,7 +200,7 @@ function openAddModal() {
 
 function openEditModal(def) {
   editing.value = def
-  Object.assign(form, { name: def.name, raid_type: def.raid_type, size: def.size, realm: def.realm ?? '', main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, tank_slots: def.tank_slots ?? 0, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
+  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, realm: def.realm ?? '', main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, tank_slots: def.tank_slots ?? 0, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
   formError.value = null; showModal.value = true
 }
 

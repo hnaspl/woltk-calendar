@@ -43,3 +43,16 @@ export const ROLE_OPTIONS = [
   { value: 'healer', label: 'Healer' },
   { value: 'dps', label: 'DPS' },
 ]
+
+export const CLASS_SPECS = {
+  'Warrior':       ['Arms', 'Fury', 'Protection'],
+  'Paladin':       ['Holy', 'Protection', 'Retribution'],
+  'Hunter':        ['Beast Mastery', 'Marksmanship', 'Survival'],
+  'Rogue':         ['Assassination', 'Combat', 'Subtlety'],
+  'Priest':        ['Discipline', 'Holy', 'Shadow'],
+  'Shaman':        ['Elemental', 'Enhancement', 'Restoration'],
+  'Mage':          ['Arcane', 'Fire', 'Frost'],
+  'Warlock':       ['Affliction', 'Demonology', 'Destruction'],
+  'Druid':         ['Balance', 'Feral', 'Restoration'],
+  'Death Knight':  ['Blood', 'Frost', 'Unholy'],
+}

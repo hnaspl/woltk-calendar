@@ -61,7 +61,7 @@ def update_raid_definition(guild_id: int, rd_id: int):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
-    if rd.is_builtin:
+    if rd.is_builtin and not getattr(current_user, "is_admin", False):
         return jsonify({"error": "Built-in raid definitions cannot be modified"}), 403
     data = request.get_json(silent=True) or {}
     rd = raid_service.update_raid_definition(rd, data)
@@ -77,7 +77,7 @@ def delete_raid_definition(guild_id: int, rd_id: int):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
-    if rd.is_builtin:
+    if rd.is_builtin and not getattr(current_user, "is_admin", False):
         return jsonify({"error": "Built-in raid definitions cannot be deleted"}), 403
     raid_service.delete_raid_definition(rd)
     return jsonify({"message": "Raid definition deleted"}), 200
