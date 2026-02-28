@@ -8,6 +8,7 @@ from flask_login import current_user
 from app.services import event_service, lineup_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.realtime import emit_lineup_changed, emit_signups_changed
 
 bp = Blueprint("lineup", __name__)
 
@@ -53,6 +54,8 @@ def update_lineup(guild_id: int, event_id: int):
             }), 409
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400
+        emit_lineup_changed(event_id)
+        emit_signups_changed(event_id)
         return jsonify(result), 200
 
     # Legacy format: {slots: [{slot_group, slot_index, signup_id, ...}, ...]}
@@ -64,6 +67,7 @@ def update_lineup(guild_id: int, event_id: int):
         slots = lineup_service.update_lineup(event_id, slots_data, current_user.id)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_lineup_changed(event_id)
     return jsonify([s.to_dict() for s in slots]), 200
 
 

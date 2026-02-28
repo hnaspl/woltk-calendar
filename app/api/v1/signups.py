@@ -8,6 +8,7 @@ from flask_login import current_user
 from app.services import event_service, signup_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.realtime import emit_signups_changed
 
 bp = Blueprint("signups", __name__)
 
@@ -78,6 +79,7 @@ def create_signup(guild_id: int, event_id: int):
         }), 409
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_signups_changed(event_id)
     return jsonify(signup.to_dict()), 201
 
 
@@ -101,6 +103,7 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
 
     data = request.get_json(silent=True) or {}
     signup = signup_service.update_signup(signup, data)
+    emit_signups_changed(event_id)
     return jsonify(signup.to_dict()), 200
 
 
@@ -122,4 +125,5 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
         return jsonify({"error": "Forbidden"}), 403
 
     signup_service.delete_signup(signup)
+    emit_signups_changed(event_id)
     return jsonify({"message": "Signup deleted"}), 200

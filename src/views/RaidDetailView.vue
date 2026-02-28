@@ -277,6 +277,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useSocket } from '@/composables/useSocket'
 import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
@@ -290,6 +291,7 @@ const uiStore = useUiStore()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
 const { getClassColor } = useWowIcons()
+const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 
 const event = ref(null)
 const signups = ref([])
@@ -383,12 +385,40 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  // Join Socket.IO room for real-time updates
+  if (event.value) joinEvent(event.value.id)
+  socketOn('signups_changed', onSignupsChanged)
+  socketOn('lineup_changed', onLineupChanged)
+  // Fallback polling in case WebSocket disconnects
   startPolling()
   document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
-// ── Live polling: refresh signups periodically so all players see changes ──
-const POLL_INTERVAL = 10_000 // 10 seconds
+// ── Real-time: WebSocket handlers ──
+async function onSignupsChanged(data) {
+  if (!guildId.value || !event.value) return
+  if (data?.event_id !== event.value.id) return
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+  } catch {
+    // Silently ignore — next WS event or poll will retry
+  }
+}
+
+async function onLineupChanged(data) {
+  // LineupBoard manages its own state; just trigger a signups reload
+  // so role slot info and signup list stay in sync
+  if (!guildId.value || !event.value) return
+  if (data?.event_id !== event.value.id) return
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+  } catch {
+    // Silently ignore
+  }
+}
+
+// ── Fallback polling: only active when tab is visible, longer interval ──
+const POLL_INTERVAL = 30_000 // 30 seconds (fallback only — WebSocket is primary)
 let pollTimer = null
 
 function startPolling() {
@@ -420,6 +450,9 @@ async function pollSignups() {
 }
 
 onUnmounted(() => {
+  socketOff('signups_changed', onSignupsChanged)
+  socketOff('lineup_changed', onLineupChanged)
+  if (event.value) leaveEvent(event.value.id)
   stopPolling()
   document.removeEventListener('visibilitychange', onVisibilityChange)
 })
@@ -427,6 +460,8 @@ onUnmounted(() => {
 // Reload everything when navigating between events (same route, different id)
 watch(() => route.params.id, async (newId, oldId) => {
   if (!newId || newId === oldId) return
+  // Leave old room, join new room
+  if (oldId) leaveEvent(oldId)
   stopPolling()
   loading.value = true
   error.value = null
@@ -444,6 +479,7 @@ watch(() => route.params.id, async (newId, oldId) => {
   } finally {
     loading.value = false
   }
+  if (event.value) joinEvent(event.value.id)
   startPolling()
 })
 

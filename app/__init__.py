@@ -9,7 +9,7 @@ from flask import Flask, jsonify, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
-from app.extensions import bcrypt, db, login_manager
+from app.extensions import bcrypt, db, login_manager, socketio
 
 # Vite build output directory (relative to project root)
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
@@ -30,6 +30,8 @@ def create_app(config_override: dict | None = None) -> Flask:
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
+    socketio.init_app(app, cors_allowed_origins=app.config["CORS_ORIGINS"],
+                      async_mode="threading", logger=False, engineio_logger=False)
 
     # Enable WAL mode for SQLite (better concurrent read/write performance)
     if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
@@ -114,6 +116,9 @@ def create_app(config_override: dict | None = None) -> Flask:
     # ------------------------------------------------------- CLI commands
     _register_commands(app)
 
+    # ------------------------------------------------------- SocketIO events
+    _register_socketio_handlers()
+
     # --------------------------------------------------------- Scheduler
     with app.app_context():
         if app.config.get("SCHEDULER_ENABLED", True) and not app.config.get("TESTING", False):
@@ -133,6 +138,23 @@ def _ensure_db_dir() -> None:
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
+
+
+def _register_socketio_handlers() -> None:
+    """Register Socket.IO event handlers for room-based real-time updates."""
+    from flask_socketio import join_room, leave_room
+
+    @socketio.on("join_event")
+    def handle_join(data):
+        event_id = data.get("event_id")
+        if event_id is not None:
+            join_room(f"event_{event_id}")
+
+    @socketio.on("leave_event")
+    def handle_leave(data):
+        event_id = data.get("event_id")
+        if event_id is not None:
+            leave_room(f"event_{event_id}")
 
 
 def _register_commands(app: Flask) -> None:

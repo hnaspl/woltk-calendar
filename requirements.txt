@@ -3,6 +3,7 @@ Flask-SQLAlchemy==3.1.1
 Flask-Login==0.6.3
 Flask-Bcrypt==1.0.1
 Flask-CORS==4.0.1
+Flask-SocketIO==5.6.1
 python-dotenv==1.0.1
 APScheduler==3.10.4
 requests==2.32.3

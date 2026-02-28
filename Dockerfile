@@ -30,4 +30,4 @@ RUN mkdir -p /app/instance
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "flask create-db && flask seed && flask run --host=0.0.0.0 --port=5000"]
+CMD ["sh", "-c", "flask create-db && flask seed && python wsgi.py"]

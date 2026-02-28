@@ -156,6 +156,7 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
+import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
 
 const props = defineProps({
@@ -382,18 +383,29 @@ async function loadLineup() {
   }
 }
 
+const { on: socketOn, off: socketOff } = useSocket()
+
 onMounted(() => {
   loadLineup()
+  // Listen for real-time lineup changes from other clients
+  socketOn('lineup_changed', onLineupSocketUpdate)
+  // Fallback polling at a longer interval
   startLineupPolling()
 })
 
 onUnmounted(() => {
+  socketOff('lineup_changed', onLineupSocketUpdate)
   stopLineupPolling()
   clearTimeout(autoSaveTimer)
 })
 
-// ── Lineup polling for live refresh ──
-const LINEUP_POLL_INTERVAL = 10_000
+function onLineupSocketUpdate(data) {
+  if (data?.event_id !== Number(props.eventId)) return
+  if (!dirty.value) loadLineup()
+}
+
+// ── Fallback lineup polling (longer interval, WebSocket is primary) ──
+const LINEUP_POLL_INTERVAL = 30_000
 let lineupPollTimer = null
 
 function startLineupPolling() {
