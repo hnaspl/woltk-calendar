@@ -52,6 +52,11 @@ class RoleFullError(Exception):
         super().__init__(message or f"All {role} slots are full")
 
 
+def get_role_counts(raid_event_id: int, roles: dict) -> dict:
+    """Return the current going counts for each role in *roles*."""
+    return {role: _count_going_by_role(raid_event_id, role) for role in roles}
+
+
 def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     """Promote the first matching benched signup to 'going'.
 
@@ -143,14 +148,25 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 
 def update_signup(signup: Signup, data: dict) -> Signup:
-    """Update a signup.  Status and role changes are informational only
-    and have no effect on the Lineup Board.  The lineup is managed
-    exclusively via the LineupBoard UI and update_lineup_grouped."""
+    """Update a signup.  Status changes are informational only and have no
+    effect on the Lineup Board.  However, when the role changes the player is
+    removed from their current lineup slot so they appear on the bench and can
+    be re-assigned to the correct role column."""
+    from app.services import lineup_service
+
+    old_role = signup.chosen_role
+
     allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)
     db.session.commit()
+
+    # When role changes, remove from old lineup slot (player goes to bench)
+    new_role = signup.chosen_role
+    if old_role and new_role and old_role != new_role:
+        lineup_service.remove_slot_for_signup(signup.id)
+
     return signup
 
 

@@ -175,16 +175,19 @@ const success = ref(false)
 const showRoleFullModal = ref(false)
 const roleFullRole = ref('')
 const roleFullSlots = ref({})
+const roleFullCounts = ref({})
 const roleFullIsOfficer = ref(false)
 
 const roleFullLabel = computed(() => ROLE_LABEL_MAP[roleFullRole.value] || roleFullRole.value)
 
 const alternativeRoles = computed(() => {
-  // Show roles that have available slots (slots > 0) and are not the full one
+  // Show only roles that have available slots (not full)
   return ROLE_OPTIONS.filter(r => {
     if (r.value === roleFullRole.value) return false
     if (!props.availableRoles.includes(r.value)) return false
-    return true
+    const maxSlots = roleFullSlots.value[r.value] ?? 0
+    const currentCount = roleFullCounts.value[r.value] ?? 0
+    return maxSlots > 0 && currentCount < maxSlots
   })
 })
 
@@ -303,6 +306,7 @@ async function handleSubmit() {
       // Role is full — show modal with bench/change options
       roleFullRole.value = data.role
       roleFullSlots.value = data.role_slots || {}
+      roleFullCounts.value = data.role_counts || {}
       roleFullIsOfficer.value = !!data.is_officer
       showRoleFullModal.value = true
     } else {

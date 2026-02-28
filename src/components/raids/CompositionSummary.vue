@@ -96,5 +96,5 @@ const roleSummary = computed(() => [
     target: props.dpsSlots,
     barClass: 'bg-red-400'
   }
-])
+].filter(r => r.target > 0))
 </script>

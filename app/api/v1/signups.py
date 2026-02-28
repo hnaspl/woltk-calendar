@@ -66,11 +66,14 @@ def create_signup(guild_id: int, event_id: int):
         )
     except signup_service.RoleFullError as exc:
         role_slots = exc.role_slots
+        # Include current going counts so frontend knows which roles still have space
+        role_counts = signup_service.get_role_counts(event_id, role_slots)
         return jsonify({
             "error": "role_full",
             "message": f"All {exc.role} slots are full",
             "role": exc.role,
             "role_slots": role_slots,
+            "role_counts": role_counts,
             "is_officer": is_officer,
         }), 409
     except Exception as exc:
