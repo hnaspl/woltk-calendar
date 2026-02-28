@@ -360,7 +360,7 @@ const roleSlotInfo = computed(() => {
   const info = {}
   for (const [role, max] of Object.entries(slotMap)) {
     if (max <= 0) continue
-    const current = signups.value.filter(s => s.chosen_role === role && s.status === 'going').length
+    const current = signups.value.filter(s => s.chosen_role === role && s.status !== 'declined').length
     info[role] = { max, current, remaining: Math.max(0, max - current) }
   }
   return info
