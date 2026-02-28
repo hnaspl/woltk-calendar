@@ -266,7 +266,7 @@ class RaidEvent(db.Model):
     def to_dict(self) -> dict:
         # Pull slot data from raid_definition if available
         rd = self.raid_definition
-        tank_slots = rd.tank_slots if rd and rd.tank_slots is not None else 2
+        tank_slots = rd.tank_slots if rd and rd.tank_slots is not None else 0
         main_tank_slots = rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1
         off_tank_slots = rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1
         healer_slots = rd.healer_slots if rd and rd.healer_slots is not None else 5
