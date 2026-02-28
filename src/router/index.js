@@ -90,15 +90,19 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 })
 })
 
+// One-time flag: ensures session restore happens exactly once on app start.
+let _authChecked = false
+
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  // If we haven't checked auth yet, try fetching the current user
-  if (!authStore.user && !authStore.loading) {
+  // First navigation (page load / refresh): always restore session from cookie
+  if (!_authChecked) {
+    _authChecked = true
     try {
       await authStore.fetchMe()
     } catch {
-      // ignore – will redirect below
+      // Not authenticated – proceed to redirect logic below
     }
   }
 

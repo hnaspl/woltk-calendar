@@ -17,6 +17,9 @@
       <div v-if="loading" class="space-y-3">
         <div v-for="i in 3" :key="i" class="h-20 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
+      <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
+        You need to create or join a guild first before managing templates. Use the sidebar to create a guild.
+      </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
       <div v-else-if="templates.length === 0" class="text-center py-12 text-text-muted">
         No templates yet. Create a template to quickly schedule recurring raids.
@@ -24,14 +27,14 @@
       <div v-else class="space-y-3">
         <WowCard v-for="tpl in templates" :key="tpl.id">
           <div class="flex items-center gap-4">
-            <img :src="getRaidIcon(tpl.raid_type)" :alt="tpl.raid_type" class="w-12 h-12 rounded border border-border-default flex-shrink-0" />
+            <div class="w-12 h-12 rounded border border-border-default bg-bg-tertiary flex items-center justify-center text-xl flex-shrink-0">📋</div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-bold text-text-primary">{{ tpl.name }}</span>
-                <RaidSizeBadge v-if="tpl.size" :size="tpl.size" />
-                <RealmBadge v-if="tpl.realm" :realm="tpl.realm" />
+                <RaidSizeBadge v-if="tpl.raid_size" :size="tpl.raid_size" />
+                <span v-if="tpl.difficulty === 'heroic'" class="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-600">Heroic</span>
               </div>
-              <div class="text-xs text-text-muted mt-1">{{ tpl.description ?? 'No description' }}</div>
+              <div class="text-xs text-text-muted mt-1">{{ tpl.default_instructions ?? 'No instructions' }}</div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
               <WowButton variant="secondary" class="text-xs py-1.5" @click="openApply(tpl)">
@@ -54,32 +57,32 @@
           <label class="block text-xs text-text-muted mb-1">Template Name *</label>
           <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Raid Definition *</label>
+          <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option value="">Select raid…</option>
+            <option v-for="d in raidDefinitions" :key="d.id" :value="d.id">{{ d.name }}</option>
+          </select>
+          <p v-if="raidDefinitions.length === 0" class="text-xs text-text-muted mt-1">No raid definitions found. Create one in Raid Definitions first.</p>
+        </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Type *</label>
-            <select v-model="form.raid_type" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select…</option>
-              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-text-muted mb-1">Size</label>
-            <select v-model.number="form.size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select…</option>
+            <label class="block text-xs text-text-muted mb-1">Raid Size</label>
+            <select v-model.number="form.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option :value="10">10-man</option>
               <option :value="25">25-man</option>
             </select>
           </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <select v-model="form.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="normal">Normal</option>
+              <option value="heroic">Heroic</option>
+            </select>
+          </div>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Realm</label>
-          <select v-model="form.realm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select realm…</option>
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Description</label>
+          <label class="block text-xs text-text-muted mb-1">Instructions</label>
           <textarea v-model="form.description" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
@@ -133,17 +136,20 @@ import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
+import { WARMANE_REALMS } from '@/constants'
 import * as templatesApi from '@/api/templates'
+import * as raidDefsApi from '@/api/raidDefinitions'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 
 const templates = ref([])
+const raidDefinitions = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
+const noGuild = ref(false)
 const formError = ref(null)
 const showModal = ref(false)
 const showApply = ref(false)
@@ -153,29 +159,39 @@ const applyTarget = ref(null)
 const deleteTarget = ref(null)
 const applyDate = ref('')
 
-const raidTypes = RAID_TYPES
 const warmaneRealms = WARMANE_REALMS
 
-const form = reactive({ name: '', raid_type: '', size: '', realm: '', description: '' })
+const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', description: '' })
 
 onMounted(async () => {
   loading.value = true
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
+  if (!guildStore.currentGuild) {
+    error.value = null
+    noGuild.value = true
+    loading.value = false
+    return
+  }
   try {
-    templates.value = await templatesApi.getTemplates(guildStore.currentGuild.id)
+    const [tpls, defs] = await Promise.all([
+      templatesApi.getTemplates(guildStore.currentGuild.id),
+      raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
+    ])
+    templates.value = tpls
+    raidDefinitions.value = defs
   } catch { error.value = 'Failed to load templates' }
   finally { loading.value = false }
 })
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_type: '', size: '', realm: '', description: '' })
+  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', description: '' })
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(tpl) {
   editing.value = tpl
-  Object.assign(form, { name: tpl.name, raid_type: tpl.raid_type, size: tpl.size ?? '', realm: tpl.realm ?? '', description: tpl.description ?? '' })
+  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', description: tpl.default_instructions ?? tpl.description ?? '' })
   formError.value = null; showModal.value = true
 }
 
@@ -184,15 +200,22 @@ function confirmDelete(tpl) { deleteTarget.value = tpl; showDeleteConfirm.value 
 
 async function saveTemplate() {
   formError.value = null
-  if (!form.name || !form.raid_type) { formError.value = 'Name and raid type are required'; return }
+  if (!form.name || !form.raid_definition_id) { formError.value = 'Name and raid definition are required'; return }
   saving.value = true
+  const payload = {
+    name: form.name,
+    raid_definition_id: form.raid_definition_id,
+    raid_size: form.raid_size,
+    difficulty: form.difficulty,
+    default_instructions: form.description || undefined
+  }
   try {
     if (editing.value) {
-      const updated = await templatesApi.updateTemplate(guildStore.currentGuild.id, editing.value.id, form)
+      const updated = await templatesApi.updateTemplate(guildStore.currentGuild.id, editing.value.id, payload)
       const idx = templates.value.findIndex(t => t.id === editing.value.id)
       if (idx !== -1) templates.value[idx] = updated
     } else {
-      templates.value.push(await templatesApi.createTemplate(guildStore.currentGuild.id, form))
+      templates.value.push(await templatesApi.createTemplate(guildStore.currentGuild.id, payload))
     }
     showModal.value = false
     uiStore.showToast(editing.value ? 'Template updated' : 'Template created', 'success')

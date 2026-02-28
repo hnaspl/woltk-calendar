@@ -14,6 +14,9 @@
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
+      <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
+        You need to create or join a guild first before managing raid definitions. Use the sidebar to create a guild.
+      </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
       <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
         No raid definitions yet. Create one to start scheduling raids.
@@ -142,6 +145,7 @@ const definitions = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
+const noGuild = ref(false)
 const formError = ref(null)
 const showModal = ref(false)
 const showDeleteConfirm = ref(false)
@@ -156,6 +160,12 @@ const form = reactive({ name: '', raid_type: '', size: '', realm: '', tank_slots
 onMounted(async () => {
   loading.value = true
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
+  if (!guildStore.currentGuild) {
+    error.value = null
+    noGuild.value = true
+    loading.value = false
+    return
+  }
   try {
     definitions.value = await raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
   } catch { error.value = 'Failed to load raid definitions' }
