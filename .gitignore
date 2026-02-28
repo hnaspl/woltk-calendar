@@ -34,4 +34,3 @@ backend/migrations/versions/*.pyc
 # SQLite test databases
 *.db
 backend/instance/
-*.db

@@ -10,8 +10,8 @@ export const updateGuild = (id, payload) => api.put(`/guilds/${id}`, payload)
 
 export const getGuildMembers = (guildId) => api.get(`/guilds/${guildId}/members`)
 
-export const updateMemberRole = (guildId, memberId, role) =>
-  api.put(`/guilds/${guildId}/members/${memberId}`, { role })
+export const updateMemberRole = (guildId, userId, role) =>
+  api.put(`/guilds/${guildId}/members/${userId}`, { role })
 
 export const removeMember = (guildId, userId) =>
   api.delete(`/guilds/${guildId}/members/${userId}`)

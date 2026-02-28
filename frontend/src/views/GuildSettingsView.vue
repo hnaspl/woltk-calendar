@@ -170,7 +170,7 @@ onMounted(async () => {
     if (!guildStore.currentGuild) await guildStore.fetchGuilds()
     const g = guildStore.currentGuild
     if (g) {
-      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? g.realm ?? '', description: g.description ?? '' })
+      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
       await guildStore.fetchMembers(g.id)
       members.value = guildStore.members
     }
