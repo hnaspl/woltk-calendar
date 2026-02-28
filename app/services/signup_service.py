@@ -158,7 +158,7 @@ def create_signup(
     # Check if character is permanently banned from this event
     ban = get_ban(raid_event_id, character_id)
     if ban is not None:
-        raise ValueError("This character has been permanently kicked from this raid")
+        raise ValueError("This character has been permanently kicked from this raid. Contact a raid officer to appeal.")
 
     # Check role-specific slot limits (with row-level locking to prevent race
     # conditions when two players sign up for the last slot simultaneously)

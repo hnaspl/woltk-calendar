@@ -171,7 +171,7 @@ class RaidBan(db.Model):
     # Relationships
     raid_event = relationship("RaidEvent", lazy="select")
     character = relationship("Character", lazy="select")
-    banner = relationship("User", foreign_keys=[banned_by], lazy="select")
+    banned_by_user = relationship("User", foreign_keys=[banned_by], lazy="select")
 
     def to_dict(self) -> dict:
         return {
