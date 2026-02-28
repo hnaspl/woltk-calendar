@@ -153,7 +153,7 @@ const props = defineProps({
   dpsSlots:       { type: Number, default: 18 }
 })
 
-const emit = defineEmits(['saved'])
+const emit = defineEmits(['saved', 'lineup-updated'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
 const {
   draggedId, dragSourceKey, dragSourceIndex, dragOverTarget,
@@ -338,6 +338,19 @@ const assignedIds = computed(() => {
   )
   return ids
 })
+
+// Emit lineup counts so CompositionSummary can reflect the Lineup Board
+const lineupCounts = computed(() => ({
+  main_tank: lineup.value.main_tanks.length,
+  off_tank:  lineup.value.off_tanks.length,
+  tank:      lineup.value.tanks.length,
+  healer:    lineup.value.healers.length,
+  dps:       lineup.value.dps.length,
+}))
+
+watch(lineupCounts, (counts) => {
+  emit('lineup-updated', counts)
+}, { deep: true, immediate: true })
 
 const bench = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))

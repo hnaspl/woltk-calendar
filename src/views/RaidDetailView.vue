@@ -118,7 +118,7 @@
               </button>
             </WowCard>
             <CompositionSummary
-              :signups="signups"
+              :lineup-counts="lineupCounts"
               :max-size="event.raid_size ?? event.size"
               :tank-slots="event.tank_slots ?? 0"
               :main-tank-slots="event.main_tank_slots ?? 1"
@@ -152,6 +152,7 @@
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
               @saved="onLineupSaved"
+              @lineup-updated="onLineupUpdated"
             />
           </div>
         </div>
@@ -291,6 +292,7 @@ const { getClassColor } = useWowIcons()
 
 const event = ref(null)
 const signups = ref([])
+const lineupCounts = ref(null)
 const loading = ref(true)
 const error = ref(null)
 const actionLoading = ref(false)
@@ -565,6 +567,10 @@ async function onLineupSaved(payload) {
   if (!payload?.auto) {
     uiStore.showToast('Lineup saved!', 'success')
   }
+}
+
+function onLineupUpdated(counts) {
+  lineupCounts.value = counts
 }
 
 function formatDateTime(d) {
