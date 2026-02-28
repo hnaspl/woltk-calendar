@@ -125,7 +125,7 @@ const props = defineProps({
   eventId: { type: [Number, String], default: null }
 })
 
-const emit = defineEmits(['signup-updated', 'signup-removed'])
+const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])
 
 const { getClassIcon } = useWowIcons()
 
@@ -155,8 +155,8 @@ async function changeStatus(signup, newStatus) {
   try {
     const updated = await signupsApi.updateSignup(props.guildId, props.eventId, signup.id, { status: newStatus })
     emit('signup-updated', updated)
-  } catch {
-    // revert dropdown visually (parent will re-render)
+  } catch (err) {
+    emit('signup-error', err?.response?.data?.message ?? 'Failed to change status')
   }
 }
 
@@ -165,8 +165,8 @@ async function removeSignup(signup) {
   try {
     await signupsApi.deleteSignup(props.guildId, props.eventId, signup.id)
     emit('signup-removed', signup.id)
-  } catch {
-    // ignore
+  } catch (err) {
+    emit('signup-error', err?.response?.data?.message ?? 'Failed to remove signup')
   }
 }
 </script>

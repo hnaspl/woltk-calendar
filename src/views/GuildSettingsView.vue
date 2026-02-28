@@ -303,8 +303,9 @@ function searchUsers() {
         guildStore.currentGuild.id,
         addMemberQuery.value
       )
-    } catch {
+    } catch (err) {
       availableUsers.value = []
+      uiStore.showToast(err?.response?.data?.message ?? 'Failed to search users', 'error')
     } finally {
       searchingUsers.value = false
     }

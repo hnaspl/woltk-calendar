@@ -74,7 +74,7 @@ def available_users(guild_id: int):
     member_ids = {m.user_id for m in guild_service.list_members(guild_id)}
 
     q = request.args.get("q", "").strip()
-    query = sa.select(User).where(User.is_active == True)  # noqa: E712
+    query = sa.select(User).where(User.is_active.is_(True))
     if q:
         query = query.where(User.username.ilike(f"%{q}%"))
     query = query.order_by(User.username.asc()).limit(50)

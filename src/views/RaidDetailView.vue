@@ -84,6 +84,7 @@
               :event-id="event.id"
               @signup-updated="onSignupUpdated"
               @signup-removed="onSignupRemoved"
+              @signup-error="msg => uiStore.showToast(msg, 'error')"
             />
 
             <LineupBoard
