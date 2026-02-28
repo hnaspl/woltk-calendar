@@ -212,6 +212,7 @@ function onDragStart(e, signup, sourceKey, idx) {
   // Set dataTransfer FIRST before any reactive state changes
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.setData('text/plain', String(signup.id))
+  // Prevent CharacterTooltip wrapper from intercepting drag events
   e.stopPropagation()
   draggedId.value = signup.id
   dragSourceKey.value = sourceKey
