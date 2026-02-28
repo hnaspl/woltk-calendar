@@ -31,6 +31,9 @@
         <span v-if="!existingSignup && signedUpCharacterIds.length > 0" class="text-[10px] text-text-muted">
           Already signed up characters are hidden. Select another character to add.
         </span>
+        <div v-if="bannedCharacterIds.length > 0" class="text-[10px] text-red-400 mt-1">
+          ⛔ Some characters are hidden because they have been permanently kicked from this raid.
+        </div>
       </div>
 
       <!-- Role -->
@@ -167,6 +170,7 @@ const props = defineProps({
   guildId: { type: [Number, String], required: true },
   existingSignup: { type: Object, default: null },
   signedUpCharacterIds: { type: Array, default: () => [] },
+  bannedCharacterIds: { type: Array, default: () => [] },
   availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] },
   roleSlotInfo: { type: Object, default: () => ({}) }
 })
@@ -233,10 +237,17 @@ function toggleSpec(sp) {
   form.chosenSpec = current.join(', ')
 }
 
-/** Characters not yet signed up for this event (unless editing) */
+/** Characters not yet signed up for this event (unless editing), excluding banned */
 const availableCharacters = computed(() => {
   if (props.existingSignup) return characters.value
-  return characters.value.filter(c => !props.signedUpCharacterIds.includes(c.id))
+  return characters.value.filter(c =>
+    !props.signedUpCharacterIds.includes(c.id) && !props.bannedCharacterIds.includes(c.id)
+  )
+})
+
+/** Check if selected character is banned (for edge cases) */
+const isCharBanned = computed(() => {
+  return form.characterId && props.bannedCharacterIds.includes(Number(form.characterId))
 })
 
 const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', status: 'going', note: '' }

@@ -153,13 +153,30 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
     signup_user_id = signup.user_id
     signup_role = signup.chosen_role
     char_name = signup.character.name if signup.character else "Unknown"
+    character_id = signup.character_id
     is_officer_action = signup.user_id != current_user.id
+
+    # Check for permanent kick flag (officer-only)
+    data = request.get_json(silent=True) or {}
+    permanent = bool(data.get("permanent", False))
+    ban_reason = data.get("reason")
 
     signup_service.delete_signup(signup)
     emit_signups_changed(event_id)
 
     if event:
-        if is_officer_action:
+        if is_officer_action and permanent:
+            # Create permanent ban
+            signup_service.create_ban(
+                raid_event_id=event_id,
+                character_id=character_id,
+                banned_by=current_user.id,
+                reason=ban_reason,
+            )
+            notify.notify_signup_permanently_kicked(
+                signup_user_id, event, current_user.username, char_name
+            )
+        elif is_officer_action:
             notify.notify_signup_removed_by_officer(
                 signup_user_id, event, current_user.username
             )
@@ -169,3 +186,35 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
             )
 
     return jsonify({"message": "Signup deleted"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Raid bans
+# ---------------------------------------------------------------------------
+
+@bp.get("/bans")
+@login_required
+def list_bans(guild_id: int, event_id: int):
+    membership = get_membership(guild_id, current_user.id)
+    if membership is None:
+        return jsonify({"error": "Forbidden"}), 403
+    _, err = _get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+    bans = signup_service.list_bans(event_id)
+    return jsonify([b.to_dict() for b in bans]), 200
+
+
+@bp.delete("/bans/<int:character_id>")
+@login_required
+def remove_ban(guild_id: int, event_id: int, character_id: int):
+    membership = get_membership(guild_id, current_user.id)
+    if membership is None or not is_officer_or_admin(membership):
+        return jsonify({"error": "Forbidden"}), 403
+    _, err = _get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+    removed = signup_service.remove_ban(event_id, character_id)
+    if not removed:
+        return jsonify({"error": "Ban not found"}), 404
+    return jsonify({"message": "Ban removed"}), 200

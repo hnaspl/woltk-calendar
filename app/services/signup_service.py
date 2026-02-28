@@ -8,7 +8,7 @@ import sqlalchemy as sa
 
 from app.enums import SignupStatus
 from app.extensions import db
-from app.models.signup import Signup
+from app.models.signup import Signup, RaidBan
 
 
 def _count_going(raid_event_id: int) -> int:
@@ -155,6 +155,11 @@ def create_signup(
     """
     from app.services import lineup_service
 
+    # Check if character is permanently banned from this event
+    ban = get_ban(raid_event_id, character_id)
+    if ban is not None:
+        raise ValueError("This character has been permanently kicked from this raid")
+
     # Check role-specific slot limits (with row-level locking to prevent race
     # conditions when two players sign up for the last slot simultaneously)
     if event is not None:
@@ -287,3 +292,56 @@ def list_user_signups(user_id: int, event_ids: list[int] | None = None) -> list[
     if event_ids is not None:
         query = query.where(Signup.raid_event_id.in_(event_ids))
     return list(db.session.execute(query).scalars().unique().all())
+
+
+# ---------------------------------------------------------------------------
+# Raid bans
+# ---------------------------------------------------------------------------
+
+def get_ban(raid_event_id: int, character_id: int) -> RaidBan | None:
+    """Check if a character is permanently banned from an event."""
+    return db.session.execute(
+        sa.select(RaidBan).where(
+            RaidBan.raid_event_id == raid_event_id,
+            RaidBan.character_id == character_id,
+        )
+    ).scalar_one_or_none()
+
+
+def list_bans(raid_event_id: int) -> list[RaidBan]:
+    """List all bans for a raid event."""
+    return list(
+        db.session.execute(
+            sa.select(RaidBan)
+            .where(RaidBan.raid_event_id == raid_event_id)
+            .options(sa.orm.joinedload(RaidBan.character))
+        ).scalars().unique().all()
+    )
+
+
+def create_ban(
+    raid_event_id: int,
+    character_id: int,
+    banned_by: int,
+    reason: str | None = None,
+) -> RaidBan:
+    """Create a permanent ban for a character on a raid event."""
+    ban = RaidBan(
+        raid_event_id=raid_event_id,
+        character_id=character_id,
+        banned_by=banned_by,
+        reason=reason,
+    )
+    db.session.add(ban)
+    db.session.commit()
+    return ban
+
+
+def remove_ban(raid_event_id: int, character_id: int) -> bool:
+    """Remove a ban. Returns True if a ban was removed."""
+    ban = get_ban(raid_event_id, character_id)
+    if ban is None:
+        return False
+    db.session.delete(ban)
+    db.session.commit()
+    return True

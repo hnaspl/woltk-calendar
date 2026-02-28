@@ -139,3 +139,47 @@ class LineupSlot(db.Model):
 
     def __repr__(self) -> str:
         return f"<LineupSlot id={self.id} event={self.raid_event_id} group={self.slot_group} idx={self.slot_index}>"
+
+
+class RaidBan(db.Model):
+    """Permanent character ban from a specific raid event."""
+
+    __tablename__ = "raid_bans"
+    __table_args__ = (
+        sa.UniqueConstraint("raid_event_id", "character_id", name="uq_raid_ban_event_character"),
+        sa.Index("ix_raid_bans_event", "raid_event_id"),
+        sa.Index("ix_raid_bans_character", "character_id"),
+    )
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    raid_event_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False
+    )
+    character_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("characters.id"), nullable=False
+    )
+    banned_by: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("users.id"), nullable=False
+    )
+    reason: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    raid_event = relationship("RaidEvent", lazy="select")
+    character = relationship("Character", lazy="select")
+    banner = relationship("User", foreign_keys=[banned_by], lazy="select")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "raid_event_id": self.raid_event_id,
+            "character_id": self.character_id,
+            "banned_by": self.banned_by,
+            "reason": self.reason,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "character": self.character.to_dict() if self.character else None,
+        }

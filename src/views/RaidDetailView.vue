@@ -65,6 +65,7 @@
               :guild-id="guildId"
               :existing-signup="editingSignup"
               :signed-up-character-ids="mySignedUpCharacterIds"
+              :banned-character-ids="bannedCharacterIds"
               :available-roles="availableRoles"
               :role-slot-info="roleSlotInfo"
               @signed-up="onSignedUp"
@@ -340,6 +341,11 @@ const mySignedUpCharacterIds = computed(() =>
   mySignups.value.map(s => s.character_id)
 )
 
+const bans = ref([])
+const bannedCharacterIds = computed(() =>
+  bans.value.map(b => b.character_id)
+)
+
 const availableRoles = computed(() => {
   if (!event.value) return ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
   const roles = []
@@ -382,6 +388,8 @@ onMounted(async () => {
     ])
     event.value = ev
     signups.value = su
+    // Fetch bans for this event
+    try { bans.value = await signupsApi.getBans(guildId.value, route.params.id) } catch { bans.value = [] }
   } catch (err) {
     error.value = err?.response?.data?.message ?? 'Failed to load raid details'
   } finally {
@@ -674,6 +682,8 @@ async function onSignupRemoved(signupId) {
     console.warn('Failed to reload signups, using local filter', err)
     signups.value = signups.value.filter(s => s.id !== signupId)
   }
+  // Refresh bans in case a permanent kick was applied
+  try { bans.value = await signupsApi.getBans(guildId.value, event.value.id) } catch { /* ignore */ }
   uiStore.showToast('Signup removed', 'success')
 }
 

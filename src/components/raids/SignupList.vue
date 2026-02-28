@@ -141,11 +141,40 @@
       </div>
     </template>
   </WowCard>
+
+  <!-- Remove confirmation modal (officer only) -->
+  <WowModal v-model="showRemoveModal" :title="'Remove ' + (removeTarget?.character?.name ?? 'Player')">
+    <div class="space-y-4">
+      <p class="text-sm text-text-muted">
+        How would you like to remove <strong class="text-text-primary">{{ removeTarget?.character?.name ?? 'this player' }}</strong> from this raid?
+      </p>
+      <div class="space-y-2">
+        <button
+          class="w-full text-left px-4 py-3 rounded border border-border-default bg-bg-tertiary hover:border-border-gold transition-colors"
+          @click="confirmRemove(false)"
+        >
+          <div class="text-sm font-medium text-text-primary">Remove this time</div>
+          <div class="text-xs text-text-muted mt-0.5">The player can sign up again if they wish.</div>
+        </button>
+        <button
+          class="w-full text-left px-4 py-3 rounded border border-red-800 bg-red-900/20 hover:border-red-500 transition-colors"
+          @click="confirmRemove(true)"
+        >
+          <div class="text-sm font-medium text-red-400">Permanently kick from raid</div>
+          <div class="text-xs text-red-300/70 mt-0.5">The player will be banned from signing up to this raid with this character.</div>
+        </button>
+      </div>
+      <div class="flex justify-end">
+        <button class="text-sm text-text-muted hover:text-text-primary transition-colors" @click="showRemoveModal = false">Cancel</button>
+      </div>
+    </div>
+  </WowModal>
 </template>
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
+import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
@@ -223,13 +252,26 @@ function charAchievements(signup) {
   return signup.character?.metadata?.achievement_points ?? null
 }
 
-async function removeSignup(signup) {
-  if (!props.guildId || !props.eventId) return
+// --- Officer remove with confirmation ---
+const showRemoveModal = ref(false)
+const removeTarget = ref(null)
+
+function removeSignup(signup) {
+  removeTarget.value = signup
+  showRemoveModal.value = true
+}
+
+async function confirmRemove(permanent) {
+  const signup = removeTarget.value
+  if (!signup || !props.guildId || !props.eventId) return
+  showRemoveModal.value = false
   try {
-    await signupsApi.deleteSignup(props.guildId, props.eventId, signup.id)
+    await signupsApi.deleteSignup(props.guildId, props.eventId, signup.id, permanent ? { permanent: true } : undefined)
     emit('signup-removed', signup.id)
   } catch (err) {
     emit('signup-error', err?.response?.data?.message ?? 'Failed to remove signup')
+  } finally {
+    removeTarget.value = null
   }
 }
 </script>

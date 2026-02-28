@@ -157,6 +157,19 @@ def notify_signup_removed_by_officer(signup, event, officer_name: str) -> None:
     )
 
 
+def notify_signup_permanently_kicked(user_id, event, officer_name: str, char_name: str) -> None:
+    """Notify the player that their character was permanently kicked from the raid."""
+    uid = user_id.user_id if hasattr(user_id, "user_id") else user_id
+    _notify(
+        user_id=uid,
+        notification_type="signup_permanently_kicked",
+        title=f"{char_name} permanently kicked from {event.title}",
+        body=f"Your character {char_name} has been permanently kicked from this raid by {officer_name}. You cannot sign up with this character again.",
+        guild_id=event.guild_id,
+        raid_event_id=event.id,
+    )
+
+
 def notify_role_changed(signup, event, old_role: str, new_role: str) -> None:
     """Notify the player that their role/assignment was changed."""
     _notify(
