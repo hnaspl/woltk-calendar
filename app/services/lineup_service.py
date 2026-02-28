@@ -87,6 +87,16 @@ def remove_slot_for_signup(signup_id: int) -> None:
     db.session.commit()
 
 
+def has_role_slot(signup_id: int) -> bool:
+    """Return True if the signup has a role lineup slot (not bench queue)."""
+    return db.session.execute(
+        sa.select(sa.func.count(LineupSlot.id)).where(
+            LineupSlot.signup_id == signup_id,
+            LineupSlot.slot_group != "bench",
+        )
+    ).scalar_one() > 0
+
+
 def update_slot_group_for_signup(signup_id: int, new_slot_group: str) -> None:
     """Update the slot_group for all LineupSlots associated with a signup."""
     slots = list(
@@ -168,9 +178,6 @@ def update_lineup_grouped(
             # Sync signup's chosen_role to match the lineup column
             if signup.chosen_role != slot_group:
                 signup.chosen_role = slot_group
-            # Promote bench players to going when placed in a role column
-            if signup.status == "bench":
-                signup.status = "going"
             slot = LineupSlot(
                 raid_event_id=raid_event_id,
                 slot_group=slot_group,
@@ -188,9 +195,6 @@ def update_lineup_grouped(
         signup = db.session.get(Signup, signup_id)
         if signup is None:
             continue
-        # Set status to bench so signup polling reflects the bench move
-        if signup.status == "going":
-            signup.status = "bench"
         slot = LineupSlot(
             raid_event_id=raid_event_id,
             slot_group="bench",
