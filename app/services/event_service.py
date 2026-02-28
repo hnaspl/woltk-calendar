@@ -230,6 +230,18 @@ def unlock_event(event: RaidEvent) -> RaidEvent:
     return event
 
 
+def cancel_event(event: RaidEvent) -> RaidEvent:
+    event.status = "cancelled"
+    db.session.commit()
+    return event
+
+
+def complete_event(event: RaidEvent) -> RaidEvent:
+    event.status = "completed"
+    db.session.commit()
+    return event
+
+
 def list_events(guild_id: int) -> list[RaidEvent]:
     return list(
         db.session.execute(

@@ -125,6 +125,32 @@ def unlock_event(guild_id: int, event_id: int):
     return jsonify(event.to_dict()), 200
 
 
+@bp.post("/<int:event_id>/cancel")
+@login_required
+def cancel_event(guild_id: int, event_id: int):
+    membership = _check_membership(guild_id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+    event = event_service.get_event(event_id)
+    if event is None or event.guild_id != guild_id:
+        return jsonify({"error": "Event not found"}), 404
+    event = event_service.cancel_event(event)
+    return jsonify(event.to_dict()), 200
+
+
+@bp.post("/<int:event_id>/complete")
+@login_required
+def complete_event(guild_id: int, event_id: int):
+    membership = _check_membership(guild_id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+    event = event_service.get_event(event_id)
+    if event is None or event.guild_id != guild_id:
+        return jsonify({"error": "Event not found"}), 404
+    event = event_service.complete_event(event)
+    return jsonify(event.to_dict()), 200
+
+
 @bp.post("/<int:event_id>/duplicate")
 @login_required
 def duplicate_event(guild_id: int, event_id: int):

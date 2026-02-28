@@ -25,8 +25,10 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     """Promote the first matching benched signup to 'going'.
 
     Preference order: mains before alts, then earliest created_at.
+    Also auto-assigns the promoted player to the lineup board.
     """
     from app.models.character import Character
+    from app.services import lineup_service
 
     # Find benched signups for this role, prefer mains, then oldest
     benched = db.session.execute(
@@ -44,6 +46,7 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     if benched is not None:
         benched.status = SignupStatus.GOING.value
         db.session.commit()
+        lineup_service.auto_assign_slot(benched)
 
 
 def create_signup(
@@ -56,6 +59,8 @@ def create_signup(
     raid_size: int,
 ) -> Signup:
     """Create a signup, applying auto-bench if the roster is full."""
+    from app.services import lineup_service
+
     going_count = _count_going(raid_event_id)
     status = (
         SignupStatus.BENCH.value if going_count >= raid_size else SignupStatus.GOING.value
@@ -72,6 +77,11 @@ def create_signup(
     )
     db.session.add(signup)
     db.session.commit()
+
+    # Auto-assign to lineup board if going
+    if status == SignupStatus.GOING.value:
+        lineup_service.auto_assign_slot(signup)
+
     return signup
 
 
@@ -82,6 +92,8 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 def update_signup(signup: Signup, data: dict) -> Signup:
     """Update a signup. Auto-promotes a benched player when a 'going' player
     changes to a non-going status (declined, bench, tentative, etc.)."""
+    from app.services import lineup_service
+
     old_status = signup.status
     old_role = signup.chosen_role
 
@@ -91,19 +103,28 @@ def update_signup(signup: Signup, data: dict) -> Signup:
             setattr(signup, key, value)
     db.session.commit()
 
-    # If the player was going and is no longer going, auto-promote from bench
     new_status = signup.status
     if old_status == SignupStatus.GOING.value and new_status != SignupStatus.GOING.value:
+        # Remove from lineup and auto-promote from bench
+        lineup_service.remove_slot_for_signup(signup.id)
         _auto_promote_bench(signup.raid_event_id, old_role)
+    elif old_status != SignupStatus.GOING.value and new_status == SignupStatus.GOING.value:
+        # Newly going — add to lineup
+        lineup_service.auto_assign_slot(signup)
 
     return signup
 
 
 def delete_signup(signup: Signup) -> None:
     """Delete a signup and auto-promote a benched player if applicable."""
+    from app.services import lineup_service
+
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
     was_going = signup.status == SignupStatus.GOING.value
+
+    # Remove lineup slot first (before deleting signup)
+    lineup_service.remove_slot_for_signup(signup.id)
 
     db.session.delete(signup)
     db.session.commit()
@@ -114,6 +135,8 @@ def delete_signup(signup: Signup) -> None:
 
 def decline_signup(signup: Signup) -> Signup:
     """Decline a signup and auto-promote a benched player if applicable."""
+    from app.services import lineup_service
+
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
     was_going = signup.status == SignupStatus.GOING.value
@@ -122,6 +145,7 @@ def decline_signup(signup: Signup) -> Signup:
     db.session.commit()
 
     if was_going:
+        lineup_service.remove_slot_for_signup(signup.id)
         _auto_promote_bench(raid_event_id, role)
 
     return signup

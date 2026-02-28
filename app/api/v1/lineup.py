@@ -20,8 +20,8 @@ def get_lineup(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
-    slots = lineup_service.get_lineup(event_id)
-    return jsonify([s.to_dict() for s in slots]), 200
+    grouped = lineup_service.get_lineup_grouped(event_id)
+    return jsonify(grouped), 200
 
 
 @bp.put("")
@@ -35,6 +35,18 @@ def update_lineup(guild_id: int, event_id: int):
         return jsonify({"error": "Event not found"}), 404
 
     data = request.get_json(silent=True) or {}
+
+    # Support grouped format: {tanks: [id,...], healers: [id,...], dps: [id,...]}
+    if "tanks" in data or "healers" in data or "dps" in data:
+        try:
+            result = lineup_service.update_lineup_grouped(
+                event_id, data, current_user.id
+            )
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(result), 200
+
+    # Legacy format: {slots: [{slot_group, slot_index, signup_id, ...}, ...]}
     slots_data = data.get("slots", [])
     if not isinstance(slots_data, list):
         return jsonify({"error": "slots must be a list"}), 400

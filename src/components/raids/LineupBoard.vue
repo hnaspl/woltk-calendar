@@ -2,7 +2,7 @@
   <WowCard :padded="false">
     <div class="flex items-center justify-between px-5 py-3 border-b border-border-default">
       <h3 class="wow-heading text-base">Lineup Board</h3>
-      <div class="flex items-center gap-2">
+      <div v-if="isOfficer" class="flex items-center gap-2">
         <WowButton variant="secondary" @click="saveLineup" :loading="saving" class="text-xs py-1 px-3">
           Save Lineup
         </WowButton>
@@ -21,6 +21,7 @@
           role="tank"
           :slots="lineup.tanks"
           :signups="availableTanks"
+          :editable="isOfficer"
           @assign="(s) => assignToRole('tanks', s)"
           @remove="(i) => removeFromRole('tanks', i)"
         />
@@ -37,6 +38,7 @@
           role="healer"
           :slots="lineup.healers"
           :signups="availableHealers"
+          :editable="isOfficer"
           @assign="(s) => assignToRole('healers', s)"
           @remove="(i) => removeFromRole('healers', i)"
         />
@@ -53,6 +55,7 @@
           role="dps"
           :slots="lineup.dps"
           :signups="availableDps"
+          :editable="isOfficer"
           @assign="(s) => assignToRole('dps', s)"
           @remove="(i) => removeFromRole('dps', i)"
         />
@@ -98,6 +101,7 @@ const props = defineProps({
   signups:     { type: Array,          default: () => [] },
   eventId:     { type: [Number,String], required: true },
   guildId:     { type: [Number,String], required: true },
+  isOfficer:   { type: Boolean, default: false },
   tankSlots:   { type: Number, default: 2 },
   healerSlots: { type: Number, default: 5 },
   dpsSlots:    { type: Number, default: 18 }
@@ -116,9 +120,17 @@ onMounted(async () => {
     lineup.value.healers = data.healers ?? []
     lineup.value.dps     = data.dps     ?? []
   } catch {
-    // No existing lineup – start fresh
+    // No existing lineup – auto-populate from going signups
+    autoPopulateFromSignups()
   }
 })
+
+function autoPopulateFromSignups() {
+  const going = props.signups.filter(s => s.status === 'going')
+  lineup.value.tanks   = going.filter(s => s.chosen_role === 'tank')
+  lineup.value.healers = going.filter(s => s.chosen_role === 'healer')
+  lineup.value.dps     = going.filter(s => s.chosen_role === 'dps')
+}
 
 const activeSignups = computed(() =>
   props.signups.filter(s => ['going', 'tentative'].includes(s.status))
@@ -166,9 +178,10 @@ async function saveLineup() {
 const LineupColumn = defineComponent({
   name: 'LineupColumn',
   props: {
-    role:    { type: String, required: true },
-    slots:   { type: Array, default: () => [] },
-    signups: { type: Array, default: () => [] }
+    role:     { type: String, required: true },
+    slots:    { type: Array, default: () => [] },
+    signups:  { type: Array, default: () => [] },
+    editable: { type: Boolean, default: false }
   },
   emits: ['assign', 'remove'],
   setup(colProps, { emit: colEmit }) {
@@ -205,15 +218,17 @@ const LineupColumn = defineComponent({
               profs ? h('span', {}, profs) : null,
             ].filter(Boolean)),
           ]),
-          h('button', {
-            type: 'button',
-            class: 'opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all',
-            onClick: () => colEmit('remove', i)
-          }, '×')
+          colProps.editable
+            ? h('button', {
+                type: 'button',
+                class: 'opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all',
+                onClick: () => colEmit('remove', i)
+              }, '×')
+            : null
         ])
       }),
-      // Dropdown to assign from available signups
-      colProps.signups.length > 0
+      // Dropdown to assign from available signups (officer only)
+      colProps.editable && colProps.signups.length > 0
         ? h('select', {
             class: 'w-full bg-bg-tertiary border border-dashed border-border-default text-text-muted text-xs rounded px-2 py-1.5 mt-1 focus:border-border-gold outline-none',
             onChange: (e) => {

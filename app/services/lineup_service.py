@@ -25,6 +25,52 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
     )
 
 
+def get_lineup_grouped(raid_event_id: int) -> dict:
+    """Return lineup grouped by role with full signup data for the frontend."""
+    slots = get_lineup(raid_event_id)
+    grouped: dict[str, list] = {"tanks": [], "healers": [], "dps": []}
+    role_map = {"tank": "tanks", "healer": "healers", "dps": "dps"}
+    for slot in slots:
+        key = role_map.get(slot.slot_group, "dps")
+        if slot.signup is not None:
+            grouped[key].append(slot.signup.to_dict())
+    return grouped
+
+
+def _next_slot_index(raid_event_id: int, slot_group: str) -> int:
+    """Return the next available slot_index for a given group."""
+    max_idx = db.session.execute(
+        sa.select(sa.func.max(LineupSlot.slot_index)).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group == slot_group,
+        )
+    ).scalar_one_or_none()
+    return (max_idx or 0) + 1
+
+
+def auto_assign_slot(signup: Signup) -> None:
+    """Automatically create a LineupSlot for a 'going' signup."""
+    role = signup.chosen_role
+    idx = _next_slot_index(signup.raid_event_id, role)
+    slot = LineupSlot(
+        raid_event_id=signup.raid_event_id,
+        slot_group=role,
+        slot_index=idx,
+        signup_id=signup.id,
+        character_id=signup.character_id,
+    )
+    db.session.add(slot)
+    db.session.commit()
+
+
+def remove_slot_for_signup(signup_id: int) -> None:
+    """Remove LineupSlot(s) associated with a signup."""
+    db.session.execute(
+        sa.delete(LineupSlot).where(LineupSlot.signup_id == signup_id)
+    )
+    db.session.commit()
+
+
 def upsert_slot(
     raid_event_id: int,
     slot_group: str,
@@ -55,6 +101,36 @@ def upsert_slot(
     slot.confirmed_at = datetime.now(timezone.utc)
     db.session.commit()
     return slot
+
+
+def update_lineup_grouped(
+    raid_event_id: int, data: dict, confirmed_by: int
+) -> dict:
+    """Bulk-update lineup from grouped format {tanks: [signupId,...], ...}."""
+    # Remove all existing slots for this event
+    db.session.execute(
+        sa.delete(LineupSlot).where(LineupSlot.raid_event_id == raid_event_id)
+    )
+    db.session.flush()
+
+    role_map = {"tanks": "tank", "healers": "healer", "dps": "dps"}
+    for key, slot_group in role_map.items():
+        signup_ids = data.get(key, [])
+        for idx, signup_id in enumerate(signup_ids):
+            signup = db.session.get(Signup, signup_id)
+            slot = LineupSlot(
+                raid_event_id=raid_event_id,
+                slot_group=slot_group,
+                slot_index=idx,
+                signup_id=signup_id,
+                character_id=signup.character_id if signup else None,
+                confirmed_by=confirmed_by,
+                confirmed_at=datetime.now(timezone.utc),
+            )
+            db.session.add(slot)
+
+    db.session.commit()
+    return get_lineup_grouped(raid_event_id)
 
 
 def update_lineup(raid_event_id: int, slots_data: list[dict], confirmed_by: int) -> list[LineupSlot]:

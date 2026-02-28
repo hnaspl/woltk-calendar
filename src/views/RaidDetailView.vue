@@ -88,10 +88,10 @@
             />
 
             <LineupBoard
-              v-if="permissions.isOfficer.value"
               :signups="signups"
               :event-id="event.id"
               :guild-id="guildId"
+              :is-officer="permissions.isOfficer.value"
               :tank-slots="event.tank_slots ?? 2"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
@@ -245,14 +245,24 @@ function onSignedUp(signup) {
   uiStore.showToast('Signed up successfully!', 'success')
 }
 
-function onSignupUpdated(updated) {
-  const idx = signups.value.findIndex(s => s.id === updated.id)
-  if (idx !== -1) signups.value[idx] = updated
+async function onSignupUpdated(updated) {
+  // Reload all signups to reflect auto-promote changes from backend
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+  } catch {
+    const idx = signups.value.findIndex(s => s.id === updated.id)
+    if (idx !== -1) signups.value[idx] = updated
+  }
   uiStore.showToast('Signup updated!', 'success')
 }
 
-function onSignupRemoved(signupId) {
-  signups.value = signups.value.filter(s => s.id !== signupId)
+async function onSignupRemoved(signupId) {
+  // Reload all signups to reflect auto-promote changes from backend
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+  } catch {
+    signups.value = signups.value.filter(s => s.id !== signupId)
+  }
   uiStore.showToast('Signup removed', 'success')
 }
 
