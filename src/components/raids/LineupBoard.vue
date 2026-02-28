@@ -219,10 +219,10 @@ function onDragLeave(e, target) {
 
 function findSignupById(id) {
   for (const key of ['main_tanks', 'off_tanks', 'tanks', 'healers', 'dps']) {
-    const idx = lineup.value[key].findIndex(s => s.id === id)
+    const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
-  const fromUnassigned = unassigned.value.find(s => s.id === id)
+  const fromUnassigned = unassigned.value.find(s => Number(s.id) === id)
   if (fromUnassigned) return { key: 'unassigned', idx: -1, signup: fromUnassigned }
   return null
 }
@@ -241,7 +241,7 @@ function onDropColumn(e, targetKey) {
   }
 
   // Add to target (avoid duplicates)
-  if (!lineup.value[targetKey].find(s => s.id == id)) {
+  if (!lineup.value[targetKey].find(s => Number(s.id) === id)) {
     lineup.value[targetKey].push(found.signup)
   }
   dirty.value = true
@@ -270,7 +270,7 @@ function autoSave() {
 async function loadLineup() {
   try {
     const data = await lineupApi.getLineup(props.guildId, props.eventId)
-    // Only apply server data if there are no unsaved changes
+    // Guard: skip applying server data if user made DnD changes while request was in flight
     if (dirty.value) return
     lineup.value.main_tanks = data.main_tanks ?? []
     lineup.value.off_tanks  = data.off_tanks  ?? []
