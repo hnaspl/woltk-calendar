@@ -29,9 +29,10 @@ class Character(db.Model):
     )
     primary_spec: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     secondary_spec: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
-    default_role: Mapped[str] = mapped_column(
+    tertiary_spec: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
+    default_role: Mapped[str | None] = mapped_column(
         sa.Enum(Role, values_callable=lambda e: [x.value for x in e]),
-        nullable=False,
+        nullable=True,
     )
     off_role: Mapped[str | None] = mapped_column(
         sa.Enum(Role, values_callable=lambda e: [x.value for x in e]),
@@ -80,6 +81,7 @@ class Character(db.Model):
             "class_name": self.class_name,
             "primary_spec": self.primary_spec,
             "secondary_spec": self.secondary_spec,
+            "tertiary_spec": self.tertiary_spec,
             "default_role": self.default_role,
             "off_role": self.off_role,
             "is_main": self.is_main,

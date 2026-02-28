@@ -23,7 +23,8 @@ def create_character(user_id: int, guild_id: int, data: dict) -> Character:
         class_name=data["class_name"],
         primary_spec=data.get("primary_spec"),
         secondary_spec=data.get("secondary_spec"),
-        default_role=data["default_role"],
+        tertiary_spec=data.get("tertiary_spec"),
+        default_role=data.get("default_role"),
         off_role=data.get("off_role"),
         is_main=data.get("is_main", False),
         is_active=data.get("is_active", True),
@@ -43,7 +44,7 @@ def get_character(character_id: int) -> Optional[Character]:
 def update_character(character: Character, data: dict) -> Character:
     allowed = {
         "realm_name", "name", "class_name", "primary_spec", "secondary_spec",
-        "default_role", "off_role", "is_main", "is_active", "armory_url",
+        "tertiary_spec", "default_role", "off_role", "is_main", "is_active", "armory_url",
     }
     for key, value in data.items():
         if key in allowed:

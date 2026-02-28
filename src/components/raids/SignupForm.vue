@@ -224,7 +224,7 @@ const availableCharacters = computed(() => {
   return characters.value.filter(c => !props.signedUpCharacterIds.includes(c.id))
 })
 
-const INITIAL_FORM = { characterId: '', chosenRole: 'dps', chosenSpec: '', status: 'going', note: '' }
+const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', status: 'going', note: '' }
 
 const form = reactive({ ...INITIAL_FORM })
 
@@ -242,7 +242,7 @@ function onCharacterChange() {
   if (!charId) return
   const selected = characters.value.find(c => String(c.id) === String(charId))
   if (selected && !props.existingSignup) {
-    form.chosenRole = selected.default_role || 'dps'
+    form.chosenRole = selected.default_role || ''
     form.chosenSpec = selected.primary_spec || ''
   }
 }
@@ -253,7 +253,7 @@ watch(
   (s) => {
     if (s) {
       form.characterId = s.character_id ?? ''
-      form.chosenRole  = s.chosen_role   ?? 'dps'
+      form.chosenRole  = s.chosen_role   ?? ''
       form.chosenSpec  = s.chosen_spec   ?? ''
       form.status      = s.status        ?? 'going'
       form.note        = s.note          ?? ''

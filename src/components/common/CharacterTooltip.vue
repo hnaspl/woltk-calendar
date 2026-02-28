@@ -45,7 +45,7 @@
         <!-- Body -->
         <div class="px-3 py-2 space-y-2 text-xs">
           <!-- Specs & Role -->
-          <table v-if="character.primary_spec || character.secondary_spec || character.default_role" class="w-full">
+          <table v-if="character.primary_spec || character.secondary_spec || character.tertiary_spec || character.default_role" class="w-full">
             <tbody>
               <tr v-if="character.default_role">
                 <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Role</td>
@@ -58,6 +58,10 @@
               <tr v-if="character.secondary_spec">
                 <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Secondary</td>
                 <td class="py-0.5"><span class="px-1.5 py-0.5 bg-gray-500/15 text-gray-400 rounded text-[11px]">{{ character.secondary_spec }}</span></td>
+              </tr>
+              <tr v-if="character.tertiary_spec">
+                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Tertiary</td>
+                <td class="py-0.5"><span class="px-1.5 py-0.5 bg-gray-500/15 text-gray-400 rounded text-[11px]">{{ character.tertiary_spec }}</span></td>
               </tr>
             </tbody>
           </table>

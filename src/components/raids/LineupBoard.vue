@@ -273,6 +273,22 @@ function autoSave() {
   autoSaveTimer = setTimeout(() => saveLineup(true), 300)
 }
 
+// ── Enforce slot limits: move excess players back to bench ──
+function enforceSlotLimits() {
+  let changed = false
+  for (const col of allColumns.value) {
+    if (col.slots > 0 && lineup.value[col.key].length > col.slots) {
+      // Trim excess from the end
+      lineup.value[col.key] = lineup.value[col.key].slice(0, col.slots)
+      changed = true
+    }
+  }
+  if (changed) {
+    dirty.value = true
+    autoSave()
+  }
+}
+
 // ── Data loading ──
 async function loadLineup() {
   try {
@@ -284,7 +300,8 @@ async function loadLineup() {
     lineup.value.tanks      = data.tanks      ?? []
     lineup.value.healers    = data.healers    ?? []
     lineup.value.dps        = data.dps        ?? []
-    dirty.value = false
+    enforceSlotLimits()
+    if (!dirty.value) dirty.value = false
   } catch {
     autoPopulateFromSignups()
   }
@@ -307,6 +324,7 @@ function autoPopulateFromSignups() {
   lineup.value.tanks      = going.filter(s => s.chosen_role === 'tank')
   lineup.value.healers    = going.filter(s => s.chosen_role === 'healer')
   lineup.value.dps        = going.filter(s => s.chosen_role === 'dps')
+  enforceSlotLimits()
 }
 
 // ── Computed helpers ──
