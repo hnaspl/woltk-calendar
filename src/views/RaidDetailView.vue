@@ -155,21 +155,18 @@
           <label class="block text-xs text-text-muted mb-1">Title *</label>
           <input v-model="editForm.title" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
-            <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
-              <option value="">None (use defaults)</option>
-              <option v-for="rd in editRaidDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Type</label>
-            <select v-model="editForm.raid_type" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select raid type…</option>
-              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
-            </select>
-          </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
+          <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
+            <option value="">None (use defaults)</option>
+            <optgroup label="Built-in Raids">
+              <option v-for="rd in editBuiltinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </optgroup>
+            <optgroup v-if="editCustomDefs.length" label="Custom Raids">
+              <option v-for="rd in editCustomDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </optgroup>
+          </select>
+          <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -234,7 +231,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
@@ -278,6 +275,8 @@ const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
 const editRaidDefs = ref([])
+const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
+const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))
 
 const editForm = reactive({
   title: '',
@@ -422,17 +421,6 @@ function onEditRaidDefChange() {
     editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
   }
 }
-
-// Auto-match edit title to raid definition (case-insensitive)
-watch(() => editForm.title, (newTitle) => {
-  if (!newTitle || !editRaidDefs.value.length) return
-  const match = editRaidDefs.value.find(d => d.name.toLowerCase() === newTitle.trim().toLowerCase())
-  if (match && match.id !== editForm.raid_definition_id) {
-    editForm.raid_definition_id = match.id
-    editForm.raid_type = match.raid_type || match.code || ''
-    editForm.raid_size = match.default_raid_size ?? match.size ?? 25
-  }
-})
 
 async function saveEvent() {
   if (actionLoading.value) return

@@ -87,24 +87,28 @@
     <WowModal v-model="showCreateModal" title="Schedule Raid" size="md">
       <form @submit.prevent="createEvent" class="space-y-4">
         <div>
+          <label class="block text-xs text-text-muted mb-1">Guild *</label>
+          <select v-model.number="eventForm.guild_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onGuildSelectChange">
+            <option value="">Select guild…</option>
+            <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Raid Definition *</label>
+          <select v-model.number="eventForm.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
+            <option value="">Select raid definition…</option>
+            <optgroup label="Built-in Raids">
+              <option v-for="rd in builtinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </optgroup>
+            <optgroup v-if="customDefs.length" label="Custom Raids">
+              <option v-for="rd in customDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </optgroup>
+          </select>
+          <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
+        </div>
+        <div>
           <label class="block text-xs text-text-muted mb-1">Title *</label>
           <input v-model="eventForm.title" required placeholder="e.g. ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs text-text-muted mb-1">Guild *</label>
-            <select v-model.number="eventForm.guild_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onGuildSelectChange">
-              <option value="">Select guild…</option>
-              <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
-            <select v-model.number="eventForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
-              <option value="">Select raid…</option>
-              <option v-for="rd in raidDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
-            </select>
-          </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -150,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import RaidCalendar from '@/components/calendar/RaidCalendar.vue'
@@ -177,6 +181,10 @@ const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref(null)
 const raidDefs = ref([])
+
+const builtinDefs = computed(() => raidDefs.value.filter(d => d.is_builtin))
+const customDefs = computed(() => raidDefs.value.filter(d => !d.is_builtin))
+
 const eventForm = reactive({
   title: '',
   guild_id: null,
@@ -203,7 +211,6 @@ function openCreateModal() {
   Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
-  // Load raid definitions for the current guild
   if (eventForm.guild_id) {
     raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
   }
@@ -212,7 +219,6 @@ function openCreateModal() {
 function onGuildSelectChange() {
   const selected = guildStore.guilds.find(g => g.id === eventForm.guild_id)
   if (selected) eventForm.realm_name = selected.realm_name
-  // Fetch raid definitions for the selected guild
   eventForm.raid_definition_id = ''
   if (eventForm.guild_id) {
     raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
@@ -226,28 +232,18 @@ function onRaidDefChange() {
   if (rd) {
     eventForm.raid_type = rd.raid_type || rd.code || ''
     eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
-    // Auto-fill title from definition name
-    if (!eventForm.title || eventForm.title === '') {
-      eventForm.title = rd.name
-    }
+    if (!eventForm.title) eventForm.title = rd.name
   }
 }
 
-// Auto-match title to raid definition (case-insensitive)
-watch(() => eventForm.title, (newTitle) => {
-  if (!newTitle || !raidDefs.value.length) return
-  const match = raidDefs.value.find(d => d.name.toLowerCase() === newTitle.trim().toLowerCase())
-  if (match && match.id !== eventForm.raid_definition_id) {
-    eventForm.raid_definition_id = match.id
-    eventForm.raid_type = match.raid_type || match.code || ''
-    eventForm.raid_size = match.default_raid_size ?? match.size ?? 25
-  }
-})
-
 async function createEvent() {
-  if (!eventForm.title || !eventForm.guild_id || !eventForm.starts_at_utc) {
-    createError.value = 'Title, guild and date are required'
+  if (!eventForm.guild_id || !eventForm.starts_at_utc || !eventForm.raid_definition_id) {
+    createError.value = 'Guild, raid definition and date are required'
     return
+  }
+  if (!eventForm.title) {
+    const rd = raidDefs.value.find(d => d.id === eventForm.raid_definition_id)
+    eventForm.title = rd?.name ?? 'Raid'
   }
   if (eventForm.close_signups_at && new Date(eventForm.close_signups_at) >= new Date(eventForm.starts_at_utc)) {
     createError.value = 'Close signups time must be before the event start time'
