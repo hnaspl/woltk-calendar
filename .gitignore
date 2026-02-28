@@ -36,3 +36,6 @@ instance/
 
 # Gunicorn
 gunicorn.ctl
+
+# Test caches
+.pytest_cache/

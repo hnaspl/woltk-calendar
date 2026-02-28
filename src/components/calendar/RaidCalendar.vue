@@ -147,11 +147,13 @@ const fcEvents = computed(() =>
   props.events.map(ev => {
     const status = ev.status ?? 'open'
     const baseColor = getRaidColor(ev.raid_type)
+    const start = ev.starts_at_utc ?? ev.start_time ?? ev.date
+    // Force end = start so event stays within a single day cell
     return {
       id: String(ev.id),
       title: ev.title ?? ev.name ?? 'Raid',
-      start: ev.starts_at_utc ?? ev.start_time ?? ev.date,
-      // Do not pass end time to prevent multi-day stretching in month view
+      start,
+      end: start,
       allDay: false,
       backgroundColor: 'transparent',
       borderColor: 'transparent',
@@ -308,19 +310,19 @@ watch(() => props.events, () => {
   background: rgba(26, 26, 46, 0.85);
   overflow: hidden;
   cursor: pointer;
-  min-height: 28px;
+  min-height: 32px;
 }
 .wow-event-content:hover {
   background: rgba(42, 42, 74, 0.95);
 }
 .wow-event-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 2px;
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
   flex-shrink: 0;
 }
 .wow-event-title {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: #e2e8f0;
   white-space: nowrap;
