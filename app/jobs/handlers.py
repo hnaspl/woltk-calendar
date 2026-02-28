@@ -53,22 +53,22 @@ def auto_lock_upcoming_events(app: Flask) -> None:
         fallback_cutoff = now + timedelta(hours=4)
 
         # Events with a specific close_signups_at that has been reached
-        events_with_close = list(db.session.execute(
+        events_with_close = db.session.execute(
             sa.select(RaidEvent).where(
                 RaidEvent.status == "open",
                 RaidEvent.close_signups_at.isnot(None),
                 RaidEvent.close_signups_at <= now,
             )
-        ).scalars().all())
+        ).scalars().all()
 
         # Events without close_signups_at, falling back to 4h before start
-        events_without_close = list(db.session.execute(
+        events_without_close = db.session.execute(
             sa.select(RaidEvent).where(
                 RaidEvent.status == "open",
                 RaidEvent.close_signups_at.is_(None),
                 RaidEvent.starts_at_utc <= fallback_cutoff,
             )
-        ).scalars().all())
+        ).scalars().all()
 
         locked = 0
         for event in events_with_close + events_without_close:

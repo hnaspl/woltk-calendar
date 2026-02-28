@@ -129,7 +129,7 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
-            <input v-model="eventForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" placeholder="Auto-locks at this time" />
+            <input v-model="eventForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             <span class="text-[10px] text-text-muted">Leave empty to auto-lock 4h before start</span>
           </div>
         </div>

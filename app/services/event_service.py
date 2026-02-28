@@ -189,12 +189,9 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         raid_type=data.get("raid_type"),
         instructions=data.get("instructions"),
     )
-    # Handle close_signups_at
     close_at = data.get("close_signups_at")
     if close_at:
-        if isinstance(close_at, str):
-            close_at = datetime.fromisoformat(close_at)
-        event.close_signups_at = close_at
+        event.close_signups_at = datetime.fromisoformat(close_at) if isinstance(close_at, str) else close_at
     db.session.add(event)
     db.session.commit()
     return event
