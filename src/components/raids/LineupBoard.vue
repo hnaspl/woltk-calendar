@@ -85,62 +85,46 @@
       </div>
     </div>
 
-    <!-- Unassigned + Bench pool (unified rendering for identical DnD behavior) -->
+    <!-- Bench pool: players not assigned to a role column -->
     <div
-      v-if="unassigned.length > 0 || (isOfficer && draggedId)"
+      v-if="bench.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
-      :class="{ 'bg-red-900/10 ring-1 ring-inset ring-red-500/30': isOfficer && dragOverTarget === 'unassigned' }"
-      @dragover.prevent="isOfficer && handleDragOver($event, 'unassigned')"
-      @dragenter.prevent="isOfficer && (dragOverTarget = 'unassigned')"
-      @dragleave="isOfficer && handleDragLeave($event, 'unassigned')"
-      @drop.prevent="isOfficer && onDropUnassigned()"
+      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': isOfficer && dragOverTarget === 'bench' }"
+      @dragover.prevent="isOfficer && handleDragOver($event, 'bench')"
+      @dragenter.prevent="isOfficer && (dragOverTarget = 'bench')"
+      @dragleave="isOfficer && handleDragLeave($event, 'bench')"
+      @drop.prevent="isOfficer && onDropBench()"
     >
-      <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassigned.length }})</p>
+      <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">Bench ({{ bench.length }})</p>
       <div class="flex flex-wrap gap-2">
         <CharacterTooltip
-          v-for="s in unassigned"
+          v-for="s in bench"
           :key="s.id"
           :character="s.character"
           position="top"
         >
           <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs transition-colors"
+            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
             :class="{
-              'border border-yellow-700/40 hover:border-yellow-500': s.status === 'bench',
-              'border border-border-default hover:border-border-gold': s.status !== 'bench',
               'cursor-grab active:cursor-grabbing': isOfficer,
               'opacity-50': draggedId === s.id
             }"
             :draggable="isOfficer"
-            @dragstart="onDragStart($event, s, s.status === 'bench' ? 'bench' : 'unassigned', -1)"
+            @dragstart="onDragStart($event, s, 'bench', -1)"
             @dragend="onDragEnd"
           >
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
             <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
-            <span v-if="s.status === 'bench'" class="text-yellow-400 text-[10px] font-medium">Bench</span>
             <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
               Lv{{ s.character.metadata.level }}
             </span>
           </div>
         </CharacterTooltip>
       </div>
-      <p v-if="unassigned.length === 0 && draggedId" class="text-xs text-text-muted italic">
-        Drop here to unassign
+      <p v-if="bench.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
+        Drop here to move to bench
       </p>
-    </div>
-
-    <!-- Bench drop zone (drop-only, shown during active drag) -->
-    <div
-      v-if="isOfficer && draggedId && dragSourceKey !== 'bench'"
-      class="px-5 py-3 border-t border-border-default transition-colors"
-      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': dragOverTarget === 'bench' }"
-      @dragover.prevent="handleDragOver($event, 'bench')"
-      @dragenter.prevent="dragOverTarget = 'bench'"
-      @dragleave="handleDragLeave($event, 'bench')"
-      @drop.prevent="onDropBench()"
-    >
-      <p class="text-xs text-yellow-400/60 italic">Drop here to move to bench</p>
     </div>
 
   </WowCard>
@@ -153,7 +137,6 @@ import WowButton from '@/components/common/WowButton.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
-import * as signupsApi from '@/api/signups'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useUiStore } from '@/stores/ui'
@@ -222,8 +205,8 @@ function findSignupById(id) {
     const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
-  const fromPool = unassigned.value.find(s => Number(s.id) === id)
-  if (fromPool) return { key: fromPool.status === 'bench' ? 'bench' : 'unassigned', idx: -1, signup: fromPool }
+  const fromPool = bench.value.find(s => Number(s.id) === id)
+  if (fromPool) return { key: 'bench', idx: -1, signup: fromPool }
   return null
 }
 
@@ -258,7 +241,7 @@ function onDropColumn(e, targetKey) {
   }
 
   // Remove from source column (column-to-column moves)
-  if (found.key !== 'unassigned' && found.key !== 'bench') {
+  if (found.key !== 'bench') {
     lineup.value[found.key].splice(found.idx, 1)
   }
 
@@ -270,56 +253,16 @@ function onDropColumn(e, targetKey) {
   autoSave()
 }
 
-async function onDropUnassigned() {
+function onDropBench() {
   dragOverTarget.value = null
   const sourceKey = dragSourceKey.value
   const sourceIdx = dragSourceIndex.value
-  const id = draggedId.value
 
-  // Moving from bench to unassigned: update status to going
-  if (sourceKey === 'bench' && id) {
-    try {
-      await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'going' })
-      emit('saved', { auto: true })
-    } catch (err) {
-      console.error('Failed to remove from bench', err)
-      uiStore.showToast('Failed to remove from bench', 'error')
-    }
-    return
-  }
-
-  if (sourceKey && sourceKey !== 'unassigned' && sourceKey !== 'bench' && sourceIdx >= 0) {
+  // Only act when dragged from a role column (remove from lineup)
+  if (sourceKey && sourceKey !== 'bench' && sourceIdx >= 0) {
     lineup.value[sourceKey].splice(sourceIdx, 1)
     dirty.value = true
     autoSave()
-  }
-}
-
-async function onDropBench() {
-  dragOverTarget.value = null
-  const sourceKey = dragSourceKey.value
-  const sourceIdx = dragSourceIndex.value
-  const id = draggedId.value
-
-  if (!id || sourceKey === 'bench') return
-
-  // Update signup status to bench
-  try {
-    await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'bench' })
-  } catch (err) {
-    console.error('Failed to move to bench', err)
-    uiStore.showToast('Failed to move to bench', 'error')
-    return
-  }
-
-  // Remove from role column if applicable
-  if (sourceKey !== 'unassigned' && sourceIdx >= 0) {
-    lineup.value[sourceKey].splice(sourceIdx, 1)
-    dirty.value = true
-    autoSave()
-  } else {
-    // No lineup change needed, just trigger signups reload
-    emit('saved', { auto: true })
   }
 }
 
@@ -379,14 +322,14 @@ const assignedIds = computed(() => {
   return ids
 })
 
-const unassigned = computed(() =>
+const bench = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
 )
 
 function availableFor(key) {
   const col = allColumns.value.find(c => c.key === key)
-  if (!col) return unassigned.value
-  return unassigned.value.filter(s => s.chosen_role === col.role)
+  if (!col) return bench.value
+  return bench.value.filter(s => s.chosen_role === col.role)
 }
 
 function profString(s) {
@@ -394,7 +337,7 @@ function profString(s) {
 }
 
 function onSelectAssign(e, key) {
-  const found = unassigned.value.find(s => String(s.id) === e.target.value)
+  const found = bench.value.find(s => String(s.id) === e.target.value)
   if (found) {
     // Overflow protection: check if column is full
     const col = allColumns.value.find(c => c.key === key)
