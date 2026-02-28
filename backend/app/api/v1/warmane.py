@@ -77,7 +77,7 @@ def sync_character():
         return jsonify({"error": "Forbidden"}), 403
 
     data = warmane_service.fetch_character(char.realm_name, char.name)
-    if data is None or "error" in data:
+    if data is None or (isinstance(data, dict) and "error" in data):
         return jsonify({"error": "Could not fetch data from Warmane. The character may not exist or the API may be unavailable."}), 404
 
     char_data = warmane_service.build_character_dict(data, char.realm_name)

@@ -196,6 +196,7 @@ import SpecBadge from '@/components/common/SpecBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { WARMANE_REALMS, WOW_CLASSES } from '@/constants'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
 
@@ -216,8 +217,8 @@ const showArchiveConfirm = ref(false)
 const editingChar = ref(null)
 const archiveTarget = ref(null)
 
-const wowClasses = ['Death Knight', 'Druid', 'Hunter', 'Mage', 'Paladin', 'Priest', 'Rogue', 'Shaman', 'Warlock', 'Warrior']
-const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
+const wowClasses = WOW_CLASSES
+const warmaneRealms = WARMANE_REALMS
 
 const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
 

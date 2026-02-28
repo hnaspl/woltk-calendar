@@ -93,6 +93,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
+import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 
 const guildStore = useGuildStore()
@@ -107,7 +108,7 @@ const showKickConfirm = ref(false)
 const kickTarget = ref(null)
 
 const form = reactive({ name: '', realm: '', description: '' })
-const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
+const warmaneRealms = WARMANE_REALMS
 
 onMounted(async () => {
   loading.value = true

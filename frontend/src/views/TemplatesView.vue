@@ -133,6 +133,7 @@ import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
 import * as templatesApi from '@/api/templates'
 
 const guildStore = useGuildStore()
@@ -152,14 +153,8 @@ const applyTarget = ref(null)
 const deleteTarget = ref(null)
 const applyDate = ref('')
 
-const raidTypes = [
-  { value: 'naxx', label: 'Naxxramas' }, { value: 'os', label: 'Obsidian Sanctum' },
-  { value: 'eoe', label: 'Eye of Eternity' }, { value: 'voa', label: 'Vault of Archavon' },
-  { value: 'ulduar', label: 'Ulduar' }, { value: 'toc', label: 'Trial of the Crusader' },
-  { value: 'icc', label: 'Icecrown Citadel' }, { value: 'rs', label: 'Ruby Sanctum' }
-]
-
-const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
+const raidTypes = RAID_TYPES
+const warmaneRealms = WARMANE_REALMS
 
 const form = reactive({ name: '', raid_type: '', size: '', realm: '', description: '' })
 

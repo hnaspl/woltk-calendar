@@ -86,23 +86,14 @@ import RaidCalendar from '@/components/calendar/RaidCalendar.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useCalendarStore } from '@/stores/calendar'
 import { useGuildStore } from '@/stores/guild'
+import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
 
 const calStore = useCalendarStore()
 const guildStore = useGuildStore()
 const router = useRouter()
 
-const raidTypes = [
-  { value: 'naxx',   label: 'Naxxramas' },
-  { value: 'os',     label: 'Obsidian Sanctum' },
-  { value: 'eoe',    label: 'Eye of Eternity' },
-  { value: 'voa',    label: 'Vault of Archavon' },
-  { value: 'ulduar', label: 'Ulduar' },
-  { value: 'toc',    label: 'Trial of the Crusader' },
-  { value: 'icc',    label: 'Icecrown Citadel' },
-  { value: 'rs',     label: 'Ruby Sanctum' }
-]
-
-const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
+const raidTypes = RAID_TYPES
+const warmaneRealms = WARMANE_REALMS
 
 onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
