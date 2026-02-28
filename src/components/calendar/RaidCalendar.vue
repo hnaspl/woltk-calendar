@@ -43,18 +43,41 @@ function getRaidColor(raidType) {
   return raidColors[raidType?.toLowerCase()] ?? raidColors.default
 }
 
+// Status indicators for calendar readability
+const statusIndicators = {
+  cancelled: { prefix: '✗ ', opacity: 0.5 },
+  completed: { prefix: '✓ ', opacity: 0.7 },
+  locked:    { prefix: '🔒 ', opacity: 1 },
+  draft:     { prefix: '📝 ', opacity: 0.6 },
+}
+
+function getStatusPrefix(status) {
+  return statusIndicators[status]?.prefix ?? ''
+}
+
+function getStatusOpacity(status) {
+  return statusIndicators[status]?.opacity ?? 1
+}
+
 // Transform backend events to FullCalendar format
 const fcEvents = computed(() =>
-  props.events.map(ev => ({
-    id: String(ev.id),
-    title: ev.title ?? ev.name ?? 'Raid',
-    start: ev.starts_at_utc ?? ev.start_time ?? ev.date,
-    end: ev.ends_at_utc ?? ev.end_time ?? null,
-    backgroundColor: getRaidColor(ev.raid_type),
-    borderColor: 'transparent',
-    textColor: '#0a0e17',
-    extendedProps: { ...ev }
-  }))
+  props.events.map(ev => {
+    const status = ev.status ?? 'open'
+    const prefix = getStatusPrefix(status)
+    const opacity = getStatusOpacity(status)
+    const baseColor = getRaidColor(ev.raid_type)
+    return {
+      id: String(ev.id),
+      title: `${prefix}${ev.title ?? ev.name ?? 'Raid'}`,
+      start: ev.starts_at_utc ?? ev.start_time ?? ev.date,
+      end: ev.ends_at_utc ?? ev.end_time ?? null,
+      backgroundColor: baseColor,
+      borderColor: status === 'cancelled' ? '#e53e3e' : status === 'completed' ? '#48bb78' : status === 'locked' ? '#ecc94b' : 'transparent',
+      textColor: '#0a0e17',
+      classNames: status !== 'open' ? [`fc-event-${status}`] : [],
+      extendedProps: { ...ev }
+    }
+  })
 )
 
 const calendarOptions = computed(() => ({
@@ -89,5 +112,24 @@ watch(() => props.events, () => {
   background: var(--color-bg-secondary);
   border-radius: 0.5rem;
   overflow: hidden;
+}
+</style>
+
+<style>
+/* Calendar event status styles (unscoped for FullCalendar) */
+.fc-event-cancelled {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+.fc-event-completed {
+  opacity: 0.7;
+}
+.fc-event-locked {
+  border-width: 2px !important;
+}
+.fc-event-draft {
+  opacity: 0.6;
+  border-style: dashed !important;
+  border-color: #a0aec0 !important;
 }
 </style>

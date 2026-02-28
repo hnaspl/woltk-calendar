@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-px bg-border-default">
+    <div class="grid grid-cols-1 gap-px bg-border-default" :class="{ 'md:grid-cols-2': columns.length === 2, 'md:grid-cols-3': columns.length === 3, 'md:grid-cols-4': columns.length === 4, 'md:grid-cols-5': columns.length >= 5 }">
       <div
         v-for="col in columns"
         :key="col.key"
@@ -158,13 +158,16 @@ const dirty = ref(false)
 
 const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 
-const columns = computed(() => [
+const allColumns = computed(() => [
   { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },
   { key: 'off_tanks',  role: 'off_tank',  label: 'Off Tank',   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
   { key: 'tanks',      role: 'tank',      label: 'Tanks',      labelClass: 'text-blue-300',  slots: props.tankSlots },
   { key: 'healers',    role: 'healer',    label: 'Healers',    labelClass: 'text-green-300', slots: props.healerSlots },
   { key: 'dps',        role: 'dps',       label: 'DPS',        labelClass: 'text-red-300',   slots: props.dpsSlots },
 ])
+
+/** Only show columns that have at least 1 slot configured */
+const columns = computed(() => allColumns.value.filter(c => c.slots > 0))
 
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 

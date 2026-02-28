@@ -401,6 +401,7 @@ function openEditModal() {
 }
 
 async function saveEvent() {
+  if (actionLoading.value) return
   if (!editForm.title || !editForm.starts_at_utc) {
     editError.value = 'Title and date are required'
     return

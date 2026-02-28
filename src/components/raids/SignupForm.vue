@@ -53,19 +53,19 @@
         </div>
       </div>
 
-      <!-- Spec -->
+      <!-- Spec (multi-select) -->
       <div>
-        <label class="block text-xs text-text-muted mb-1">Spec</label>
+        <label class="block text-xs text-text-muted mb-1">Spec (select one or more)</label>
         <div v-if="specOptions.length > 0" class="flex gap-2 mb-1">
           <button
             v-for="sp in specOptions"
             :key="sp"
             type="button"
             class="px-3 py-1.5 rounded border text-xs transition-all"
-            :class="form.chosenSpec === sp
+            :class="selectedSpecs.includes(sp)
               ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
               : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
-            @click="form.chosenSpec = sp"
+            @click="toggleSpec(sp)"
           >{{ sp }}</button>
         </div>
         <input
@@ -141,6 +141,24 @@ const specOptions = computed(() => {
   if (!selected) return []
   return CLASS_SPECS[selected.class_name] || []
 })
+
+/** Parse the comma-separated chosenSpec into an array for toggle button state */
+const selectedSpecs = computed(() => {
+  if (!form.chosenSpec) return []
+  return form.chosenSpec.split(',').map(s => s.trim()).filter(Boolean)
+})
+
+/** Toggle a spec on/off in the multi-select list */
+function toggleSpec(sp) {
+  const current = selectedSpecs.value.slice()
+  const idx = current.indexOf(sp)
+  if (idx >= 0) {
+    current.splice(idx, 1)
+  } else {
+    current.push(sp)
+  }
+  form.chosenSpec = current.join(', ')
+}
 
 /** Characters not yet signed up for this event (unless editing) */
 const availableCharacters = computed(() => {
