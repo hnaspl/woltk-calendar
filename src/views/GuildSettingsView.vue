@@ -264,7 +264,7 @@ async function updateRole(member, role) {
 
 /** Only site admins and guild admins can promote to guild_admin */
 const canSetGuildAdmin = computed(() =>
-  authStore.user?.is_admin || permissions.isGuildAdmin?.value
+  authStore.user?.is_admin || permissions.isGuildAdmin.value
 )
 
 /** Can the current user change this member's role? */
@@ -273,7 +273,7 @@ function canChangeRole(member) {
   if (member.user_id === authStore.user?.id) return false
   // Only site admin or guild_admin can modify a guild_admin
   if (member.role === 'guild_admin') {
-    return authStore.user?.is_admin || permissions.isGuildAdmin?.value
+    return authStore.user?.is_admin || permissions.isGuildAdmin.value
   }
   return true
 }
