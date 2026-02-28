@@ -39,3 +39,5 @@ gunicorn.ctl
 
 # Test caches
 .pytest_cache/
+dist/
+node_modules/

@@ -87,6 +87,7 @@ def handle_sync_all_characters(payload: dict) -> None:
 
     from app.extensions import db
     from app.services import character_service, warmane_service
+    from app.services.character_service import _default_role_for_class
 
     guild_id = payload.get("guild_id")
     import sqlalchemy as sa
@@ -108,6 +109,11 @@ def handle_sync_all_characters(payload: dict) -> None:
             char_data = warmane_service.build_character_dict(data, char.realm_name)
             if char_data.get("class_name"):
                 char.class_name = char_data["class_name"]
+                # Auto-populate default_role if not already set
+                if not char.default_role:
+                    default_role = _default_role_for_class(char_data["class_name"])
+                    if default_role:
+                        char.default_role = default_role
             char.armory_url = char_data["armory_url"]
             talents = char_data.get("talents", [])
             if talents:

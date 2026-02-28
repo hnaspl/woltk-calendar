@@ -39,7 +39,10 @@
       <!-- Role -->
       <div>
         <label class="text-xs text-text-muted mb-1 block">Role *</label>
-        <div class="flex gap-2">
+        <div v-if="form.characterId && roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
+          ⚠ There are no available role slots for this character's class in this raid. This character cannot sign up for this event.
+        </div>
+        <div v-else class="flex gap-2">
           <button
             v-for="r in roles"
             :key="r.value"
@@ -111,7 +114,7 @@
         />
       </div>
 
-      <WowButton type="submit" :loading="submitting" class="w-full">
+      <WowButton type="submit" :loading="submitting" :disabled="form.characterId && roles.length === 0" class="w-full">
         {{ existingSignup ? 'Update Signup' : 'Sign Up' }}
       </WowButton>
     </form>

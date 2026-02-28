@@ -194,7 +194,7 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Class *</label>
-          <select v-model="form.class" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+          <select v-model="form.class" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onClassChange">
             <option value="">Select class…</option>
             <option v-for="c in wowClasses" :key="c" :value="c">{{ c }}</option>
           </select>
@@ -211,16 +211,24 @@
           <label class="block text-xs text-text-muted mb-1">Role</label>
           <select v-model="form.role" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option value="">Select role…</option>
-            <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
+            <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Spec</label>
-          <input v-model="form.spec" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <select v-if="filteredSpecs.length > 0" v-model="form.spec" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option value="">Select spec…</option>
+            <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
+          </select>
+          <input v-else v-model="form.spec" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Secondary Spec</label>
-          <input v-model="form.secondary_spec" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <select v-if="filteredSpecs.length > 0" v-model="form.secondary_spec" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option value="">Select secondary spec…</option>
+            <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
+          </select>
+          <input v-else v-model="form.secondary_spec" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Warmane Armory URL</label>
@@ -280,7 +288,7 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS } from '@/constants'
+import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS } from '@/constants'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
 
@@ -329,6 +337,20 @@ const guildRealms = computed(() => {
 })
 
 const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
+
+/** Roles filtered by the selected class */
+const filteredRoles = computed(() => {
+  if (!form.class) return ROLE_OPTIONS
+  const allowed = CLASS_ROLES[form.class] ?? []
+  if (allowed.length === 0) return ROLE_OPTIONS
+  return ROLE_OPTIONS.filter(r => allowed.includes(r.value))
+})
+
+/** Specs filtered by the selected class */
+const filteredSpecs = computed(() => {
+  if (!form.class) return []
+  return CLASS_SPECS[form.class] ?? []
+})
 
 // Map backend response fields to display-friendly names
 function mapChar(c) {
@@ -386,6 +408,15 @@ function openAddModal() {
   showModal.value = true
 }
 
+/** Reset role and specs when class changes so invalid values don't persist */
+function onClassChange() {
+  const allowed = CLASS_ROLES[form.class] ?? []
+  if (form.role && !allowed.includes(form.role)) form.role = ''
+  const specs = CLASS_SPECS[form.class] ?? []
+  if (form.spec && specs.length > 0 && !specs.includes(form.spec)) form.spec = ''
+  if (form.secondary_spec && specs.length > 0 && !specs.includes(form.secondary_spec)) form.secondary_spec = ''
+}
+
 function openEditModal(char) {
   editingChar.value = char
   Object.assign(form, { name: char.name, class: char.class, realm: char.realm, role: char.role ?? '', spec: char.spec ?? '', secondary_spec: char.secondary_spec ?? '', armory_url: char.armory_url ?? '' })
@@ -410,7 +441,14 @@ async function lookupFromWarmane() {
   formError.value = null
   try {
     const data = await warmaneApi.lookupCharacter(form.realm, form.name)
-    if (data?.class_name) form.class = data.class_name
+    if (data?.class_name) {
+      form.class = data.class_name
+      // Auto-populate default role from CLASS_ROLES
+      const allowed = CLASS_ROLES[data.class_name] ?? []
+      if (allowed.length > 0 && !form.role) {
+        form.role = allowed[0]
+      }
+    }
     if (data?.armory_url) form.armory_url = data.armory_url
     if (data?.name) form.name = data.name
     // Auto-fill spec from talents

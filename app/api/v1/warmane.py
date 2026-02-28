@@ -9,6 +9,7 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.services import character_service, warmane_service
+from app.services.character_service import _default_role_for_class
 from app.utils.auth import login_required
 
 bp = Blueprint("warmane", __name__, url_prefix="/warmane")
@@ -86,6 +87,11 @@ def sync_character():
     updates = {"armory_url": char_data["armory_url"]}
     if char_data.get("class_name"):
         updates["class_name"] = char_data["class_name"]
+        # Auto-populate default_role from CLASS_ROLES if not already set
+        if not char.default_role:
+            default_role = _default_role_for_class(char_data["class_name"])
+            if default_role:
+                updates["default_role"] = default_role
     char = character_service.update_character(char, updates)
 
     # Update primary_spec from talents if available
