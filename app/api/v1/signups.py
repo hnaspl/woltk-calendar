@@ -8,7 +8,7 @@ from flask_login import current_user
 from app.services import event_service, signup_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
-from app.utils.realtime import emit_signups_changed
+from app.utils.realtime import emit_signups_changed, emit_lineup_changed
 from app.utils import notify
 
 bp = Blueprint("signups", __name__)
@@ -81,6 +81,7 @@ def create_signup(guild_id: int, event_id: int):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
     emit_signups_changed(event_id)
+    emit_lineup_changed(event_id)
 
     # Notify the signing-up player
     char_name = signup.character.name if signup.character else "Unknown"
@@ -117,6 +118,7 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
     old_status = signup.status
     signup = signup_service.update_signup(signup, data)
     emit_signups_changed(event_id)
+    emit_lineup_changed(event_id)
 
     # Notify player if an officer changed their role or declined them
     event = event_service.get_event(event_id)
@@ -163,6 +165,7 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
 
     signup_service.delete_signup(signup)
     emit_signups_changed(event_id)
+    emit_lineup_changed(event_id)
 
     if event:
         if is_officer_action and permanent:

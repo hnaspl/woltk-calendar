@@ -242,13 +242,14 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 
 def update_signup(signup: Signup, data: dict) -> Signup:
-    """Update a signup.  Status changes are purely informational and have no
-    effect on the Lineup Board.  However, when the role changes the player is
-    removed from their current lineup slot so they appear on the bench and can
-    be re-assigned to the correct role column."""
+    """Update a signup.  When the role changes the player is removed from
+    their current lineup slot so they appear on the bench.  When the status
+    changes to 'declined' the player is removed from the lineup/bench and
+    auto-promotion is triggered if they had a role slot."""
     from app.services import lineup_service
 
     old_role = signup.chosen_role
+    old_status = signup.status
 
     # Validate class-role constraint when role is changing
     new_role_val = data.get("chosen_role")
@@ -261,9 +262,19 @@ def update_signup(signup: Signup, data: dict) -> Signup:
             setattr(signup, key, value)
     db.session.commit()
 
-    # When role changes, remove from old lineup slot (player goes to bench)
     new_role = signup.chosen_role
-    if old_role and new_role and old_role != new_role:
+    new_status = signup.status
+
+    # Handle status → declined: remove slots and auto-promote
+    if new_status == SignupStatus.DECLINED.value and old_status != SignupStatus.DECLINED.value:
+        role = old_role or new_role
+        raid_event_id = signup.raid_event_id
+        had_role_slot = lineup_service.has_role_slot(signup.id)
+        lineup_service.remove_slot_for_signup(signup.id)
+        if had_role_slot:
+            _auto_promote_bench(raid_event_id, role)
+    # When role changes (but not declining), remove from old lineup slot
+    elif old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
 
     return signup
