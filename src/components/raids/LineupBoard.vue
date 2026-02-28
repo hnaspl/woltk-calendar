@@ -169,24 +169,28 @@
       </p>
     </div>
 
-    <!-- Role-change modal (officer drops from bench / unassigned) -->
-    <WowModal v-model="showRoleModal" title="Assign Player" size="sm">
+    <!-- Role-change modal (officer drops bench player onto lineup) -->
+    <WowModal v-model="showRoleModal" title="Assign Bench Player" size="sm">
       <div v-if="pendingDrop" class="space-y-3">
         <p class="text-sm text-text-muted">
-          Choose a role column for
-          <span class="font-semibold text-text-primary">{{ pendingDrop.signup.character?.name ?? '?' }}</span>:
+          Assign
+          <span class="font-semibold text-text-primary">{{ pendingDrop.signup.character?.name ?? '?' }}</span>
+          <span class="text-xs text-text-muted">({{ ROLE_LABEL_MAP[pendingDrop.signup.chosen_role] ?? pendingDrop.signup.chosen_role }})</span>
+          to a lineup slot:
         </p>
         <div class="grid grid-cols-1 gap-2">
           <button
             v-for="col in columns"
             :key="col.key"
             class="flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm text-left transition-colors"
-            :class="col.key === pendingDrop.targetKey
-              ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
-              : lineup[col.key].length >= col.slots
-                ? 'border-red-800/50 bg-red-900/10 text-red-400 cursor-not-allowed opacity-60'
-                : 'border-border-default bg-bg-tertiary text-text-primary hover:border-border-gold'"
-            :disabled="lineup[col.key].length >= col.slots && col.key !== pendingDrop.targetKey"
+            :class="pendingDrop.signup.chosen_role !== col.role
+              ? 'border-border-default/30 bg-bg-tertiary/50 text-text-muted/50 cursor-not-allowed opacity-40'
+              : col.key === pendingDrop.targetKey
+                ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
+                : lineup[col.key].length >= col.slots
+                  ? 'border-red-800/50 bg-red-900/10 text-red-400 cursor-not-allowed opacity-60'
+                  : 'border-border-default bg-bg-tertiary text-text-primary hover:border-border-gold'"
+            :disabled="pendingDrop.signup.chosen_role !== col.role || (lineup[col.key].length >= col.slots && col.key !== pendingDrop.targetKey)"
             @click="confirmRoleDrop(col.key)"
           >
             <img :src="getRoleIcon(col.role)" class="w-5 h-5 rounded" :alt="col.label" />
@@ -320,17 +324,17 @@ function onDropColumn(e, targetKey) {
   const found = findSignupById(id)
   if (!found) return
 
-  // When dropping from bench or unassigned, show role-choice modal
-  if (found.key === 'bench' || found.key === 'unassigned') {
+  const col = allColumns.value.find(c => c.key === targetKey)
+  const signupRole = found.signup.chosen_role
+
+  // When dropping from BENCH, show role-choice modal (officer picks column or leaves on bench)
+  if (found.key === 'bench') {
     pendingDrop.value = { signup: found.signup, sourceKey: found.key, targetKey }
     showRoleModal.value = true
     return
   }
 
-  const col = allColumns.value.find(c => c.key === targetKey)
-  const signupRole = found.signup.chosen_role
-
-  // Strict role enforcement for column-to-column moves: roles are NOT interchangeable
+  // Strict role enforcement: roles are NOT interchangeable
   if (col && signupRole !== col.role) {
     const roleName = ROLE_LABEL_MAP[signupRole] ?? signupRole
     uiStore.showToast(`${found.signup.character?.name ?? 'Player'} signed up as ${roleName}. Cannot place in ${col.label}.`, 'error')
@@ -347,7 +351,7 @@ function onDropColumn(e, targetKey) {
     }
   }
 
-  // Remove from source column
+  // Remove from source column (column-to-column moves)
   if (found.key !== 'unassigned' && found.key !== 'bench') {
     lineup.value[found.key].splice(found.idx, 1)
   }
@@ -495,13 +499,13 @@ const activeSignups = computed(() =>
 const assignedIds = computed(() => {
   const ids = new Set()
   ;['main_tanks', 'off_tanks', 'tanks', 'healers', 'dps'].forEach(k =>
-    lineup.value[k].forEach(s => ids.add(s.id))
+    lineup.value[k].forEach(s => ids.add(Number(s.id)))
   )
   return ids
 })
 
 const unassigned = computed(() =>
-  activeSignups.value.filter(s => !assignedIds.value.has(s.id))
+  activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
 )
 
 const unassignedNonBench = computed(() =>
@@ -513,10 +517,9 @@ const benchPlayers = computed(() =>
 )
 
 function availableFor(key) {
-  const un = unassigned.value
   const col = allColumns.value.find(c => c.key === key)
-  if (!col) return un
-  return un.filter(s => s.chosen_role === col.role)
+  if (!col) return unassignedNonBench.value
+  return unassignedNonBench.value.filter(s => s.chosen_role === col.role)
 }
 
 function profString(s) {
