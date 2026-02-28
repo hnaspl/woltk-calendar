@@ -103,6 +103,9 @@ def create_signup(
         role_slots = _get_role_slots(event)
         max_for_role = role_slots.get(chosen_role, 0)
         current_for_role = _count_going_by_role(raid_event_id, chosen_role)
+        if max_for_role == 0 and not force_bench:
+            raise RoleFullError(chosen_role, role_slots,
+                                f"No {chosen_role} slots are defined for this raid")
         if current_for_role >= max_for_role and not force_bench:
             raise RoleFullError(chosen_role, role_slots)
 
