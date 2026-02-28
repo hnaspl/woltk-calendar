@@ -16,9 +16,9 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const filteredEvents = computed(() => {
     return events.value.filter(ev => {
-      if (filters.value.realm && ev.realm !== filters.value.realm) return false
+      if (filters.value.realm && (ev.realm_name ?? ev.realm) !== filters.value.realm) return false
       if (filters.value.raidType && ev.raid_type !== filters.value.raidType) return false
-      if (filters.value.size && String(ev.size) !== String(filters.value.size)) return false
+      if (filters.value.size && String(ev.raid_size ?? ev.size) !== String(filters.value.size)) return false
       if (filters.value.status && ev.status !== filters.value.status) return false
       return true
     })

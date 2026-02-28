@@ -70,12 +70,12 @@
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
                     <span class="font-semibold text-text-primary">{{ ev.title }}</span>
-                    <RaidSizeBadge v-if="ev.size" :size="ev.size" />
+                    <RaidSizeBadge v-if="ev.raid_size || ev.size" :size="ev.raid_size ?? ev.size" />
                     <StatusBadge :status="ev.status ?? 'open'" />
                   </div>
                   <div class="text-sm text-text-muted mt-1">
-                    {{ formatDateTime(ev.start_time ?? ev.date) }}
-                    <RealmBadge v-if="ev.realm" :realm="ev.realm" class="ml-2" />
+                    {{ formatDateTime(ev.starts_at_utc ?? ev.start_time ?? ev.date) }}
+                    <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" class="ml-2" />
                   </div>
                 </div>
                 <svg class="w-5 h-5 text-text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,8 +148,8 @@ const now = new Date()
 
 const upcomingEvents = computed(() =>
   calStore.events
-    .filter(ev => new Date(ev.start_time ?? ev.date) >= now && ev.status !== 'cancelled')
-    .sort((a, b) => new Date(a.start_time ?? a.date) - new Date(b.start_time ?? b.date))
+    .filter(ev => new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date) >= now && ev.status !== 'cancelled')
+    .sort((a, b) => new Date(a.starts_at_utc ?? a.start_time ?? a.date) - new Date(b.starts_at_utc ?? b.start_time ?? b.date))
     .slice(0, 8)
 )
 

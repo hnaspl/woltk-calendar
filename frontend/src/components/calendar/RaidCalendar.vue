@@ -48,8 +48,8 @@ const fcEvents = computed(() =>
   props.events.map(ev => ({
     id: String(ev.id),
     title: ev.title ?? ev.name ?? 'Raid',
-    start: ev.start_time ?? ev.date,
-    end: ev.end_time ?? null,
+    start: ev.starts_at_utc ?? ev.start_time ?? ev.date,
+    end: ev.ends_at_utc ?? ev.end_time ?? null,
     backgroundColor: getRaidColor(ev.raid_type),
     borderColor: 'transparent',
     textColor: '#0a0e17',

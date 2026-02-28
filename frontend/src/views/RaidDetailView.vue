@@ -24,26 +24,26 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap mb-2">
                 <h1 class="wow-heading text-xl">{{ event.title }}</h1>
-                <RaidSizeBadge v-if="event.size" :size="event.size" />
+                <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
                 <StatusBadge :status="event.status ?? 'open'" />
-                <LockBadge :locked="event.is_locked" />
+                <LockBadge :locked="event.status === 'locked' || event.is_locked" />
               </div>
 
               <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
-                <span>📅 {{ formatDateTime(event.start_time ?? event.date) }}</span>
-                <span v-if="event.end_time">→ {{ formatDateTime(event.end_time) }}</span>
-                <RealmBadge v-if="event.realm" :realm="event.realm" />
+                <span>📅 {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+                <span v-if="event.ends_at_utc || event.end_time">→ {{ formatDateTime(event.ends_at_utc ?? event.end_time) }}</span>
+                <RealmBadge v-if="event.realm_name || event.realm" :realm="event.realm_name ?? event.realm" />
               </div>
 
-              <p v-if="event.description" class="mt-3 text-sm text-text-muted">
-                {{ event.description }}
+              <p v-if="event.instructions || event.description" class="mt-3 text-sm text-text-muted">
+                {{ event.instructions ?? event.description }}
               </p>
             </div>
 
             <!-- Officer actions -->
             <div v-if="permissions.isOfficer.value" class="flex flex-wrap gap-2 flex-shrink-0">
               <WowButton variant="secondary" @click="toggleLock">
-                {{ event.is_locked ? 'Unlock' : 'Lock' }}
+                {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
               </WowButton>
               <WowButton variant="secondary" @click="doDuplicate">Duplicate</WowButton>
               <WowButton v-if="event.status !== 'completed'" variant="primary" @click="markComplete">
@@ -59,7 +59,7 @@
           <!-- Left column: signup form + composition -->
           <div class="space-y-6">
             <SignupForm
-              v-if="event.status === 'open'"
+              v-if="event.status === 'open' || event.status === 'draft'"
               :event-id="event.id"
               :guild-id="guildId"
               :existing-signup="mySignup"
@@ -68,7 +68,7 @@
             />
             <CompositionSummary
               :signups="signups"
-              :max-size="event.size"
+              :max-size="event.raid_size ?? event.size"
               :tank-slots="event.tank_slots ?? 2"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
@@ -174,16 +174,18 @@ async function toggleLock() {
   if (!event.value) return
   actionLoading.value = true
   try {
-    if (event.value.is_locked) {
-      await eventsApi.unlockEvent(guildId.value, event.value.id)
-      event.value.is_locked = false
+    const isLocked = event.value.status === 'locked' || event.value.is_locked
+    if (isLocked) {
+      const updated = await eventsApi.unlockEvent(guildId.value, event.value.id)
+      event.value = updated
     } else {
-      await eventsApi.lockEvent(guildId.value, event.value.id)
-      event.value.is_locked = true
+      const updated = await eventsApi.lockEvent(guildId.value, event.value.id)
+      event.value = updated
     }
-    uiStore.showToast(`Event ${event.value.is_locked ? 'locked' : 'unlocked'}`, 'success')
+    const nowLocked = event.value.status === 'locked'
+    uiStore.showToast(`Event ${nowLocked ? 'locked' : 'unlocked'}`, 'success')
   } catch (err) {
-    uiStore.showToast('Action failed', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? 'Action failed', 'error')
   } finally {
     actionLoading.value = false
   }
