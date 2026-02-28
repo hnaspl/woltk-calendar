@@ -26,7 +26,7 @@ def create_character(user_id: int, guild_id: int, data: dict) -> Character:
         armory_url=data.get("armory_url"),
     )
     if "metadata" in data:
-        char.metadata = data["metadata"]
+        char.char_metadata = data["metadata"]
     db.session.add(char)
     db.session.commit()
     return char
@@ -45,7 +45,7 @@ def update_character(character: Character, data: dict) -> Character:
         if key in allowed:
             setattr(character, key, value)
     if "metadata" in data:
-        character.metadata = data["metadata"]
+        character.char_metadata = data["metadata"]
     db.session.commit()
     return character
 

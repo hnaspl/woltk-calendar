@@ -58,7 +58,7 @@ class Character(db.Model):
     guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
 
     @property
-    def metadata(self) -> dict:
+    def char_metadata(self) -> dict:
         if self.metadata_json:
             try:
                 return json.loads(self.metadata_json)
@@ -66,8 +66,8 @@ class Character(db.Model):
                 return {}
         return {}
 
-    @metadata.setter
-    def metadata(self, value: dict) -> None:
+    @char_metadata.setter
+    def char_metadata(self, value: dict) -> None:
         self.metadata_json = json.dumps(value)
 
     def to_dict(self) -> dict:
@@ -84,7 +84,7 @@ class Character(db.Model):
             "off_role": self.off_role,
             "is_main": self.is_main,
             "is_active": self.is_active,
-            "metadata": self.metadata,
+            "metadata": self.char_metadata,
             "armory_url": self.armory_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
