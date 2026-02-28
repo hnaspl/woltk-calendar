@@ -172,7 +172,7 @@ const filteredRoleOptions = computed(() =>
   ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
 )
 
-const STATUS_ORDER = ['going', 'tentative', 'late', 'bench', 'declined']
+const STATUS_ORDER = ['going', 'tentative', 'late', 'declined']
 
 const groups = computed(() =>
   STATUS_ORDER.map(status => ({

@@ -85,9 +85,10 @@
                     {{ s.character?.name ?? '?' }}
                   </span>
                   <span class="text-text-muted text-xs">{{ s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
-                  <span class="text-xs" :class="{
+                  <span v-if="s.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">Bench</span>
+                  <span v-else class="text-xs" :class="{
                     'text-green-400': s.status === 'going',
-                    'text-yellow-400': s.status === 'tentative' || s.status === 'bench',
+                    'text-yellow-400': s.status === 'tentative',
                     'text-red-400': s.status === 'declined'
                   }">{{ s.status }}</span>
                   <div class="ml-auto flex gap-1">

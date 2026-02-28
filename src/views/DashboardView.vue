@@ -110,6 +110,7 @@
                   <span v-if="raidLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidLabel(su.raid_type) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">{{ su.character.name }}</span>
                 </div>
+                <span v-if="su.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">Bench</span>
                 <StatusBadge :status="su.status" />
               </div>
             </WowCard>

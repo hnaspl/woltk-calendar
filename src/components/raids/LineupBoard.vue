@@ -32,7 +32,7 @@
             v-for="(s, i) in lineup[col.key]"
             :key="s.id"
             :character="s.character"
-            position="left"
+            position="bottom"
           >
             <div
               class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
@@ -87,7 +87,7 @@
 
     <!-- Unassigned pool -->
     <div
-      v-if="unassigned.length > 0 || (isOfficer && draggedId)"
+      v-if="unassignedNonBench.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
       :class="{ 'bg-red-900/10 ring-1 ring-inset ring-red-500/30': isOfficer && dragOverTarget === 'unassigned' }"
       @dragover.prevent="isOfficer && onDragOver($event, 'unassigned')"
@@ -95,13 +95,13 @@
       @dragleave="isOfficer && onDragLeave($event, 'unassigned')"
       @drop.prevent="isOfficer && onDropUnassigned()"
     >
-      <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassigned.length }})</p>
+      <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassignedNonBench.length }})</p>
       <div class="flex flex-wrap gap-2">
         <CharacterTooltip
-          v-for="s in unassigned"
+          v-for="s in unassignedNonBench"
           :key="s.id"
           :character="s.character"
-          position="top"
+          position="bottom"
         >
           <div
             class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-border-default text-xs transition-colors"
@@ -117,15 +117,57 @@
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
             <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
-            <span v-if="s.status === 'bench'" class="text-[10px] text-yellow-400 font-semibold">Bench</span>
             <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
               Lv{{ s.character.metadata.level }}
             </span>
           </div>
         </CharacterTooltip>
       </div>
-      <p v-if="unassigned.length === 0 && draggedId" class="text-xs text-text-muted italic">
+      <p v-if="unassignedNonBench.length === 0 && draggedId" class="text-xs text-text-muted italic">
         Drop here to unassign
+      </p>
+    </div>
+
+    <!-- Bench pool -->
+    <div
+      v-if="benchPlayers.length > 0 || (isOfficer && draggedId)"
+      class="px-5 py-4 border-t border-border-default transition-colors"
+      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': isOfficer && dragOverTarget === 'bench' }"
+      @dragover.prevent="isOfficer && onDragOver($event, 'bench')"
+      @dragenter.prevent="isOfficer && (dragOverTarget = 'bench')"
+      @dragleave="isOfficer && onDragLeave($event, 'bench')"
+      @drop.prevent="isOfficer && onDropBench()"
+    >
+      <p class="text-xs text-yellow-400 mb-2 uppercase tracking-wider">Bench ({{ benchPlayers.length }})</p>
+      <div class="flex flex-wrap gap-2">
+        <CharacterTooltip
+          v-for="s in benchPlayers"
+          :key="s.id"
+          :character="s.character"
+          position="bottom"
+        >
+          <div
+            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-yellow-700/40 text-xs transition-colors"
+            :class="{
+              'cursor-grab active:cursor-grabbing hover:border-yellow-500': isOfficer,
+              'cursor-pointer hover:border-yellow-500': !isOfficer,
+              'opacity-50': draggedId === s.id
+            }"
+            :draggable="isOfficer"
+            @dragstart="isOfficer && onDragStart($event, s, 'bench', -1)"
+            @dragend="onDragEnd"
+          >
+            <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
+            <span>{{ s.character?.name ?? '?' }}</span>
+            <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
+            <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+              Lv{{ s.character.metadata.level }}
+            </span>
+          </div>
+        </CharacterTooltip>
+      </div>
+      <p v-if="benchPlayers.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
+        Drop here to move to bench
       </p>
     </div>
   </WowCard>
@@ -223,7 +265,9 @@ function findSignupById(id) {
     const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
-  const fromUnassigned = unassigned.value.find(s => Number(s.id) === id)
+  const fromBench = benchPlayers.value.find(s => Number(s.id) === id)
+  if (fromBench) return { key: 'bench', idx: -1, signup: fromBench }
+  const fromUnassigned = unassignedNonBench.value.find(s => Number(s.id) === id)
   if (fromUnassigned) return { key: 'unassigned', idx: -1, signup: fromUnassigned }
   return null
 }
@@ -249,7 +293,7 @@ function onDropColumn(e, targetKey) {
   }
 
   // Remove from source
-  if (found.key !== 'unassigned') {
+  if (found.key !== 'unassigned' && found.key !== 'bench') {
     lineup.value[found.key].splice(found.idx, 1)
   }
 
@@ -265,8 +309,21 @@ function onDropUnassigned() {
   dragOverTarget.value = null
   const sourceKey = dragSourceKey.value
   const sourceIdx = dragSourceIndex.value
-  if (sourceKey && sourceKey !== 'unassigned' && sourceIdx >= 0) {
+  if (sourceKey && sourceKey !== 'unassigned' && sourceKey !== 'bench' && sourceIdx >= 0) {
     lineup.value[sourceKey].splice(sourceIdx, 1)
+    dirty.value = true
+    autoSave()
+  }
+}
+
+function onDropBench() {
+  dragOverTarget.value = null
+  const sourceKey = dragSourceKey.value
+  const sourceIdx = dragSourceIndex.value
+  if (sourceKey && sourceKey !== 'bench') {
+    if (sourceKey !== 'unassigned' && sourceIdx >= 0) {
+      lineup.value[sourceKey].splice(sourceIdx, 1)
+    }
     dirty.value = true
     autoSave()
   }
@@ -330,6 +387,14 @@ const assignedIds = computed(() => {
 
 const unassigned = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(s.id))
+)
+
+const unassignedNonBench = computed(() =>
+  unassigned.value.filter(s => s.status !== 'bench')
+)
+
+const benchPlayers = computed(() =>
+  unassigned.value.filter(s => s.status === 'bench')
 )
 
 const tankFamilyRoles = ['tank', 'main_tank', 'off_tank']
