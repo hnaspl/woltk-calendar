@@ -120,6 +120,10 @@
               <option value="Horde">Horde</option>
             </select>
           </div>
+          <div class="flex items-center gap-2">
+            <input id="allow-self-join" v-model="newGuild.allow_self_join" type="checkbox" class="w-4 h-4 rounded bg-bg-tertiary border border-border-default accent-accent-gold" />
+            <label for="allow-self-join" class="text-sm text-text-muted">Allow users to join by themselves</label>
+          </div>
           <div v-if="createGuildError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createGuildError }}</div>
           <div class="flex justify-end gap-3">
             <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">Cancel</button>
@@ -156,11 +160,11 @@ const isOfficerOrAdmin = computed(() => permissions.isOfficer.value || authStore
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
-// Available guilds = all guilds minus the ones user is already in
+// Available guilds = all guilds minus the ones user is already in, excluding invite-only guilds
 // Use the is_member flag from the /guilds/all API response as the primary filter
 const availableGuilds = computed(() => {
   const memberIds = new Set(guildStore.guilds.map(g => g.id))
-  return guildStore.allGuilds.filter(g => !g.is_member && !memberIds.has(g.id))
+  return guildStore.allGuilds.filter(g => !g.is_member && !memberIds.has(g.id) && g.allow_self_join !== false)
 })
 
 const joiningGuildId = ref(null)
@@ -270,7 +274,7 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
-const newGuild = reactive({ name: '', realm_name: '', faction: '' })
+const newGuild = reactive({ name: '', realm_name: '', faction: '', allow_self_join: true })
 
 async function doCreateGuild() {
   createGuildError.value = null
@@ -280,6 +284,7 @@ async function doCreateGuild() {
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
+      allow_self_join: newGuild.allow_self_join,
     })
     await guildStore.fetchGuilds()
     await guildStore.fetchAllGuilds()
@@ -288,6 +293,7 @@ async function doCreateGuild() {
     newGuild.name = ''
     newGuild.realm_name = ''
     newGuild.faction = ''
+    newGuild.allow_self_join = true
     uiStore.showToast('Guild created!', 'success')
   } catch (err) {
     createGuildError.value = err?.response?.data?.message ?? 'Failed to create guild'

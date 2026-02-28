@@ -48,6 +48,8 @@ def join_guild(guild_id: int):
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": "Guild not found"}), 404
+    if not guild.allow_self_join:
+        return jsonify({"error": "This guild requires members to be added manually by an officer"}), 403
     try:
         membership = guild_service.add_member(
             guild_id=guild_id,
@@ -98,6 +100,7 @@ def create_guild():
         created_by=current_user.id,
         faction=data.get("faction"),
         region=data.get("region"),
+        allow_self_join=data.get("allow_self_join", True),
     )
     return jsonify(guild.to_dict()), 201
 

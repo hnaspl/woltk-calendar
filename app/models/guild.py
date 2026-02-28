@@ -25,6 +25,7 @@ class Guild(db.Model):
     faction: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
     region: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
     settings_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    allow_self_join: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True, server_default=sa.text("1"))
     created_by: Mapped[int | None] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
@@ -62,6 +63,7 @@ class Guild(db.Model):
             "faction": self.faction,
             "region": self.region,
             "settings": self.settings,
+            "allow_self_join": self.allow_self_join,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

@@ -42,6 +42,7 @@
 
             <!-- Officer actions -->
             <div v-if="permissions.isOfficer.value" class="flex flex-wrap gap-2 flex-shrink-0">
+              <WowButton variant="secondary" @click="openEditModal">Edit</WowButton>
               <WowButton variant="secondary" @click="toggleLock">
                 {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
               </WowButton>
@@ -102,6 +103,71 @@
       </template>
     </div>
 
+    <!-- Edit Event modal -->
+    <WowModal v-model="showEditModal" title="Edit Event" size="md">
+      <form @submit.prevent="saveEvent" class="space-y-4">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Title *</label>
+          <input v-model="editForm.title" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Raid Type</label>
+            <select v-model="editForm.raid_type" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">Select raid type…</option>
+              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Size</label>
+            <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option :value="10">10-man</option>
+              <option :value="25">25-man</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <select v-model="editForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="normal">Normal</option>
+              <option value="heroic">Heroic</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Status</label>
+            <select v-model="editForm.status" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="draft">Draft</option>
+              <option value="open">Open</option>
+              <option value="locked">Locked</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
+            <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+            <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <span class="text-[10px] text-text-muted">Must be after event start time</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Instructions</label>
+          <textarea v-model="editForm.instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
+        </div>
+        <div v-if="editError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ editError }}</div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showEditModal = false">Cancel</WowButton>
+          <WowButton :loading="actionLoading" @click="saveEvent">Save</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
     <!-- Cancel confirmation modal -->
     <WowModal v-model="confirmCancel" title="Cancel Event" size="sm">
       <p class="text-text-muted mb-4">Are you sure you want to cancel this event? This cannot be undone.</p>
@@ -116,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
@@ -135,6 +201,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 
@@ -152,6 +219,20 @@ const loading = ref(true)
 const error = ref(null)
 const actionLoading = ref(false)
 const confirmCancel = ref(false)
+const showEditModal = ref(false)
+const editError = ref(null)
+const raidTypes = RAID_TYPES
+
+const editForm = reactive({
+  title: '',
+  raid_type: '',
+  raid_size: 25,
+  difficulty: 'normal',
+  status: 'open',
+  starts_at_utc: '',
+  close_signups_at: '',
+  instructions: ''
+})
 
 const guildId = computed(() => guildStore.currentGuild?.id)
 
@@ -235,6 +316,62 @@ async function doDuplicate() {
     router.push({ name: 'raid-detail', params: { id: newEvent.id } })
   } catch {
     uiStore.showToast('Failed to duplicate event', 'error')
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+function toLocalDatetime(utcStr) {
+  if (!utcStr) return ''
+  const d = new Date(utcStr)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function openEditModal() {
+  if (!event.value) return
+  Object.assign(editForm, {
+    title: event.value.title ?? '',
+    raid_type: event.value.raid_type ?? '',
+    raid_size: event.value.raid_size ?? event.value.size ?? 25,
+    difficulty: event.value.difficulty ?? 'normal',
+    status: event.value.status ?? 'open',
+    starts_at_utc: toLocalDatetime(event.value.starts_at_utc ?? event.value.start_time),
+    close_signups_at: toLocalDatetime(event.value.close_signups_at),
+    instructions: event.value.instructions ?? event.value.description ?? ''
+  })
+  editError.value = null
+  showEditModal.value = true
+}
+
+async function saveEvent() {
+  if (!editForm.title || !editForm.starts_at_utc) {
+    editError.value = 'Title and date are required'
+    return
+  }
+  if (editForm.close_signups_at && editForm.close_signups_at <= editForm.starts_at_utc) {
+    editError.value = 'Close signups time must be after the event start time'
+    return
+  }
+  editError.value = null
+  actionLoading.value = true
+  try {
+    const payload = {
+      title: editForm.title,
+      raid_type: editForm.raid_type || undefined,
+      raid_size: editForm.raid_size,
+      difficulty: editForm.difficulty,
+      status: editForm.status,
+      starts_at_utc: editForm.starts_at_utc,
+      close_signups_at: editForm.close_signups_at || undefined,
+      instructions: editForm.instructions
+    }
+    const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)
+    event.value = updated
+    showEditModal.value = false
+    uiStore.showToast('Event updated!', 'success')
+  } catch (err) {
+    editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to update event'
   } finally {
     actionLoading.value = false
   }

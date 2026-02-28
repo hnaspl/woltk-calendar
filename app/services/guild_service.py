@@ -17,12 +17,14 @@ def create_guild(
     created_by: int,
     faction: Optional[str] = None,
     region: Optional[str] = None,
+    allow_self_join: bool = True,
 ) -> Guild:
     guild = Guild(
         name=name,
         realm_name=realm_name,
         faction=faction,
         region=region,
+        allow_self_join=allow_self_join,
         created_by=created_by,
     )
     db.session.add(guild)
@@ -45,7 +47,7 @@ def get_guild(guild_id: int) -> Optional[Guild]:
 
 
 def update_guild(guild: Guild, data: dict) -> Guild:
-    allowed = {"name", "realm_name", "faction", "region", "settings_json"}
+    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join"}
     for key, value in data.items():
         if key in allowed:
             setattr(guild, key, value)
