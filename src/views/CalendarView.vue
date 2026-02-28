@@ -154,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import RaidCalendar from '@/components/calendar/RaidCalendar.vue'
@@ -164,6 +164,7 @@ import { useCalendarStore } from '@/stores/calendar'
 import { useGuildStore } from '@/stores/guild'
 import { usePermissions } from '@/composables/usePermissions'
 import { useUiStore } from '@/stores/ui'
+import { useSocket } from '@/composables/useSocket'
 import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
@@ -173,6 +174,7 @@ const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const router = useRouter()
+const { joinGuild, leaveGuild, on, off } = useSocket()
 
 const raidTypes = RAID_TYPES
 const warmaneRealms = WARMANE_REALMS
@@ -203,8 +205,26 @@ onMounted(async () => {
   const tasks = [calStore.fetchEvents()]
   if (guildStore.currentGuild) {
     tasks.push(guildStore.fetchMembers(guildStore.currentGuild.id))
+    joinGuild(guildStore.currentGuild.id)
   }
   await Promise.all(tasks)
+  on('events_changed', handleEventsChanged)
+})
+
+// Re-join guild room when current guild changes
+const stopGuildWatch = watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
+  if (oldId) leaveGuild(oldId)
+  if (newId) joinGuild(newId)
+})
+
+function handleEventsChanged() {
+  calStore.fetchEvents()
+}
+
+onUnmounted(() => {
+  off('events_changed', handleEventsChanged)
+  if (guildStore.currentGuild) leaveGuild(guildStore.currentGuild.id)
+  stopGuildWatch()
 })
 
 function openCreateModal() {

@@ -116,7 +116,10 @@
                       <option v-if="canSetGuildAdmin" value="guild_admin">Guild Admin</option>
                     </select>
                   </td>
-                  <td class="px-4 py-2.5 text-right">
+                  <td class="px-4 py-2.5 text-right space-x-2">
+                    <WowButton variant="ghost" class="text-xs py-1 px-2" @click="viewMemberChars(m)">
+                      Characters
+                    </WowButton>
                     <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
                       Remove
                     </WowButton>
@@ -168,6 +171,42 @@
         <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers" class="text-xs text-text-muted">
           No matching users found.
         </div>
+      </div>
+    </WowModal>
+
+    <!-- Member Characters modal -->
+    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="md">
+      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
+      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
+      <div v-else class="overflow-x-auto max-h-72 overflow-y-auto">
+        <table class="w-full text-xs">
+          <thead class="sticky top-0">
+            <tr class="bg-bg-tertiary border-b border-border-default">
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Name</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Class</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Main</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Default Role</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Primary Spec</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border-default">
+            <tr v-for="c in memberChars" :key="c.id" class="hover:bg-bg-tertiary/50">
+              <td class="px-3 py-1.5 text-text-primary font-medium">{{ c.name }}</td>
+              <td class="px-3 py-1.5 text-text-muted">{{ c.class_name }}</td>
+              <td class="px-3 py-1.5">
+                <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase">Main</span>
+                <span v-else class="text-text-muted text-[10px]">Alt</span>
+              </td>
+              <td class="px-3 py-1.5 text-text-muted">{{ c.default_role || '—' }}</td>
+              <td class="px-3 py-1.5 text-text-muted">{{ c.primary_spec || '—' }}</td>
+              <td class="px-3 py-1.5">
+                <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px]">Active</span>
+                <span v-else class="text-red-400 text-[10px]">Archived</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </WowModal>
   </AppShell>
@@ -303,6 +342,27 @@ const warmaneGuildRealm = ref('Icecrown')
 const fetchingWarmane = ref(false)
 const warmaneError = ref(null)
 const warmaneGuildData = ref(null)
+
+// Member characters viewer
+const showMemberChars = ref(false)
+const memberChars = ref([])
+const loadingMemberChars = ref(false)
+const memberCharsTitle = ref('Member Characters')
+
+async function viewMemberChars(member) {
+  const username = member.username ?? member.user?.username ?? 'Unknown'
+  memberCharsTitle.value = `${username}'s Characters`
+  showMemberChars.value = true
+  loadingMemberChars.value = true
+  memberChars.value = []
+  try {
+    memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to load characters', 'error')
+  } finally {
+    loadingMemberChars.value = false
+  }
+}
 
 // Add member
 const showAddMember = ref(false)

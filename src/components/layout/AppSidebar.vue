@@ -173,19 +173,21 @@
 </template>
 
 <script setup>
-import { computed, h, ref, reactive, onMounted } from 'vue'
+import { computed, h, ref, reactive, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useSocket } from '@/composables/useSocket'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
 
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
+const { on, off } = useSocket()
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
@@ -208,7 +210,23 @@ const joiningGuildId = ref(null)
 // Load all guilds on mount so available guilds are visible
 onMounted(() => {
   guildStore.fetchAllGuilds()
+  on('guilds_changed', handleGuildsChanged)
+  on('guild_changed', handleGuildChanged)
 })
+
+onUnmounted(() => {
+  off('guilds_changed', handleGuildsChanged)
+  off('guild_changed', handleGuildChanged)
+})
+
+function handleGuildsChanged() {
+  guildStore.fetchGuilds()
+  guildStore.fetchAllGuilds()
+}
+
+function handleGuildChanged() {
+  guildStore.fetchGuilds()
+}
 
 async function doJoinGuild(guild) {
   joiningGuildId.value = guild.id

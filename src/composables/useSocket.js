@@ -4,6 +4,9 @@
  * Manages a single shared Socket.IO connection.  Components call
  * `joinEvent(eventId)` / `leaveEvent(eventId)` to subscribe to a
  * specific raid event room, and register listeners via `on` / `off`.
+ *
+ * Guild rooms (`joinGuild` / `leaveGuild`) are used for calendar and
+ * guild-level real-time updates.
  */
 import { ref, onUnmounted } from 'vue'
 import { io } from 'socket.io-client'
@@ -41,6 +44,16 @@ export function useSocket() {
     s.emit('leave_event', { event_id: Number(eventId) })
   }
 
+  /** Join the Socket.IO room for a given guild (calendar / guild updates). */
+  function joinGuild(guildId) {
+    s.emit('join_guild', { guild_id: Number(guildId) })
+  }
+
+  /** Leave the Socket.IO room for a given guild. */
+  function leaveGuild(guildId) {
+    s.emit('leave_guild', { guild_id: Number(guildId) })
+  }
+
   /** Register a listener for a Socket.IO event. */
   function on(event, handler) {
     s.on(event, handler)
@@ -61,5 +74,5 @@ export function useSocket() {
     }
   })
 
-  return { connected, joinEvent, leaveEvent, on, off }
+  return { connected, joinEvent, leaveEvent, joinGuild, leaveGuild, on, off }
 }

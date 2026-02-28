@@ -4,7 +4,7 @@ export const getNotifications = (params = {}) =>
   api.get('/notifications', { params })
 
 export const markRead = (notifId) =>
-  api.post(`/notifications/${notifId}/read`)
+  api.put(`/notifications/${notifId}/read`)
 
 export const markAllRead = () =>
   api.post('/notifications/read-all')
