@@ -117,40 +117,52 @@ def _sync_schema() -> None:
 
     ``db.create_all()`` only creates tables that do not exist yet; it will
     not ALTER existing tables.  This helper inspects every mapped table and
-    issues ``ALTER TABLE … ADD COLUMN`` for any column that is defined in
-    the model but absent from the live database, preventing
-    "Unknown column" errors after schema changes.
+    adds any column defined in the model but absent from the live database,
+    preventing "Unknown column" errors after schema changes.
     """
     import sqlalchemy as sa
     from sqlalchemy import inspect as sa_inspect
 
+    # Snapshot which tables already exist *before* create_all adds new ones.
+    inspector = sa_inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+
     db.create_all()
 
+    # Re-inspect so the cache reflects any tables just created.
     inspector = sa_inspect(db.engine)
-    for table_name, table_obj in db.metadata.tables.items():
-        if not inspector.has_table(table_name):
-            continue
-        existing = {c["name"] for c in inspector.get_columns(table_name)}
-        for col in table_obj.columns:
-            if col.name in existing:
+
+    preparer = db.engine.dialect.identifier_preparer
+
+    with db.engine.begin() as conn:
+        for table_name, table_obj in db.metadata.tables.items():
+            if table_name not in existing_tables:
+                # Table was just created by create_all – nothing to patch.
                 continue
-            col_type = col.type.compile(dialect=db.engine.dialect)
-            nullable = "" if col.nullable else " NOT NULL"
-            default = ""
-            if col.default is not None and not callable(getattr(col.default, "arg", None)):
-                default = f" DEFAULT {col.default.arg!r}"
-            elif not col.nullable and col.default is None:
-                # Provide a safe zero-value so NOT NULL doesn't fail on
-                # existing rows
-                if isinstance(col.type, (sa.Boolean,)):
-                    default = " DEFAULT 0"
-                elif isinstance(col.type, (sa.Integer,)):
-                    default = " DEFAULT 0"
-                elif isinstance(col.type, (sa.String, sa.Text)):
-                    default = " DEFAULT ''"
-            stmt = f"ALTER TABLE `{table_name}` ADD COLUMN `{col.name}` {col_type}{nullable}{default}"
-            db.session.execute(sa.text(stmt))
-    db.session.commit()
+            existing_cols = {c["name"] for c in inspector.get_columns(table_name)}
+            for col in table_obj.columns:
+                if col.name in existing_cols:
+                    continue
+                # Compile the column type for this dialect.
+                col_type = col.type.compile(dialect=db.engine.dialect)
+                q_table = preparer.quote_identifier(table_name)
+                q_col = preparer.quote_identifier(col.name)
+
+                # Build the column definition.  If the column is NOT NULL
+                # we must provide a DEFAULT so existing rows don't break.
+                if col.nullable:
+                    stmt = f"ALTER TABLE {q_table} ADD COLUMN {q_col} {col_type} NULL"
+                else:
+                    # Pick a safe zero-value default for the type.
+                    if isinstance(col.type, (sa.Boolean, sa.Integer, sa.Float, sa.Numeric)):
+                        default_lit = "0"
+                    elif isinstance(col.type, (sa.DateTime, sa.Date)):
+                        default_lit = "'1970-01-01 00:00:00'"
+                    else:
+                        default_lit = "''"
+                    stmt = f"ALTER TABLE {q_table} ADD COLUMN {q_col} {col_type} NOT NULL DEFAULT {default_lit}"
+
+                conn.execute(sa.text(stmt))
 
 
 def _register_commands(app: Flask) -> None:
