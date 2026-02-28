@@ -205,6 +205,7 @@ def list_my_signups():
         d = s.to_dict()
         if s.raid_event is not None:
             d["event_title"] = s.raid_event.title
+            d["raid_type"] = s.raid_event.raid_type
             d["guild_id"] = s.raid_event.guild_id
         result.append(d)
     return jsonify(result), 200

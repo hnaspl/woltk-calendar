@@ -32,7 +32,7 @@
                 <div>
                   <label class="text-[10px] text-text-muted">Role</label>
                   <select v-model="editForm.chosen_role" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none">
-                    <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
+                    <option v-for="r in filteredRoleOptions" :key="r.value" :value="r.value">{{ r.label }}</option>
                   </select>
                 </div>
                 <div>
@@ -160,12 +160,17 @@ const props = defineProps({
   signups: { type: Array, default: () => [] },
   isOfficer: { type: Boolean, default: false },
   guildId: { type: [Number, String], default: null },
-  eventId: { type: [Number, String], default: null }
+  eventId: { type: [Number, String], default: null },
+  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] }
 })
 
 const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])
 
 const { getClassIcon } = useWowIcons()
+
+const filteredRoleOptions = computed(() =>
+  ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
+)
 
 const STATUS_ORDER = ['going', 'tentative', 'late', 'bench', 'declined']
 

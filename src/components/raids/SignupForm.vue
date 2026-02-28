@@ -122,7 +122,8 @@ const props = defineProps({
   eventId: { type: [Number, String], required: true },
   guildId: { type: [Number, String], required: true },
   existingSignup: { type: Object, default: null },
-  signedUpCharacterIds: { type: Array, default: () => [] }
+  signedUpCharacterIds: { type: Array, default: () => [] },
+  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] }
 })
 
 const emit = defineEmits(['signed-up', 'updated'])
@@ -132,7 +133,9 @@ const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
 
-const roles = ROLE_OPTIONS
+const roles = computed(() =>
+  ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
+)
 
 /** Available spec options from the selected character's class */
 const specOptions = computed(() => {

@@ -65,6 +65,7 @@
               :guild-id="guildId"
               :existing-signup="editingSignup"
               :signed-up-character-ids="mySignedUpCharacterIds"
+              :available-roles="availableRoles"
               @signed-up="onSignedUp"
               @updated="onSignupUpdated"
             />
@@ -126,6 +127,7 @@
               :is-officer="permissions.isOfficer.value"
               :guild-id="guildId"
               :event-id="event.id"
+              :available-roles="availableRoles"
               @signup-updated="onSignupUpdated"
               @signup-removed="onSignupRemoved"
               @signup-error="msg => uiStore.showToast(msg, 'error')"
@@ -305,6 +307,17 @@ const editingSignup = computed(() => {
 const mySignedUpCharacterIds = computed(() =>
   mySignups.value.map(s => s.character_id)
 )
+
+const availableRoles = computed(() => {
+  if (!event.value) return ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
+  const roles = []
+  if ((event.value.main_tank_slots ?? 1) > 0) roles.push('main_tank')
+  if ((event.value.off_tank_slots ?? 1) > 0) roles.push('off_tank')
+  if ((event.value.tank_slots ?? 0) > 0) roles.push('tank')
+  if ((event.value.healer_slots ?? 5) > 0) roles.push('healer')
+  if ((event.value.dps_slots ?? 18) > 0) roles.push('dps')
+  return roles
+})
 
 onMounted(async () => {
   loading.value = true
@@ -486,14 +499,16 @@ async function onSignupRemoved(signupId) {
   uiStore.showToast('Signup removed', 'success')
 }
 
-async function onLineupSaved() {
+async function onLineupSaved(payload) {
   // Reload signups so role changes from drag-and-drop are reflected in the signup list
   try {
     signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
   } catch (err) {
     console.warn('Failed to reload signups after lineup save', err)
   }
-  uiStore.showToast('Lineup saved!', 'success')
+  if (!payload?.auto) {
+    uiStore.showToast('Lineup saved!', 'success')
+  }
 }
 
 function formatDateTime(d) {

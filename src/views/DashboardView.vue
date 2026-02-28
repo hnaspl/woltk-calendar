@@ -107,6 +107,7 @@
                 <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
                 <div class="flex-1 min-w-0">
                   <span class="text-sm text-text-primary truncate block">{{ su.event_title ?? 'Raid' }}</span>
+                  <span v-if="raidLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidLabel(su.raid_type) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">{{ su.character.name }}</span>
                 </div>
                 <StatusBadge :status="su.status" />
@@ -133,6 +134,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 
 const authStore = useAuthStore()
@@ -183,5 +185,11 @@ function formatDateTime(d) {
     weekday: 'short', day: '2-digit', month: 'short',
     hour: '2-digit', minute: '2-digit'
   })
+}
+
+function raidLabel(raidType) {
+  if (!raidType) return null
+  const found = RAID_TYPES.find(r => r.value === raidType)
+  return found ? found.label : raidType
 }
 </script>

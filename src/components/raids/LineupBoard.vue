@@ -241,10 +241,11 @@ function onDropColumn(e, targetKey) {
   }
 
   // Add to target (avoid duplicates)
-  if (!lineup.value[targetKey].find(s => s.id === id)) {
+  if (!lineup.value[targetKey].find(s => s.id == id)) {
     lineup.value[targetKey].push(found.signup)
   }
   dirty.value = true
+  autoSave()
 }
 
 function onDropUnassigned() {
@@ -254,13 +255,23 @@ function onDropUnassigned() {
   if (sourceKey && sourceKey !== 'unassigned' && sourceIdx >= 0) {
     lineup.value[sourceKey].splice(sourceIdx, 1)
     dirty.value = true
+    autoSave()
   }
+}
+
+// ── Auto-save on DnD ──
+let autoSaveTimer = null
+function autoSave() {
+  clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(() => saveLineup(true), 300)
 }
 
 // ── Data loading ──
 async function loadLineup() {
   try {
     const data = await lineupApi.getLineup(props.guildId, props.eventId)
+    // Only apply server data if there are no unsaved changes
+    if (dirty.value) return
     lineup.value.main_tanks = data.main_tanks ?? []
     lineup.value.off_tanks  = data.off_tanks  ?? []
     lineup.value.tanks      = data.tanks      ?? []
@@ -329,6 +340,7 @@ function onSelectAssign(e, key) {
   if (found) {
     lineup.value[key].push(found)
     dirty.value = true
+    autoSave()
   }
   e.target.value = ''
 }
@@ -336,9 +348,11 @@ function onSelectAssign(e, key) {
 function removeFromRole(key, index) {
   lineup.value[key].splice(index, 1)
   dirty.value = true
+  autoSave()
 }
 
-async function saveLineup() {
+async function saveLineup(auto = false) {
+  if (saving.value) return
   saving.value = true
   try {
     const result = await lineupApi.saveLineup(props.guildId, props.eventId, {
@@ -355,10 +369,12 @@ async function saveLineup() {
     lineup.value.healers    = result.healers    ?? []
     lineup.value.dps        = result.dps        ?? []
     dirty.value = false
-    emit('saved', lineup.value)
+    emit('saved', { auto })
   } catch (err) {
     console.error('Failed to save lineup', err)
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+    if (!auto) {
+      uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+    }
   } finally {
     saving.value = false
   }
