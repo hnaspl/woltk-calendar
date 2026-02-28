@@ -116,6 +116,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
+import { ROLE_OPTIONS } from '@/constants'
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -131,13 +132,7 @@ const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
 
-const roles = [
-  { value: 'tank' },
-  { value: 'main_tank', label: 'MT' },
-  { value: 'off_tank', label: 'OT' },
-  { value: 'healer' },
-  { value: 'dps' }
-]
+const roles = ROLE_OPTIONS
 
 /** Available spec options from the selected character's primary and secondary specs */
 const specOptions = computed(() => {
@@ -156,13 +151,9 @@ const availableCharacters = computed(() => {
   return characters.value.filter(c => !props.signedUpCharacterIds.includes(c.id))
 })
 
-const form = reactive({
-  characterId: '',
-  chosenRole: 'dps',
-  chosenSpec: '',
-  status: 'going',
-  note: ''
-})
+const INITIAL_FORM = { characterId: '', chosenRole: 'dps', chosenSpec: '', status: 'going', note: '' }
+
+const form = reactive({ ...INITIAL_FORM })
 
 onMounted(async () => {
   try {
@@ -226,10 +217,7 @@ async function handleSubmit() {
       const created = await signupsApi.createSignup(props.guildId, props.eventId, payload)
       emit('signed-up', created)
       // Reset form for adding another character
-      form.characterId = ''
-      form.chosenRole = 'dps'
-      form.chosenSpec = ''
-      form.note = ''
+      Object.assign(form, INITIAL_FORM)
     }
     success.value = true
     setTimeout(() => { success.value = false }, 3000)

@@ -35,3 +35,11 @@ export const RAID_TYPES = [
   { value: 'icc', label: 'Icecrown Citadel' },
   { value: 'rs', label: 'Ruby Sanctum' },
 ]
+
+export const ROLE_OPTIONS = [
+  { value: 'tank', label: 'Tank' },
+  { value: 'main_tank', label: 'Main Tank' },
+  { value: 'off_tank', label: 'Off Tank' },
+  { value: 'healer', label: 'Healer' },
+  { value: 'dps', label: 'DPS' },
+]

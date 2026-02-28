@@ -32,11 +32,7 @@
                 <div>
                   <label class="text-[10px] text-text-muted">Role</label>
                   <select v-model="editForm.chosen_role" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none">
-                    <option value="tank">Tank</option>
-                    <option value="main_tank">Main Tank</option>
-                    <option value="off_tank">Off Tank</option>
-                    <option value="healer">Healer</option>
-                    <option value="dps">DPS</option>
+                    <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
                   </select>
                 </div>
                 <div>
@@ -158,6 +154,7 @@ import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import * as signupsApi from '@/api/signups'
+import { ROLE_OPTIONS } from '@/constants'
 
 const props = defineProps({
   signups: { type: Array, default: () => [] },

@@ -127,6 +127,7 @@ class LineupSlot(db.Model):
                 "chosen_role": self.signup.chosen_role,
                 "status": self.signup.status,
                 "note": self.signup.note,
+                "gear_score_note": self.signup.gear_score_note,
             }
         return result
 

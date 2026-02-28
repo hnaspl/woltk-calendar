@@ -155,6 +155,6 @@ WARMANE_REALMS: list[str] = [
 # Standard role slot distribution for raid sizes
 # ---------------------------------------------------------------------------
 ROLE_SLOTS: dict[int, dict[str, int]] = {
-    10: {"tank": 2, "main_tank": 1, "off_tank": 1, "healer": 3, "dps": 5},
-    25: {"tank": 3, "main_tank": 1, "off_tank": 2, "healer": 6, "dps": 16},
+    10: {"main_tank": 1, "off_tank": 1, "tank": 0, "healer": 3, "dps": 5},
+    25: {"main_tank": 1, "off_tank": 2, "tank": 0, "healer": 6, "dps": 16},
 }
