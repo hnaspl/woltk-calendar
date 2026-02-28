@@ -45,7 +45,7 @@
             :class="form.chosenRole === r.value
               ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
               : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
-            :disabled="form.characterId !== ''"
+            :disabled="form.characterId === ''"
             @click="form.chosenRole = r.value"
           >
             <RoleBadge :role="r.value" />
@@ -53,8 +53,8 @@
         </div>
       </div>
 
-      <!-- Spec (multi-select) -->
-      <div>
+      <!-- Spec (multi-select, only when character selected) -->
+      <div v-if="form.characterId">
         <label class="block text-xs text-text-muted mb-1">Spec (select one or more)</label>
         <div v-if="specOptions.length > 0" class="flex gap-2 mb-1">
           <button

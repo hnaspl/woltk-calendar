@@ -98,6 +98,13 @@
                     >
                       {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
                     </button>
+                    <button
+                      v-if="event.status === 'open' || event.status === 'draft'"
+                      class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                      @click="leaveRaid(s)"
+                    >
+                      Leave Raid
+                    </button>
                   </div>
                 </div>
               </div>
@@ -229,6 +236,21 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Leave Raid confirmation modal -->
+    <WowModal v-model="showLeaveModal" title="Leave Raid" size="sm">
+      <p class="text-text-muted">
+        Are you sure you want to remove
+        <strong class="text-text-primary">{{ leaveSignup?.character?.name ?? 'this character' }}</strong>
+        from this raid? This will remove the character from the signup list and lineup.
+      </p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showLeaveModal = false">Cancel</WowButton>
+          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">Leave Raid</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -273,6 +295,8 @@ const error = ref(null)
 const actionLoading = ref(false)
 const confirmCancel = ref(false)
 const showEditModal = ref(false)
+const showLeaveModal = ref(false)
+const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
@@ -473,6 +497,37 @@ async function saveEvent() {
 function onSignedUp(signup) {
   signups.value.push(signup)
   uiStore.showToast('Signed up successfully!', 'success')
+}
+
+function leaveRaid(signup) {
+  leaveSignup.value = signup
+  showLeaveModal.value = true
+}
+
+async function confirmLeaveRaid() {
+  if (!leaveSignup.value) return
+  const signupId = leaveSignup.value.id
+  actionLoading.value = true
+  try {
+    await signupsApi.deleteSignup(guildId.value, event.value.id, signupId)
+    showLeaveModal.value = false
+    if (editingSignupId.value === signupId) {
+      editingSignupId.value = null
+    }
+    leaveSignup.value = null
+    // Reload signups to reflect auto-promote changes
+    try {
+      signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+    } catch (err) {
+      console.warn('Failed to reload signups', err)
+      signups.value = signups.value.filter(s => s.id !== signupId)
+    }
+    uiStore.showToast('You have left the raid', 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to leave raid', 'error')
+  } finally {
+    actionLoading.value = false
+  }
 }
 
 async function onSignupUpdated(updated) {
