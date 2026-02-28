@@ -188,6 +188,7 @@ function renderEventContent(arg) {
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: props.initialView,
+  timeZone: 'UTC',
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',

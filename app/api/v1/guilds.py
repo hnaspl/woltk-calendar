@@ -98,14 +98,17 @@ def create_guild():
     data = request.get_json(silent=True) or {}
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": "name and realm_name are required"}), 400
-    guild = guild_service.create_guild(
-        name=data["name"],
-        realm_name=data["realm_name"],
-        created_by=current_user.id,
-        faction=data.get("faction"),
-        region=data.get("region"),
-        allow_self_join=data.get("allow_self_join", True),
-    )
+    try:
+        guild = guild_service.create_guild(
+            name=data["name"],
+            realm_name=data["realm_name"],
+            created_by=current_user.id,
+            faction=data.get("faction"),
+            region=data.get("region"),
+            allow_self_join=data.get("allow_self_join", True),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "message": str(exc)}), 409
     emit_guilds_changed()
     return jsonify(guild.to_dict()), 201
 

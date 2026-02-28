@@ -85,7 +85,8 @@
                   <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
                     {{ s.character?.name ?? '?' }}
                   </span>
-                  <span class="text-text-muted text-xs">{{ s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
+                  <span class="text-text-muted text-xs">{{ ROLE_LABEL_MAP[s.chosen_role] || s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
+                  <span v-if="s.note" class="text-text-muted text-[10px] italic truncate max-w-[120px]" :title="s.note">📝 {{ s.note }}</span>
                   <span v-if="s.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">Bench</span>
                   <span v-else class="text-xs" :class="{
                     'text-green-400': s.status === 'going',
@@ -306,6 +307,7 @@ const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
+const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))

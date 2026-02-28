@@ -148,7 +148,7 @@ def generate_events_from_series(series: EventSeries, count: int = 4) -> list[Rai
             ends_at_utc=ends_at,
             raid_size=series.default_raid_size,
             difficulty=series.default_difficulty,
-            status="draft",
+            status="open",
             created_by=series.created_by,
         )
         db.session.add(event)
@@ -194,7 +194,7 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         ends_at_utc=ends_at,
         raid_size=data.get("raid_size", 25),
         difficulty=data.get("difficulty", "normal"),
-        status=data.get("status", "draft"),
+        status=data.get("status", "open"),
         raid_type=data.get("raid_type"),
         instructions=data.get("instructions"),
     )
@@ -339,7 +339,7 @@ def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[d
         ends_at_utc=starts_at + duration,
         raid_size=event.raid_size,
         difficulty=event.difficulty,
-        status="draft",
+        status="open",
         raid_type=event.raid_type,
         instructions=event.instructions,
         created_by=created_by,

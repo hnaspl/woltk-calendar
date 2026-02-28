@@ -19,6 +19,16 @@ def create_guild(
     region: Optional[str] = None,
     allow_self_join: bool = True,
 ) -> Guild:
+    # Check for duplicate guild (case-insensitive name + realm)
+    existing = db.session.execute(
+        sa.select(Guild).where(
+            sa.func.lower(Guild.name) == name.strip().lower(),
+            sa.func.lower(Guild.realm_name) == realm_name.strip().lower(),
+        )
+    ).scalar_one_or_none()
+    if existing:
+        raise ValueError(f"Guild '{name}' on {realm_name} already exists")
+
     guild = Guild(
         name=name,
         realm_name=realm_name,
