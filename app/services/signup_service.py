@@ -10,6 +10,7 @@ from app.constants import CLASS_ROLES
 from app.enums import SignupStatus
 from app.extensions import db
 from app.models.signup import Signup, RaidBan, CharacterReplacement
+from app.utils.class_roles import validate_class_role
 
 
 def _validate_class_role(character_id: int, chosen_role: str) -> None:
@@ -20,21 +21,9 @@ def _validate_class_role(character_id: int, chosen_role: str) -> None:
     from app.models.character import Character
 
     character = db.session.get(Character, character_id)
-    if character is None:
+    if character is None or not character.class_name:
         return  # Let other validation handle missing character
-    class_name = character.class_name
-    if not class_name:
-        return
-    allowed = [r.value for roles in CLASS_ROLES.values()
-               for r in roles]  # fallback: allow all
-    for wow_class, roles in CLASS_ROLES.items():
-        if wow_class.value == class_name:
-            allowed = [r.value for r in roles]
-            break
-    if chosen_role not in allowed:
-        raise ValueError(
-            f"{class_name} cannot take the {chosen_role} role"
-        )
+    validate_class_role(character.class_name, chosen_role)
 
 
 def _count_going(raid_event_id: int) -> int:

@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from app.constants import CLASS_ROLES
 from app.extensions import db
 from app.models.signup import LineupSlot, Signup
+from app.utils.class_roles import validate_class_role
 
 
 def get_lineup(raid_event_id: int) -> list[LineupSlot]:
@@ -144,20 +145,10 @@ def upsert_slot(
 
 
 def _validate_class_role_lineup(signup: Signup, new_role: str) -> None:
-    """Validate class-role constraint for lineup changes (best-effort, logs warning)."""
+    """Validate class-role constraint for lineup changes."""
     if signup.character is None:
         return
-    class_name = signup.character.class_name
-    if not class_name:
-        return
-    for wow_class, roles in CLASS_ROLES.items():
-        if wow_class.value == class_name:
-            allowed = [r.value for r in roles]
-            if new_role not in allowed:
-                raise ValueError(
-                    f"{class_name} cannot take the {new_role} role"
-                )
-            return
+    validate_class_role(signup.character.class_name, new_role)
 
 
 class LineupConflictError(Exception):
