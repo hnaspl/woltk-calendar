@@ -188,6 +188,9 @@ def update_lineup_grouped(
         signup = db.session.get(Signup, signup_id)
         if signup is None:
             continue
+        # Set status to bench so signup polling reflects the bench move
+        if signup.status == "going":
+            signup.status = "bench"
         slot = LineupSlot(
             raid_event_id=raid_event_id,
             slot_group="bench",

@@ -174,13 +174,12 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 
 def update_signup(signup: Signup, data: dict) -> Signup:
-    """Update a signup.  Status changes are informational only and have no
-    effect on the Lineup Board.  However, when the role changes the player is
-    removed from their current lineup slot so they appear on the bench and can
-    be re-assigned to the correct role column."""
+    """Update a signup.  Handles role changes (removes lineup slot) and status
+    transitions (removes lineup/bench slots and auto-promotes when leaving)."""
     from app.services import lineup_service
 
     old_role = signup.chosen_role
+    old_status = signup.status
 
     allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
     for key, value in data.items():
@@ -188,10 +187,20 @@ def update_signup(signup: Signup, data: dict) -> Signup:
             setattr(signup, key, value)
     db.session.commit()
 
-    # When role changes, remove from old lineup slot (player goes to bench)
     new_role = signup.chosen_role
+    new_status = signup.status
+
+    # When role changes, remove from old lineup slot (player goes to bench)
     if old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
+
+    # When status transitions away from active, clean up lineup/bench slots
+    active_statuses = {SignupStatus.GOING.value, SignupStatus.BENCH.value}
+    if old_status in active_statuses and new_status not in active_statuses:
+        lineup_service.remove_slot_for_signup(signup.id)
+        # Auto-promote from bench queue when a going player leaves
+        if old_status == SignupStatus.GOING.value:
+            _auto_promote_bench(signup.raid_event_id, old_role)
 
     return signup
 
@@ -225,8 +234,10 @@ def decline_signup(signup: Signup) -> Signup:
     signup.status = SignupStatus.DECLINED.value
     db.session.commit()
 
+    # Always remove lineup/bench queue slots (covers both going and bench players)
+    lineup_service.remove_slot_for_signup(signup.id)
+
     if was_going:
-        lineup_service.remove_slot_for_signup(signup.id)
         _auto_promote_bench(raid_event_id, role)
 
     return signup
