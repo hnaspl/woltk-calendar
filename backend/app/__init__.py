@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from flask import Flask
+from flask import Flask, session
 from flask_cors import CORS
 
 from config import get_config
@@ -35,7 +35,7 @@ def create_app(config_override: dict | None = None) -> Flask:
     )
 
     # ------------------------------------------------------- Flask-Login
-    login_manager.session_protection = "strong"
+    login_manager.session_protection = "basic"
 
     @login_manager.user_loader
     def load_user(user_id: str):
