@@ -72,6 +72,8 @@
               :signups="signups"
               :max-size="event.raid_size ?? event.size"
               :tank-slots="event.tank_slots ?? 2"
+              :main-tank-slots="Math.min(1, event.tank_slots ?? 2)"
+              :off-tank-slots="Math.max(0, (event.tank_slots ?? 2) - 1)"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
             />
@@ -95,6 +97,8 @@
               :guild-id="guildId"
               :is-officer="permissions.isOfficer.value"
               :tank-slots="event.tank_slots ?? 2"
+              :main-tank-slots="Math.min(1, event.tank_slots ?? 2)"
+              :off-tank-slots="Math.max(0, (event.tank_slots ?? 2) - 1)"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
               @saved="uiStore.showToast('Lineup saved!', 'success')"

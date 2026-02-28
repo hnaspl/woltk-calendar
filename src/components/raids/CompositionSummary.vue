@@ -50,9 +50,11 @@ const props = defineProps({
   signups: { type: Array, default: () => [] },
   maxSize: { type: Number, default: null },
   // Slot targets from the raid definition
-  tankSlots:   { type: Number, default: 2 },
-  healerSlots: { type: Number, default: 5 },
-  dpsSlots:    { type: Number, default: 18 }
+  tankSlots:      { type: Number, default: 2 },
+  mainTankSlots:  { type: Number, default: 1 },
+  offTankSlots:   { type: Number, default: 1 },
+  healerSlots:    { type: Number, default: 5 },
+  dpsSlots:       { type: Number, default: 18 }
 })
 
 // Only count going + tentative
@@ -74,13 +76,13 @@ const roleSummary = computed(() => [
   {
     name: 'main_tank',
     count: countRole('main_tank'),
-    target: 1,
+    target: props.mainTankSlots,
     barClass: 'bg-blue-300'
   },
   {
     name: 'off_tank',
     count: countRole('off_tank'),
-    target: 1,
+    target: props.offTankSlots,
     barClass: 'bg-cyan-400'
   },
   {

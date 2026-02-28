@@ -15,7 +15,7 @@
         <div class="flex items-center gap-2 mb-3">
           <img :src="getRoleIcon('main_tank')" class="w-5 h-5 rounded" alt="Main Tank" />
           <span class="text-blue-200 font-semibold text-sm">MT</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.main_tanks.length }}</span>
+          <span class="ml-auto text-xs text-text-muted">{{ lineup.main_tanks.length }} / {{ mainTankSlots }}</span>
         </div>
         <LineupColumn
           role="main_tank"
@@ -32,7 +32,7 @@
         <div class="flex items-center gap-2 mb-3">
           <img :src="getRoleIcon('off_tank')" class="w-5 h-5 rounded" alt="Off Tank" />
           <span class="text-cyan-300 font-semibold text-sm">OT</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.off_tanks.length }}</span>
+          <span class="ml-auto text-xs text-text-muted">{{ lineup.off_tanks.length }} / {{ offTankSlots }}</span>
         </div>
         <LineupColumn
           role="off_tank"
@@ -111,7 +111,7 @@
           >
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
-            <span class="text-text-muted">({{ s.chosen_role }})</span>
+            <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
             <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
               Lv{{ s.character.metadata.level }}
             </span>
@@ -132,18 +132,22 @@ import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
 
 const props = defineProps({
-  signups:     { type: Array,          default: () => [] },
-  eventId:     { type: [Number,String], required: true },
-  guildId:     { type: [Number,String], required: true },
-  isOfficer:   { type: Boolean, default: false },
-  tankSlots:   { type: Number, default: 2 },
-  healerSlots: { type: Number, default: 5 },
-  dpsSlots:    { type: Number, default: 18 }
+  signups:        { type: Array,          default: () => [] },
+  eventId:        { type: [Number,String], required: true },
+  guildId:        { type: [Number,String], required: true },
+  isOfficer:      { type: Boolean, default: false },
+  tankSlots:      { type: Number, default: 2 },
+  mainTankSlots:  { type: Number, default: 1 },
+  offTankSlots:   { type: Number, default: 1 },
+  healerSlots:    { type: Number, default: 5 },
+  dpsSlots:       { type: Number, default: 18 }
 })
 
 const emit = defineEmits(['saved'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
 const saving = ref(false)
+
+const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'MT', off_tank: 'OT', healer: 'Healer', dps: 'DPS' }
 
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 
@@ -192,9 +196,11 @@ const unassigned = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(s.id))
 )
 
-const availableMainTanks = computed(() => unassigned.value.filter(s => s.chosen_role === 'main_tank'))
-const availableOffTanks  = computed(() => unassigned.value.filter(s => s.chosen_role === 'off_tank'))
-const availableTanks     = computed(() => unassigned.value.filter(s => s.chosen_role === 'tank'))
+// Tank-family roles can be cross-assigned to any tank column
+const tankFamilyRoles = ['tank', 'main_tank', 'off_tank']
+const availableMainTanks = computed(() => unassigned.value.filter(s => tankFamilyRoles.includes(s.chosen_role)))
+const availableOffTanks  = computed(() => unassigned.value.filter(s => tankFamilyRoles.includes(s.chosen_role)))
+const availableTanks     = computed(() => unassigned.value.filter(s => tankFamilyRoles.includes(s.chosen_role)))
 const availableHealers   = computed(() => unassigned.value.filter(s => s.chosen_role === 'healer'))
 const availableDps       = computed(() => unassigned.value.filter(s => s.chosen_role === 'dps'))
 
