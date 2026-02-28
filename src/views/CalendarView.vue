@@ -232,13 +232,12 @@ function onRaidDefChange() {
   if (rd) {
     eventForm.raid_type = rd.raid_type || rd.code || ''
     eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
-    if (!eventForm.title) eventForm.title = rd.name
   }
 }
 
 async function createEvent() {
   if (!eventForm.guild_id || !eventForm.starts_at_utc || !eventForm.raid_definition_id) {
-    createError.value = 'Guild, raid definition and date are required'
+    createError.value = 'Guild, raid definition and start time are required'
     return
   }
   if (!eventForm.title) {
