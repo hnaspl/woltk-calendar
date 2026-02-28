@@ -301,7 +301,6 @@ async function loadLineup() {
     lineup.value.healers    = data.healers    ?? []
     lineup.value.dps        = data.dps        ?? []
     enforceSlotLimits()
-    if (!dirty.value) dirty.value = false
   } catch {
     autoPopulateFromSignups()
   }
