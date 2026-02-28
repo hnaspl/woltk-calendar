@@ -38,7 +38,7 @@
               class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
               :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
               :draggable="isOfficer"
-              @dragstart="isOfficer && onDragStart($event, s, col.key, i)"
+              @dragstart="onDragStart($event, s, col.key, i)"
               @dragend="onDragEnd"
             >
               <img
@@ -107,11 +107,10 @@
             class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-border-default text-xs transition-colors"
             :class="{
               'cursor-grab active:cursor-grabbing hover:border-border-gold': isOfficer,
-              'cursor-pointer hover:border-border-gold': !isOfficer,
               'opacity-50': draggedId === s.id
             }"
-            :draggable="isOfficer"
-            @dragstart="isOfficer && onDragStart($event, s, 'unassigned', -1)"
+            draggable="true"
+            @dragstart="onDragStart($event, s, 'unassigned', -1)"
             @dragend="onDragEnd"
           >
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
@@ -150,11 +149,10 @@
             class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-yellow-700/40 text-xs transition-colors"
             :class="{
               'cursor-grab active:cursor-grabbing hover:border-yellow-500': isOfficer,
-              'cursor-pointer hover:border-yellow-500': !isOfficer,
               'opacity-50': draggedId === s.id
             }"
-            :draggable="isOfficer"
-            @dragstart="isOfficer && onDragStart($event, s, 'bench', -1)"
+            draggable="true"
+            @dragstart="onDragStart($event, s, 'bench', -1)"
             @dragend="onDragEnd"
           >
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
@@ -232,6 +230,7 @@ const dragSourceIndex = ref(-1)
 const dragOverTarget = ref(null)
 
 function onDragStart(e, signup, sourceKey, idx) {
+  if (!props.isOfficer) { e.preventDefault(); return }
   draggedId.value = signup.id
   dragSourceKey.value = sourceKey
   dragSourceIndex.value = idx
