@@ -33,3 +33,10 @@ def mark_read(notification_id: int):
 def mark_all_read():
     count = notification_service.mark_all_read(current_user.id)
     return jsonify({"marked_read": count}), 200
+
+
+@bp.get("/unread-count")
+@login_required
+def unread_count():
+    count = notification_service.unread_count(current_user.id)
+    return jsonify({"count": count}), 200

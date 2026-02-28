@@ -12,6 +12,7 @@ from app.models.guild import Guild, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.realtime import emit_guild_changed, emit_guilds_changed
 
 bp = Blueprint("guilds", __name__, url_prefix="/guilds")
 
@@ -59,6 +60,7 @@ def join_guild(guild_id: int):
         )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_guild_changed(guild_id)
     return jsonify(membership.to_dict()), 201
 
 
@@ -102,6 +104,7 @@ def create_guild():
         region=data.get("region"),
         allow_self_join=data.get("allow_self_join", True),
     )
+    emit_guilds_changed()
     return jsonify(guild.to_dict()), 201
 
 
@@ -131,6 +134,7 @@ def update_guild(guild_id: int):
         return jsonify({"error": "Officer or admin privileges required"}), 403
     data = request.get_json(silent=True) or {}
     guild = guild_service.update_guild(guild, data)
+    emit_guild_changed(guild_id)
     return jsonify(guild.to_dict()), 200
 
 
@@ -144,6 +148,7 @@ def delete_guild(guild_id: int):
     if not is_officer_or_admin(membership):
         return jsonify({"error": "Officer or admin privileges required"}), 403
     guild_service.delete_guild(guild)
+    emit_guilds_changed()
     return jsonify({"message": "Guild deleted"}), 200
 
 
@@ -236,3 +241,21 @@ def remove_member(guild_id: int, user_id: int):
     db.session.delete(target)
     db.session.commit()
     return jsonify({"message": "Member removed"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Member characters (officer / admin)
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:guild_id>/members/<int:user_id>/characters")
+@login_required
+def list_member_characters(guild_id: int, user_id: int):
+    """List all characters for a guild member.  Requires officer or admin."""
+    membership = get_membership(guild_id, current_user.id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+
+    from app.services import character_service
+
+    chars = character_service.list_characters(user_id, guild_id, include_archived=True)
+    return jsonify([c.to_dict() for c in chars]), 200

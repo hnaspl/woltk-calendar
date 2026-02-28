@@ -62,3 +62,13 @@ def mark_all_read(user_id: int) -> int:
 
 def get_notification(notification_id: int) -> Optional[Notification]:
     return db.session.get(Notification, notification_id)
+
+
+def unread_count(user_id: int) -> int:
+    """Return the number of unread notifications for a user."""
+    return db.session.execute(
+        sa.select(sa.func.count(Notification.id)).where(
+            Notification.user_id == user_id,
+            Notification.read_at.is_(None),
+        )
+    ).scalar_one()

@@ -10,6 +10,7 @@ from flask_login import current_user
 from app.services import event_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.realtime import emit_events_changed
 
 bp = Blueprint("events", __name__)
 
@@ -55,6 +56,7 @@ def create_event(guild_id: int):
         event = event_service.create_event(guild_id, current_user.id, data)
     except (ValueError, KeyError) as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 201
 
 
@@ -83,6 +85,7 @@ def update_event(guild_id: int, event_id: int):
         event = event_service.update_event(event, data)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200
 
 
@@ -96,6 +99,7 @@ def delete_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event_service.delete_event(event)
+    emit_events_changed(guild_id)
     return jsonify({"message": "Event deleted"}), 200
 
 
@@ -109,6 +113,7 @@ def lock_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.lock_event(event)
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200
 
 
@@ -122,6 +127,7 @@ def unlock_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.unlock_event(event)
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200
 
 
@@ -135,6 +141,7 @@ def cancel_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.cancel_event(event)
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200
 
 
@@ -148,6 +155,7 @@ def complete_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.complete_event(event)
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200
 
 
@@ -165,6 +173,7 @@ def duplicate_event(guild_id: int, event_id: int):
     if data.get("starts_at_utc"):
         new_starts_at = datetime.fromisoformat(data["starts_at_utc"])
     new_event = event_service.duplicate_event(event, current_user.id, new_starts_at)
+    emit_events_changed(guild_id)
     return jsonify(new_event.to_dict()), 201
 
 

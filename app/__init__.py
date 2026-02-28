@@ -161,6 +161,22 @@ def _register_socketio_handlers() -> None:
         if event_id is not None:
             leave_room(f"event_{event_id}")
 
+    @socketio.on("join_guild")
+    def handle_join_guild(data):
+        if not current_user.is_authenticated:
+            return
+        guild_id = data.get("guild_id")
+        if guild_id is not None:
+            join_room(f"guild_{guild_id}")
+
+    @socketio.on("leave_guild")
+    def handle_leave_guild(data):
+        if not current_user.is_authenticated:
+            return
+        guild_id = data.get("guild_id")
+        if guild_id is not None:
+            leave_room(f"guild_{guild_id}")
+
 
 def _register_commands(app: Flask) -> None:
     import click

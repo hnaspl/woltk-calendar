@@ -21,15 +21,22 @@ def _count_going(raid_event_id: int) -> int:
     ).scalar_one()
 
 
-def _count_going_by_role(raid_event_id: int, role: str) -> int:
-    """Return the number of going signups for a specific role in an event."""
-    return db.session.execute(
-        sa.select(sa.func.count(Signup.id)).where(
-            Signup.raid_event_id == raid_event_id,
-            Signup.status == SignupStatus.GOING.value,
-            Signup.chosen_role == role,
-        )
-    ).scalar_one()
+def _count_going_by_role(raid_event_id: int, role: str, *, lock: bool = False) -> int:
+    """Return the number of going signups for a specific role in an event.
+
+    When *lock* is True the matching rows are locked with SELECT … FOR UPDATE
+    so that concurrent transactions block until the current one commits.  This
+    prevents the race condition where two players sign up for the last slot of
+    the same role simultaneously.
+    """
+    query = sa.select(sa.func.count(Signup.id)).where(
+        Signup.raid_event_id == raid_event_id,
+        Signup.status == SignupStatus.GOING.value,
+        Signup.chosen_role == role,
+    )
+    if lock:
+        query = query.with_for_update()
+    return db.session.execute(query).scalar_one()
 
 
 def _get_role_slots(event) -> dict:
@@ -132,11 +139,12 @@ def create_signup(
     """
     from app.services import lineup_service
 
-    # Check role-specific slot limits
+    # Check role-specific slot limits (with row-level locking to prevent race
+    # conditions when two players sign up for the last slot simultaneously)
     if event is not None:
         role_slots = _get_role_slots(event)
         max_for_role = role_slots.get(chosen_role, 0)
-        current_for_role = _count_going_by_role(raid_event_id, chosen_role)
+        current_for_role = _count_going_by_role(raid_event_id, chosen_role, lock=True)
         if max_for_role == 0 and not force_bench:
             raise RoleFullError(chosen_role, role_slots,
                                 f"No {chosen_role} slots are defined for this raid")
