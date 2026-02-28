@@ -194,11 +194,13 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     if old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
 
-    # When status transitions away from active, clean up lineup/bench slots
+    # When status transitions away from active, clean up lineup/bench slots.
+    # remove_slot_for_signup is idempotent (safe if role-change already removed).
     active_statuses = {SignupStatus.GOING.value, SignupStatus.BENCH.value}
     if old_status in active_statuses and new_status not in active_statuses:
         lineup_service.remove_slot_for_signup(signup.id)
-        # Auto-promote from bench queue when a going player leaves
+        # Auto-promote only when a going player leaves — bench declines
+        # don't free a role slot so there's nothing to promote into.
         if old_status == SignupStatus.GOING.value:
             _auto_promote_bench(signup.raid_event_id, old_role)
 
@@ -237,6 +239,8 @@ def decline_signup(signup: Signup) -> Signup:
     # Always remove lineup/bench queue slots (covers both going and bench players)
     lineup_service.remove_slot_for_signup(signup.id)
 
+    # Auto-promote only when a going player leaves — bench declines don't
+    # free a role slot so there's nothing to promote into.
     if was_going:
         _auto_promote_bench(raid_event_id, role)
 
