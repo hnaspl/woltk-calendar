@@ -118,7 +118,14 @@ class LineupSlot(db.Model):
         if self.character is not None:
             result["character"] = self.character.to_dict()
         if self.signup is not None:
-            result["signup"] = self.signup.to_dict()
+            # Shallow signup dict to avoid duplicating the character data
+            result["signup"] = {
+                "id": self.signup.id,
+                "chosen_spec": self.signup.chosen_spec,
+                "chosen_role": self.signup.chosen_role,
+                "status": self.signup.status,
+                "note": self.signup.note,
+            }
         return result
 
     def __repr__(self) -> str:

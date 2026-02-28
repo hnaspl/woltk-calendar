@@ -1,5 +1,12 @@
 <template>
-  <div class="relative inline-flex" @mouseenter="show = true" @mouseleave="show = false">
+  <div
+    class="relative inline-flex"
+    @mouseenter="show = true"
+    @mouseleave="show = false"
+    @focusin="show = true"
+    @focusout="show = false"
+    tabindex="0"
+  >
     <slot />
     <Transition name="fade">
       <div
