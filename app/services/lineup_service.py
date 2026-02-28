@@ -136,6 +136,9 @@ def update_lineup_grouped(
             # Sync signup's chosen_role to match the lineup column
             if signup.chosen_role != slot_group:
                 signup.chosen_role = slot_group
+            # Promote bench players to going when placed in a role column
+            if signup.status == "bench":
+                signup.status = "going"
             slot = LineupSlot(
                 raid_event_id=raid_event_id,
                 slot_group=slot_group,

@@ -180,6 +180,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
+import * as signupsApi from '@/api/signups'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useUiStore } from '@/stores/ui'
 
@@ -305,10 +306,23 @@ function onDropColumn(e, targetKey) {
   autoSave()
 }
 
-function onDropUnassigned() {
+async function onDropUnassigned() {
   dragOverTarget.value = null
   const sourceKey = dragSourceKey.value
   const sourceIdx = dragSourceIndex.value
+  const id = draggedId.value
+
+  // Moving from bench to unassigned: update status to going
+  if (sourceKey === 'bench' && id) {
+    try {
+      await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'going' })
+      emit('saved', { auto: true })
+    } catch {
+      uiStore.showToast('Failed to remove from bench', 'error')
+    }
+    return
+  }
+
   if (sourceKey && sourceKey !== 'unassigned' && sourceKey !== 'bench' && sourceIdx >= 0) {
     lineup.value[sourceKey].splice(sourceIdx, 1)
     dirty.value = true
@@ -316,16 +330,30 @@ function onDropUnassigned() {
   }
 }
 
-function onDropBench() {
+async function onDropBench() {
   dragOverTarget.value = null
   const sourceKey = dragSourceKey.value
   const sourceIdx = dragSourceIndex.value
-  if (sourceKey && sourceKey !== 'bench') {
-    if (sourceKey !== 'unassigned' && sourceIdx >= 0) {
-      lineup.value[sourceKey].splice(sourceIdx, 1)
-    }
+  const id = draggedId.value
+
+  if (!id || sourceKey === 'bench') return
+
+  // Update signup status to bench
+  try {
+    await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'bench' })
+  } catch {
+    uiStore.showToast('Failed to move to bench', 'error')
+    return
+  }
+
+  // Remove from role column if applicable
+  if (sourceKey !== 'unassigned' && sourceIdx >= 0) {
+    lineup.value[sourceKey].splice(sourceIdx, 1)
     dirty.value = true
     autoSave()
+  } else {
+    // No lineup change needed, just trigger signups reload
+    emit('saved', { auto: true })
   }
 }
 
