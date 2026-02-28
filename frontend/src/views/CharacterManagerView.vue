@@ -80,6 +80,28 @@
     <!-- Add / Edit modal -->
     <WowModal v-model="showModal" :title="editingChar ? 'Edit Character' : 'Add Character'" size="md">
       <form @submit.prevent="saveChar" class="space-y-4">
+        <!-- Warmane import section (only when adding, not editing) -->
+        <div v-if="!editingChar" class="p-3 rounded bg-bg-tertiary border border-border-default space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-accent-gold font-bold uppercase">Import from Warmane</span>
+            <span class="text-xs text-text-muted">(optional — fill name & realm, then click Lookup)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <input v-model="form.name" placeholder="Character name" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <select v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">Select realm…</option>
+              <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-3">
+            <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
+              Lookup on Warmane
+            </WowButton>
+            <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ Found — class & armory URL filled in</span>
+            <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">Not found on Warmane — fill in manually below</span>
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs text-text-muted mb-1">Character Name *</label>
           <input v-model="form.name" required placeholder="Arthas" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
@@ -157,6 +179,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import * as charApi from '@/api/characters'
+import * as warmaneApi from '@/api/warmane'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
@@ -165,6 +188,8 @@ const { getClassIcon } = useWowIcons()
 const characters = ref([])
 const loading = ref(true)
 const saving = ref(false)
+const lookingUp = ref(false)
+const lookupResult = ref(null)
 const error = ref(null)
 const formError = ref(null)
 const showModal = ref(false)
@@ -207,6 +232,7 @@ function openAddModal() {
   editingChar.value = null
   Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
   formError.value = null
+  lookupResult.value = null
   showModal.value = true
 }
 
@@ -220,6 +246,24 @@ function openEditModal(char) {
 function confirmArchive(char) {
   archiveTarget.value = char
   showArchiveConfirm.value = true
+}
+
+async function lookupFromWarmane() {
+  if (!form.name || !form.realm) return
+  lookingUp.value = true
+  lookupResult.value = null
+  formError.value = null
+  try {
+    const data = await warmaneApi.lookupCharacter(form.realm, form.name)
+    if (data?.class_name) form.class = data.class_name
+    if (data?.armory_url) form.armory_url = data.armory_url
+    if (data?.name) form.name = data.name
+    lookupResult.value = 'found'
+  } catch {
+    lookupResult.value = 'not_found'
+  } finally {
+    lookingUp.value = false
+  }
 }
 
 async function saveChar() {

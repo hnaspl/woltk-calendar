@@ -251,17 +251,20 @@ This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It
 | Feature | How it works |
 |---|---|
 | **Realms** | All 7 Warmane WotLK realms (Icecrown, Lordaeron, Onyxia, Blackrock, Frostwolf, Frostmourne, Neltharion) are available as dropdown selectors throughout the app |
-| **Armory URLs** | Characters can store a Warmane armory link (`https://armory.warmane.com/character/…`) for quick reference |
+| **Character lookup** | When adding a character, click "Lookup on Warmane" to auto-fill class and armory URL from the Warmane armory API. Falls back to manual entry if the API is unavailable. |
+| **Guild roster lookup** | `GET /api/v1/warmane/guild/{realm}/{name}` returns the guild roster with class data from Warmane |
+| **Armory URLs** | Characters store a Warmane armory link — auto-generated on import or manually entered |
+| **Deduplication** | Characters are unique per realm + name + guild. Both manual and imported characters are checked to prevent duplicates. |
 | **WoW classes & roles** | All 10 WotLK classes and tank/healer/dps roles are built in |
 
-### What's NOT integrated
+### Warmane API Endpoints (proxied)
 
-- No live character sync from Warmane
-- No gear score fetching
-- No guild roster import
-- All character and event data is managed locally within the app
+| Endpoint | Description |
+|---|---|
+| `GET /api/v1/warmane/character/{realm}/{name}` | Look up a character on Warmane armory (returns class, level, race, faction, armory URL) |
+| `GET /api/v1/warmane/guild/{realm}/{guild_name}` | Look up a guild roster on Warmane armory (returns member list with class data) |
 
-The armory URL field on characters is a convenience link — click it to view the character on Warmane's armory in your browser.
+> **Note:** The Warmane API (`armory.warmane.com/api`) is a public endpoint. If it's unreachable, character lookup will fail gracefully and you can enter data manually.
 
 ---
 

@@ -11,6 +11,10 @@ from app.models.character import Character
 
 
 def create_character(user_id: int, guild_id: int, data: dict) -> Character:
+    existing = find_existing(guild_id, data["realm_name"], data["name"])
+    if existing is not None:
+        raise ValueError(f"Character '{data['name']}' on {data['realm_name']} already exists in this guild")
+
     char = Character(
         user_id=user_id,
         guild_id=guild_id,
@@ -67,3 +71,14 @@ def list_characters(user_id: int, guild_id: Optional[int] = None) -> list[Charac
     if guild_id is not None:
         stmt = stmt.where(Character.guild_id == guild_id)
     return list(db.session.execute(stmt).scalars().all())
+
+
+def find_existing(guild_id: int, realm_name: str, name: str) -> Optional[Character]:
+    """Find an existing character by realm + name + guild (dedup check)."""
+    return db.session.execute(
+        sa.select(Character).where(
+            Character.guild_id == guild_id,
+            Character.realm_name == realm_name,
+            Character.name == name,
+        )
+    ).scalars().first()

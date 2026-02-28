@@ -28,11 +28,15 @@ def create_character():
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
-    char = character_service.create_character(
-        user_id=current_user.id,
-        guild_id=data["guild_id"],
-        data=data,
-    )
+    try:
+        char = character_service.create_character(
+            user_id=current_user.id,
+            guild_id=data["guild_id"],
+            data=data,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 409
+
     return jsonify(char.to_dict()), 201
 
 
