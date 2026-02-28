@@ -125,6 +125,15 @@
                     </svg>
                   </button>
                   <button
+                    class="text-blue-400 hover:text-blue-300 transition-colors p-0.5"
+                    title="Replace character"
+                    @click="startReplaceCharacter(signup)"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                  </button>
+                  <button
                     class="text-red-400 hover:text-red-300 transition-colors p-0.5"
                     title="Remove signup"
                     @click="removeSignup(signup)"
@@ -169,6 +178,57 @@
       </div>
     </div>
   </WowModal>
+
+  <!-- Replace character modal (officer only) -->
+  <WowModal v-model="showReplaceModal" :title="'Replace Character — ' + (replaceTarget?.character?.name ?? 'Player')">
+    <div class="space-y-4">
+      <p class="text-sm text-text-muted">
+        Select a replacement character for <strong class="text-text-primary">{{ replaceTarget?.character?.name ?? 'this player' }}</strong>.
+        The player will be notified and can confirm, decline, or leave the raid.
+      </p>
+      <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">Loading characters…</div>
+      <div v-else-if="replaceChars.length <= 1" class="text-center py-4 text-text-muted text-sm">
+        This player has no other characters available for replacement.
+      </div>
+      <template v-else>
+        <div class="space-y-2">
+          <button
+            v-for="c in replaceChars.filter(ch => ch.id !== replaceTarget?.character_id)"
+            :key="c.id"
+            class="w-full text-left px-4 py-3 rounded border transition-colors"
+            :class="selectedReplaceCharId === c.id
+              ? 'border-accent-gold bg-accent-gold/10'
+              : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+            @click="selectedReplaceCharId = c.id"
+          >
+            <div class="flex items-center gap-2">
+              <img
+                v-if="c.class_name"
+                :src="getClassIcon(c.class_name)"
+                :alt="c.class_name"
+                class="w-6 h-6 rounded border border-border-default"
+              />
+              <span class="text-sm font-medium text-text-primary">{{ c.name }}</span>
+              <span class="text-xs text-text-muted">{{ c.class_name }}</span>
+              <span v-if="c.is_main" class="text-[10px] text-accent-gold bg-accent-gold/10 px-1.5 py-0.5 rounded">Main</span>
+            </div>
+          </button>
+        </div>
+        <div>
+          <label class="text-[10px] text-text-muted">Reason (optional)</label>
+          <input v-model="replaceReason" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none" placeholder="e.g. Need a tank for this fight…" />
+        </div>
+      </template>
+      <div class="flex justify-end gap-2">
+        <button class="text-sm text-text-muted hover:text-text-primary transition-colors" @click="showReplaceModal = false">Cancel</button>
+        <button
+          v-if="selectedReplaceCharId"
+          class="text-sm text-accent-gold hover:text-amber-300 font-medium transition-colors"
+          @click="submitReplaceRequest"
+        >Request Replacement</button>
+      </div>
+    </div>
+  </WowModal>
 </template>
 
 <script setup>
@@ -201,7 +261,7 @@ const filteredRoleOptions = computed(() =>
   ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
 )
 
-const STATUS_ORDER = ['going', 'tentative', 'late', 'declined']
+const STATUS_ORDER = ['going', 'tentative', 'late', 'bench', 'declined']
 
 const groups = computed(() =>
   STATUS_ORDER.map(status => ({
@@ -272,6 +332,45 @@ async function confirmRemove(permanent) {
     emit('signup-error', err?.response?.data?.message ?? 'Failed to remove signup')
   } finally {
     removeTarget.value = null
+  }
+}
+
+// --- Officer character replacement ---
+const showReplaceModal = ref(false)
+const replaceTarget = ref(null)
+const replaceChars = ref([])
+const replaceCharsLoading = ref(false)
+const selectedReplaceCharId = ref(null)
+const replaceReason = ref('')
+
+async function startReplaceCharacter(signup) {
+  replaceTarget.value = signup
+  showReplaceModal.value = true
+  replaceChars.value = []
+  replaceCharsLoading.value = true
+  selectedReplaceCharId.value = null
+  replaceReason.value = ''
+  try {
+    replaceChars.value = await signupsApi.getSignupUserCharacters(props.guildId, props.eventId, signup.id)
+  } catch (err) {
+    emit('signup-error', err?.response?.data?.message ?? 'Failed to load player characters')
+    showReplaceModal.value = false
+  } finally {
+    replaceCharsLoading.value = false
+  }
+}
+
+async function submitReplaceRequest() {
+  if (!replaceTarget.value || !selectedReplaceCharId.value || !props.guildId || !props.eventId) return
+  try {
+    await signupsApi.createReplaceRequest(props.guildId, props.eventId, replaceTarget.value.id, {
+      new_character_id: selectedReplaceCharId.value,
+      reason: replaceReason.value || undefined,
+    })
+    showReplaceModal.value = false
+    emit('signup-updated', null)
+  } catch (err) {
+    emit('signup-error', err?.response?.data?.message ?? 'Failed to create replacement request')
   }
 }
 </script>

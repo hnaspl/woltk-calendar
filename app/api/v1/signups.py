@@ -218,3 +218,107 @@ def remove_ban(guild_id: int, event_id: int, character_id: int):
     if not removed:
         return jsonify({"error": "Ban not found"}), 404
     return jsonify({"message": "Ban removed"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Character replacement
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:signup_id>/user-characters")
+@login_required
+def get_signup_user_characters(guild_id: int, event_id: int, signup_id: int):
+    """Return the characters available for replacement (officer only)."""
+    membership = get_membership(guild_id, current_user.id)
+    if membership is None or not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer privileges required"}), 403
+    _, err = _get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+    signup = signup_service.get_signup(signup_id)
+    if signup is None or signup.raid_event_id != event_id:
+        return jsonify({"error": "Signup not found"}), 404
+    chars = signup_service.list_user_characters_for_event(signup.user_id, guild_id)
+    return jsonify([c.to_dict() for c in chars]), 200
+
+
+@bp.post("/<int:signup_id>/replace-request")
+@login_required
+def create_replace_request(guild_id: int, event_id: int, signup_id: int):
+    """Create a character replacement request (officer only)."""
+    membership = get_membership(guild_id, current_user.id)
+    if membership is None or not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer privileges required"}), 403
+    event, err = _get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+    signup = signup_service.get_signup(signup_id)
+    if signup is None or signup.raid_event_id != event_id:
+        return jsonify({"error": "Signup not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    new_character_id = data.get("new_character_id")
+    if not new_character_id:
+        return jsonify({"error": "new_character_id is required"}), 400
+
+    try:
+        req = signup_service.create_replacement_request(
+            signup_id=signup_id,
+            new_character_id=new_character_id,
+            requested_by=current_user.id,
+            reason=data.get("reason"),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    # Notify the player
+    if event:
+        notify.notify_character_replacement_requested(
+            signup, event, current_user.username, req
+        )
+
+    emit_signups_changed(event_id)
+    return jsonify(req.to_dict()), 201
+
+
+@bp.get("/replacement-requests")
+@login_required
+def list_my_replacement_requests(guild_id: int, event_id: int):
+    """Return pending replacement requests for the current user's signups in this event."""
+    if get_membership(guild_id, current_user.id) is None:
+        return jsonify({"error": "Forbidden"}), 403
+    requests = signup_service.get_pending_replacements_for_user(current_user.id)
+    # Filter to this event only
+    result = [r.to_dict() for r in requests if r.signup and r.signup.raid_event_id == event_id]
+    return jsonify(result), 200
+
+
+@bp.put("/replace-request/<int:request_id>")
+@login_required
+def resolve_replace_request(guild_id: int, event_id: int, request_id: int):
+    """Resolve a character replacement request (confirm or decline)."""
+    if get_membership(guild_id, current_user.id) is None:
+        return jsonify({"error": "Forbidden"}), 403
+    event, err = _get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+    if action not in ("confirm", "decline"):
+        return jsonify({"error": "action must be 'confirm' or 'decline'"}), 400
+
+    try:
+        req = signup_service.resolve_replacement(request_id, action)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    # Notify the officer who requested the replacement
+    if event and req.requester:
+        signup = signup_service.get_signup(req.signup_id)
+        if signup:
+            notify.notify_character_replacement_resolved(
+                req, event, signup, action
+            )
+
+    emit_signups_changed(event_id)
+    return jsonify(req.to_dict()), 200

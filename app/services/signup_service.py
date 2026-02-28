@@ -8,7 +8,7 @@ import sqlalchemy as sa
 
 from app.enums import SignupStatus
 from app.extensions import db
-from app.models.signup import Signup, RaidBan
+from app.models.signup import Signup, RaidBan, CharacterReplacement
 
 
 def _count_going(raid_event_id: int) -> int:
@@ -90,6 +90,8 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     if bench_slot is not None:
         benched = bench_slot.signup
+        # Update status from bench to going
+        benched.status = SignupStatus.GOING.value
         db.session.delete(bench_slot)
         db.session.commit()
         lineup_service.auto_assign_slot(benched)
@@ -119,6 +121,9 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     for candidate in candidates:
         if candidate.id not in existing_slot_ids:
+            # Update status from bench to going
+            candidate.status = SignupStatus.GOING.value
+            db.session.commit()
             lineup_service.auto_assign_slot(candidate)
             # Notify the promoted player
             _notify_bench_promotion(candidate)
@@ -345,3 +350,138 @@ def remove_ban(raid_event_id: int, character_id: int) -> bool:
     db.session.delete(ban)
     db.session.commit()
     return True
+
+
+# ---------------------------------------------------------------------------
+# Character replacement requests
+# ---------------------------------------------------------------------------
+
+def create_replacement_request(
+    signup_id: int,
+    new_character_id: int,
+    requested_by: int,
+    reason: str | None = None,
+) -> CharacterReplacement:
+    """Create a pending character replacement request."""
+    from datetime import datetime, timezone
+
+    signup = get_signup(signup_id)
+    if signup is None:
+        raise ValueError("Signup not found")
+
+    # Cancel any existing pending requests for this signup
+    existing = db.session.execute(
+        sa.select(CharacterReplacement).where(
+            CharacterReplacement.signup_id == signup_id,
+            CharacterReplacement.status == "pending",
+        )
+    ).scalars().all()
+    for old_req in existing:
+        old_req.status = "cancelled"
+        old_req.resolved_at = datetime.now(timezone.utc)
+
+    req = CharacterReplacement(
+        signup_id=signup_id,
+        old_character_id=signup.character_id,
+        new_character_id=new_character_id,
+        requested_by=requested_by,
+        reason=reason,
+        status="pending",
+    )
+    db.session.add(req)
+    db.session.commit()
+    return req
+
+
+def get_pending_replacement(signup_id: int) -> CharacterReplacement | None:
+    """Get the pending replacement request for a signup, if any."""
+    return db.session.execute(
+        sa.select(CharacterReplacement)
+        .where(
+            CharacterReplacement.signup_id == signup_id,
+            CharacterReplacement.status == "pending",
+        )
+        .options(
+            sa.orm.joinedload(CharacterReplacement.old_character),
+            sa.orm.joinedload(CharacterReplacement.new_character),
+            sa.orm.joinedload(CharacterReplacement.requester),
+        )
+    ).scalar_one_or_none()
+
+
+def get_pending_replacements_for_user(user_id: int) -> list[CharacterReplacement]:
+    """Get all pending replacement requests for signups owned by a user."""
+    return list(
+        db.session.execute(
+            sa.select(CharacterReplacement)
+            .join(Signup, Signup.id == CharacterReplacement.signup_id)
+            .where(
+                Signup.user_id == user_id,
+                CharacterReplacement.status == "pending",
+            )
+            .options(
+                sa.orm.joinedload(CharacterReplacement.old_character),
+                sa.orm.joinedload(CharacterReplacement.new_character),
+                sa.orm.joinedload(CharacterReplacement.requester),
+                sa.orm.joinedload(CharacterReplacement.signup),
+            )
+        ).scalars().unique().all()
+    )
+
+
+def resolve_replacement(
+    replacement_id: int,
+    action: str,
+) -> CharacterReplacement:
+    """Resolve a character replacement request.
+
+    action: 'confirm' or 'decline'
+    """
+    from datetime import datetime, timezone
+
+    req = db.session.get(CharacterReplacement, replacement_id)
+    if req is None:
+        raise ValueError("Replacement request not found")
+    if req.status != "pending":
+        raise ValueError("This replacement request is no longer pending")
+
+    if action == "confirm":
+        signup = get_signup(req.signup_id)
+        if signup is None:
+            raise ValueError("Signup no longer exists")
+        # Swap the character
+        signup.character_id = req.new_character_id
+        # Update lineup slot character too
+        from app.models.signup import LineupSlot
+        slots = db.session.execute(
+            sa.select(LineupSlot).where(LineupSlot.signup_id == signup.id)
+        ).scalars().all()
+        for slot in slots:
+            slot.character_id = req.new_character_id
+        req.status = "confirmed"
+    elif action == "decline":
+        req.status = "declined"
+    else:
+        raise ValueError(f"Invalid action: {action}")
+
+    req.resolved_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return req
+
+
+def list_user_characters_for_event(user_id: int, guild_id: int) -> list:
+    """Return all active characters for a user within a guild.
+
+    Used by officers to see which characters a player has available
+    for character replacement.
+    """
+    from app.models.character import Character
+    return list(
+        db.session.execute(
+            sa.select(Character).where(
+                Character.user_id == user_id,
+                Character.guild_id == guild_id,
+                Character.is_active.is_(True),
+            )
+        ).scalars().all()
+    )

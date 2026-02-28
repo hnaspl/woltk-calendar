@@ -150,9 +150,8 @@ onMounted(async () => {
   loading.value = true
   try {
     await guildStore.fetchGuilds()
-    if (guildStore.currentGuild) {
-      await calStore.fetchEvents(guildStore.currentGuild.id)
-    }
+    // Fetch events for all user's guilds (getAllEvents is guild-agnostic)
+    await calStore.fetchEvents()
     // Fetch user's signups across all guilds
     try {
       mySignups.value = await eventsApi.getMySignups()

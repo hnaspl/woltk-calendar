@@ -17,3 +17,16 @@ export const getBans = (guildId, eventId) =>
 
 export const removeBan = (guildId, eventId, characterId) =>
   api.delete(`/guilds/${guildId}/events/${eventId}/signups/bans/${characterId}`)
+
+// Character replacement
+export const getSignupUserCharacters = (guildId, eventId, signupId) =>
+  api.get(`/guilds/${guildId}/events/${eventId}/signups/${signupId}/user-characters`)
+
+export const createReplaceRequest = (guildId, eventId, signupId, payload) =>
+  api.post(`/guilds/${guildId}/events/${eventId}/signups/${signupId}/replace-request`, payload)
+
+export const getMyReplacementRequests = (guildId, eventId) =>
+  api.get(`/guilds/${guildId}/events/${eventId}/signups/replacement-requests`)
+
+export const resolveReplaceRequest = (guildId, eventId, requestId, payload) =>
+  api.put(`/guilds/${guildId}/events/${eventId}/signups/replace-request/${requestId}`, payload)

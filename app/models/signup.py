@@ -1,4 +1,4 @@
-"""Signup and LineupSlot models."""
+"""Signup, LineupSlot, RaidBan, and CharacterReplacement models."""
 
 from __future__ import annotations
 
@@ -182,4 +182,61 @@ class RaidBan(db.Model):
             "reason": self.reason,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "character": self.character.to_dict() if self.character else None,
+        }
+
+
+class CharacterReplacement(db.Model):
+    """Pending character replacement request from an officer."""
+
+    __tablename__ = "character_replacements"
+    __table_args__ = (
+        sa.Index("ix_char_replacement_signup", "signup_id"),
+    )
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    signup_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("signups.id"), nullable=False
+    )
+    old_character_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("characters.id"), nullable=False
+    )
+    new_character_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("characters.id"), nullable=False
+    )
+    requested_by: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("users.id"), nullable=False
+    )
+    reason: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    status: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, default="pending"
+    )  # pending, confirmed, declined
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    signup = relationship("Signup", foreign_keys=[signup_id], lazy="select")
+    old_character = relationship("Character", foreign_keys=[old_character_id], lazy="select")
+    new_character = relationship("Character", foreign_keys=[new_character_id], lazy="select")
+    requester = relationship("User", foreign_keys=[requested_by], lazy="select")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "signup_id": self.signup_id,
+            "old_character_id": self.old_character_id,
+            "new_character_id": self.new_character_id,
+            "requested_by": self.requested_by,
+            "reason": self.reason,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "old_character": self.old_character.to_dict() if self.old_character else None,
+            "new_character": self.new_character.to_dict() if self.new_character else None,
+            "requester_name": self.requester.username if self.requester else None,
         }

@@ -78,37 +78,70 @@
                 <div
                   v-for="s in mySignups"
                   :key="s.id"
-                  class="flex items-center gap-2 px-3 py-2 rounded border text-sm transition-colors"
-                  :class="editingSignupId === s.id
-                    ? 'border-accent-gold bg-accent-gold/10'
-                    : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                  class="space-y-2"
                 >
-                  <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
-                    {{ s.character?.name ?? '?' }}
-                  </span>
-                  <span class="text-text-muted text-xs">{{ ROLE_LABEL_MAP[s.chosen_role] || s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
-                  <span v-if="s.note" class="text-text-muted text-[10px] italic truncate max-w-[120px]" :title="s.note">📝 {{ s.note }}</span>
-                  <span v-if="s.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">Bench</span>
-                  <span v-else class="text-xs" :class="{
-                    'text-green-400': s.status === 'going',
-                    'text-yellow-400': s.status === 'tentative',
-                    'text-red-400': s.status === 'declined'
-                  }">{{ s.status }}</span>
-                  <div class="ml-auto flex gap-1">
-                    <button
-                      v-if="event.status === 'open' || event.status === 'draft'"
-                      class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
-                      @click="editingSignupId = editingSignupId === s.id ? null : s.id"
-                    >
-                      {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
-                    </button>
-                    <button
-                      v-if="event.status === 'open' || event.status === 'draft'"
-                      class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
-                      @click="leaveRaid(s)"
-                    >
-                      Leave Raid
-                    </button>
+                  <div
+                    class="flex items-center gap-2 px-3 py-2 rounded border text-sm transition-colors"
+                    :class="editingSignupId === s.id
+                      ? 'border-accent-gold bg-accent-gold/10'
+                      : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                  >
+                    <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
+                      {{ s.character?.name ?? '?' }}
+                    </span>
+                    <span class="text-text-muted text-xs">{{ ROLE_LABEL_MAP[s.chosen_role] || s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
+                    <span v-if="s.note" class="text-text-muted text-[10px] italic truncate max-w-[120px]" :title="s.note">📝 {{ s.note }}</span>
+                    <span v-if="s.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">Bench</span>
+                    <span v-else class="text-xs" :class="{
+                      'text-green-400': s.status === 'going',
+                      'text-yellow-400': s.status === 'tentative',
+                      'text-red-400': s.status === 'declined'
+                    }">{{ s.status }}</span>
+                    <div class="ml-auto flex gap-1">
+                      <button
+                        v-if="event.status === 'open' || event.status === 'draft'"
+                        class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
+                        @click="editingSignupId = editingSignupId === s.id ? null : s.id"
+                      >
+                        {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
+                      </button>
+                      <button
+                        v-if="event.status === 'open' || event.status === 'draft'"
+                        class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                        @click="leaveRaid(s)"
+                      >
+                        Leave Raid
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Pending character replacement request -->
+                  <div
+                    v-if="pendingReplacementForSignup(s.id)"
+                    class="ml-4 px-3 py-2 rounded border border-blue-700 bg-blue-900/20 text-sm space-y-2"
+                  >
+                    <p class="text-blue-300 text-xs font-medium">⚡ Character Swap Requested</p>
+                    <p class="text-text-muted text-xs">
+                      <strong class="text-text-primary">{{ pendingReplacementForSignup(s.id).requester_name }}</strong>
+                      wants to replace
+                      <strong class="text-text-primary">{{ pendingReplacementForSignup(s.id).old_character?.name ?? '?' }}</strong>
+                      with
+                      <strong class="text-accent-gold">{{ pendingReplacementForSignup(s.id).new_character?.name ?? '?' }}</strong>
+                      <span v-if="pendingReplacementForSignup(s.id).reason" class="italic"> — {{ pendingReplacementForSignup(s.id).reason }}</span>
+                    </p>
+                    <div class="flex gap-2">
+                      <button
+                        class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
+                        @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'confirm')"
+                      >Confirm</button>
+                      <button
+                        class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                        @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'decline')"
+                      >Decline</button>
+                      <button
+                        class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
+                        @click="leaveRaid(s)"
+                      >Leave Raid</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -313,6 +346,9 @@ const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))
 
+// Character replacement requests
+const replacementRequests = ref([])
+
 const editForm = reactive({
   title: '',
   raid_type: '',
@@ -390,6 +426,8 @@ onMounted(async () => {
     signups.value = su
     // Fetch bans for this event
     try { bans.value = await signupsApi.getBans(guildId.value, route.params.id) } catch { bans.value = [] }
+    // Fetch pending character replacement requests
+    await loadReplacementRequests()
   } catch (err) {
     error.value = err?.response?.data?.message ?? 'Failed to load raid details'
   } finally {
@@ -410,6 +448,7 @@ async function onSignupsChanged(data) {
   if (data?.event_id !== event.value.id) return
   try {
     signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+    await loadReplacementRequests()
   } catch {
     // Silently ignore — next WS event or poll will retry
   }
@@ -701,6 +740,36 @@ async function onLineupSaved(payload) {
 
 function onLineupUpdated(counts) {
   lineupCounts.value = counts
+}
+
+// --- Character replacement requests ---
+function pendingReplacementForSignup(signupId) {
+  return replacementRequests.value.find(r => r.signup_id === signupId) ?? null
+}
+
+async function loadReplacementRequests() {
+  if (!guildId.value || !event.value) return
+  try {
+    replacementRequests.value = await signupsApi.getMyReplacementRequests(guildId.value, event.value.id)
+  } catch {
+    replacementRequests.value = []
+  }
+}
+
+async function resolveReplacement(requestId, action) {
+  if (!guildId.value || !event.value) return
+  try {
+    await signupsApi.resolveReplaceRequest(guildId.value, event.value.id, requestId, { action })
+    // Reload signups and replacement requests
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+    await loadReplacementRequests()
+    uiStore.showToast(
+      action === 'confirm' ? 'Character swap confirmed!' : 'Character swap declined.',
+      action === 'confirm' ? 'success' : 'info'
+    )
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to process replacement', 'error')
+  }
 }
 
 function formatDateTime(d) {

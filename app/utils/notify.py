@@ -375,3 +375,45 @@ def notify_officers_lineup_changed(event, changed_by_user_id: int) -> None:
             guild_id=event.guild_id,
             raid_event_id=event.id,
         )
+
+
+# ---------------------------------------------------------------------------
+# Character replacement notifications
+# ---------------------------------------------------------------------------
+
+def notify_character_replacement_requested(signup, event, officer_name: str, replacement) -> None:
+    """Notify the player that an officer wants to replace their character."""
+    old_name = replacement.old_character.name if replacement.old_character else "your character"
+    new_name = replacement.new_character.name if replacement.new_character else "another character"
+    reason = f" Reason: {replacement.reason}" if replacement.reason else ""
+    _notify(
+        user_id=signup.user_id,
+        notification_type="character_replacement_requested",
+        title=f"Character swap requested for {event.title}",
+        body=f"{officer_name} wants to replace {old_name} with {new_name}.{reason} Please confirm, decline, or leave the raid.",
+        guild_id=event.guild_id,
+        raid_event_id=event.id,
+    )
+
+
+def notify_character_replacement_resolved(replacement, event, signup, action: str) -> None:
+    """Notify the requesting officer about the replacement resolution."""
+    char_name = replacement.old_character.name if replacement.old_character else "character"
+    if action == "confirm":
+        _notify(
+            user_id=replacement.requested_by,
+            notification_type="character_replacement_confirmed",
+            title=f"Character swap accepted for {event.title}",
+            body=f"The player accepted the character swap from {char_name} to {replacement.new_character.name if replacement.new_character else 'new character'}.",
+            guild_id=event.guild_id,
+            raid_event_id=event.id,
+        )
+    elif action == "decline":
+        _notify(
+            user_id=replacement.requested_by,
+            notification_type="character_replacement_declined",
+            title=f"Character swap declined for {event.title}",
+            body=f"The player declined the character swap for {char_name}.",
+            guild_id=event.guild_id,
+            raid_event_id=event.id,
+        )
