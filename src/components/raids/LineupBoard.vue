@@ -85,9 +85,9 @@
       </div>
     </div>
 
-    <!-- Unassigned pool -->
+    <!-- Unassigned + Bench pool (unified rendering for identical DnD behavior) -->
     <div
-      v-if="unassignedNonBench.length > 0 || (isOfficer && draggedId)"
+      v-if="unassigned.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
       :class="{ 'bg-red-900/10 ring-1 ring-inset ring-red-500/30': isOfficer && dragOverTarget === 'unassigned' }"
       @dragover.prevent="isOfficer && onDragOver($event, 'unassigned')"
@@ -95,80 +95,53 @@
       @dragleave="isOfficer && onDragLeave($event, 'unassigned')"
       @drop.prevent="isOfficer && onDropUnassigned()"
     >
-      <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassignedNonBench.length }})</p>
+      <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassigned.length }})</p>
       <div class="flex flex-wrap gap-2">
         <CharacterTooltip
-          v-for="s in unassignedNonBench"
+          v-for="s in unassigned"
           :key="s.id"
           :character="s.character"
-          position="bottom"
+          position="top"
         >
           <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-border-default text-xs transition-colors"
+            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs transition-colors"
             :class="{
-              'cursor-grab active:cursor-grabbing hover:border-border-gold': isOfficer,
+              'border border-yellow-700/40 hover:border-yellow-500': s.status === 'bench',
+              'border border-border-default hover:border-border-gold': s.status !== 'bench',
+              'cursor-grab active:cursor-grabbing': isOfficer,
               'opacity-50': draggedId === s.id
             }"
             draggable="true"
-            @dragstart="onDragStart($event, s, 'unassigned', -1)"
+            @dragstart="onDragStart($event, s, s.status === 'bench' ? 'bench' : 'unassigned', -1)"
             @dragend="onDragEnd"
           >
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
             <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
+            <span v-if="s.status === 'bench'" class="text-yellow-400 text-[10px] font-medium">Bench</span>
             <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
               Lv{{ s.character.metadata.level }}
             </span>
           </div>
         </CharacterTooltip>
       </div>
-      <p v-if="unassignedNonBench.length === 0 && draggedId" class="text-xs text-text-muted italic">
+      <p v-if="unassigned.length === 0 && draggedId" class="text-xs text-text-muted italic">
         Drop here to unassign
       </p>
     </div>
 
-    <!-- Bench pool -->
+    <!-- Bench drop zone (drop-only, shown during active drag) -->
     <div
-      v-if="benchPlayers.length > 0 || (isOfficer && draggedId)"
-      class="px-5 py-4 border-t border-border-default transition-colors"
-      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': isOfficer && dragOverTarget === 'bench' }"
-      @dragover.prevent="isOfficer && onDragOver($event, 'bench')"
-      @dragenter.prevent="isOfficer && (dragOverTarget = 'bench')"
-      @dragleave="isOfficer && onDragLeave($event, 'bench')"
-      @drop.prevent="isOfficer && onDropBench()"
+      v-if="isOfficer && draggedId && dragSourceKey !== 'bench'"
+      class="px-5 py-3 border-t border-border-default transition-colors"
+      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': dragOverTarget === 'bench' }"
+      @dragover.prevent="onDragOver($event, 'bench')"
+      @dragenter.prevent="dragOverTarget = 'bench'"
+      @dragleave="onDragLeave($event, 'bench')"
+      @drop.prevent="onDropBench()"
     >
-      <p class="text-xs text-yellow-400 mb-2 uppercase tracking-wider">Bench ({{ benchPlayers.length }})</p>
-      <div class="flex flex-wrap gap-2">
-        <CharacterTooltip
-          v-for="s in benchPlayers"
-          :key="s.id"
-          :character="s.character"
-          position="bottom"
-        >
-          <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-yellow-700/40 text-xs transition-colors"
-            :class="{
-              'cursor-grab active:cursor-grabbing hover:border-yellow-500': isOfficer,
-              'opacity-50': draggedId === s.id
-            }"
-            draggable="true"
-            @dragstart="onDragStart($event, s, 'bench', -1)"
-            @dragend="onDragEnd"
-          >
-            <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
-            <span>{{ s.character?.name ?? '?' }}</span>
-            <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
-            <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
-              Lv{{ s.character.metadata.level }}
-            </span>
-          </div>
-        </CharacterTooltip>
-      </div>
-      <p v-if="benchPlayers.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
-        Drop here to move to bench
-      </p>
+      <p class="text-xs text-yellow-400/60 italic">Drop here to move to bench</p>
     </div>
-
 
   </WowCard>
 </template>
@@ -236,11 +209,13 @@ function onDragStart(e, signup, sourceKey, idx) {
     e.preventDefault()
     return
   }
+  // Set dataTransfer FIRST before any reactive state changes
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(signup.id))
+  e.stopPropagation()
   draggedId.value = signup.id
   dragSourceKey.value = sourceKey
   dragSourceIndex.value = idx
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', String(signup.id))
 }
 
 function onDragEnd() {
@@ -270,16 +245,16 @@ function findSignupById(id) {
     const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
-  const fromBench = benchPlayers.value.find(s => Number(s.id) === id)
-  if (fromBench) return { key: 'bench', idx: -1, signup: fromBench }
-  const fromUnassigned = unassignedNonBench.value.find(s => Number(s.id) === id)
-  if (fromUnassigned) return { key: 'unassigned', idx: -1, signup: fromUnassigned }
+  const fromPool = unassigned.value.find(s => Number(s.id) === id)
+  if (fromPool) return { key: fromPool.status === 'bench' ? 'bench' : 'unassigned', idx: -1, signup: fromPool }
   return null
 }
 
 function onDropColumn(e, targetKey) {
   dragOverTarget.value = null
-  const id = Number(e.dataTransfer.getData('text/plain'))
+  // Use Vue reactive state as primary source; dataTransfer as fallback
+  const rawId = draggedId.value || e.dataTransfer.getData('text/plain')
+  const id = Number(rawId)
   if (!id) return
 
   const found = findSignupById(id)
@@ -429,14 +404,6 @@ const assignedIds = computed(() => {
 
 const unassigned = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
-)
-
-const unassignedNonBench = computed(() =>
-  unassigned.value.filter(s => s.status !== 'bench')
-)
-
-const benchPlayers = computed(() =>
-  unassigned.value.filter(s => s.status === 'bench')
 )
 
 function availableFor(key) {
