@@ -187,7 +187,7 @@
         The player will be notified and can confirm, decline, or leave the raid.
       </p>
       <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">Loading characters…</div>
-      <div v-else-if="replaceChars.length <= 1" class="text-center py-4 text-text-muted text-sm">
+      <div v-else-if="replaceChars.filter(ch => ch.id !== replaceTarget?.character_id).length === 0" class="text-center py-4 text-text-muted text-sm">
         This player has no other characters available for replacement.
       </div>
       <template v-else>
