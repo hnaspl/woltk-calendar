@@ -21,6 +21,37 @@ def _count_going(raid_event_id: int) -> int:
     ).scalar_one()
 
 
+def _count_going_by_role(raid_event_id: int, role: str) -> int:
+    """Return the number of going signups for a specific role in an event."""
+    return db.session.execute(
+        sa.select(sa.func.count(Signup.id)).where(
+            Signup.raid_event_id == raid_event_id,
+            Signup.status == SignupStatus.GOING.value,
+            Signup.chosen_role == role,
+        )
+    ).scalar_one()
+
+
+def _get_role_slots(event) -> dict:
+    """Return the slot limits per role from the event's raid definition."""
+    rd = event.raid_definition
+    return {
+        "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
+        "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
+        "tank": rd.tank_slots if rd and rd.tank_slots is not None else 0,
+        "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
+        "dps": rd.dps_slots if rd and rd.dps_slots is not None else 18,
+    }
+
+
+class RoleFullError(Exception):
+    """Raised when a role's slots are all filled."""
+    def __init__(self, role: str, role_slots: dict, message: str | None = None):
+        self.role = role
+        self.role_slots = role_slots
+        super().__init__(message or f"All {role} slots are full")
+
+
 def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     """Promote the first matching benched signup to 'going'.
 
@@ -57,14 +88,33 @@ def create_signup(
     chosen_spec: Optional[str],
     note: Optional[str],
     raid_size: int,
+    force_bench: bool = False,
+    event=None,
 ) -> Signup:
-    """Create a signup, applying auto-bench if the roster is full."""
+    """Create a signup, applying auto-bench if the roster is full.
+
+    Raises RoleFullError if the chosen role's slots are all filled
+    and force_bench is False.
+    """
     from app.services import lineup_service
 
+    # Check role-specific slot limits
+    if event is not None:
+        role_slots = _get_role_slots(event)
+        max_for_role = role_slots.get(chosen_role, 0)
+        current_for_role = _count_going_by_role(raid_event_id, chosen_role)
+        if current_for_role >= max_for_role and not force_bench:
+            raise RoleFullError(chosen_role, role_slots)
+
     going_count = _count_going(raid_event_id)
-    status = (
-        SignupStatus.BENCH.value if going_count >= raid_size else SignupStatus.GOING.value
-    )
+
+    if force_bench:
+        # User explicitly chose to go to bench for a full role
+        status = SignupStatus.BENCH.value
+    else:
+        status = (
+            SignupStatus.BENCH.value if going_count >= raid_size else SignupStatus.GOING.value
+        )
 
     signup = Signup(
         raid_event_id=raid_event_id,

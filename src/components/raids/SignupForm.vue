@@ -106,6 +106,41 @@
         {{ existingSignup ? 'Update Signup' : 'Sign Up' }}
       </WowButton>
     </form>
+
+    <!-- Role Full dialog -->
+    <WowModal v-model="showRoleFullModal" title="Role Slots Full" size="sm">
+      <div class="space-y-3">
+        <p class="text-text-muted text-sm">
+          All <strong class="text-accent-gold">{{ roleFullLabel }}</strong> slots are full for this raid.
+        </p>
+        <p v-if="roleFullIsOfficer" class="text-text-muted text-sm">
+          As an officer you can remove someone from this role in the Signups list, move them to bench, or select a different role below. You may also join the <strong class="text-yellow-400">bench</strong> yourself and wait for a slot to open.
+        </p>
+        <p v-else class="text-text-muted text-sm">
+          You can join the <strong class="text-yellow-400">bench</strong> and you will be automatically moved in when a slot opens up, or select a different role.
+        </p>
+        <div v-if="alternativeRoles.length > 0" class="mt-2">
+          <p class="text-xs text-text-muted mb-1">Available roles:</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="r in alternativeRoles"
+              :key="r.value"
+              type="button"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-default text-xs text-text-muted hover:border-accent-gold hover:text-accent-gold transition-all"
+              @click="switchRoleAndRetry(r.value)"
+            >
+              <RoleBadge :role="r.value" /> {{ r.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showRoleFullModal = false">Cancel</WowButton>
+          <WowButton variant="primary" :loading="submitting" @click="forceBenchSignup">Join Bench</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </WowCard>
 </template>
 
@@ -113,10 +148,13 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
+import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
 import { ROLE_OPTIONS, CLASS_SPECS } from '@/constants'
+
+const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -132,6 +170,23 @@ const characters = ref([])
 const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
+
+// Role full modal state
+const showRoleFullModal = ref(false)
+const roleFullRole = ref('')
+const roleFullSlots = ref({})
+const roleFullIsOfficer = ref(false)
+
+const roleFullLabel = computed(() => ROLE_LABEL_MAP[roleFullRole.value] || roleFullRole.value)
+
+const alternativeRoles = computed(() => {
+  // Show roles that have available slots (slots > 0) and are not the full one
+  return ROLE_OPTIONS.filter(r => {
+    if (r.value === roleFullRole.value) return false
+    if (!props.availableRoles.includes(r.value)) return false
+    return true
+  })
+})
 
 const roles = computed(() =>
   ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
@@ -240,9 +295,53 @@ async function handleSubmit() {
     success.value = true
     setTimeout(() => { success.value = false }, 3000)
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to submit signup'
+    const data = err?.response?.data
+    if (err?.response?.status === 409 && data?.error === 'role_full') {
+      // Role is full — show modal with bench/change options
+      roleFullRole.value = data.role
+      roleFullSlots.value = data.role_slots || {}
+      roleFullIsOfficer.value = !!data.is_officer
+      showRoleFullModal.value = true
+    } else {
+      error.value = data?.message ?? 'Failed to submit signup'
+    }
   } finally {
     submitting.value = false
   }
+}
+
+/** User chose to go to bench despite role being full */
+async function forceBenchSignup() {
+  error.value = null
+  submitting.value = true
+
+  const payload = {
+    character_id: form.characterId,
+    chosen_role:  form.chosenRole,
+    chosen_spec:  form.chosenSpec || undefined,
+    note:         form.note || undefined,
+    force_bench:  true,
+  }
+
+  try {
+    const created = await signupsApi.createSignup(props.guildId, props.eventId, payload)
+    emit('signed-up', created)
+    Object.assign(form, INITIAL_FORM)
+    showRoleFullModal.value = false
+    success.value = true
+    setTimeout(() => { success.value = false }, 3000)
+  } catch (err) {
+    error.value = err?.response?.data?.message ?? 'Failed to submit signup'
+    showRoleFullModal.value = false
+  } finally {
+    submitting.value = false
+  }
+}
+
+/** User chose to switch role and retry signup */
+function switchRoleAndRetry(newRole) {
+  form.chosenRole = newRole
+  showRoleFullModal.value = false
+  handleSubmit()
 }
 </script>

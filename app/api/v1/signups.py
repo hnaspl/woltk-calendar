@@ -49,6 +49,9 @@ def create_signup(guild_id: int, event_id: int):
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
+    membership = get_membership(guild_id, current_user.id)
+    is_officer = is_officer_or_admin(membership)
+
     try:
         signup = signup_service.create_signup(
             raid_event_id=event_id,
@@ -58,7 +61,18 @@ def create_signup(guild_id: int, event_id: int):
             chosen_spec=data.get("chosen_spec"),
             note=data.get("note"),
             raid_size=event.raid_size,
+            force_bench=bool(data.get("force_bench", False)),
+            event=event,
         )
+    except signup_service.RoleFullError as exc:
+        role_slots = exc.role_slots
+        return jsonify({
+            "error": "role_full",
+            "message": f"All {exc.role} slots are full",
+            "role": exc.role,
+            "role_slots": role_slots,
+            "is_officer": is_officer,
+        }), 409
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(signup.to_dict()), 201
