@@ -30,3 +30,7 @@ Thumbs.db
 
 # Alembic
 backend/migrations/versions/*.pyc
+
+# SQLite test databases
+*.db
+backend/instance/

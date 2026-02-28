@@ -55,6 +55,34 @@ def create_app(config_override: dict | None = None) -> Flask:
     from app.api.v1 import register_blueprints
     register_blueprints(app)
 
+    # ------------------------------------------------- Error handlers
+    @app.errorhandler(400)
+    def bad_request(e):
+        from flask import jsonify
+        return jsonify({"error": str(e.description) if hasattr(e, "description") else "Bad request"}), 400
+
+    @app.errorhandler(404)
+    def not_found(e):
+        from flask import jsonify
+        return jsonify({"error": "Not found"}), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        from flask import jsonify
+        return jsonify({"error": "Method not allowed"}), 405
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        from flask import jsonify
+        app.logger.exception("Unhandled 500 error: %s", e)
+        return jsonify({"error": "Internal server error"}), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        from flask import jsonify
+        app.logger.exception("Unhandled exception: %s", e)
+        return jsonify({"error": "Internal server error"}), 500
+
     # -------------------------------------------------- Health / root route
     @app.route("/")
     def index():

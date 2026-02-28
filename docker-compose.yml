@@ -21,11 +21,11 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  app:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    container_name: wotlk_calendar_backend
+    container_name: wotlk_calendar_app
     restart: unless-stopped
     depends_on:
       db:
@@ -38,29 +38,14 @@ services:
       CORS_ORIGINS: "*"
       SESSION_COOKIE_SECURE: "false"
       SESSION_COOKIE_SAMESITE: Lax
+      VITE_API_URL: http://localhost:5000
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend:/app
-    command: >
-      sh -c "flask create-db && flask seed && flask run --host=0.0.0.0 --port=5000"
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: wotlk_calendar_frontend
-    restart: unless-stopped
-    depends_on:
-      - backend
-    environment:
-      VITE_API_URL: http://backend:5000
-    ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev -- --host 0.0.0.0
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
 
 volumes:
   mysql_data:
