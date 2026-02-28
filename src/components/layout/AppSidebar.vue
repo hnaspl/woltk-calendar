@@ -365,8 +365,13 @@ async function lookupGuild() {
         lookingUpGuild.value = false
         return
       }
-    } catch {
-      // Not found on this realm, try next
+    } catch (err) {
+      // 404 = not found on this realm, try next; other errors are real failures
+      if (err?.response?.status && err.response.status !== 404) {
+        lookingUpGuild.value = false
+        guildLookupError.value = err?.response?.data?.message ?? 'Failed to search Warmane API'
+        return
+      }
     }
   }
 
