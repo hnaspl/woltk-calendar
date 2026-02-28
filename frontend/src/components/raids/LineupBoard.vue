@@ -13,7 +13,7 @@
       <!-- TANKS -->
       <div class="bg-bg-secondary p-4">
         <div class="flex items-center gap-2 mb-3">
-          <img src="https://wow.zamimg.com/images/wow/icons/medium/ability_warrior_defensivestance.jpg" class="w-5 h-5 rounded" alt="Tank" />
+          <img :src="getRoleIcon('tank')" class="w-5 h-5 rounded" alt="Tank" />
           <span class="text-blue-300 font-semibold text-sm">Tanks</span>
           <span class="ml-auto text-xs text-text-muted">{{ lineup.tanks.length }} / {{ tankSlots }}</span>
         </div>
@@ -29,7 +29,7 @@
       <!-- HEALERS -->
       <div class="bg-bg-secondary p-4">
         <div class="flex items-center gap-2 mb-3">
-          <img src="https://wow.zamimg.com/images/wow/icons/medium/spell_holy_flashheal.jpg" class="w-5 h-5 rounded" alt="Healer" />
+          <img :src="getRoleIcon('healer')" class="w-5 h-5 rounded" alt="Healer" />
           <span class="text-green-300 font-semibold text-sm">Healers</span>
           <span class="ml-auto text-xs text-text-muted">{{ lineup.healers.length }} / {{ healerSlots }}</span>
         </div>
@@ -45,7 +45,7 @@
       <!-- DPS -->
       <div class="bg-bg-secondary p-4">
         <div class="flex items-center gap-2 mb-3">
-          <img src="https://wow.zamimg.com/images/wow/icons/medium/ability_dualwield.jpg" class="w-5 h-5 rounded" alt="DPS" />
+          <img :src="getRoleIcon('dps')" class="w-5 h-5 rounded" alt="DPS" />
           <span class="text-red-300 font-semibold text-sm">DPS</span>
           <span class="ml-auto text-xs text-text-muted">{{ lineup.dps.length }} / {{ dpsSlots }}</span>
         </div>
@@ -95,7 +95,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['saved'])
-const { getClassIcon, getClassColor } = useWowIcons()
+const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
 const saving = ref(false)
 
 const lineup = ref({ tanks: [], healers: [], dps: [] })

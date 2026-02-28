@@ -3,7 +3,7 @@
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <img
-          src="https://wow.zamimg.com/images/wow/icons/large/achievement_dungeon_icecrown_25man.jpg"
+          :src="logoIcon"
           alt="Raid Calendar"
           class="w-20 h-20 rounded-xl border-2 border-border-gold mx-auto mb-4 shadow-gold"
         />
@@ -89,8 +89,12 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { useWowIcons } from '@/composables/useWowIcons'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
+
+const { getRaidIcon } = useWowIcons()
+const logoIcon = getRaidIcon('icc')
 
 const { register, authError } = useAuth()
 

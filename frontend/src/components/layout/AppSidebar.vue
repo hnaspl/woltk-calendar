@@ -3,7 +3,7 @@
     <!-- Logo / Guild branding -->
     <div class="flex items-center gap-3 px-5 py-5 border-b border-[#2a3450]">
       <img
-        src="https://wow.zamimg.com/images/wow/icons/large/achievement_dungeon_icecrown_25man.jpg"
+        :src="logoIcon"
         alt="WoW Calendar"
         class="w-9 h-9 rounded border border-border-gold"
       />
@@ -69,6 +69,10 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
+import { useWowIcons } from '@/composables/useWowIcons'
+
+const { getRaidIcon } = useWowIcons()
+const logoIcon = getRaidIcon('icc')
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
