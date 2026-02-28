@@ -19,7 +19,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,9 @@ def fetch_character(realm: str, name: str) -> Optional[dict]:
     Returns full character data (class, level, race, equipment, talents,
     professions, achievement points) or None if not found / API error.
     """
+    if requests is None:
+        logger.warning("requests library not installed; cannot call Warmane API")
+        return None
     url = f"{WARMANE_API_BASE}/character/{name}/{realm}/summary"
     try:
         resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
@@ -56,6 +62,9 @@ def fetch_guild(realm: str, guild_name: str) -> Optional[dict]:
 
     Returns a dict with guild data or None if not found / API error.
     """
+    if requests is None:
+        logger.warning("requests library not installed; cannot call Warmane API")
+        return None
     url = f"{WARMANE_API_BASE}/guild/{guild_name}/{realm}/summary"
     try:
         resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
