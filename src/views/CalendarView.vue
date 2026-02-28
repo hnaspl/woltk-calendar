@@ -60,6 +60,13 @@
         <WowButton variant="ghost" class="w-full text-xs" @click="calStore.clearFilters()">
           Clear Filters
         </WowButton>
+
+        <WowButton v-if="permissions.isOfficer.value" class="w-full text-sm" @click="openCreateModal">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Schedule Raid
+        </WowButton>
       </aside>
 
       <!-- Calendar -->
@@ -75,32 +82,130 @@
         />
       </div>
     </div>
+
+    <!-- Schedule Raid Modal -->
+    <WowModal v-model="showCreateModal" title="Schedule Raid" size="md">
+      <form @submit.prevent="createEvent" class="space-y-4">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Title *</label>
+          <input v-model="eventForm.title" required placeholder="e.g. ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Realm *</label>
+            <select v-model="eventForm.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">Select realm…</option>
+              <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Size</label>
+            <select v-model.number="eventForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option :value="10">10-man</option>
+              <option :value="25">25-man</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
+            <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="normal">Normal</option>
+              <option value="heroic">Heroic</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Instructions</label>
+          <textarea v-model="eventForm.instructions" rows="2" placeholder="Bring flasks, food, etc." class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none placeholder:text-text-muted/50" />
+        </div>
+        <div v-if="createError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createError }}</div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showCreateModal = false">Cancel</WowButton>
+          <WowButton :loading="creating" @click="createEvent">Schedule</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import RaidCalendar from '@/components/calendar/RaidCalendar.vue'
 import WowButton from '@/components/common/WowButton.vue'
+import WowModal from '@/components/common/WowModal.vue'
 import { useCalendarStore } from '@/stores/calendar'
 import { useGuildStore } from '@/stores/guild'
+import { usePermissions } from '@/composables/usePermissions'
+import { useUiStore } from '@/stores/ui'
 import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
+import * as eventsApi from '@/api/events'
 
 const calStore = useCalendarStore()
 const guildStore = useGuildStore()
+const uiStore = useUiStore()
+const permissions = usePermissions()
 const router = useRouter()
 
 const raidTypes = RAID_TYPES
 const warmaneRealms = WARMANE_REALMS
 
+const showCreateModal = ref(false)
+const creating = ref(false)
+const createError = ref(null)
+const eventForm = reactive({
+  title: '',
+  realm_name: '',
+  raid_size: 25,
+  starts_at_utc: '',
+  difficulty: 'normal',
+  instructions: ''
+})
+
 onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (guildStore.currentGuild) {
-    await calStore.fetchEvents(guildStore.currentGuild.id)
+    await Promise.all([
+      calStore.fetchEvents(guildStore.currentGuild.id),
+      guildStore.fetchMembers(guildStore.currentGuild.id)
+    ])
   }
 })
+
+function openCreateModal() {
+  Object.assign(eventForm, { title: '', realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', instructions: '' })
+  createError.value = null
+  showCreateModal.value = true
+}
+
+async function createEvent() {
+  if (!eventForm.title || !eventForm.realm_name || !eventForm.starts_at_utc) {
+    createError.value = 'Title, realm and date are required'
+    return
+  }
+  createError.value = null
+  creating.value = true
+  try {
+    const payload = { ...eventForm, status: 'open' }
+    const newEvent = await eventsApi.createEvent(guildStore.currentGuild.id, payload)
+    showCreateModal.value = false
+    uiStore.showToast('Raid scheduled!', 'success')
+    await calStore.fetchEvents(guildStore.currentGuild.id)
+    router.push(`/raids/${newEvent.id}`)
+  } catch (err) {
+    createError.value = err?.response?.data?.message ?? 'Failed to schedule raid'
+  } finally {
+    creating.value = false
+  }
+}
 
 function onEventClick(event) {
   router.push(`/raids/${event.id}`)

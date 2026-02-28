@@ -83,7 +83,7 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Instructions</label>
-          <textarea v-model="form.description" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
+          <textarea v-model="form.default_instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
       </form>
@@ -161,7 +161,7 @@ const applyDate = ref('')
 
 const warmaneRealms = WARMANE_REALMS
 
-const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', description: '' })
+const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '' })
 
 onMounted(async () => {
   loading.value = true
@@ -185,13 +185,13 @@ onMounted(async () => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', description: '' })
+  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '' })
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(tpl) {
   editing.value = tpl
-  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', description: tpl.default_instructions ?? tpl.description ?? '' })
+  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', default_instructions: tpl.default_instructions ?? '' })
   formError.value = null; showModal.value = true
 }
 
@@ -207,7 +207,7 @@ async function saveTemplate() {
     raid_definition_id: form.raid_definition_id,
     raid_size: form.raid_size,
     difficulty: form.difficulty,
-    default_instructions: form.description || undefined
+    default_instructions: form.default_instructions || undefined
   }
   try {
     if (editing.value) {

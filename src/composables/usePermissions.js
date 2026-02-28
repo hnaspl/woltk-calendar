@@ -19,7 +19,7 @@ export function usePermissions() {
   const role = computed(() => membership.value?.role ?? 'member')
 
   const isAdmin = computed(() =>
-    currentUser.value?.is_admin === true || role.value === 'admin'
+    currentUser.value?.is_admin === true || role.value === 'guild_admin'
   )
 
   const isOfficer = computed(() =>

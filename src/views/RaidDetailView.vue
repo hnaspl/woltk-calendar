@@ -159,7 +159,8 @@ onMounted(async () => {
     if (!guildStore.currentGuild) await guildStore.fetchGuilds()
     const [ev, su] = await Promise.all([
       eventsApi.getEvent(guildId.value, route.params.id),
-      signupsApi.getSignups(guildId.value, route.params.id)
+      signupsApi.getSignups(guildId.value, route.params.id),
+      guildStore.members.length === 0 && guildId.value ? guildStore.fetchMembers(guildId.value) : Promise.resolve()
     ])
     event.value = ev
     signups.value = su
