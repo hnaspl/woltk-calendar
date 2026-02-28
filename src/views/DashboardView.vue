@@ -95,13 +95,24 @@
           <div v-else-if="mySignups.length === 0" class="text-center py-8 text-text-muted text-sm">
             No signups yet.
           </div>
-          <WowCard v-else v-for="su in mySignups" :key="su.id" class="py-2">
-            <div class="flex items-center gap-2">
-              <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
-              <span class="text-sm text-text-primary flex-1 truncate">{{ su.event_title ?? 'Raid' }}</span>
-              <StatusBadge :status="su.status" />
-            </div>
-          </WowCard>
+          <RouterLink
+            v-else
+            v-for="su in mySignups"
+            :key="su.id"
+            :to="`/raids/${su.raid_event_id}`"
+            class="block"
+          >
+            <WowCard class="py-2 hover:border-border-gold transition-colors cursor-pointer">
+              <div class="flex items-center gap-2">
+                <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
+                <div class="flex-1 min-w-0">
+                  <span class="text-sm text-text-primary truncate block">{{ su.event_title ?? 'Raid' }}</span>
+                  <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">{{ su.character.name }}</span>
+                </div>
+                <StatusBadge :status="su.status" />
+              </div>
+            </WowCard>
+          </RouterLink>
         </div>
       </div>
     </div>
@@ -161,7 +172,10 @@ const upcomingEvents = computed(() =>
 
 const myGoingCount = computed(() => mySignups.value.filter(s => s.status === 'going').length)
 const myTentativeCount = computed(() => mySignups.value.filter(s => s.status === 'tentative').length)
-const missingResponseCount = computed(() => upcomingEvents.value.length - mySignups.value.length)
+const missingResponseCount = computed(() => {
+  const signedUpEventIds = new Set(mySignups.value.map(s => s.raid_event_id))
+  return upcomingEvents.value.filter(ev => !signedUpEventIds.has(ev.id)).length
+})
 
 function formatDateTime(d) {
   if (!d) return '?'

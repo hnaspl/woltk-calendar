@@ -17,6 +17,8 @@ export const useGuildStore = defineStore('guild', () => {
       guilds.value = await guildsApi.getGuilds()
       if (!currentGuild.value && guilds.value.length > 0) {
         currentGuild.value = guilds.value[0]
+        // Auto-fetch members so permissions are available immediately
+        fetchMembers(guilds.value[0].id)
       }
     } catch (err) {
       error.value = err?.response?.data?.message || 'Failed to load guilds'
@@ -51,6 +53,10 @@ export const useGuildStore = defineStore('guild', () => {
   function setCurrentGuild(guild) {
     currentGuild.value = guild
     members.value = []
+    // Auto-fetch members so permissions are available immediately
+    if (guild?.id) {
+      fetchMembers(guild.id)
+    }
   }
 
   async function fetchMembers(guildId) {

@@ -99,10 +99,26 @@
             </select>
           </div>
           <div>
+            <label class="block text-xs text-text-muted mb-1">Raid Type</label>
+            <select v-model="eventForm.raid_type" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">Select raid type…</option>
+              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
             <label class="block text-xs text-text-muted mb-1">Size</label>
             <select v-model.number="eventForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option :value="10">10-man</option>
               <option :value="25">25-man</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="normal">Normal</option>
+              <option value="heroic">Heroic</option>
             </select>
           </div>
         </div>
@@ -112,11 +128,9 @@
             <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
-            <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="normal">Normal</option>
-              <option value="heroic">Heroic</option>
-            </select>
+            <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+            <input v-model="eventForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" placeholder="Auto-locks at this time" />
+            <span class="text-[10px] text-text-muted">Leave empty to auto-lock 4h before start</span>
           </div>
         </div>
         <div>
@@ -168,6 +182,8 @@ const eventForm = reactive({
   raid_size: 25,
   starts_at_utc: '',
   difficulty: 'normal',
+  raid_type: '',
+  close_signups_at: '',
   instructions: ''
 })
 
@@ -181,7 +197,7 @@ onMounted(async () => {
 })
 
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
 }
@@ -205,6 +221,8 @@ async function createEvent() {
       raid_size: eventForm.raid_size,
       starts_at_utc: eventForm.starts_at_utc,
       difficulty: eventForm.difficulty,
+      raid_type: eventForm.raid_type || undefined,
+      close_signups_at: eventForm.close_signups_at || undefined,
       instructions: eventForm.instructions,
       status: 'open'
     }

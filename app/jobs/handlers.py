@@ -39,7 +39,8 @@ def handle_send_notification(payload: dict) -> None:
 
 
 def auto_lock_upcoming_events(app: Flask) -> None:
-    """Auto-lock events starting within 4 hours. Runs on a schedule."""
+    """Auto-lock events that have reached their close_signups_at time,
+    or events starting within 4 hours if no close time is set."""
     from datetime import datetime, timedelta, timezone as tz
 
     import sqlalchemy as sa
@@ -48,21 +49,35 @@ def auto_lock_upcoming_events(app: Flask) -> None:
     from app.models.raid import RaidEvent
 
     with app.app_context():
-        cutoff = datetime.now(tz.utc) + timedelta(hours=4)
-        events = db.session.execute(
-                sa.select(RaidEvent).where(
-                    RaidEvent.status == "open",
-                    RaidEvent.starts_at_utc <= cutoff,
-                )
-            ).scalars().all()
+        now = datetime.now(tz.utc)
+        fallback_cutoff = now + timedelta(hours=4)
+
+        # Events with a specific close_signups_at that has been reached
+        events_with_close = list(db.session.execute(
+            sa.select(RaidEvent).where(
+                RaidEvent.status == "open",
+                RaidEvent.close_signups_at.isnot(None),
+                RaidEvent.close_signups_at <= now,
+            )
+        ).scalars().all())
+
+        # Events without close_signups_at, falling back to 4h before start
+        events_without_close = list(db.session.execute(
+            sa.select(RaidEvent).where(
+                RaidEvent.status == "open",
+                RaidEvent.close_signups_at.is_(None),
+                RaidEvent.starts_at_utc <= fallback_cutoff,
+            )
+        ).scalars().all())
+
         locked = 0
-        for event in events:
+        for event in events_with_close + events_without_close:
             event.status = "locked"
-            event.locked_at = datetime.now(tz.utc)
+            event.locked_at = now
             locked += 1
         if locked:
             db.session.commit()
-            logger.info("Auto-locked %d events starting within 4h", locked)
+            logger.info("Auto-locked %d events", locked)
 
 
 @register_handler("sync_all_characters")

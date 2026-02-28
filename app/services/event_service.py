@@ -186,8 +186,15 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         raid_size=data.get("raid_size", 25),
         difficulty=data.get("difficulty", "normal"),
         status=data.get("status", "draft"),
+        raid_type=data.get("raid_type"),
         instructions=data.get("instructions"),
     )
+    # Handle close_signups_at
+    close_at = data.get("close_signups_at")
+    if close_at:
+        if isinstance(close_at, str):
+            close_at = datetime.fromisoformat(close_at)
+        event.close_signups_at = close_at
     db.session.add(event)
     db.session.commit()
     return event
@@ -200,11 +207,11 @@ def get_event(event_id: int) -> Optional[RaidEvent]:
 def update_event(event: RaidEvent, data: dict) -> RaidEvent:
     allowed = {
         "title", "realm_name", "starts_at_utc", "ends_at_utc", "raid_size",
-        "difficulty", "status", "instructions",
+        "difficulty", "status", "instructions", "raid_type", "close_signups_at",
     }
     for key, value in data.items():
         if key in allowed:
-            if key in ("starts_at_utc", "ends_at_utc") and isinstance(value, str):
+            if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
                 value = datetime.fromisoformat(value)
             setattr(event, key, value)
     db.session.commit()
@@ -309,6 +316,7 @@ def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[d
         raid_size=event.raid_size,
         difficulty=event.difficulty,
         status="draft",
+        raid_type=event.raid_type,
         instructions=event.instructions,
         created_by=created_by,
     )

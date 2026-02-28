@@ -220,7 +220,9 @@ class RaidEvent(db.Model):
         nullable=False,
         default=EventStatus.DRAFT.value,
     )
+    raid_type: Mapped[str | None] = mapped_column(sa.String(30), nullable=True)
     instructions: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    close_signups_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     created_by: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
     locked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -260,7 +262,9 @@ class RaidEvent(db.Model):
             "raid_size": self.raid_size,
             "difficulty": self.difficulty,
             "status": self.status,
+            "raid_type": self.raid_type,
             "instructions": self.instructions,
+            "close_signups_at": self.close_signups_at.isoformat() if self.close_signups_at else None,
             "created_by": self.created_by,
             "locked_at": self.locked_at.isoformat() if self.locked_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,

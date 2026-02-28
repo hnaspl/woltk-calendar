@@ -53,6 +53,18 @@
       <!-- Spec -->
       <div>
         <label class="block text-xs text-text-muted mb-1">Spec</label>
+        <div v-if="specOptions.length > 0" class="flex gap-2 mb-1">
+          <button
+            v-for="sp in specOptions"
+            :key="sp"
+            type="button"
+            class="px-3 py-1.5 rounded border text-xs transition-all"
+            :class="form.chosenSpec === sp
+              ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
+              : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+            @click="form.chosenSpec = sp"
+          >{{ sp }}</button>
+        </div>
         <input
           v-model="form.chosenSpec"
           type="text"
@@ -95,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
@@ -120,6 +132,17 @@ const roles = [
   { value: 'healer' },
   { value: 'dps' }
 ]
+
+/** Available spec options from the selected character's primary and secondary specs */
+const specOptions = computed(() => {
+  if (!form.characterId) return []
+  const selected = characters.value.find(c => String(c.id) === String(form.characterId))
+  if (!selected) return []
+  const specs = []
+  if (selected.primary_spec) specs.push(selected.primary_spec)
+  if (selected.secondary_spec && selected.secondary_spec !== selected.primary_spec) specs.push(selected.secondary_spec)
+  return specs
+})
 
 const form = reactive({
   characterId: '',

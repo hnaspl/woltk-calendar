@@ -201,8 +201,9 @@
           <label class="block text-xs text-text-muted mb-1">Realm *</label>
           <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option value="">Select realm…</option>
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+            <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
           </select>
+          <span v-if="guildRealms.length" class="text-[10px] text-text-muted">Only realms from your guilds</span>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Role</label>
@@ -267,7 +268,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -305,6 +306,12 @@ const deleteTarget = ref(null)
 
 const wowClasses = WOW_CLASSES
 const warmaneRealms = WARMANE_REALMS
+
+/** Realms from guilds the user belongs to (for character realm selector) */
+const guildRealms = computed(() => {
+  const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
+  return [...realms].sort()
+})
 
 const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
 
