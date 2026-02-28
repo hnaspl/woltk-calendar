@@ -3,18 +3,17 @@
     class="relative inline-flex"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
-    @focusin="show = true"
+    @focusin="onFocusIn"
     @focusout="onMouseLeave"
-    tabindex="0"
+    @dragstart="onChildDragStart"
+    @dragend="onChildDragEnd"
   >
     <slot />
     <Transition name="fade">
       <div
-        v-if="show && character"
-        class="absolute z-50 w-72 bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl"
+        v-if="show && character && !dragging"
+        class="absolute z-50 w-72 bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl pointer-events-none"
         :class="positionClass"
-        @mouseenter="onMouseEnter"
-        @mouseleave="onMouseLeave"
       >
         <!-- Header -->
         <div class="flex items-center gap-3 px-3 py-2 border-b border-[#2a3450] bg-[#161b22] rounded-t-lg">
@@ -164,15 +163,33 @@ const props = defineProps({
 
 const show = ref(false)
 const hideTimeout = ref(null)
+const dragging = ref(false)
 const { getClassIcon, getClassColor } = useWowIcons()
 
 function onMouseEnter() {
+  if (dragging.value) return
   if (hideTimeout.value) { clearTimeout(hideTimeout.value); hideTimeout.value = null }
   show.value = true
 }
 
 function onMouseLeave() {
   hideTimeout.value = setTimeout(() => { show.value = false }, 150)
+}
+
+function onFocusIn() {
+  if (!dragging.value) show.value = true
+}
+
+/** Hide tooltip when a child element starts being dragged */
+function onChildDragStart() {
+  dragging.value = true
+  show.value = false
+  if (hideTimeout.value) { clearTimeout(hideTimeout.value); hideTimeout.value = null }
+}
+
+/** Re-enable tooltip after drag ends */
+function onChildDragEnd() {
+  dragging.value = false
 }
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)

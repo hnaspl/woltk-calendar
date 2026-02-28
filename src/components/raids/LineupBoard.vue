@@ -16,9 +16,9 @@
         :key="col.key"
         class="bg-bg-secondary p-4 transition-colors"
         :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': isOfficer && dragOverTarget === col.key }"
-        @dragover.prevent="isOfficer && onDragOver($event, col.key)"
+        @dragover.prevent="isOfficer && handleDragOver($event, col.key)"
         @dragenter.prevent="isOfficer && (dragOverTarget = col.key)"
-        @dragleave="isOfficer && onDragLeave($event, col.key)"
+        @dragleave="isOfficer && handleDragLeave($event, col.key)"
         @drop.prevent="isOfficer && onDropColumn($event, col.key)"
       >
         <div class="flex items-center gap-2 mb-3">
@@ -90,9 +90,9 @@
       v-if="unassigned.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
       :class="{ 'bg-red-900/10 ring-1 ring-inset ring-red-500/30': isOfficer && dragOverTarget === 'unassigned' }"
-      @dragover.prevent="isOfficer && onDragOver($event, 'unassigned')"
+      @dragover.prevent="isOfficer && handleDragOver($event, 'unassigned')"
       @dragenter.prevent="isOfficer && (dragOverTarget = 'unassigned')"
-      @dragleave="isOfficer && onDragLeave($event, 'unassigned')"
+      @dragleave="isOfficer && handleDragLeave($event, 'unassigned')"
       @drop.prevent="isOfficer && onDropUnassigned()"
     >
       <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassigned.length }})</p>
@@ -135,9 +135,9 @@
       v-if="isOfficer && draggedId && dragSourceKey !== 'bench'"
       class="px-5 py-3 border-t border-border-default transition-colors"
       :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': dragOverTarget === 'bench' }"
-      @dragover.prevent="onDragOver($event, 'bench')"
+      @dragover.prevent="handleDragOver($event, 'bench')"
       @dragenter.prevent="dragOverTarget = 'bench'"
-      @dragleave="onDragLeave($event, 'bench')"
+      @dragleave="handleDragLeave($event, 'bench')"
       @drop.prevent="onDropBench()"
     >
       <p class="text-xs text-yellow-400/60 italic">Drop here to move to bench</p>
@@ -155,6 +155,7 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
 import * as signupsApi from '@/api/signups'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useDragDrop } from '@/composables/useDragDrop'
 import { useUiStore } from '@/stores/ui'
 
 const props = defineProps({
@@ -171,6 +172,10 @@ const props = defineProps({
 
 const emit = defineEmits(['saved'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
+const {
+  draggedId, dragSourceKey, dragSourceIndex, dragOverTarget,
+  isDragging, startDrag, endDrag, handleDragOver, handleDragLeave,
+} = useDragDrop()
 const uiStore = useUiStore()
 const saving = ref(false)
 const dirty = ref(false)
@@ -198,47 +203,18 @@ const gridClass = computed(() => {
 
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 
-// ── Drag state ──
-const draggedId = ref(null)
-const dragSourceKey = ref(null)
-const dragSourceIndex = ref(-1)
-const dragOverTarget = ref(null)
+// ── Drag handlers (state managed by useDragDrop composable) ──
 
 function onDragStart(e, signup, sourceKey, idx) {
   if (!props.isOfficer) {
     e.preventDefault()
     return
   }
-  // Set dataTransfer FIRST before any reactive state changes
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', String(signup.id))
-  // Prevent CharacterTooltip wrapper from intercepting drag events
-  e.stopPropagation()
-  draggedId.value = signup.id
-  dragSourceKey.value = sourceKey
-  dragSourceIndex.value = idx
+  startDrag(e, signup.id, sourceKey, idx)
 }
 
 function onDragEnd() {
-  draggedId.value = null
-  dragSourceKey.value = null
-  dragSourceIndex.value = -1
-  dragOverTarget.value = null
-}
-
-function onDragOver(e, target) {
-  e.dataTransfer.dropEffect = 'move'
-  dragOverTarget.value = target
-}
-
-function onDragLeave(e, target) {
-  if (dragOverTarget.value === target) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX; const y = e.clientY
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      dragOverTarget.value = null
-    }
-  }
+  endDrag()
 }
 
 function findSignupById(id) {
