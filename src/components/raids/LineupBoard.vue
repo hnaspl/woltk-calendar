@@ -312,11 +312,6 @@ function findSignupById(id) {
   return null
 }
 
-function roleForColumnKey(key) {
-  const col = allColumns.value.find(c => c.key === key)
-  return col ? col.role : null
-}
-
 function onDropColumn(e, targetKey) {
   dragOverTarget.value = null
   const id = Number(e.dataTransfer.getData('text/plain'))
@@ -332,20 +327,17 @@ function onDropColumn(e, targetKey) {
     return
   }
 
-  const targetRole = roleForColumnKey(targetKey)
+  const col = allColumns.value.find(c => c.key === targetKey)
   const signupRole = found.signup.chosen_role
 
   // Strict role enforcement for column-to-column moves: roles are NOT interchangeable
-  if (signupRole !== targetRole) {
-    const targetCol = allColumns.value.find(c => c.key === targetKey)
+  if (col && signupRole !== col.role) {
     const roleName = ROLE_LABEL_MAP[signupRole] ?? signupRole
-    const targetName = targetCol?.label ?? targetKey
-    uiStore.showToast(`${found.signup.character?.name ?? 'Player'} signed up as ${roleName}. Cannot place in ${targetName}.`, 'error')
+    uiStore.showToast(`${found.signup.character?.name ?? 'Player'} signed up as ${roleName}. Cannot place in ${col.label}.`, 'error')
     return
   }
 
   // Overflow protection: check if target column is full
-  const col = allColumns.value.find(c => c.key === targetKey)
   if (col) {
     const currentCount = lineup.value[targetKey].length
     const alreadyInTarget = lineup.value[targetKey].find(s => Number(s.id) === id)
