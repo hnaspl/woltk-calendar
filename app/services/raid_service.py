@@ -11,6 +11,11 @@ from app.models.raid import RaidDefinition
 
 
 def create_raid_definition(guild_id: int, created_by: int, data: dict) -> RaidDefinition:
+    raid_size = data.get("size", data.get("default_raid_size", 25))
+    total_slots = (data.get("main_tank_slots") or 0) + (data.get("off_tank_slots") or 0) + \
+                  (data.get("tank_slots") or 0) + (data.get("healer_slots") or 0) + (data.get("dps_slots") or 0)
+    if total_slots > raid_size:
+        raise ValueError(f"Total slots ({total_slots}) cannot exceed raid size ({raid_size})")
     rd = RaidDefinition(
         guild_id=guild_id,
         created_by=created_by,
@@ -56,6 +61,12 @@ def update_raid_definition(rd: RaidDefinition, data: dict) -> RaidDefinition:
     # Map frontend 'size' field to default_raid_size
     if "size" in data and "default_raid_size" not in data:
         rd.default_raid_size = data["size"]
+    # Validate total slots don't exceed raid size
+    raid_size = rd.default_raid_size or 25
+    total_slots = (rd.main_tank_slots or 0) + (rd.off_tank_slots or 0) + \
+                  (rd.tank_slots or 0) + (rd.healer_slots or 0) + (rd.dps_slots or 0)
+    if total_slots > raid_size:
+        raise ValueError(f"Total slots ({total_slots}) cannot exceed raid size ({raid_size})")
     db.session.commit()
     return rd
 

@@ -157,12 +157,21 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
+            <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
+            <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
+              <option value="">None (use defaults)</option>
+              <option v-for="rd in editRaidDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-xs text-text-muted mb-1">Raid Type</label>
             <select v-model="editForm.raid_type" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option value="">Select raid type…</option>
               <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Size</label>
             <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -170,8 +179,6 @@
               <option :value="25">25-man</option>
             </select>
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Difficulty</label>
             <select v-model="editForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -249,6 +256,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
+import * as raidDefsApi from '@/api/raidDefinitions'
 
 const route = useRoute()
 const router = useRouter()
@@ -269,10 +277,12 @@ const showEditModal = ref(false)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
+const editRaidDefs = ref([])
 
 const editForm = reactive({
   title: '',
   raid_type: '',
+  raid_definition_id: '',
   raid_size: 25,
   difficulty: 'normal',
   status: 'open',
@@ -389,6 +399,7 @@ function openEditModal() {
   Object.assign(editForm, {
     title: event.value.title ?? '',
     raid_type: event.value.raid_type ?? '',
+    raid_definition_id: event.value.raid_definition_id ?? '',
     raid_size: event.value.raid_size ?? event.value.size ?? 25,
     difficulty: event.value.difficulty ?? 'normal',
     status: event.value.status ?? 'open',
@@ -398,6 +409,18 @@ function openEditModal() {
   })
   editError.value = null
   showEditModal.value = true
+  // Fetch raid definitions
+  if (guildId.value) {
+    raidDefsApi.getRaidDefinitions(guildId.value).then(defs => { editRaidDefs.value = defs }).catch(() => {})
+  }
+}
+
+function onEditRaidDefChange() {
+  const rd = editRaidDefs.value.find(d => d.id === editForm.raid_definition_id)
+  if (rd) {
+    editForm.raid_type = rd.raid_type || rd.code || ''
+    editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+  }
 }
 
 async function saveEvent() {
@@ -416,6 +439,7 @@ async function saveEvent() {
     const payload = {
       title: editForm.title,
       raid_type: editForm.raid_type || undefined,
+      raid_definition_id: editForm.raid_definition_id || undefined,
       raid_size: editForm.raid_size,
       difficulty: editForm.difficulty,
       status: editForm.status,

@@ -37,7 +37,10 @@ def create_raid_definition(guild_id: int):
     # Auto-generate code from raid_type or name if not provided
     if not data.get("code"):
         data["code"] = (data.get("raid_type") or data["name"]).lower().replace(" ", "_")[:30]
-    rd = raid_service.create_raid_definition(guild_id, current_user.id, data)
+    try:
+        rd = raid_service.create_raid_definition(guild_id, current_user.id, data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     return jsonify(rd.to_dict()), 201
 
 
@@ -64,7 +67,10 @@ def update_raid_definition(guild_id: int, rd_id: int):
     if rd.is_builtin and not getattr(current_user, "is_admin", False):
         return jsonify({"error": "Built-in raid definitions cannot be modified"}), 403
     data = request.get_json(silent=True) or {}
-    rd = raid_service.update_raid_definition(rd, data)
+    try:
+        rd = raid_service.update_raid_definition(rd, data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     return jsonify(rd.to_dict()), 200
 
 

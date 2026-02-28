@@ -209,6 +209,8 @@ function confirmDelete(def) { deleteTarget.value = def; showDeleteConfirm.value 
 async function saveDef() {
   formError.value = null
   if (!form.name || !form.raid_type || !form.size) { formError.value = 'Name, type and size are required'; return }
+  const totalSlots = (form.main_tank_slots || 0) + (form.off_tank_slots || 0) + (form.tank_slots || 0) + (form.healer_slots || 0) + (form.dps_slots || 0)
+  if (totalSlots > form.size) { formError.value = `Total slots (${totalSlots}) cannot exceed raid size (${form.size})`; return }
   saving.value = true
   try {
     if (editing.value) {

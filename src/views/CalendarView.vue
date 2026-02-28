@@ -99,10 +99,10 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Type</label>
-            <select v-model="eventForm.raid_type" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select raid type…</option>
-              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
+            <select v-model.number="eventForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
+              <option value="">Select raid…</option>
+              <option v-for="rd in raidDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </select>
           </div>
         </div>
@@ -162,6 +162,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useUiStore } from '@/stores/ui'
 import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
+import * as raidDefsApi from '@/api/raidDefinitions'
 
 const calStore = useCalendarStore()
 const guildStore = useGuildStore()
@@ -175,10 +176,12 @@ const warmaneRealms = WARMANE_REALMS
 const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref(null)
+const raidDefs = ref([])
 const eventForm = reactive({
   title: '',
   guild_id: null,
   realm_name: '',
+  raid_definition_id: '',
   raid_size: 25,
   starts_at_utc: '',
   difficulty: 'normal',
@@ -197,14 +200,33 @@ onMounted(async () => {
 })
 
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
+  // Load raid definitions for the current guild
+  if (eventForm.guild_id) {
+    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(() => {})
+  }
 }
 
 function onGuildSelectChange() {
   const selected = guildStore.guilds.find(g => g.id === eventForm.guild_id)
   if (selected) eventForm.realm_name = selected.realm_name
+  // Fetch raid definitions for the selected guild
+  eventForm.raid_definition_id = ''
+  if (eventForm.guild_id) {
+    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(() => {})
+  } else {
+    raidDefs.value = []
+  }
+}
+
+function onRaidDefChange() {
+  const rd = raidDefs.value.find(d => d.id === eventForm.raid_definition_id)
+  if (rd) {
+    eventForm.raid_type = rd.raid_type || rd.code || ''
+    eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+  }
 }
 
 async function createEvent() {
@@ -226,6 +248,7 @@ async function createEvent() {
       starts_at_utc: eventForm.starts_at_utc,
       difficulty: eventForm.difficulty,
       raid_type: eventForm.raid_type || undefined,
+      raid_definition_id: eventForm.raid_definition_id || undefined,
       close_signups_at: eventForm.close_signups_at || undefined,
       instructions: eventForm.instructions,
       status: 'open'

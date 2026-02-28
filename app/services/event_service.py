@@ -217,6 +217,7 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
     allowed = {
         "title", "realm_name", "starts_at_utc", "ends_at_utc", "raid_size",
         "difficulty", "status", "instructions", "raid_type", "close_signups_at",
+        "raid_definition_id",
     }
     for key, value in data.items():
         if key in allowed:
