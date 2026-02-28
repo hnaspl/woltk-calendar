@@ -26,28 +26,35 @@ def _validate_class_role(character_id: int, chosen_role: str) -> None:
     validate_class_role(character.class_name, chosen_role)
 
 
-def _count_going(raid_event_id: int) -> int:
-    """Return the number of going signups for an event."""
+def _count_assigned_slots(raid_event_id: int) -> int:
+    """Return the number of role lineup slots (excluding bench) for an event.
+
+    Status is purely informational — counting is based on LineupSlots only.
+    """
+    from app.models.signup import LineupSlot
+
     return db.session.execute(
-        sa.select(sa.func.count(Signup.id)).where(
-            Signup.raid_event_id == raid_event_id,
-            Signup.status == SignupStatus.GOING.value,
+        sa.select(sa.func.count(LineupSlot.id)).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group != "bench",
         )
     ).scalar_one()
 
 
-def _count_going_by_role(raid_event_id: int, role: str, *, lock: bool = False) -> int:
-    """Return the number of going signups for a specific role in an event.
+def _count_assigned_slots_by_role(
+    raid_event_id: int, role: str, *, lock: bool = False
+) -> int:
+    """Return the number of lineup slots assigned to a specific role.
 
+    Status is purely informational — counting is based on LineupSlots only.
     When *lock* is True the matching rows are locked with SELECT … FOR UPDATE
-    so that concurrent transactions block until the current one commits.  This
-    prevents the race condition where two players sign up for the last slot of
-    the same role simultaneously.
+    so that concurrent transactions block until the current one commits.
     """
-    query = sa.select(sa.func.count(Signup.id)).where(
-        Signup.raid_event_id == raid_event_id,
-        Signup.status == SignupStatus.GOING.value,
-        Signup.chosen_role == role,
+    from app.models.signup import LineupSlot
+
+    query = sa.select(sa.func.count(LineupSlot.id)).where(
+        LineupSlot.raid_event_id == raid_event_id,
+        LineupSlot.slot_group == role,
     )
     if lock:
         query = query.with_for_update()
@@ -75,8 +82,10 @@ class RoleFullError(Exception):
 
 
 def get_role_counts(raid_event_id: int, roles: dict) -> dict:
-    """Return the current going counts for each role in *roles*."""
-    return {role: _count_going_by_role(raid_event_id, role) for role in roles}
+    """Return the current assigned slot counts for each role in *roles*."""
+    return {
+        role: _count_assigned_slots_by_role(raid_event_id, role) for role in roles
+    }
 
 
 def _auto_promote_bench(raid_event_id: int, role: str) -> None:
@@ -85,10 +94,12 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     Uses bench queue order (slot_index) when bench lineup slots exist,
     falling back to mains-first then earliest created_at.
     Status is NOT used as a filter — it is purely informational.
+    Emits real-time events so all clients see the promotion instantly.
     """
     from app.models.character import Character
     from app.models.signup import LineupSlot
     from app.services import lineup_service
+    from app.utils.realtime import emit_signups_changed, emit_lineup_changed
 
     # First: check bench queue (explicit queue order via LineupSlots)
     bench_slot = db.session.execute(
@@ -110,8 +121,10 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
         db.session.delete(bench_slot)
         db.session.commit()
         lineup_service.auto_assign_slot(benched)
-        # Notify the promoted player
+        # Notify the promoted player and emit real-time updates
         _notify_bench_promotion(benched)
+        emit_signups_changed(raid_event_id)
+        emit_lineup_changed(raid_event_id)
         return
 
     # Fallback: no bench queue slots, use created_at ordering
@@ -140,8 +153,10 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
             candidate.status = SignupStatus.GOING.value
             db.session.commit()
             lineup_service.auto_assign_slot(candidate)
-            # Notify the promoted player
+            # Notify the promoted player and emit real-time updates
             _notify_bench_promotion(candidate)
+            emit_signups_changed(raid_event_id)
+            emit_lineup_changed(raid_event_id)
             return
 
 
@@ -184,25 +199,28 @@ def create_signup(
     _validate_class_role(character_id, chosen_role)
 
     # Check role-specific slot limits (with row-level locking to prevent race
-    # conditions when two players sign up for the last slot simultaneously)
+    # conditions when two players sign up for the last slot simultaneously).
+    # Counting is based on LineupSlots, NOT signup status.
     if event is not None:
         role_slots = _get_role_slots(event)
         max_for_role = role_slots.get(chosen_role, 0)
-        current_for_role = _count_going_by_role(raid_event_id, chosen_role, lock=True)
+        current_for_role = _count_assigned_slots_by_role(
+            raid_event_id, chosen_role, lock=True
+        )
         if max_for_role == 0 and not force_bench:
             raise RoleFullError(chosen_role, role_slots,
                                 f"No {chosen_role} slots are defined for this raid")
         if current_for_role >= max_for_role and not force_bench:
             raise RoleFullError(chosen_role, role_slots)
 
-    going_count = _count_going(raid_event_id)
+    assigned_count = _count_assigned_slots(raid_event_id)
 
     if force_bench:
         # User explicitly chose to go to bench for a full role
         status = SignupStatus.BENCH.value
     else:
         status = (
-            SignupStatus.BENCH.value if going_count >= raid_size else SignupStatus.GOING.value
+            SignupStatus.BENCH.value if assigned_count >= raid_size else SignupStatus.GOING.value
         )
 
     signup = Signup(

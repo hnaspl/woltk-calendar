@@ -6,14 +6,33 @@ from typing import Optional
 
 import sqlalchemy as sa
 
+from app.constants import CLASS_ROLES
+from app.enums import WowClass
 from app.extensions import db
 from app.models.character import Character
+
+
+def _default_role_for_class(class_name: str) -> str | None:
+    """Return the first allowed role for a character class.
+
+    This ensures characters always have a valid default_role so there are
+    no unselected roles anywhere in the UI.
+    """
+    for wow_class, roles in CLASS_ROLES.items():
+        if wow_class.value == class_name and roles:
+            return roles[0].value
+    return None
 
 
 def create_character(user_id: int, guild_id: int, data: dict) -> Character:
     existing = find_existing(guild_id, data["realm_name"], data["name"])
     if existing is not None:
         raise ValueError(f"Character '{data['name']}' on {data['realm_name']} already exists in this guild")
+
+    # Auto-populate default_role from CLASS_ROLES if not provided
+    default_role = data.get("default_role")
+    if not default_role and data.get("class_name"):
+        default_role = _default_role_for_class(data["class_name"])
 
     char = Character(
         user_id=user_id,
@@ -23,7 +42,7 @@ def create_character(user_id: int, guild_id: int, data: dict) -> Character:
         class_name=data["class_name"],
         primary_spec=data.get("primary_spec"),
         secondary_spec=data.get("secondary_spec"),
-        default_role=data.get("default_role"),
+        default_role=default_role,
         off_role=data.get("off_role"),
         is_main=data.get("is_main", False),
         is_active=data.get("is_active", True),

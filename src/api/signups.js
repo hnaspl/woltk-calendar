@@ -12,6 +12,9 @@ export const updateSignup = (guildId, eventId, signupId, payload) =>
 export const deleteSignup = (guildId, eventId, signupId, payload) =>
   api.delete(`/guilds/${guildId}/events/${eventId}/signups/${signupId}`, { data: payload })
 
+export const declineSignup = (guildId, eventId, signupId) =>
+  api.post(`/guilds/${guildId}/events/${eventId}/signups/${signupId}/decline`)
+
 export const getBans = (guildId, eventId) =>
   api.get(`/guilds/${guildId}/events/${eventId}/signups/bans`)
 

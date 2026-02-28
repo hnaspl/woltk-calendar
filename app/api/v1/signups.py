@@ -191,6 +191,40 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
     return jsonify({"message": "Signup deleted"}), 200
 
 
+@bp.post("/<int:signup_id>/decline")
+@login_required
+def decline_signup(guild_id: int, event_id: int, signup_id: int):
+    """Decline a signup — removes lineup/bench slots and auto-promotes."""
+    if get_membership(guild_id, current_user.id) is None:
+        return jsonify({"error": "Forbidden"}), 403
+    _, err = _get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+
+    signup = signup_service.get_signup(signup_id)
+    if signup is None or signup.raid_event_id != event_id:
+        return jsonify({"error": "Signup not found"}), 404
+
+    membership = get_membership(guild_id, current_user.id)
+    if signup.user_id != current_user.id and not is_officer_or_admin(membership):
+        return jsonify({"error": "Forbidden"}), 403
+
+    event = event_service.get_event(event_id)
+    old_status = signup.status
+
+    signup = signup_service.decline_signup(signup)
+    emit_signups_changed(event_id)
+    emit_lineup_changed(event_id)
+
+    # Notify player if an officer declined them
+    if signup.user_id != current_user.id and event and old_status != "declined":
+        notify.notify_signup_declined_by_officer(
+            signup, event, current_user.username
+        )
+
+    return jsonify(signup.to_dict()), 200
+
+
 # ---------------------------------------------------------------------------
 # Raid bans
 # ---------------------------------------------------------------------------
