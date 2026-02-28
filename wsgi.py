@@ -1,11 +1,14 @@
-"""WSGI entry point.
+"""WSGI / ASGI entry point.
 
-For development: python wsgi.py  (uses socketio.run with WebSocket support)
-For production:  gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 wsgi:app
+For development:  python wsgi.py
+For production:   gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 wsgi:app
 """
 
-from app import create_app
-from app.extensions import socketio
+from gevent import monkey  # noqa: E402
+monkey.patch_all()
+
+from app import create_app  # noqa: E402
+from app.extensions import socketio  # noqa: E402
 
 app = create_app()
 

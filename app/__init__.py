@@ -31,7 +31,7 @@ def create_app(config_override: dict | None = None) -> Flask:
     bcrypt.init_app(app)
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins=app.config["CORS_ORIGINS"],
-                      async_mode="threading", logger=False, engineio_logger=False)
+                      async_mode="gevent", logger=False, engineio_logger=False)
 
     # Enable WAL mode for SQLite (better concurrent read/write performance)
     if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):

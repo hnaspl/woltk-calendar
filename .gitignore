@@ -33,3 +33,6 @@ migrations/versions/*.pyc
 # SQLite test databases
 *.db
 instance/
+
+# Gunicorn
+gunicorn.ctl
