@@ -44,15 +44,15 @@
             </div>
             <div class="bg-blue-500/10 rounded p-1.5">
               <div class="text-blue-300 font-bold">{{ def.tank_slots ?? 0 }}</div>
-              <div class="text-text-muted">Tanks</div>
+              <div class="text-text-muted">Melee DPS</div>
             </div>
             <div class="bg-green-500/10 rounded p-1.5">
               <div class="text-green-300 font-bold">{{ def.healer_slots ?? 5 }}</div>
-              <div class="text-text-muted">Healers</div>
+              <div class="text-text-muted">Heal</div>
             </div>
             <div class="bg-red-500/10 rounded p-1.5">
               <div class="text-red-300 font-bold">{{ def.dps_slots ?? 18 }}</div>
-              <div class="text-text-muted">DPS</div>
+              <div class="text-text-muted">Range DPS</div>
             </div>
           </div>
           <div class="flex gap-2">

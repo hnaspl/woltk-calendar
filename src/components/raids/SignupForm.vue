@@ -161,7 +161,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, CLASS_SPECS } from '@/constants'
+import { ROLE_OPTIONS } from '@/constants'
 
 const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
@@ -211,12 +211,15 @@ function isRoleFull(role) {
   return info ? info.remaining <= 0 : false
 }
 
-/** Available spec options from the selected character's class */
+/** Available spec options from the selected character's own specs (max 2) */
 const specOptions = computed(() => {
   if (!form.characterId) return []
   const selected = characters.value.find(c => String(c.id) === String(form.characterId))
   if (!selected) return []
-  return CLASS_SPECS[selected.class_name] || []
+  const specs = []
+  if (selected.primary_spec) specs.push(selected.primary_spec)
+  if (selected.secondary_spec) specs.push(selected.secondary_spec)
+  return specs
 })
 
 /** Parse the comma-separated chosenSpec into an array for toggle button state */
