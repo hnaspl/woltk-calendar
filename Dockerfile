@@ -1,10 +1,7 @@
 FROM python:3.11-slim
 
-# Install system deps for MySQL client + Node.js
+# Install system deps for Node.js
 RUN apt-get update && apt-get install -y \
-    pkg-config \
-    default-libmysqlclient-dev \
-    gcc \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
@@ -27,6 +24,9 @@ COPY . .
 RUN npm run build
 
 ENV FLASK_APP=wsgi.py
+
+# Create instance directory for SQLite database
+RUN mkdir -p /app/instance
 
 EXPOSE 5000
 

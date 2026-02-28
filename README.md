@@ -7,8 +7,8 @@ A **production-minded web app for Warmane WotLK raid management** — a calendar
 | Layer | Technology |
 |---|---|
 | Frontend | Vue 3, Vite, Pinia, Vue Router, Tailwind CSS, FullCalendar |
-| Backend | Flask 3.x, SQLAlchemy 2.x, Alembic, Flask-Login |
-| Database | MySQL 8.x |
+| Backend | Flask 3.x, SQLAlchemy 2.x, Flask-Login |
+| Database | SQLite (file-based, zero config) |
 | Auth | Session-based (Flask-Login, httpOnly cookies) |
 
 ---
@@ -30,7 +30,6 @@ Access the app at **http://localhost:5000** — Flask serves both the API and th
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- MySQL 8.x running locally
 
 ### Install & Run
 
@@ -46,7 +45,6 @@ npm run build
 
 # Initialize database and seed data
 export FLASK_APP=wsgi.py
-export DATABASE_URL=mysql+pymysql://user:password@localhost:3306/wotlk_calendar
 flask create-db
 flask seed
 
@@ -91,12 +89,7 @@ Override via env vars: `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
 | Variable | Default | Description |
 |---|---|---|
 | `SECRET_KEY` | `dev-secret-key-change-me` | Flask secret key (required in production) |
-| `DATABASE_URL` | — | Full MySQL connection URL |
-| `DB_HOST` | `localhost` | MySQL host (alternative to DATABASE_URL) |
-| `DB_PORT` | `3306` | MySQL port |
-| `DB_USER` | `user` | MySQL username |
-| `DB_PASSWORD` | `password` | MySQL password |
-| `DB_NAME` | `wotlk_calendar` | MySQL database name |
+| `DATABASE_URL` | `sqlite:///instance/wotlk_calendar.db` | SQLAlchemy database URL |
 | `CORS_ORIGINS` | `*` | Allowed CORS origins |
 | `SESSION_COOKIE_SECURE` | `false` | Set to `true` in production (HTTPS) |
 | `SCHEDULER_ENABLED` | `true` | Enable APScheduler |
@@ -109,7 +102,7 @@ Override via env vars: `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
 wotlk-calendar/
 ├── app/                    # Flask application
 │   ├── __init__.py         # create_app() factory + SPA serving
-│   ├── extensions.py       # db, migrate, login_manager, bcrypt
+│   ├── extensions.py       # db, login_manager, bcrypt
 │   ├── enums.py            # All enums (Realm, WowClass, Role, etc.)
 │   ├── constants.py        # WoW constants
 │   ├── models/             # SQLAlchemy 2.x models
@@ -135,7 +128,7 @@ wotlk-calendar/
 ├── package.json            # Node dependencies
 ├── requirements.txt        # Python dependencies
 ├── Dockerfile              # Single-stage Docker build
-└── docker-compose.yml      # MySQL + app (2 services)
+└── docker-compose.yml      # App service with SQLite
 ```
 
 ---
@@ -196,16 +189,9 @@ All endpoints are under `/api/v1/`. Authentication uses session cookies (Flask-L
 
 ## Database
 
-MySQL 8.x with InnoDB. Run migrations with Alembic:
+SQLite (file-based, zero configuration). The database file is stored at `instance/wotlk_calendar.db`.
 
-```bash
-# First-time setup
-flask db upgrade
-
-# After model changes
-flask db migrate -m "add new field"
-flask db upgrade
-```
+Schema changes are applied automatically via `db.create_all()` and `_sync_schema()` — no migrations are used during alpha.
 
 ---
 
@@ -250,4 +236,3 @@ This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It
 2. Use a strong random `SECRET_KEY`
 3. Build: `docker compose up --build`
 4. Or deploy manually: `npm run build && gunicorn wsgi:app`
-5. Use a managed MySQL instance or secure your own

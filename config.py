@@ -15,19 +15,11 @@ class Config:
     # -------------------------------------------------------------- Database
     SQLALCHEMY_DATABASE_URI: str = os.environ.get(
         "DATABASE_URL",
-        "mysql+pymysql://{user}:{password}@{host}:{port}/{name}".format(
-            user=os.environ.get("DB_USER", "user"),
-            password=os.environ.get("DB_PASSWORD", "password"),
-            host=os.environ.get("DB_HOST", "localhost"),
-            port=os.environ.get("DB_PORT", "3306"),
-            name=os.environ.get("DB_NAME", "wotlk_calendar"),
+        "sqlite:///" + os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "instance", "wotlk_calendar.db"
         ),
     )
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
-    SQLALCHEMY_ENGINE_OPTIONS: dict = {
-        "pool_recycle": 300,
-        "pool_pre_ping": True,
-    }
 
     # --------------------------------------------------------------- Session
     SESSION_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"

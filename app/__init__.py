@@ -9,7 +9,7 @@ from flask import Flask, jsonify, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
-from app.extensions import bcrypt, db, login_manager, migrate
+from app.extensions import bcrypt, db, login_manager
 
 # Vite build output directory (relative to project root)
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
@@ -28,7 +28,6 @@ def create_app(config_override: dict | None = None) -> Flask:
 
     # ----------------------------------------------------------- Extensions
     db.init_app(app)
-    migrate.init_app(app, db)
     bcrypt.init_app(app)
     login_manager.init_app(app)
 
@@ -122,6 +121,14 @@ def _sync_schema() -> None:
     """
     import sqlalchemy as sa
     from sqlalchemy import inspect as sa_inspect
+
+    # Ensure the instance directory exists for SQLite file databases.
+    db_uri = str(db.engine.url)
+    if db_uri.startswith("sqlite:///") and not db_uri.startswith("sqlite:///:memory:"):
+        db_path = db_uri.replace("sqlite:///", "")
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
 
     # Snapshot which tables already exist *before* create_all adds new ones.
     inspector = sa_inspect(db.engine)

@@ -1,43 +1,21 @@
 version: "3.9"
 
 services:
-  db:
-    image: mysql:8.0
-    container_name: wotlk_calendar_db
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: wotlk_calendar
-      MYSQL_USER: wotlk
-      MYSQL_PASSWORD: wotlkpassword
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "wotlk", "-pwotlkpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build: .
     container_name: wotlk_calendar_app
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
       FLASK_APP: wsgi.py
       FLASK_ENV: development
       SECRET_KEY: change-me-in-production
-      DATABASE_URL: mysql+pymysql://wotlk:wotlkpassword@db:3306/wotlk_calendar
       CORS_ORIGINS: "*"
       SESSION_COOKIE_SECURE: "false"
       SESSION_COOKIE_SAMESITE: Lax
     ports:
       - "5000:5000"
+    volumes:
+      - sqlite_data:/app/instance
 
 volumes:
-  mysql_data:
+  sqlite_data:
