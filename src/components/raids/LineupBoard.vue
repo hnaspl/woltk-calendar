@@ -3,6 +3,7 @@
     <div class="flex items-center justify-between px-5 py-3 border-b border-border-default">
       <h3 class="wow-heading text-base">Lineup Board</h3>
       <div v-if="isOfficer" class="flex items-center gap-2">
+        <span v-if="dirty" class="text-xs text-yellow-400">Unsaved changes</span>
         <WowButton variant="secondary" @click="saveLineup" :loading="saving" class="text-xs py-1 px-3">
           Save Lineup
         </WowButton>
@@ -10,94 +11,90 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-px bg-border-default">
-      <!-- MAIN TANKS -->
-      <div class="bg-bg-secondary p-4">
+      <div
+        v-for="col in columns"
+        :key="col.key"
+        class="bg-bg-secondary p-4 transition-colors"
+        :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': isOfficer && dragOverTarget === col.key }"
+        @dragover.prevent="isOfficer && onDragOver($event, col.key)"
+        @dragenter.prevent="isOfficer && (dragOverTarget = col.key)"
+        @dragleave="isOfficer && onDragLeave($event, col.key)"
+        @drop.prevent="isOfficer && onDropColumn($event, col.key)"
+      >
         <div class="flex items-center gap-2 mb-3">
-          <img :src="getRoleIcon('main_tank')" class="w-5 h-5 rounded" alt="Main Tank" />
-          <span class="text-blue-200 font-semibold text-sm">Main Tank</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.main_tanks.length }} / {{ mainTankSlots }}</span>
+          <img :src="getRoleIcon(col.role)" class="w-5 h-5 rounded" :alt="col.label" />
+          <span :class="col.labelClass" class="font-semibold text-sm">{{ col.label }}</span>
+          <span class="ml-auto text-xs text-text-muted">{{ lineup[col.key].length }} / {{ col.slots }}</span>
         </div>
-        <LineupColumn
-          role="main_tank"
-          :slots="lineup.main_tanks"
-          :signups="availableMainTanks"
-          :editable="isOfficer"
-          @assign="(s) => assignToRole('main_tanks', s)"
-          @remove="(i) => removeFromRole('main_tanks', i)"
-        />
-      </div>
-
-      <!-- OFF TANKS -->
-      <div class="bg-bg-secondary p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <img :src="getRoleIcon('off_tank')" class="w-5 h-5 rounded" alt="Off Tank" />
-          <span class="text-cyan-300 font-semibold text-sm">Off Tank</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.off_tanks.length }} / {{ offTankSlots }}</span>
+        <div class="space-y-1.5 min-h-[2rem]">
+          <!-- Assigned slots -->
+          <CharacterTooltip
+            v-for="(s, i) in lineup[col.key]"
+            :key="s.id"
+            :character="s.character"
+            position="left"
+          >
+            <div
+              class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
+              :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
+              :draggable="isOfficer"
+              @dragstart="isOfficer && onDragStart($event, s, col.key, i)"
+              @dragend="onDragEnd"
+            >
+              <img
+                :src="getClassIcon(s.character?.class_name)"
+                :alt="s.character?.class_name ?? ''"
+                class="w-6 h-6 rounded flex-shrink-0"
+                loading="lazy"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1">
+                  <span
+                    class="text-xs font-medium truncate"
+                    :style="{ color: getClassColor(s.character?.class_name) ?? '#ccc' }"
+                  >{{ s.character?.name ?? '?' }}</span>
+                  <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+                    Lv{{ s.character.metadata.level }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-1 text-[10px] text-text-muted">
+                  <span v-if="s.chosen_spec" class="text-amber-300">{{ s.chosen_spec }}</span>
+                  <span v-if="profString(s)">{{ profString(s) }}</span>
+                </div>
+              </div>
+              <button
+                v-if="isOfficer"
+                type="button"
+                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
+                @click="removeFromRole(col.key, i)"
+              >×</button>
+            </div>
+          </CharacterTooltip>
+          <!-- Dropdown to assign (officer only) -->
+          <select
+            v-if="isOfficer && availableFor(col.key).length > 0"
+            class="w-full bg-bg-tertiary border border-dashed border-border-default text-text-muted text-xs rounded px-2 py-1.5 mt-1 focus:border-border-gold outline-none"
+            @change="onSelectAssign($event, col.key)"
+          >
+            <option value="">+ Add player…</option>
+            <option v-for="s in availableFor(col.key)" :key="s.id" :value="s.id">
+              {{ s.character?.name ?? '?' }} ({{ s.chosen_spec || s.chosen_role }}){{ s.character?.metadata?.level ? ` Lv${s.character.metadata.level}` : '' }}
+            </option>
+          </select>
         </div>
-        <LineupColumn
-          role="off_tank"
-          :slots="lineup.off_tanks"
-          :signups="availableOffTanks"
-          :editable="isOfficer"
-          @assign="(s) => assignToRole('off_tanks', s)"
-          @remove="(i) => removeFromRole('off_tanks', i)"
-        />
-      </div>
-
-      <!-- TANKS -->
-      <div class="bg-bg-secondary p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <img :src="getRoleIcon('tank')" class="w-5 h-5 rounded" alt="Tank" />
-          <span class="text-blue-300 font-semibold text-sm">Tanks</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.tanks.length }} / {{ tankSlots }}</span>
-        </div>
-        <LineupColumn
-          role="tank"
-          :slots="lineup.tanks"
-          :signups="availableTanks"
-          :editable="isOfficer"
-          @assign="(s) => assignToRole('tanks', s)"
-          @remove="(i) => removeFromRole('tanks', i)"
-        />
-      </div>
-
-      <!-- HEALERS -->
-      <div class="bg-bg-secondary p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <img :src="getRoleIcon('healer')" class="w-5 h-5 rounded" alt="Healer" />
-          <span class="text-green-300 font-semibold text-sm">Healers</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.healers.length }} / {{ healerSlots }}</span>
-        </div>
-        <LineupColumn
-          role="healer"
-          :slots="lineup.healers"
-          :signups="availableHealers"
-          :editable="isOfficer"
-          @assign="(s) => assignToRole('healers', s)"
-          @remove="(i) => removeFromRole('healers', i)"
-        />
-      </div>
-
-      <!-- DPS -->
-      <div class="bg-bg-secondary p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <img :src="getRoleIcon('dps')" class="w-5 h-5 rounded" alt="DPS" />
-          <span class="text-red-300 font-semibold text-sm">DPS</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup.dps.length }} / {{ dpsSlots }}</span>
-        </div>
-        <LineupColumn
-          role="dps"
-          :slots="lineup.dps"
-          :signups="availableDps"
-          :editable="isOfficer"
-          @assign="(s) => assignToRole('dps', s)"
-          @remove="(i) => removeFromRole('dps', i)"
-        />
       </div>
     </div>
 
     <!-- Unassigned pool -->
-    <div v-if="unassigned.length > 0" class="px-5 py-4 border-t border-border-default">
+    <div
+      v-if="unassigned.length > 0 || (isOfficer && draggedId)"
+      class="px-5 py-4 border-t border-border-default transition-colors"
+      :class="{ 'bg-red-900/10 ring-1 ring-inset ring-red-500/30': isOfficer && dragOverTarget === 'unassigned' }"
+      @dragover.prevent="isOfficer && onDragOver($event, 'unassigned')"
+      @dragenter.prevent="isOfficer && (dragOverTarget = 'unassigned')"
+      @dragleave="isOfficer && onDragLeave($event, 'unassigned')"
+      @drop.prevent="isOfficer && onDropUnassigned()"
+    >
       <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassigned.length }})</p>
       <div class="flex flex-wrap gap-2">
         <CharacterTooltip
@@ -107,7 +104,15 @@
           position="top"
         >
           <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-border-default text-xs cursor-pointer hover:border-border-gold transition-colors"
+            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary border border-border-default text-xs transition-colors"
+            :class="{
+              'cursor-grab active:cursor-grabbing hover:border-border-gold': isOfficer,
+              'cursor-pointer hover:border-border-gold': !isOfficer,
+              'opacity-50': draggedId === s.id
+            }"
+            :draggable="isOfficer"
+            @dragstart="isOfficer && onDragStart($event, s, 'unassigned', -1)"
+            @dragend="onDragEnd"
           >
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
@@ -118,12 +123,15 @@
           </div>
         </CharacterTooltip>
       </div>
+      <p v-if="unassigned.length === 0 && draggedId" class="text-xs text-text-muted italic">
+        Drop here to unassign
+      </p>
     </div>
   </WowCard>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, defineComponent, h } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
@@ -136,7 +144,7 @@ const props = defineProps({
   eventId:        { type: [Number,String], required: true },
   guildId:        { type: [Number,String], required: true },
   isOfficer:      { type: Boolean, default: false },
-  tankSlots:      { type: Number, default: 2 },
+  tankSlots:      { type: Number, default: 0 },
   mainTankSlots:  { type: Number, default: 1 },
   offTankSlots:   { type: Number, default: 1 },
   healerSlots:    { type: Number, default: 5 },
@@ -146,11 +154,97 @@ const props = defineProps({
 const emit = defineEmits(['saved'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
 const saving = ref(false)
+const dirty = ref(false)
 
 const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 
+const columns = computed(() => [
+  { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },
+  { key: 'off_tanks',  role: 'off_tank',  label: 'Off Tank',   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
+  { key: 'tanks',      role: 'tank',      label: 'Tanks',      labelClass: 'text-blue-300',  slots: props.tankSlots },
+  { key: 'healers',    role: 'healer',    label: 'Healers',    labelClass: 'text-green-300', slots: props.healerSlots },
+  { key: 'dps',        role: 'dps',       label: 'DPS',        labelClass: 'text-red-300',   slots: props.dpsSlots },
+])
+
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 
+// ── Drag state ──
+const draggedId = ref(null)
+const dragSourceKey = ref(null)
+const dragSourceIndex = ref(-1)
+const dragOverTarget = ref(null)
+
+function onDragStart(e, signup, sourceKey, idx) {
+  draggedId.value = signup.id
+  dragSourceKey.value = sourceKey
+  dragSourceIndex.value = idx
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(signup.id))
+}
+
+function onDragEnd() {
+  draggedId.value = null
+  dragSourceKey.value = null
+  dragSourceIndex.value = -1
+  dragOverTarget.value = null
+}
+
+function onDragOver(e, target) {
+  e.dataTransfer.dropEffect = 'move'
+  dragOverTarget.value = target
+}
+
+function onDragLeave(e, target) {
+  if (dragOverTarget.value === target) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX; const y = e.clientY
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      dragOverTarget.value = null
+    }
+  }
+}
+
+function findSignupById(id) {
+  for (const key of ['main_tanks', 'off_tanks', 'tanks', 'healers', 'dps']) {
+    const idx = lineup.value[key].findIndex(s => s.id === id)
+    if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
+  }
+  const fromUnassigned = unassigned.value.find(s => s.id === id)
+  if (fromUnassigned) return { key: 'unassigned', idx: -1, signup: fromUnassigned }
+  return null
+}
+
+function onDropColumn(e, targetKey) {
+  dragOverTarget.value = null
+  const id = Number(e.dataTransfer.getData('text/plain'))
+  if (!id) return
+
+  const found = findSignupById(id)
+  if (!found) return
+
+  // Remove from source
+  if (found.key !== 'unassigned') {
+    lineup.value[found.key].splice(found.idx, 1)
+  }
+
+  // Add to target (avoid duplicates)
+  if (!lineup.value[targetKey].find(s => s.id === id)) {
+    lineup.value[targetKey].push(found.signup)
+  }
+  dirty.value = true
+}
+
+function onDropUnassigned() {
+  dragOverTarget.value = null
+  const sourceKey = dragSourceKey.value
+  const sourceIdx = dragSourceIndex.value
+  if (sourceKey && sourceKey !== 'unassigned' && sourceIdx >= 0) {
+    lineup.value[sourceKey].splice(sourceIdx, 1)
+    dirty.value = true
+  }
+}
+
+// ── Data loading ──
 async function loadLineup() {
   try {
     const data = await lineupApi.getLineup(props.guildId, props.eventId)
@@ -159,15 +253,14 @@ async function loadLineup() {
     lineup.value.tanks      = data.tanks      ?? []
     lineup.value.healers    = data.healers    ?? []
     lineup.value.dps        = data.dps        ?? []
+    dirty.value = false
   } catch {
-    // No existing lineup – auto-populate from going signups
     autoPopulateFromSignups()
   }
 }
 
 onMounted(loadLineup)
 
-// Reload lineup when signups change (e.g. new signup, removal, status change)
 watch(
   () => props.signups.map(s => `${s.id}:${s.status}`).join(','),
   loadLineup
@@ -182,13 +275,16 @@ function autoPopulateFromSignups() {
   lineup.value.dps        = going.filter(s => s.chosen_role === 'dps')
 }
 
+// ── Computed helpers ──
 const activeSignups = computed(() =>
   props.signups.filter(s => ['going', 'tentative'].includes(s.status))
 )
 
 const assignedIds = computed(() => {
   const ids = new Set()
-  ;[...lineup.value.main_tanks, ...lineup.value.off_tanks, ...lineup.value.tanks, ...lineup.value.healers, ...lineup.value.dps].forEach(s => ids.add(s.id))
+  ;['main_tanks', 'off_tanks', 'tanks', 'healers', 'dps'].forEach(k =>
+    lineup.value[k].forEach(s => ids.add(s.id))
+  )
   return ids
 })
 
@@ -196,20 +292,34 @@ const unassigned = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(s.id))
 )
 
-// Tank-family roles can be cross-assigned to any tank column
 const tankFamilyRoles = ['tank', 'main_tank', 'off_tank']
-const availableMainTanks = computed(() => unassigned.value.filter(s => tankFamilyRoles.includes(s.chosen_role)))
-const availableOffTanks  = computed(() => unassigned.value.filter(s => tankFamilyRoles.includes(s.chosen_role)))
-const availableTanks     = computed(() => unassigned.value.filter(s => tankFamilyRoles.includes(s.chosen_role)))
-const availableHealers   = computed(() => unassigned.value.filter(s => s.chosen_role === 'healer'))
-const availableDps       = computed(() => unassigned.value.filter(s => s.chosen_role === 'dps'))
 
-function assignToRole(role, signup) {
-  lineup.value[role].push(signup)
+function availableFor(key) {
+  const un = unassigned.value
+  if (['main_tanks', 'off_tanks', 'tanks'].includes(key)) {
+    return un.filter(s => tankFamilyRoles.includes(s.chosen_role))
+  }
+  if (key === 'healers') return un.filter(s => s.chosen_role === 'healer')
+  if (key === 'dps') return un.filter(s => s.chosen_role === 'dps')
+  return un
 }
 
-function removeFromRole(role, index) {
-  lineup.value[role].splice(index, 1)
+function profString(s) {
+  return (s.character?.metadata?.professions ?? []).map(p => p.name).join(', ')
+}
+
+function onSelectAssign(e, key) {
+  const found = unassigned.value.find(s => String(s.id) === e.target.value)
+  if (found) {
+    lineup.value[key].push(found)
+    dirty.value = true
+  }
+  e.target.value = ''
+}
+
+function removeFromRole(key, index) {
+  lineup.value[key].splice(index, 1)
+  dirty.value = true
 }
 
 async function saveLineup() {
@@ -222,6 +332,7 @@ async function saveLineup() {
       healers:    lineup.value.healers.map(s => s.id),
       dps:        lineup.value.dps.map(s => s.id)
     })
+    dirty.value = false
     emit('saved', lineup.value)
   } catch (err) {
     console.error('Failed to save lineup', err)
@@ -229,86 +340,4 @@ async function saveLineup() {
     saving.value = false
   }
 }
-
-// ── Inline LineupColumn sub-component ────────────────────────
-const LineupColumn = defineComponent({
-  name: 'LineupColumn',
-  props: {
-    role:     { type: String, required: true },
-    slots:    { type: Array, default: () => [] },
-    signups:  { type: Array, default: () => [] },
-    editable: { type: Boolean, default: false }
-  },
-  emits: ['assign', 'remove'],
-  setup(colProps, { emit: colEmit }) {
-    const { getClassIcon, getClassColor } = useWowIcons()
-    return () => h('div', { class: 'space-y-1.5' }, [
-      // Assigned slots with enriched info + tooltip
-      ...colProps.slots.map((s, i) => {
-        const meta = s.character?.metadata ?? {}
-        const profs = (meta.professions ?? []).map(p => p.name).join(', ')
-        const level = meta.level ?? ''
-        const classColor = getClassColor(s.character?.class_name) ?? '#ccc'
-
-        const slotContent = h('div', {
-          key: s.id,
-          class: 'flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors'
-        }, [
-          h('img', {
-            src: getClassIcon(s.character?.class_name),
-            alt: s.character?.class_name ?? '',
-            class: 'w-6 h-6 rounded flex-shrink-0',
-            loading: 'lazy'
-          }),
-          h('div', { class: 'flex-1 min-w-0' }, [
-            h('div', { class: 'flex items-center gap-1' }, [
-              h('span', {
-                class: 'text-xs font-medium truncate',
-                style: { color: classColor }
-              }, s.character?.name ?? '?'),
-              level ? h('span', { class: 'text-[10px] text-text-muted' }, `Lv${level}`) : null,
-            ]),
-            // Spec + professions line
-            h('div', { class: 'flex items-center gap-1 text-[10px] text-text-muted' }, [
-              s.chosen_spec ? h('span', { class: 'text-amber-300' }, s.chosen_spec) : null,
-              profs ? h('span', {}, profs) : null,
-            ].filter(Boolean)),
-          ]),
-          colProps.editable
-            ? h('button', {
-                type: 'button',
-                class: 'opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all',
-                onClick: () => colEmit('remove', i)
-              }, '×')
-            : null
-        ])
-
-        // Wrap with CharacterTooltip
-        return h(CharacterTooltip, {
-          key: s.id,
-          character: s.character,
-          position: 'left'
-        }, () => slotContent)
-      }),
-      // Dropdown to assign from available signups (officer only)
-      colProps.editable && colProps.signups.length > 0
-        ? h('select', {
-            class: 'w-full bg-bg-tertiary border border-dashed border-border-default text-text-muted text-xs rounded px-2 py-1.5 mt-1 focus:border-border-gold outline-none',
-            onChange: (e) => {
-              const found = colProps.signups.find(s => String(s.id) === e.target.value)
-              if (found) { colEmit('assign', found); e.target.value = '' }
-            }
-          }, [
-            h('option', { value: '' }, '+ Add player…'),
-            ...colProps.signups.map(s => {
-              const lvl = s.character?.metadata?.level ? ` Lv${s.character.metadata.level}` : ''
-              return h('option', { key: s.id, value: s.id },
-                `${s.character?.name ?? '?'} (${s.chosen_spec || s.chosen_role})${lvl}`
-              )
-            })
-          ])
-        : null
-    ])
-  }
-})
 </script>

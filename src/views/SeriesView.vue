@@ -39,6 +39,7 @@
               </div>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
                 <RealmBadge v-if="s.realm_name" :realm="s.realm_name" />
+                <span v-if="s.template_id" class="text-accent-gold">📋 {{ templateName(s.template_id) }}</span>
                 <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
                 <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
                 <span>⏱ {{ s.duration_minutes }}min</span>
@@ -64,6 +65,14 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">Title *</label>
           <input v-model="form.title" required placeholder="e.g. Weekly ICC 25" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div v-if="templates.length > 0">
+          <label class="block text-xs text-text-muted mb-1">Template (optional)</label>
+          <select v-model="form.template_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onTemplateChange">
+            <option :value="null">No template — configure manually</option>
+            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }} ({{ t.raid_size }}-man {{ t.difficulty }})</option>
+          </select>
+          <span class="text-[10px] text-text-muted">Selecting a template auto-fills size, difficulty &amp; duration</span>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Realm *</label>
@@ -165,11 +174,13 @@ import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import * as seriesApi from '@/api/series'
+import * as templatesApi from '@/api/templates'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 
 const seriesList = ref([])
+const templates = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
@@ -196,7 +207,8 @@ const form = reactive({
   start_time_local: '19:00',
   duration_minutes: 180,
   default_raid_size: 25,
-  default_difficulty: 'normal'
+  default_difficulty: 'normal',
+  template_id: null
 })
 
 onMounted(async () => {
@@ -209,7 +221,12 @@ onMounted(async () => {
     return
   }
   try {
-    seriesList.value = await seriesApi.getSeries(guildStore.currentGuild.id)
+    const [seriesData, templatesData] = await Promise.all([
+      seriesApi.getSeries(guildStore.currentGuild.id),
+      templatesApi.getTemplates(guildStore.currentGuild.id)
+    ])
+    seriesList.value = seriesData
+    templates.value = templatesData
   } catch { error.value = 'Failed to load recurring raids' }
   finally { loading.value = false }
 })
@@ -221,12 +238,29 @@ function formatRecurrence(rule) {
   return rule
 }
 
+function onTemplateChange() {
+  if (!form.template_id) return
+  const tpl = templates.value.find(t => t.id === form.template_id)
+  if (tpl) {
+    form.default_raid_size = tpl.raid_size ?? form.default_raid_size
+    form.default_difficulty = tpl.difficulty ?? form.default_difficulty
+    form.duration_minutes = tpl.expected_duration_minutes ?? form.duration_minutes
+    if (!form.title && tpl.name) form.title = tpl.name
+  }
+}
+
+function templateName(tplId) {
+  const t = templates.value.find(t => t.id === tplId)
+  return t ? t.name : `Template #${tplId}`
+}
+
 function openAddModal() {
   editing.value = null
   Object.assign(form, {
     title: '', realm_name: guildStore.currentGuild?.realm_name ?? '',
     recurrence_rule: 'weekly', start_time_local: '19:00',
-    duration_minutes: 180, default_raid_size: 25, default_difficulty: 'normal'
+    duration_minutes: 180, default_raid_size: 25, default_difficulty: 'normal',
+    template_id: null
   })
   formError.value = null; showModal.value = true
 }
@@ -239,7 +273,8 @@ function openEditModal(s) {
     start_time_local: s.start_time_local ?? '19:00',
     duration_minutes: s.duration_minutes ?? 180,
     default_raid_size: s.default_raid_size ?? 25,
-    default_difficulty: s.default_difficulty ?? 'normal'
+    default_difficulty: s.default_difficulty ?? 'normal',
+    template_id: s.template_id ?? null
   })
   formError.value = null; showModal.value = true
 }
