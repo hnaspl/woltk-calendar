@@ -112,6 +112,47 @@ def create_app(config_override: dict | None = None) -> Flask:
     return app
 
 
+def _sync_schema() -> None:
+    """Create missing tables and add missing columns to existing tables.
+
+    ``db.create_all()`` only creates tables that do not exist yet; it will
+    not ALTER existing tables.  This helper inspects every mapped table and
+    issues ``ALTER TABLE … ADD COLUMN`` for any column that is defined in
+    the model but absent from the live database, preventing
+    "Unknown column" errors after schema changes.
+    """
+    import sqlalchemy as sa
+    from sqlalchemy import inspect as sa_inspect
+
+    db.create_all()
+
+    inspector = sa_inspect(db.engine)
+    for table_name, table_obj in db.metadata.tables.items():
+        if not inspector.has_table(table_name):
+            continue
+        existing = {c["name"] for c in inspector.get_columns(table_name)}
+        for col in table_obj.columns:
+            if col.name in existing:
+                continue
+            col_type = col.type.compile(dialect=db.engine.dialect)
+            nullable = "" if col.nullable else " NOT NULL"
+            default = ""
+            if col.default is not None and not callable(getattr(col.default, "arg", None)):
+                default = f" DEFAULT {col.default.arg!r}"
+            elif not col.nullable and col.default is None:
+                # Provide a safe zero-value so NOT NULL doesn't fail on
+                # existing rows
+                if isinstance(col.type, (sa.Boolean,)):
+                    default = " DEFAULT 0"
+                elif isinstance(col.type, (sa.Integer,)):
+                    default = " DEFAULT 0"
+                elif isinstance(col.type, (sa.String, sa.Text)):
+                    default = " DEFAULT ''"
+            stmt = f"ALTER TABLE `{table_name}` ADD COLUMN `{col.name}` {col_type}{nullable}{default}"
+            db.session.execute(sa.text(stmt))
+    db.session.commit()
+
+
 def _register_commands(app: Flask) -> None:
     import click
 
@@ -122,7 +163,7 @@ def _register_commands(app: Flask) -> None:
         if reset:
             db.drop_all()
             click.echo("Dropped all tables.")
-        db.create_all()
+        _sync_schema()
         click.echo("Created all tables.")
 
         from app.seeds.raid_definitions import seed_raid_definitions
@@ -149,6 +190,6 @@ def _register_commands(app: Flask) -> None:
 
     @app.cli.command("create-db")
     def create_db_command() -> None:
-        """Create all database tables."""
-        db.create_all()
+        """Create all database tables and add any missing columns."""
+        _sync_schema()
         click.echo("Database tables created.")
