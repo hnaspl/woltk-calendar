@@ -151,7 +151,9 @@ onMounted(async () => {
 
 // Auto-fill role & spec from selected character
 function onCharacterChange() {
-  const selected = characters.value.find(c => c.id === Number(form.characterId))
+  const charId = form.characterId
+  if (!charId) return
+  const selected = characters.value.find(c => String(c.id) === String(charId))
   if (selected && !props.existingSignup) {
     form.chosenRole = selected.default_role || 'dps'
     form.chosenSpec = selected.primary_spec || ''

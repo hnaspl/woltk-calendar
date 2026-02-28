@@ -60,6 +60,7 @@ def handle_sync_all_characters(payload: dict) -> None:
         try:
             data = warmane_service.fetch_character(char.realm_name, char.name)
             if data is None or (isinstance(data, dict) and "error" in data):
+                logger.warning("Skipping sync for %s/%s: no data from Warmane", char.realm_name, char.name)
                 continue
             char_data = warmane_service.build_character_dict(data, char.realm_name)
             if char_data.get("class_name"):

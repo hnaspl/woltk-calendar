@@ -336,6 +336,7 @@ onMounted(async () => {
 
 async function loadArchivedCharacters() {
   try {
+    // include_archived=true returns ALL chars (active + archived); filter for archived only
     const all = await charApi.getArchivedCharacters(guildStore.currentGuild?.id)
     const allMapped = (Array.isArray(all) ? all : []).map(mapChar)
     archivedCharacters.value = allMapped.filter(c => !c.is_active)
