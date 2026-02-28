@@ -143,15 +143,25 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 
 def update_signup(signup: Signup, data: dict) -> Signup:
-    """Update a signup.  Status and role changes are informative only and do
-    **not** trigger any automatic lineup assignments or removals.  The lineup
-    board is the single source of truth for slot assignments."""
+    """Update a signup.  When a going player changes to a non-going status,
+    their lineup slot is removed and the first matching bench player is
+    auto-promoted to fill the vacancy."""
+    from app.services import lineup_service
+
+    old_status = signup.status
+    old_role = signup.chosen_role
 
     allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)
     db.session.commit()
+
+    # Auto-promote from bench when a going player leaves
+    new_status = signup.status
+    if old_status == SignupStatus.GOING.value and new_status != SignupStatus.GOING.value:
+        lineup_service.remove_slot_for_signup(signup.id)
+        _auto_promote_bench(signup.raid_event_id, old_role)
 
     return signup
 

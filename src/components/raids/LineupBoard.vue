@@ -169,45 +169,7 @@
       </p>
     </div>
 
-    <!-- Role-change modal (officer drops bench player onto lineup) -->
-    <WowModal v-model="showRoleModal" title="Assign Bench Player" size="sm">
-      <div v-if="pendingDrop" class="space-y-3">
-        <p class="text-sm text-text-muted">
-          Assign
-          <span class="font-semibold text-text-primary">{{ pendingDrop.signup.character?.name ?? '?' }}</span>
-          <span class="text-xs text-text-muted">({{ ROLE_LABEL_MAP[pendingDrop.signup.chosen_role] ?? pendingDrop.signup.chosen_role }})</span>
-          to a lineup slot:
-        </p>
-        <div class="grid grid-cols-1 gap-2">
-          <button
-            v-for="col in columns"
-            :key="col.key"
-            class="flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm text-left transition-colors"
-            :class="pendingDrop.signup.chosen_role !== col.role
-              ? 'border-border-default/30 bg-bg-tertiary/50 text-text-muted/50 cursor-not-allowed opacity-40'
-              : col.key === pendingDrop.targetKey
-                ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
-                : lineup[col.key].length >= col.slots
-                  ? 'border-red-800/50 bg-red-900/10 text-red-400 cursor-not-allowed opacity-60'
-                  : 'border-border-default bg-bg-tertiary text-text-primary hover:border-border-gold'"
-            :disabled="pendingDrop.signup.chosen_role !== col.role || (lineup[col.key].length >= col.slots && col.key !== pendingDrop.targetKey)"
-            @click="confirmRoleDrop(col.key)"
-          >
-            <img :src="getRoleIcon(col.role)" class="w-5 h-5 rounded" :alt="col.label" />
-            <span class="flex-1">{{ col.label }}</span>
-            <span class="text-xs" :class="lineup[col.key].length >= col.slots ? 'text-red-400' : 'text-text-muted'">
-              {{ lineup[col.key].length }}/{{ col.slots }}
-            </span>
-          </button>
-        </div>
-        <button
-          class="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-yellow-700/40 bg-yellow-900/10 text-yellow-400 text-sm hover:border-yellow-500 transition-colors"
-          @click="cancelRoleDrop"
-        >
-          ⏳ Leave on Bench
-        </button>
-      </div>
-    </WowModal>
+
   </WowCard>
 </template>
 
@@ -215,7 +177,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
-import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
@@ -327,13 +288,6 @@ function onDropColumn(e, targetKey) {
   const col = allColumns.value.find(c => c.key === targetKey)
   const signupRole = found.signup.chosen_role
 
-  // When dropping from BENCH, show role-choice modal (officer picks column or leaves on bench)
-  if (found.key === 'bench') {
-    pendingDrop.value = { signup: found.signup, sourceKey: found.key, targetKey }
-    showRoleModal.value = true
-    return
-  }
-
   // Strict role enforcement: roles are NOT interchangeable
   if (col && signupRole !== col.role) {
     const roleName = ROLE_LABEL_MAP[signupRole] ?? signupRole
@@ -417,37 +371,6 @@ async function onDropBench() {
   }
 }
 
-// ── Role-change modal (officer drop from bench / unassigned) ──
-const showRoleModal = ref(false)
-const pendingDrop = ref(null)
-
-function confirmRoleDrop(chosenKey) {
-  if (!pendingDrop.value) return
-  const { signup } = pendingDrop.value
-  const id = Number(signup.id)
-
-  // Overflow protection
-  const col = allColumns.value.find(c => c.key === chosenKey)
-  if (col && lineup.value[chosenKey].length >= col.slots) {
-    uiStore.showToast(`${col.label} slots are full (${lineup.value[chosenKey].length}/${col.slots}). Remove someone first.`, 'error')
-    return
-  }
-
-  // Add to chosen column (avoid duplicates)
-  if (!lineup.value[chosenKey].find(s => Number(s.id) === id)) {
-    lineup.value[chosenKey].push(signup)
-  }
-  dirty.value = true
-  showRoleModal.value = false
-  pendingDrop.value = null
-  autoSave()
-}
-
-function cancelRoleDrop() {
-  showRoleModal.value = false
-  pendingDrop.value = null
-}
-
 // ── Auto-save on DnD ──
 let autoSaveTimer = null
 function autoSave() {
@@ -518,8 +441,8 @@ const benchPlayers = computed(() =>
 
 function availableFor(key) {
   const col = allColumns.value.find(c => c.key === key)
-  if (!col) return unassignedNonBench.value
-  return unassignedNonBench.value.filter(s => s.chosen_role === col.role)
+  if (!col) return unassigned.value
+  return unassigned.value.filter(s => s.chosen_role === col.role)
 }
 
 function profString(s) {
