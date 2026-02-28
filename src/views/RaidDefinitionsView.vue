@@ -83,7 +83,7 @@
           <label class="block text-xs text-text-muted mb-1">Realm</label>
           <select v-model="form.realm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option value="">Select realm…</option>
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+            <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
           </select>
         </div>
         <div class="grid grid-cols-3 gap-3">
@@ -124,7 +124,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -153,7 +153,11 @@ const editing = ref(null)
 const deleteTarget = ref(null)
 
 const raidTypes = RAID_TYPES
-const warmaneRealms = WARMANE_REALMS
+// Show realms from joined guilds instead of all Warmane realms
+const guildRealms = computed(() => {
+  const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
+  return [...realms].sort()
+})
 
 const form = reactive({ name: '', raid_type: '', size: '', realm: '', tank_slots: 2, healer_slots: 5, dps_slots: 18 })
 

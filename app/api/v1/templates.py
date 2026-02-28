@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from app.services import event_service
+from app.services import event_service, raid_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
 
@@ -74,3 +74,41 @@ def delete_template(guild_id: int, tmpl_id: int):
         return jsonify({"error": "Template not found"}), 404
     event_service.delete_template(tmpl)
     return jsonify({"message": "Template deleted"}), 200
+
+
+@bp.post("/<int:tmpl_id>/apply")
+@login_required
+def apply_template(guild_id: int, tmpl_id: int):
+    membership = _check_membership(guild_id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+    tmpl = event_service.get_template(tmpl_id)
+    if tmpl is None or tmpl.guild_id != guild_id:
+        return jsonify({"error": "Template not found"}), 404
+    data = request.get_json(silent=True) or {}
+    if not data.get("start_time"):
+        return jsonify({"error": "start_time is required"}), 400
+
+    # Build event data from template
+    rd = raid_service.get_raid_definition(tmpl.raid_definition_id)
+    realm_name = membership.guild.realm_name if membership and membership.guild else ""
+    if rd and rd.realm:
+        realm_name = rd.realm
+    event_data = {
+        "title": tmpl.name,
+        "starts_at_utc": data["start_time"],
+        "realm_name": realm_name,
+        "raid_size": tmpl.raid_size,
+        "difficulty": tmpl.difficulty,
+        "duration_minutes": tmpl.expected_duration_minutes,
+        "raid_definition_id": tmpl.raid_definition_id,
+        "template_id": tmpl.id,
+        "raid_type": rd.raid_type if rd else None,
+        "instructions": tmpl.default_instructions,
+        "status": "open",
+    }
+    try:
+        event = event_service.create_event(guild_id, current_user.id, event_data)
+    except (ValueError, KeyError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(event.to_dict()), 201

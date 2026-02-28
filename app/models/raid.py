@@ -34,6 +34,11 @@ class RaidDefinition(db.Model):
     is_builtin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     default_duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
+    raid_type: Mapped[str | None] = mapped_column(sa.String(30), nullable=True)
+    realm: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
+    tank_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    healer_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    dps_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     created_by: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("users.id"), nullable=True
@@ -57,12 +62,18 @@ class RaidDefinition(db.Model):
             "expansion": self.expansion,
             "category": self.category,
             "default_raid_size": self.default_raid_size,
+            "size": self.default_raid_size,
             "supports_10": self.supports_10,
             "supports_25": self.supports_25,
             "supports_heroic": self.supports_heroic,
             "is_builtin": self.is_builtin,
             "is_active": self.is_active,
             "default_duration_minutes": self.default_duration_minutes,
+            "raid_type": self.raid_type,
+            "realm": self.realm,
+            "tank_slots": self.tank_slots,
+            "healer_slots": self.healer_slots,
+            "dps_slots": self.dps_slots,
             "notes": self.notes,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,

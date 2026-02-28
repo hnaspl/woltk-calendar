@@ -32,8 +32,11 @@ def create_raid_definition(guild_id: int):
     if not is_officer_or_admin(membership):
         return jsonify({"error": "Officer or admin privileges required"}), 403
     data = request.get_json(silent=True) or {}
-    if not data.get("code") or not data.get("name"):
-        return jsonify({"error": "code and name are required"}), 400
+    if not data.get("name"):
+        return jsonify({"error": "name is required"}), 400
+    # Auto-generate code from raid_type or name if not provided
+    if not data.get("code"):
+        data["code"] = (data.get("raid_type") or data["name"]).lower().replace(" ", "_")[:30]
     rd = raid_service.create_raid_definition(guild_id, current_user.id, data)
     return jsonify(rd.to_dict()), 201
 

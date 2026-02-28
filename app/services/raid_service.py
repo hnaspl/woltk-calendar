@@ -18,13 +18,18 @@ def create_raid_definition(guild_id: int, created_by: int, data: dict) -> RaidDe
         name=data["name"],
         expansion=data.get("expansion", "wotlk"),
         category=data.get("category", "raid"),
-        default_raid_size=data.get("default_raid_size", 25),
+        default_raid_size=data.get("size", data.get("default_raid_size", 25)),
         supports_10=data.get("supports_10", True),
         supports_25=data.get("supports_25", True),
         supports_heroic=data.get("supports_heroic", False),
         is_builtin=data.get("is_builtin", False),
         is_active=data.get("is_active", True),
         default_duration_minutes=data.get("default_duration_minutes", 180),
+        raid_type=data.get("raid_type"),
+        realm=data.get("realm") or None,
+        tank_slots=data.get("tank_slots"),
+        healer_slots=data.get("healer_slots"),
+        dps_slots=data.get("dps_slots"),
         notes=data.get("notes"),
     )
     db.session.add(rd)
@@ -40,11 +45,15 @@ def update_raid_definition(rd: RaidDefinition, data: dict) -> RaidDefinition:
     allowed = {
         "code", "name", "expansion", "category", "default_raid_size",
         "supports_10", "supports_25", "supports_heroic", "is_active",
-        "default_duration_minutes", "notes",
+        "default_duration_minutes", "raid_type", "realm",
+        "tank_slots", "healer_slots", "dps_slots", "notes",
     }
     for key, value in data.items():
         if key in allowed:
             setattr(rd, key, value)
+    # Map frontend 'size' field to default_raid_size
+    if "size" in data and "default_raid_size" not in data:
+        rd.default_raid_size = data["size"]
     db.session.commit()
     return rd
 
