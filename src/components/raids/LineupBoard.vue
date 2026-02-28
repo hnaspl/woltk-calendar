@@ -198,7 +198,7 @@
         </div>
         <button
           class="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-yellow-700/40 bg-yellow-900/10 text-yellow-400 text-sm hover:border-yellow-500 transition-colors"
-          @click="cancelRoleDrop()"
+          @click="cancelRoleDrop"
         >
           ⏳ Leave on Bench
         </button>
@@ -267,7 +267,10 @@ const dragSourceIndex = ref(-1)
 const dragOverTarget = ref(null)
 
 function onDragStart(e, signup, sourceKey, idx) {
-  if (!props.isOfficer) { e.preventDefault(); return }
+  if (!props.isOfficer) {
+    e.preventDefault()
+    return
+  }
   draggedId.value = signup.id
   dragSourceKey.value = sourceKey
   dragSourceIndex.value = idx
