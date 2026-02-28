@@ -160,23 +160,12 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
 
     if event:
         if is_officer_action:
-            notify._notify(
-                user_id=signup_user_id,
-                notification_type="signup_removed",
-                title=f"Removed from {event.title}",
-                body=f"Your signup was removed by {current_user.username}.",
-                guild_id=event.guild_id,
-                raid_event_id=event.id,
+            notify.notify_signup_removed_by_officer(
+                signup_user_id, event, current_user.username
             )
         else:
-            for officer_id in notify._get_officers(event.guild_id, exclude_user_id=signup_user_id):
-                notify._notify(
-                    user_id=officer_id,
-                    notification_type="officer_signup_left",
-                    title=f"{char_name} left {event.title}",
-                    body=f"Previously assigned as {signup_role}.",
-                    guild_id=event.guild_id,
-                    raid_event_id=event.id,
-                )
+            notify.notify_officers_signup_withdrawn(
+                event, signup_user_id, char_name, signup_role
+            )
 
     return jsonify({"message": "Signup deleted"}), 200

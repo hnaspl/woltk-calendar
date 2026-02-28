@@ -146,8 +146,9 @@ def notify_signup_declined_by_officer(signup, event, officer_name: str) -> None:
 
 def notify_signup_removed_by_officer(signup, event, officer_name: str) -> None:
     """Notify the player that an officer removed their signup."""
+    user_id = signup.user_id if hasattr(signup, "user_id") else signup
     _notify(
-        user_id=signup.user_id,
+        user_id=user_id,
         notification_type="signup_removed",
         title=f"Removed from {event.title}",
         body=f"Your signup was removed by {officer_name}.",
@@ -174,20 +175,34 @@ def notify_role_changed(signup, event, old_role: str, new_role: str) -> None:
 
 def notify_event_created(event, guild_id: int) -> None:
     """Notify all guild members that a new event was created."""
-    members = db.session.execute(
+    from app.models.notification import Notification
+    from datetime import datetime, timezone
+
+    member_ids = list(db.session.execute(
         sa.select(GuildMembership.user_id).where(
             GuildMembership.guild_id == guild_id,
         )
-    ).scalars().all()
-    for uid in members:
-        _notify(
+    ).scalars().all())
+
+    if not member_ids:
+        return
+
+    now = datetime.now(timezone.utc)
+    db.session.bulk_save_objects([
+        Notification(
             user_id=uid,
-            notification_type="event_created",
+            type="event_created",
             title=f"New raid scheduled: {event.title}",
-            body=f"A new raid has been scheduled. Sign up now!",
+            body="A new raid has been scheduled. Sign up now!",
             guild_id=guild_id,
             raid_event_id=event.id,
+            created_at=now,
         )
+        for uid in member_ids
+    ])
+    db.session.commit()
+    for uid in member_ids:
+        _push_to_user(uid)
 
 
 def _get_signed_up_users(event_id: int) -> list[int]:
@@ -316,6 +331,21 @@ def notify_officers_signup_left(signup, event, character_name: str) -> None:
             notification_type="officer_signup_left",
             title=f"{character_name} left {event.title}",
             body=f"Previously assigned as {_role_name(signup.chosen_role)}.",
+            guild_id=event.guild_id,
+            raid_event_id=event.id,
+        )
+
+
+def notify_officers_signup_withdrawn(
+    event, user_id: int, character_name: str, role: str,
+) -> None:
+    """Notify officers that a player withdrew from a raid (post-deletion)."""
+    for officer_id in _get_officers(event.guild_id, exclude_user_id=user_id):
+        _notify(
+            user_id=officer_id,
+            notification_type="officer_signup_left",
+            title=f"{character_name} left {event.title}",
+            body=f"Previously assigned as {_role_name(role)}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
         )
