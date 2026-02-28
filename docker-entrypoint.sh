@@ -5,7 +5,7 @@ echo "==> Starting WotLK Calendar (unified container)"
 
 # --- Backend ---
 cd /app/backend
-echo "==> Initialising database..."
+echo "==> Initializing database..."
 flask create-db
 flask seed
 
@@ -22,9 +22,9 @@ FRONTEND_PID=$!
 echo "==> Both services running (backend=$BACKEND_PID, frontend=$FRONTEND_PID)"
 
 # Wait for either to exit
-wait -n $BACKEND_PID $FRONTEND_PID
+wait "$BACKEND_PID" "$FRONTEND_PID"
 EXIT_CODE=$?
 
 # If one dies, kill the other
-kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true
 exit $EXIT_CODE
