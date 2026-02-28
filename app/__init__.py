@@ -111,66 +111,6 @@ def create_app(config_override: dict | None = None) -> Flask:
     return app
 
 
-def _sync_schema() -> None:
-    """Create missing tables and add missing columns to existing tables.
-
-    ``db.create_all()`` only creates tables that do not exist yet; it will
-    not ALTER existing tables.  This helper inspects every mapped table and
-    adds any column defined in the model but absent from the live database,
-    preventing "Unknown column" errors after schema changes.
-    """
-    import sqlalchemy as sa
-    from sqlalchemy import inspect as sa_inspect
-
-    # Ensure the instance directory exists for SQLite file databases.
-    db_path = db.engine.url.database
-    if db_path and db_path != ":memory:":
-        db_dir = os.path.dirname(db_path)
-        if db_dir:
-            os.makedirs(db_dir, exist_ok=True)
-
-    # Snapshot which tables already exist *before* create_all adds new ones.
-    inspector = sa_inspect(db.engine)
-    existing_tables = set(inspector.get_table_names())
-
-    db.create_all()
-
-    # Re-inspect so the cache reflects any tables just created.
-    inspector = sa_inspect(db.engine)
-
-    preparer = db.engine.dialect.identifier_preparer
-
-    with db.engine.begin() as conn:
-        for table_name, table_obj in db.metadata.tables.items():
-            if table_name not in existing_tables:
-                # Table was just created by create_all – nothing to patch.
-                continue
-            existing_cols = {c["name"] for c in inspector.get_columns(table_name)}
-            for col in table_obj.columns:
-                if col.name in existing_cols:
-                    continue
-                # Compile the column type for this dialect.
-                col_type = col.type.compile(dialect=db.engine.dialect)
-                q_table = preparer.quote_identifier(table_name)
-                q_col = preparer.quote_identifier(col.name)
-
-                # Build the column definition.  If the column is NOT NULL
-                # we must provide a DEFAULT so existing rows don't break.
-                if col.nullable:
-                    stmt = f"ALTER TABLE {q_table} ADD COLUMN {q_col} {col_type} NULL"
-                else:
-                    # Pick a safe zero-value default for the type.
-                    if isinstance(col.type, (sa.Boolean, sa.Integer, sa.Float, sa.Numeric)):
-                        default_lit = "0"
-                    elif isinstance(col.type, (sa.DateTime, sa.Date)):
-                        default_lit = "'1970-01-01 00:00:00'"
-                    else:
-                        default_lit = "''"
-                    stmt = f"ALTER TABLE {q_table} ADD COLUMN {q_col} {col_type} NOT NULL DEFAULT {default_lit}"
-
-                conn.execute(sa.text(stmt))
-
-
 def _register_commands(app: Flask) -> None:
     import click
 
@@ -181,7 +121,7 @@ def _register_commands(app: Flask) -> None:
         if reset:
             db.drop_all()
             click.echo("Dropped all tables.")
-        _sync_schema()
+        db.create_all()
         click.echo("Created all tables.")
 
         from app.seeds.raid_definitions import seed_raid_definitions
@@ -208,6 +148,6 @@ def _register_commands(app: Flask) -> None:
 
     @app.cli.command("create-db")
     def create_db_command() -> None:
-        """Create all database tables and add any missing columns."""
-        _sync_schema()
+        """Create all database tables."""
+        db.create_all()
         click.echo("Database tables created.")

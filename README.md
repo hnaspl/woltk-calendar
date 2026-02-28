@@ -191,7 +191,7 @@ All endpoints are under `/api/v1/`. Authentication uses session cookies (Flask-L
 
 SQLite (file-based, zero configuration). The database file is stored at `instance/wotlk_calendar.db`.
 
-Schema changes are applied automatically via `db.create_all()` and `_sync_schema()` — no migrations are used during alpha.
+All fields are defined in the SQLAlchemy models. Running `flask create-db` calls `db.create_all()` to create all tables with all columns. For a full reset use `flask seed --reset`.
 
 ---
 
