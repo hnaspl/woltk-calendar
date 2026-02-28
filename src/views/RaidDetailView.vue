@@ -141,7 +141,7 @@
               :off-tank-slots="event.off_tank_slots ?? 1"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
-              @saved="uiStore.showToast('Lineup saved!', 'success')"
+              @saved="onLineupSaved"
             />
           </div>
         </div>
@@ -460,6 +460,16 @@ async function onSignupRemoved(signupId) {
     signups.value = signups.value.filter(s => s.id !== signupId)
   }
   uiStore.showToast('Signup removed', 'success')
+}
+
+async function onLineupSaved() {
+  // Reload signups so role changes from drag-and-drop are reflected in the signup list
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+  } catch (err) {
+    console.warn('Failed to reload signups after lineup save', err)
+  }
+  uiStore.showToast('Lineup saved!', 'success')
 }
 
 function formatDateTime(d) {

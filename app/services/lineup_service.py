@@ -71,6 +71,19 @@ def remove_slot_for_signup(signup_id: int) -> None:
     db.session.commit()
 
 
+def update_slot_group_for_signup(signup_id: int, new_slot_group: str) -> None:
+    """Update the slot_group for all LineupSlots associated with a signup."""
+    slots = list(
+        db.session.execute(
+            sa.select(LineupSlot).where(LineupSlot.signup_id == signup_id)
+        ).scalars().all()
+    )
+    for slot in slots:
+        slot.slot_group = new_slot_group
+        slot.slot_index = _next_slot_index(slot.raid_event_id, new_slot_group)
+    db.session.commit()
+
+
 def upsert_slot(
     raid_event_id: int,
     slot_group: str,
@@ -120,6 +133,9 @@ def update_lineup_grouped(
             signup = db.session.get(Signup, signup_id)
             if signup is None:
                 continue
+            # Sync signup's chosen_role to match the lineup column
+            if signup.chosen_role != slot_group:
+                signup.chosen_role = slot_group
             slot = LineupSlot(
                 raid_event_id=raid_event_id,
                 slot_group=slot_group,

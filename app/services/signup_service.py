@@ -104,6 +104,8 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     db.session.commit()
 
     new_status = signup.status
+    new_role = signup.chosen_role
+
     if old_status == SignupStatus.GOING.value and new_status != SignupStatus.GOING.value:
         # Remove from lineup and auto-promote from bench
         lineup_service.remove_slot_for_signup(signup.id)
@@ -111,6 +113,9 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     elif old_status != SignupStatus.GOING.value and new_status == SignupStatus.GOING.value:
         # Newly going — add to lineup
         lineup_service.auto_assign_slot(signup)
+    elif old_role != new_role and new_status == SignupStatus.GOING.value:
+        # Role changed while still going — update lineup slot group
+        lineup_service.update_slot_group_for_signup(signup.id, new_role)
 
     return signup
 

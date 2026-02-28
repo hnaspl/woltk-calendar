@@ -262,7 +262,7 @@ async function loadLineup() {
 onMounted(loadLineup)
 
 watch(
-  () => props.signups.map(s => `${s.id}:${s.status}`).join(','),
+  () => props.signups.map(s => `${s.id}:${s.status}:${s.chosen_role}`).join(','),
   loadLineup
 )
 
