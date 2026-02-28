@@ -70,9 +70,9 @@
               >×</button>
             </div>
           </CharacterTooltip>
-          <!-- Dropdown to assign (officer only) -->
+          <!-- Dropdown to assign (officer only, hidden when column is full) -->
           <select
-            v-if="isOfficer && availableFor(col.key).length > 0"
+            v-if="isOfficer && lineup[col.key].length < col.slots && availableFor(col.key).length > 0"
             class="w-full bg-bg-tertiary border border-dashed border-border-default text-text-muted text-xs rounded px-2 py-1.5 mt-1 focus:border-border-gold outline-none"
             @change="onSelectAssign($event, col.key)"
           >
@@ -111,7 +111,7 @@
               'cursor-grab active:cursor-grabbing': isOfficer,
               'opacity-50': draggedId === s.id
             }"
-            draggable="true"
+            :draggable="isOfficer"
             @dragstart="onDragStart($event, s, s.status === 'bench' ? 'bench' : 'unassigned', -1)"
             @dragend="onDragEnd"
           >
