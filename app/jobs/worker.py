@@ -22,7 +22,6 @@ def claim_next_job() -> JobQueue | None:
         )
         .order_by(JobQueue.available_at.asc())
         .limit(1)
-        .with_for_update(skip_locked=True)
     ).scalar_one_or_none()
 
     if job is None:

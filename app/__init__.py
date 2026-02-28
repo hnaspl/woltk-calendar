@@ -31,6 +31,18 @@ def create_app(config_override: dict | None = None) -> Flask:
     bcrypt.init_app(app)
     login_manager.init_app(app)
 
+    # Enable WAL mode for SQLite (better concurrent read/write performance)
+    if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
+        from sqlalchemy import event as sa_event
+
+        with app.app_context():
+            @sa_event.listens_for(db.engine, "connect")
+            def _set_sqlite_pragma(dbapi_conn, connection_record):
+                cursor = dbapi_conn.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
+
     CORS(
         app,
         origins=app.config["CORS_ORIGINS"],
@@ -111,6 +123,15 @@ def create_app(config_override: dict | None = None) -> Flask:
     return app
 
 
+def _ensure_db_dir() -> None:
+    """Create the parent directory for file-based SQLite databases."""
+    db_path = db.engine.url.database
+    if db_path and db_path != ":memory:":
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+
+
 def _register_commands(app: Flask) -> None:
     import click
 
@@ -118,6 +139,7 @@ def _register_commands(app: Flask) -> None:
     @click.option("--reset", is_flag=True, default=False, help="Drop and recreate all tables first.")
     def seed_command(reset: bool) -> None:
         """Seed the database with initial data."""
+        _ensure_db_dir()
         if reset:
             db.drop_all()
             click.echo("Dropped all tables.")
@@ -149,5 +171,6 @@ def _register_commands(app: Flask) -> None:
     @app.cli.command("create-db")
     def create_db_command() -> None:
         """Create all database tables."""
+        _ensure_db_dir()
         db.create_all()
         click.echo("Database tables created.")

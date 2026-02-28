@@ -20,6 +20,9 @@ class Config:
         ),
     )
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+    SQLALCHEMY_ENGINE_OPTIONS: dict = {
+        "connect_args": {"timeout": 20},
+    }
 
     # --------------------------------------------------------------- Session
     SESSION_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
