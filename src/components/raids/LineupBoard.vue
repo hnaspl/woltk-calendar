@@ -316,6 +316,12 @@ watch(
   }
 )
 
+// After DnD auto-save completes, reload lineup to pick up any changes
+// that arrived via polling while dirty was true
+watch(dirty, (isDirty, wasDirty) => {
+  if (wasDirty && !isDirty) loadLineup()
+})
+
 function autoPopulateFromSignups() {
   const going = props.signups.filter(s => s.status === 'going')
   lineup.value.main_tanks = going.filter(s => s.chosen_role === 'main_tank')

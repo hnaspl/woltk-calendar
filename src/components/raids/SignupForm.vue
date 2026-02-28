@@ -41,14 +41,19 @@
             v-for="r in roles"
             :key="r.value"
             type="button"
-            class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded border text-sm transition-all"
-            :class="form.chosenRole === r.value
-              ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
-              : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+            class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded border text-sm transition-all"
+            :class="isRoleFull(r.value) && form.chosenRole !== r.value
+              ? 'border-red-800/50 text-text-muted/50 cursor-not-allowed'
+              : form.chosenRole === r.value
+                ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
+                : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
             :disabled="form.characterId === ''"
             @click="form.chosenRole = r.value"
           >
             <RoleBadge :role="r.value" />
+            <span v-if="roleSlotInfo[r.value]" class="text-[10px]" :class="isRoleFull(r.value) ? 'text-red-400' : 'text-text-muted'">
+              {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' Full' : '' }}
+            </span>
           </button>
         </div>
       </div>
@@ -161,7 +166,8 @@ const props = defineProps({
   guildId: { type: [Number, String], required: true },
   existingSignup: { type: Object, default: null },
   signedUpCharacterIds: { type: Array, default: () => [] },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] }
+  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] },
+  roleSlotInfo: { type: Object, default: () => ({}) }
 })
 
 const emit = defineEmits(['signed-up', 'updated'])
@@ -194,6 +200,11 @@ const alternativeRoles = computed(() => {
 const roles = computed(() =>
   ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
 )
+
+function isRoleFull(role) {
+  const info = props.roleSlotInfo[role]
+  return info ? info.remaining <= 0 : false
+}
 
 /** Available spec options from the selected character's class */
 const specOptions = computed(() => {

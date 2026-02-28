@@ -66,6 +66,7 @@
               :existing-signup="editingSignup"
               :signed-up-character-ids="mySignedUpCharacterIds"
               :available-roles="availableRoles"
+              :role-slot-info="roleSlotInfo"
               @signed-up="onSignedUp"
               @updated="onSignupUpdated"
             />
@@ -344,6 +345,25 @@ const availableRoles = computed(() => {
   if ((event.value.healer_slots ?? 5) > 0) roles.push('healer')
   if ((event.value.dps_slots ?? 18) > 0) roles.push('dps')
   return roles
+})
+
+// Live role slot info: max slots, current going count, and remaining for each role
+const roleSlotInfo = computed(() => {
+  if (!event.value) return {}
+  const slotMap = {
+    main_tank: event.value.main_tank_slots ?? 1,
+    off_tank:  event.value.off_tank_slots ?? 1,
+    tank:      event.value.tank_slots ?? 0,
+    healer:    event.value.healer_slots ?? 5,
+    dps:       event.value.dps_slots ?? 18,
+  }
+  const info = {}
+  for (const [role, max] of Object.entries(slotMap)) {
+    if (max <= 0) continue
+    const current = signups.value.filter(s => s.chosen_role === role && s.status === 'going').length
+    info[role] = { max, current, remaining: Math.max(0, max - current) }
+  }
+  return info
 })
 
 onMounted(async () => {
