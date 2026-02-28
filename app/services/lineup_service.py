@@ -118,6 +118,8 @@ def update_lineup_grouped(
         signup_ids = data.get(key, [])
         for idx, signup_id in enumerate(signup_ids):
             signup = db.session.get(Signup, signup_id)
+            if signup is None:
+                continue
             slot = LineupSlot(
                 raid_event_id=raid_event_id,
                 slot_group=slot_group,

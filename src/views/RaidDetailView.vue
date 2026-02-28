@@ -249,7 +249,8 @@ async function onSignupUpdated(updated) {
   // Reload all signups to reflect auto-promote changes from backend
   try {
     signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
-  } catch {
+  } catch (err) {
+    console.warn('Failed to reload signups, using local update', err)
     const idx = signups.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) signups.value[idx] = updated
   }
@@ -260,7 +261,8 @@ async function onSignupRemoved(signupId) {
   // Reload all signups to reflect auto-promote changes from backend
   try {
     signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
-  } catch {
+  } catch (err) {
+    console.warn('Failed to reload signups, using local filter', err)
     signups.value = signups.value.filter(s => s.id !== signupId)
   }
   uiStore.showToast('Signup removed', 'success')
