@@ -97,7 +97,7 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     old_status = signup.status
     old_role = signup.chosen_role
 
-    allowed = {"chosen_spec", "chosen_role", "status", "note"}
+    allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)

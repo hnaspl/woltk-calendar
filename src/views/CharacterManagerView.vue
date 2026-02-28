@@ -53,20 +53,22 @@
               class="absolute top-3 right-3 text-[10px] font-bold text-accent-gold bg-accent-gold/10 border border-accent-gold/30 px-1.5 py-0.5 rounded"
             >MAIN</span>
 
-            <div class="flex items-center gap-3 mb-3">
-              <img
-                :src="getClassIcon(char.class)"
-                :alt="char.class"
-                class="w-12 h-12 rounded border border-border-default"
-              />
-              <div>
-                <div class="font-bold text-text-primary">{{ char.name }}</div>
-                <div class="text-xs text-text-muted">{{ char.realm }}</div>
-                <div v-if="char.metadata?.level" class="text-xs text-text-muted">
-                  Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
+            <CharacterTooltip :character="charToTooltip(char)" position="right">
+              <div class="flex items-center gap-3 mb-3 cursor-pointer">
+                <img
+                  :src="getClassIcon(char.class)"
+                  :alt="char.class"
+                  class="w-12 h-12 rounded border border-border-default"
+                />
+                <div>
+                  <div class="font-bold text-text-primary">{{ char.name }}</div>
+                  <div class="text-xs text-text-muted">{{ char.realm }}</div>
+                  <div v-if="char.metadata?.level" class="text-xs text-text-muted">
+                    Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
+                  </div>
                 </div>
               </div>
-            </div>
+            </CharacterTooltip>
 
             <div class="flex flex-wrap gap-1.5 mb-2">
               <ClassBadge :class-name="char.class" />
@@ -278,6 +280,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
+import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -288,6 +291,20 @@ import * as warmaneApi from '@/api/warmane'
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const { getClassIcon } = useWowIcons()
+
+/** Map display char to CharacterTooltip format */
+function charToTooltip(char) {
+  return {
+    name: char.name,
+    class_name: char.class,
+    realm_name: char.realm,
+    default_role: char.role,
+    primary_spec: char.spec,
+    secondary_spec: char.secondary_spec,
+    armory_url: char.armory_url,
+    metadata: char.metadata ?? {}
+  }
+}
 
 const characters = ref([])
 const archivedCharacters = ref([])

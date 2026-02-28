@@ -21,13 +21,16 @@
         >
           <option value="">Select character…</option>
           <option
-            v-for="char in characters"
+            v-for="char in availableCharacters"
             :key="char.id"
             :value="char.id"
           >
             {{ char.name }} ({{ char.class_name }} – {{ char.realm_name }})
           </option>
         </select>
+        <span v-if="!existingSignup && signedUpCharacterIds.length > 0" class="text-[10px] text-text-muted">
+          Already signed up characters are hidden. Select another character to add.
+        </span>
       </div>
 
       <!-- Role -->
@@ -117,7 +120,8 @@ import * as charactersApi from '@/api/characters'
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
   guildId: { type: [Number, String], required: true },
-  existingSignup: { type: Object, default: null }
+  existingSignup: { type: Object, default: null },
+  signedUpCharacterIds: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['signed-up', 'updated'])
@@ -144,6 +148,12 @@ const specOptions = computed(() => {
   if (selected.primary_spec) specs.push(selected.primary_spec)
   if (selected.secondary_spec && selected.secondary_spec !== selected.primary_spec) specs.push(selected.secondary_spec)
   return specs
+})
+
+/** Characters not yet signed up for this event (unless editing) */
+const availableCharacters = computed(() => {
+  if (props.existingSignup) return characters.value
+  return characters.value.filter(c => !props.signedUpCharacterIds.includes(c.id))
 })
 
 const form = reactive({
@@ -215,6 +225,11 @@ async function handleSubmit() {
     } else {
       const created = await signupsApi.createSignup(props.guildId, props.eventId, payload)
       emit('signed-up', created)
+      // Reset form for adding another character
+      form.characterId = ''
+      form.chosenRole = 'dps'
+      form.chosenSpec = ''
+      form.note = ''
     }
     success.value = true
     setTimeout(() => { success.value = false }, 3000)

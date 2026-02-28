@@ -13,7 +13,7 @@ from app.extensions import db
 
 class Signup(db.Model):
     __tablename__ = "signups"
-    __table_args__ = (sa.UniqueConstraint("raid_event_id", "user_id", name="uq_event_user"),)
+    __table_args__ = (sa.UniqueConstraint("raid_event_id", "character_id", name="uq_event_character"),)
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
     raid_event_id: Mapped[int] = mapped_column(
@@ -34,6 +34,7 @@ class Signup(db.Model):
         default=SignupStatus.GOING.value,
     )
     note: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    gear_score_note: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
@@ -61,6 +62,7 @@ class Signup(db.Model):
             "chosen_role": self.chosen_role,
             "status": self.status,
             "note": self.note,
+            "gear_score_note": self.gear_score_note,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

@@ -237,14 +237,14 @@ const LineupColumn = defineComponent({
   setup(colProps, { emit: colEmit }) {
     const { getClassIcon, getClassColor } = useWowIcons()
     return () => h('div', { class: 'space-y-1.5' }, [
-      // Assigned slots with enriched info
+      // Assigned slots with enriched info + tooltip
       ...colProps.slots.map((s, i) => {
         const meta = s.character?.metadata ?? {}
         const profs = (meta.professions ?? []).map(p => p.name).join(', ')
         const level = meta.level ?? ''
         const classColor = getClassColor(s.character?.class_name) ?? '#ccc'
 
-        return h('div', {
+        const slotContent = h('div', {
           key: s.id,
           class: 'flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors'
         }, [
@@ -276,6 +276,13 @@ const LineupColumn = defineComponent({
               }, '×')
             : null
         ])
+
+        // Wrap with CharacterTooltip
+        return h(CharacterTooltip, {
+          key: s.id,
+          character: s.character,
+          position: 'left'
+        }, () => slotContent)
       }),
       // Dropdown to assign from available signups (officer only)
       colProps.editable && colProps.signups.length > 0

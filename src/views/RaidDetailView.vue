@@ -64,6 +64,7 @@
               :event-id="event.id"
               :guild-id="guildId"
               :existing-signup="mySignup"
+              :signed-up-character-ids="mySignedUpCharacterIds"
               @signed-up="onSignedUp"
               @updated="onSignupUpdated"
             />
@@ -236,10 +237,16 @@ const editForm = reactive({
 
 const guildId = computed(() => guildStore.currentGuild?.id)
 
-const mySignup = computed(() => {
-  if (!authStore.user) return null
-  return signups.value.find(s => s.user_id === authStore.user.id) ?? null
+const mySignups = computed(() => {
+  if (!authStore.user) return []
+  return signups.value.filter(s => s.user_id === authStore.user.id)
 })
+
+const mySignup = computed(() => mySignups.value[0] ?? null)
+
+const mySignedUpCharacterIds = computed(() =>
+  mySignups.value.map(s => s.character_id)
+)
 
 onMounted(async () => {
   loading.value = true
