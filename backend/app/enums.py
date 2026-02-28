@@ -9,6 +9,8 @@ class Realm(str, Enum):
     ICECROWN = "Icecrown"
     LORDAERON = "Lordaeron"
     ONYXIA = "Onyxia"
+    BLACKROCK = "Blackrock"
+    FROSTWOLF = "Frostwolf"
     FROSTMOURNE = "Frostmourne"
     NELTHARION = "Neltharion"
 

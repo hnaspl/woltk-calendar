@@ -67,3 +67,15 @@ def update_lineup(raid_event_id: int, slots_data: list[dict], confirmed_by: int)
         )
         results.append(slot)
     return results
+
+
+def confirm_lineup(raid_event_id: int, confirmed_by: int) -> list[LineupSlot]:
+    """Mark all existing lineup slots as confirmed."""
+    now = datetime.now(timezone.utc)
+    slots = get_lineup(raid_event_id)
+    for slot in slots:
+        if slot.signup_id is not None and slot.confirmed_at is None:
+            slot.confirmed_by = confirmed_by
+            slot.confirmed_at = now
+    db.session.commit()
+    return slots

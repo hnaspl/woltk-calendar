@@ -93,7 +93,10 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Realm *</label>
-          <input v-model="form.realm" required placeholder="Icecrown" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option value="">Select realm…</option>
+            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+          </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Role</label>
@@ -107,6 +110,14 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">Spec</label>
           <input v-model="form.spec" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Secondary Spec</label>
+          <input v-model="form.secondary_spec" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Warmane Armory URL</label>
+          <input v-model="form.armory_url" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
       </form>
@@ -162,14 +173,29 @@ const editingChar = ref(null)
 const archiveTarget = ref(null)
 
 const wowClasses = ['Death Knight', 'Druid', 'Hunter', 'Mage', 'Paladin', 'Priest', 'Rogue', 'Shaman', 'Warlock', 'Warrior']
+const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
 
-const form = reactive({ name: '', class: '', realm: '', role: '', spec: '' })
+const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
+
+// Map backend response fields to display-friendly names
+function mapChar(c) {
+  return {
+    ...c,
+    class: c.class_name || c.class,
+    realm: c.realm_name || c.realm,
+    role: c.default_role || c.role,
+    spec: c.primary_spec || c.spec,
+    secondary_spec: c.secondary_spec,
+    armory_url: c.armory_url,
+  }
+}
 
 onMounted(async () => {
   loading.value = true
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   try {
-    characters.value = await charApi.getMyCharacters(guildStore.currentGuild?.id)
+    const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
+    characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
   } catch (err) {
     error.value = 'Failed to load characters'
   } finally {
@@ -179,14 +205,14 @@ onMounted(async () => {
 
 function openAddModal() {
   editingChar.value = null
-  Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '' })
+  Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
   formError.value = null
   showModal.value = true
 }
 
 function openEditModal(char) {
   editingChar.value = char
-  Object.assign(form, { name: char.name, class: char.class, realm: char.realm, role: char.role ?? '', spec: char.spec ?? '' })
+  Object.assign(form, { name: char.name, class: char.class, realm: char.realm, role: char.role ?? '', spec: char.spec ?? '', secondary_spec: char.secondary_spec ?? '', armory_url: char.armory_url ?? '' })
   formError.value = null
   showModal.value = true
 }
@@ -201,20 +227,28 @@ async function saveChar() {
   if (!form.name || !form.class || !form.realm) { formError.value = 'Name, class and realm are required'; return }
   saving.value = true
   try {
-    const payload = { name: form.name, class: form.class, realm: form.realm, role: form.role || undefined, spec: form.spec || undefined }
+    const payload = {
+      name: form.name,
+      class_name: form.class,
+      realm_name: form.realm,
+      default_role: form.role || 'dps',
+      primary_spec: form.spec || undefined,
+      secondary_spec: form.secondary_spec || undefined,
+      armory_url: form.armory_url || undefined,
+    }
     if (editingChar.value) {
       const updated = await charApi.updateCharacter(guildStore.currentGuild.id, editingChar.value.id, payload)
       const idx = characters.value.findIndex(c => c.id === editingChar.value.id)
-      if (idx !== -1) characters.value[idx] = updated
+      if (idx !== -1) characters.value[idx] = mapChar(updated)
       uiStore.showToast('Character updated', 'success')
     } else {
       const created = await charApi.createCharacter(guildStore.currentGuild.id, payload)
-      characters.value.push(created)
+      characters.value.push(mapChar(created))
       uiStore.showToast('Character added', 'success')
     }
     showModal.value = false
   } catch (err) {
-    formError.value = err?.response?.data?.message ?? 'Failed to save character'
+    formError.value = err?.response?.data?.error ?? 'Failed to save character'
   } finally {
     saving.value = false
   }

@@ -145,6 +145,8 @@ WARMANE_REALMS: list[str] = [
     "Icecrown",
     "Lordaeron",
     "Onyxia",
+    "Blackrock",
+    "Frostwolf",
     "Frostmourne",
     "Neltharion",
 ]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
@@ -38,6 +39,8 @@ class Character(db.Model):
     )
     is_main: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
+    metadata_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    armory_url: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
@@ -54,6 +57,16 @@ class Character(db.Model):
     user = relationship("User", foreign_keys=[user_id], lazy="select")
     guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
 
+    @property
+    def metadata(self) -> dict:
+        if self.metadata_json:
+            return json.loads(self.metadata_json)
+        return {}
+
+    @metadata.setter
+    def metadata(self, value: dict) -> None:
+        self.metadata_json = json.dumps(value)
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -68,6 +81,8 @@ class Character(db.Model):
             "off_role": self.off_role,
             "is_main": self.is_main,
             "is_active": self.is_active,
+            "metadata": self.metadata,
+            "armory_url": self.armory_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

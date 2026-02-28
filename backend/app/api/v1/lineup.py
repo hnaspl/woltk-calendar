@@ -44,3 +44,16 @@ def update_lineup(guild_id: int, event_id: int):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify([s.to_dict() for s in slots]), 200
+
+
+@bp.post("/confirm")
+@login_required
+def confirm_lineup(guild_id: int, event_id: int):
+    membership = get_membership(guild_id, current_user.id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+    event = event_service.get_event(event_id)
+    if event is None or event.guild_id != guild_id:
+        return jsonify({"error": "Event not found"}), 404
+    slots = lineup_service.confirm_lineup(event_id, current_user.id)
+    return jsonify([s.to_dict() for s in slots]), 200

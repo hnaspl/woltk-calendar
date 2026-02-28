@@ -17,7 +17,10 @@
             </div>
             <div>
               <label class="block text-xs text-text-muted mb-1">Realm *</label>
-              <input v-model="form.realm" required placeholder="Icecrown, Lordaeron…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option value="">Select realm…</option>
+                <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+              </select>
             </div>
             <div>
               <label class="block text-xs text-text-muted mb-1">Description</label>
@@ -104,6 +107,7 @@ const showKickConfirm = ref(false)
 const kickTarget = ref(null)
 
 const form = reactive({ name: '', realm: '', description: '' })
+const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
 
 onMounted(async () => {
   loading.value = true

@@ -11,3 +11,6 @@ export const addLineupSlot = (guildId, eventId, payload) =>
 
 export const removeLineupSlot = (guildId, eventId, slotId) =>
   api.delete(`/guilds/${guildId}/events/${eventId}/lineup/${slotId}`)
+
+export const confirmLineup = (guildId, eventId) =>
+  api.post(`/guilds/${guildId}/events/${eventId}/lineup/confirm`)

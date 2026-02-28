@@ -26,3 +26,6 @@ export const completeEvent = (guildId, eventId) =>
 
 export const cancelEvent = (guildId, eventId) =>
   api.post(`/guilds/${guildId}/events/${eventId}/cancel`)
+
+export const duplicateEvent = (guildId, eventId, payload = {}) =>
+  api.post(`/guilds/${guildId}/events/${eventId}/duplicate`, payload)

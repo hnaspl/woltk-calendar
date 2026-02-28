@@ -45,6 +45,7 @@
               <WowButton variant="secondary" @click="toggleLock">
                 {{ event.is_locked ? 'Unlock' : 'Lock' }}
               </WowButton>
+              <WowButton variant="secondary" @click="doDuplicate">Duplicate</WowButton>
               <WowButton v-if="event.status !== 'completed'" variant="primary" @click="markComplete">
                 Mark Done
               </WowButton>
@@ -108,7 +109,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -130,6 +131,7 @@ import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 
 const route = useRoute()
+const router = useRouter()
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
@@ -209,6 +211,19 @@ async function cancelEvent() {
     uiStore.showToast('Event cancelled', 'warning')
   } catch {
     uiStore.showToast('Failed to cancel event', 'error')
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function doDuplicate() {
+  actionLoading.value = true
+  try {
+    const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id)
+    uiStore.showToast('Event duplicated! Redirecting…', 'success')
+    router.push({ name: 'raid-detail', params: { id: newEvent.id } })
+  } catch {
+    uiStore.showToast('Failed to duplicate event', 'error')
   } finally {
     actionLoading.value = false
   }

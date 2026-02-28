@@ -23,7 +23,10 @@ def create_character(user_id: int, guild_id: int, data: dict) -> Character:
         off_role=data.get("off_role"),
         is_main=data.get("is_main", False),
         is_active=data.get("is_active", True),
+        armory_url=data.get("armory_url"),
     )
+    if "metadata" in data:
+        char.metadata = data["metadata"]
     db.session.add(char)
     db.session.commit()
     return char
@@ -36,11 +39,13 @@ def get_character(character_id: int) -> Optional[Character]:
 def update_character(character: Character, data: dict) -> Character:
     allowed = {
         "realm_name", "name", "class_name", "primary_spec", "secondary_spec",
-        "default_role", "off_role", "is_main", "is_active",
+        "default_role", "off_role", "is_main", "is_active", "armory_url",
     }
     for key, value in data.items():
         if key in allowed:
             setattr(character, key, value)
+    if "metadata" in data:
+        character.metadata = data["metadata"]
     db.session.commit()
     return character
 
@@ -48,6 +53,13 @@ def update_character(character: Character, data: dict) -> Character:
 def delete_character(character: Character) -> None:
     db.session.delete(character)
     db.session.commit()
+
+
+def archive_character(character: Character) -> Character:
+    """Soft-delete by setting is_active to False."""
+    character.is_active = False
+    db.session.commit()
+    return character
 
 
 def list_characters(user_id: int, guild_id: Optional[int] = None) -> list[Character]:

@@ -236,3 +236,40 @@ def list_events(guild_id: int) -> list[RaidEvent]:
             sa.select(RaidEvent).where(RaidEvent.guild_id == guild_id).order_by(RaidEvent.starts_at_utc)
         ).scalars().all()
     )
+
+
+def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[RaidEvent]:
+    """Return events within a date range."""
+    return list(
+        db.session.execute(
+            sa.select(RaidEvent).where(
+                RaidEvent.guild_id == guild_id,
+                RaidEvent.starts_at_utc >= start,
+                RaidEvent.starts_at_utc <= end,
+            ).order_by(RaidEvent.starts_at_utc)
+        ).scalars().all()
+    )
+
+
+def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[datetime] = None) -> RaidEvent:
+    """Duplicate an existing raid event. Optionally set a new start time."""
+    starts_at = new_starts_at or event.starts_at_utc + timedelta(weeks=1)
+    duration = event.ends_at_utc - event.starts_at_utc
+    new_event = RaidEvent(
+        guild_id=event.guild_id,
+        series_id=event.series_id,
+        template_id=event.template_id,
+        raid_definition_id=event.raid_definition_id,
+        title=event.title,
+        realm_name=event.realm_name,
+        starts_at_utc=starts_at,
+        ends_at_utc=starts_at + duration,
+        raid_size=event.raid_size,
+        difficulty=event.difficulty,
+        status="draft",
+        instructions=event.instructions,
+        created_by=created_by,
+    )
+    db.session.add(new_event)
+    db.session.commit()
+    return new_event

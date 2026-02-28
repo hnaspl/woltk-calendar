@@ -70,3 +70,15 @@ def delete_character(char_id: int):
         return jsonify({"error": "Forbidden"}), 403
     character_service.delete_character(char)
     return jsonify({"message": "Character deleted"}), 200
+
+
+@bp.post("/<int:char_id>/archive")
+@login_required
+def archive_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": "Character not found"}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": "Forbidden"}), 403
+    char = character_service.archive_character(char)
+    return jsonify(char.to_dict()), 200
