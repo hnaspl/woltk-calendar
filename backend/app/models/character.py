@@ -60,7 +60,10 @@ class Character(db.Model):
     @property
     def metadata(self) -> dict:
         if self.metadata_json:
-            return json.loads(self.metadata_json)
+            try:
+                return json.loads(self.metadata_json)
+            except (json.JSONDecodeError, TypeError):
+                return {}
         return {}
 
     @metadata.setter
