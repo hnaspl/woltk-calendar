@@ -13,13 +13,17 @@ from app.extensions import db
 
 class Signup(db.Model):
     __tablename__ = "signups"
-    __table_args__ = (sa.UniqueConstraint("raid_event_id", "character_id", name="uq_event_character"),)
+    __table_args__ = (
+        sa.UniqueConstraint("raid_event_id", "character_id", name="uq_event_character"),
+        sa.Index("ix_signups_raid_event", "raid_event_id"),
+        sa.Index("ix_signups_user", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
     raid_event_id: Mapped[int] = mapped_column(
-        sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False
+        sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False, index=True
     )
-    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     character_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("characters.id"), nullable=False
     )
@@ -78,11 +82,13 @@ class LineupSlot(db.Model):
     __tablename__ = "lineup_slots"
     __table_args__ = (
         sa.UniqueConstraint("raid_event_id", "slot_group", "slot_index", name="uq_event_slot"),
+        sa.Index("ix_lineup_slots_raid_event", "raid_event_id"),
+        sa.Index("ix_lineup_slots_signup", "signup_id"),
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
     raid_event_id: Mapped[int] = mapped_column(
-        sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False
+        sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False, index=True
     )
     slot_group: Mapped[str] = mapped_column(
         sa.Enum(SlotGroup, values_callable=lambda e: [x.value for x in e]),

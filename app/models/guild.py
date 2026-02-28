@@ -75,11 +75,15 @@ class Guild(db.Model):
 
 class GuildMembership(db.Model):
     __tablename__ = "guild_memberships"
-    __table_args__ = (sa.UniqueConstraint("guild_id", "user_id", name="uq_guild_user"),)
+    __table_args__ = (
+        sa.UniqueConstraint("guild_id", "user_id", name="uq_guild_user"),
+        sa.Index("ix_guild_memberships_guild", "guild_id"),
+        sa.Index("ix_guild_memberships_user", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
-    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
+    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(
         sa.Enum(GuildRole, values_callable=lambda e: [x.value for x in e]),
         nullable=False,

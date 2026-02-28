@@ -267,8 +267,11 @@ def complete_event(event: RaidEvent) -> RaidEvent:
 def list_events(guild_id: int) -> list[RaidEvent]:
     return list(
         db.session.execute(
-            sa.select(RaidEvent).where(RaidEvent.guild_id == guild_id).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            sa.select(RaidEvent)
+            .where(RaidEvent.guild_id == guild_id)
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -280,8 +283,10 @@ def list_events_for_guilds(guild_ids: list[int]) -> list[RaidEvent]:
         db.session.execute(
             sa.select(RaidEvent).where(
                 RaidEvent.guild_id.in_(guild_ids)
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -297,8 +302,10 @@ def list_events_for_guilds_by_range(
                 RaidEvent.guild_id.in_(guild_ids),
                 RaidEvent.starts_at_utc >= start,
                 RaidEvent.starts_at_utc <= end,
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -310,8 +317,10 @@ def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[
                 RaidEvent.guild_id == guild_id,
                 RaidEvent.starts_at_utc >= start,
                 RaidEvent.starts_at_utc <= end,
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 

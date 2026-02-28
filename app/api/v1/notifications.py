@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.services import notification_service
@@ -14,7 +14,11 @@ bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 @bp.get("")
 @login_required
 def list_notifications():
-    notifications = notification_service.list_notifications(current_user.id)
+    limit = min(int(request.args.get("limit", 50)), 100)
+    offset = max(int(request.args.get("offset", 0)), 0)
+    notifications = notification_service.list_notifications(
+        current_user.id, limit=limit, offset=offset
+    )
     return jsonify([n.to_dict() for n in notifications]), 200
 
 

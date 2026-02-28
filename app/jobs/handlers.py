@@ -98,6 +98,7 @@ def handle_sync_all_characters(payload: dict) -> None:
 
     chars = list(db.session.execute(stmt).scalars().all())
     synced = 0
+    batch_size = 20
     for char in chars:
         try:
             data = warmane_service.fetch_character(char.realm_name, char.name)
@@ -127,6 +128,9 @@ def handle_sync_all_characters(payload: dict) -> None:
             meta["last_synced"] = datetime.now(tz.utc).isoformat()
             char.char_metadata = meta
             synced += 1
+            # Commit in batches to avoid accumulating dirty objects
+            if synced % batch_size == 0:
+                db.session.commit()
         except Exception as exc:
             logger.warning("Failed to sync character %s: %s", char.name, exc)
     db.session.commit()
@@ -137,8 +141,11 @@ def process_job_queue(app: Flask) -> None:
     """Entry point called by the scheduler to drain queued jobs."""
     from app.jobs.worker import claim_next_job, complete_job, fail_job
 
+    max_batch = 50  # prevent unbounded loop from blocking the DB
+
     with app.app_context():
-        while True:
+        processed = 0
+        while processed < max_batch:
             job = claim_next_job()
             if job is None:
                 break
@@ -154,3 +161,4 @@ def process_job_queue(app: Flask) -> None:
             except Exception as exc:
                 fail_job(job, str(exc))
                 logger.exception("Job %s (type=%r) failed: %s", job.id, job.type, exc)
+            processed += 1

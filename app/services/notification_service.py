@@ -32,12 +32,14 @@ def create_notification(
     return notif
 
 
-def list_notifications(user_id: int) -> list[Notification]:
+def list_notifications(user_id: int, *, limit: int = 50, offset: int = 0) -> list[Notification]:
     return list(
         db.session.execute(
             sa.select(Notification)
             .where(Notification.user_id == user_id)
             .order_by(Notification.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         ).scalars().all()
     )
 

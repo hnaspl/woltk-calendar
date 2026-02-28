@@ -196,6 +196,7 @@ def list_all_events():
     guild_ids = guild_service.get_user_guild_ids(current_user.id)
     start = request.args.get("start")
     end = request.args.get("end")
+    include_signups = request.args.get("include_signup_count", "").lower() in ("1", "true")
     if start and end:
         try:
             start_dt = datetime.fromisoformat(start)
@@ -205,7 +206,7 @@ def list_all_events():
         events = event_service.list_events_for_guilds_by_range(guild_ids, start_dt, end_dt)
     else:
         events = event_service.list_events_for_guilds(guild_ids)
-    return jsonify([e.to_dict() for e in events]), 200
+    return jsonify([e.to_dict(include_signup_count=include_signups) for e in events]), 200
 
 
 @all_events_bp.get("/my-signups")
