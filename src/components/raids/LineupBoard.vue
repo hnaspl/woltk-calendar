@@ -312,6 +312,11 @@ function findSignupById(id) {
   return null
 }
 
+function roleForColumnKey(key) {
+  const col = allColumns.value.find(c => c.key === key)
+  return col ? col.role : null
+}
+
 function onDropColumn(e, targetKey) {
   dragOverTarget.value = null
   const id = Number(e.dataTransfer.getData('text/plain'))
@@ -327,19 +332,30 @@ function onDropColumn(e, targetKey) {
     return
   }
 
+  const targetRole = roleForColumnKey(targetKey)
+  const signupRole = found.signup.chosen_role
+
+  // Strict role enforcement for column-to-column moves: roles are NOT interchangeable
+  if (signupRole !== targetRole) {
+    const targetCol = allColumns.value.find(c => c.key === targetKey)
+    const roleName = ROLE_LABEL_MAP[signupRole] ?? signupRole
+    const targetName = targetCol?.label ?? targetKey
+    uiStore.showToast(`${found.signup.character?.name ?? 'Player'} signed up as ${roleName}. Cannot place in ${targetName}.`, 'error')
+    return
+  }
+
   // Overflow protection: check if target column is full
   const col = allColumns.value.find(c => c.key === targetKey)
   if (col) {
     const currentCount = lineup.value[targetKey].length
-    // Don't count the item if it's already in this column (re-ordering)
     const alreadyInTarget = lineup.value[targetKey].find(s => Number(s.id) === id)
     if (!alreadyInTarget && currentCount >= col.slots) {
-      uiStore.showToast(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first or choose a different role.`, 'error')
+      uiStore.showToast(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first.`, 'error')
       return
     }
   }
 
-  // Remove from source
+  // Remove from source column
   if (found.key !== 'unassigned' && found.key !== 'bench') {
     lineup.value[found.key].splice(found.idx, 1)
   }
@@ -504,16 +520,11 @@ const benchPlayers = computed(() =>
   unassigned.value.filter(s => s.status === 'bench')
 )
 
-const tankFamilyRoles = ['tank', 'main_tank', 'off_tank']
-
 function availableFor(key) {
   const un = unassigned.value
-  if (['main_tanks', 'off_tanks', 'tanks'].includes(key)) {
-    return un.filter(s => tankFamilyRoles.includes(s.chosen_role))
-  }
-  if (key === 'healers') return un.filter(s => s.chosen_role === 'healer')
-  if (key === 'dps') return un.filter(s => s.chosen_role === 'dps')
-  return un
+  const col = allColumns.value.find(c => c.key === key)
+  if (!col) return un
+  return un.filter(s => s.chosen_role === col.role)
 }
 
 function profString(s) {
