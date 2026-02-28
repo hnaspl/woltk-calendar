@@ -70,17 +70,7 @@
               >×</button>
             </div>
           </CharacterTooltip>
-          <!-- Dropdown to assign (officer only, hidden when column is full) -->
-          <select
-            v-if="isOfficer && lineup[col.key].length < col.slots && availableFor(col.key).length > 0"
-            class="w-full bg-bg-tertiary border border-dashed border-border-default text-text-muted text-xs rounded px-2 py-1.5 mt-1 focus:border-border-gold outline-none"
-            @change="onSelectAssign($event, col.key)"
-          >
-            <option value="">+ Add player…</option>
-            <option v-for="s in availableFor(col.key)" :key="s.id" :value="s.id">
-              {{ s.character?.name ?? '?' }} ({{ s.chosen_spec || s.chosen_role }}){{ s.character?.metadata?.level ? ` Lv${s.character.metadata.level}` : '' }}
-            </option>
-          </select>
+
         </div>
       </div>
     </div>
@@ -156,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -376,7 +366,30 @@ async function loadLineup() {
   }
 }
 
-onMounted(loadLineup)
+onMounted(() => {
+  loadLineup()
+  startLineupPolling()
+})
+
+onUnmounted(() => {
+  stopLineupPolling()
+  clearTimeout(autoSaveTimer)
+})
+
+// ── Lineup polling for live refresh ──
+const LINEUP_POLL_INTERVAL = 10_000
+let lineupPollTimer = null
+
+function startLineupPolling() {
+  stopLineupPolling()
+  lineupPollTimer = setInterval(() => {
+    if (!dirty.value) loadLineup()
+  }, LINEUP_POLL_INTERVAL)
+}
+
+function stopLineupPolling() {
+  if (lineupPollTimer) { clearInterval(lineupPollTimer); lineupPollTimer = null }
+}
 
 watch(
   () => props.signups.map(s => `${s.id}:${s.status}:${s.chosen_role}`).join(','),
@@ -432,31 +445,8 @@ const bench = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
 )
 
-function availableFor(key) {
-  const col = allColumns.value.find(c => c.key === key)
-  if (!col) return bench.value
-  return bench.value.filter(s => s.chosen_role === col.role)
-}
-
 function profString(s) {
   return (s.character?.metadata?.professions ?? []).map(p => p.name).join(', ')
-}
-
-function onSelectAssign(e, key) {
-  const found = bench.value.find(s => String(s.id) === e.target.value)
-  if (found) {
-    // Overflow protection: check if column is full
-    const col = allColumns.value.find(c => c.key === key)
-    if (col && lineup.value[key].length >= col.slots) {
-      uiStore.showToast(`${col.label} slots are full (${lineup.value[key].length}/${col.slots}). Remove someone first or choose a different role.`, 'error')
-      e.target.value = ''
-      return
-    }
-    lineup.value[key].push(found)
-    dirty.value = true
-    autoSave()
-  }
-  e.target.value = ''
 }
 
 function removeFromRole(key, index) {
