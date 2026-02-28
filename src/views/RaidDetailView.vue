@@ -349,7 +349,7 @@ async function saveEvent() {
     editError.value = 'Title and date are required'
     return
   }
-  if (editForm.close_signups_at && editForm.close_signups_at <= editForm.starts_at_utc) {
+  if (editForm.close_signups_at && new Date(editForm.close_signups_at) <= new Date(editForm.starts_at_utc)) {
     editError.value = 'Close signups time must be after the event start time'
     return
   }
