@@ -138,6 +138,7 @@ import ClassBadge from '@/components/common/ClassBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useUiStore } from '@/stores/ui'
 
 const props = defineProps({
   signups:        { type: Array,          default: () => [] },
@@ -153,6 +154,7 @@ const props = defineProps({
 
 const emit = defineEmits(['saved'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
+const uiStore = useUiStore()
 const saving = ref(false)
 const dirty = ref(false)
 
@@ -274,7 +276,10 @@ onMounted(loadLineup)
 
 watch(
   () => props.signups.map(s => `${s.id}:${s.status}:${s.chosen_role}`).join(','),
-  loadLineup
+  () => {
+    // Skip reload when there are unsaved DnD changes to avoid overwriting them
+    if (!dirty.value) loadLineup()
+  }
 )
 
 function autoPopulateFromSignups() {
@@ -336,17 +341,24 @@ function removeFromRole(key, index) {
 async function saveLineup() {
   saving.value = true
   try {
-    await lineupApi.saveLineup(props.guildId, props.eventId, {
+    const result = await lineupApi.saveLineup(props.guildId, props.eventId, {
       main_tanks: lineup.value.main_tanks.map(s => s.id),
       off_tanks:  lineup.value.off_tanks.map(s => s.id),
       tanks:      lineup.value.tanks.map(s => s.id),
       healers:    lineup.value.healers.map(s => s.id),
       dps:        lineup.value.dps.map(s => s.id)
     })
+    // Update local state from server response
+    lineup.value.main_tanks = result.main_tanks ?? []
+    lineup.value.off_tanks  = result.off_tanks  ?? []
+    lineup.value.tanks      = result.tanks      ?? []
+    lineup.value.healers    = result.healers    ?? []
+    lineup.value.dps        = result.dps        ?? []
     dirty.value = false
     emit('saved', lineup.value)
   } catch (err) {
     console.error('Failed to save lineup', err)
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
   } finally {
     saving.value = false
   }

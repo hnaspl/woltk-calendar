@@ -174,6 +174,8 @@ def _ensure_utc(dt):
 
 
 def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
+    from app.services import raid_service
+
     starts_at = _ensure_utc(data["starts_at_utc"])
     ends_at = data.get("ends_at_utc")
     if ends_at is None:
@@ -182,20 +184,52 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
     elif isinstance(ends_at, str):
         ends_at = _ensure_utc(ends_at)
 
+    raid_definition_id = data.get("raid_definition_id")
+    raid_size = data.get("raid_size", 25)
+    raid_type = data.get("raid_type")
+    title = data["title"]
+
+    # Auto-find or create raid definition if not provided
+    if not raid_definition_id:
+        rd = raid_service.find_definition_by_name(guild_id, title)
+        if rd:
+            raid_definition_id = rd.id
+            if not raid_type:
+                raid_type = rd.raid_type or rd.code
+        else:
+            # Auto-create a raid definition with defaults for this custom raid
+            code = title.lower().replace(" ", "_")[:30]
+            rd = raid_service.create_raid_definition(guild_id, created_by, {
+                "code": code,
+                "name": title,
+                "size": raid_size,
+                "raid_type": raid_type or code,
+                "main_tank_slots": 2 if raid_size == 25 else 1,
+                "off_tank_slots": 1 if raid_size == 25 else 1,
+                "tank_slots": 0,
+                "healer_slots": 5 if raid_size == 25 else 2,
+                "dps_slots": (raid_size - (2 if raid_size == 25 else 1) -
+                              (1 if raid_size == 25 else 1) - 0 -
+                              (5 if raid_size == 25 else 2)),
+            })
+            raid_definition_id = rd.id
+            if not raid_type:
+                raid_type = rd.raid_type or rd.code
+
     event = RaidEvent(
         guild_id=guild_id,
         created_by=created_by,
         series_id=data.get("series_id"),
         template_id=data.get("template_id"),
-        raid_definition_id=data.get("raid_definition_id"),
-        title=data["title"],
+        raid_definition_id=raid_definition_id,
+        title=title,
         realm_name=data["realm_name"],
         starts_at_utc=starts_at,
         ends_at_utc=ends_at,
-        raid_size=data.get("raid_size", 25),
+        raid_size=raid_size,
         difficulty=data.get("difficulty", "normal"),
         status=data.get("status", "draft"),
-        raid_type=data.get("raid_type"),
+        raid_type=raid_type,
         instructions=data.get("instructions"),
     )
     close_at = data.get("close_signups_at")

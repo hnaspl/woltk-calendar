@@ -234,7 +234,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
@@ -422,6 +422,17 @@ function onEditRaidDefChange() {
     editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
   }
 }
+
+// Auto-match edit title to raid definition (case-insensitive)
+watch(() => editForm.title, (newTitle) => {
+  if (!newTitle || !editRaidDefs.value.length) return
+  const match = editRaidDefs.value.find(d => d.name.toLowerCase() === newTitle.trim().toLowerCase())
+  if (match && match.id !== editForm.raid_definition_id) {
+    editForm.raid_definition_id = match.id
+    editForm.raid_type = match.raid_type || match.code || ''
+    editForm.raid_size = match.default_raid_size ?? match.size ?? 25
+  }
+})
 
 async function saveEvent() {
   if (actionLoading.value) return

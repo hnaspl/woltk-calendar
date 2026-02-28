@@ -76,6 +76,16 @@ def delete_raid_definition(rd: RaidDefinition) -> None:
     db.session.commit()
 
 
+def find_definition_by_name(guild_id: int, name: str) -> Optional[RaidDefinition]:
+    """Find a raid definition by name (case-insensitive) for a guild or built-in."""
+    stmt = sa.select(RaidDefinition).where(
+        (RaidDefinition.guild_id == guild_id) | (RaidDefinition.guild_id.is_(None)),
+        sa.func.lower(RaidDefinition.name) == name.lower(),
+        RaidDefinition.is_active.is_(True),
+    )
+    return db.session.execute(stmt).scalar_one_or_none()
+
+
 def list_raid_definitions(guild_id: int) -> list[RaidDefinition]:
     """Return guild-specific definitions plus built-in ones."""
     stmt = sa.select(RaidDefinition).where(

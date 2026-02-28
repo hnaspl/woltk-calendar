@@ -150,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import RaidCalendar from '@/components/calendar/RaidCalendar.vue'
@@ -226,8 +226,23 @@ function onRaidDefChange() {
   if (rd) {
     eventForm.raid_type = rd.raid_type || rd.code || ''
     eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    // Auto-fill title from definition name
+    if (!eventForm.title || eventForm.title === '') {
+      eventForm.title = rd.name
+    }
   }
 }
+
+// Auto-match title to raid definition (case-insensitive)
+watch(() => eventForm.title, (newTitle) => {
+  if (!newTitle || !raidDefs.value.length) return
+  const match = raidDefs.value.find(d => d.name.toLowerCase() === newTitle.trim().toLowerCase())
+  if (match && match.id !== eventForm.raid_definition_id) {
+    eventForm.raid_definition_id = match.id
+    eventForm.raid_type = match.raid_type || match.code || ''
+    eventForm.raid_size = match.default_raid_size ?? match.size ?? 25
+  }
+})
 
 async function createEvent() {
   if (!eventForm.title || !eventForm.guild_id || !eventForm.starts_at_utc) {
