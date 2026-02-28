@@ -27,6 +27,65 @@ def list_guilds():
     return jsonify([g.to_dict() for g in guilds]), 200
 
 
+@bp.get("/all")
+@login_required
+def list_all_guilds():
+    """List all guilds (for browsing / joining)."""
+    guilds = guild_service.list_all_guilds()
+    user_guild_ids = set(guild_service.get_user_guild_ids(current_user.id))
+    result = []
+    for g in guilds:
+        d = g.to_dict()
+        d["is_member"] = g.id in user_guild_ids
+        result.append(d)
+    return jsonify(result), 200
+
+
+@bp.post("/<int:guild_id>/join")
+@login_required
+def join_guild(guild_id: int):
+    """Allow any authenticated user to join a guild as a member."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": "Guild not found"}), 404
+    try:
+        membership = guild_service.add_member(
+            guild_id=guild_id,
+            user_id=current_user.id,
+            role="member",
+            status="active",
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(membership.to_dict()), 201
+
+
+@bp.get("/<int:guild_id>/available-users")
+@login_required
+def available_users(guild_id: int):
+    """List users not already in this guild (officer-only, for adding members)."""
+    membership = get_membership(guild_id, current_user.id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+
+    from app.models.user import User
+
+    # Get IDs of current members
+    member_ids = {m.user_id for m in guild_service.list_members(guild_id)}
+
+    q = request.args.get("q", "").strip()
+    query = sa.select(User).where(User.is_active == True)  # noqa: E712
+    if q:
+        query = query.where(User.username.ilike(f"%{q}%"))
+    query = query.order_by(User.username.asc()).limit(50)
+
+    users = db.session.execute(query).scalars().all()
+    return jsonify([
+        {"id": u.id, "username": u.username, "display_name": u.display_name}
+        for u in users if u.id not in member_ids
+    ]), 200
+
+
 @bp.post("")
 @login_required
 def create_guild():

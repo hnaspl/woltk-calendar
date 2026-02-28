@@ -21,14 +21,36 @@
         class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
         @change="onGuildChange"
       >
-        <option v-if="!guildStore.guilds.length" value="">No guilds</option>
+        <option v-if="!guildStore.guilds.length" value="">No guilds joined</option>
         <option
           v-for="g in guildStore.guilds"
           :key="g.id"
           :value="g.id"
         >{{ g.name }} ({{ g.realm_name }})</option>
       </select>
+
+      <!-- Available guilds to join -->
+      <div v-if="availableGuilds.length > 0" class="mt-2">
+        <label class="text-[10px] text-text-muted uppercase tracking-wider mb-1 block">Available Guilds</label>
+        <div class="space-y-1 max-h-32 overflow-y-auto">
+          <div
+            v-for="g in availableGuilds"
+            :key="g.id"
+            class="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded bg-bg-tertiary/50 border border-border-default"
+          >
+            <span class="text-text-muted truncate">{{ g.name }} <span class="text-[10px]">({{ g.realm_name }})</span></span>
+            <button
+              type="button"
+              class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors whitespace-nowrap font-medium"
+              :disabled="joiningGuildId === g.id"
+              @click="doJoinGuild(g)"
+            >{{ joiningGuildId === g.id ? 'Joining…' : 'Join' }}</button>
+          </div>
+        </div>
+      </div>
+
       <button
+        v-if="isOfficerOrAdmin"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
         @click="showCreateGuild = true"
@@ -112,7 +134,7 @@
 </template>
 
 <script setup>
-import { computed, h, ref, reactive } from 'vue'
+import { computed, h, ref, reactive, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
@@ -133,6 +155,34 @@ const permissions = usePermissions()
 const isOfficerOrAdmin = computed(() => permissions.isOfficer.value || authStore.user?.is_admin)
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
+
+// Available guilds = all guilds minus the ones user is already in
+const availableGuilds = computed(() => {
+  const memberIds = new Set(guildStore.guilds.map(g => g.id))
+  return guildStore.allGuilds.filter(g => !memberIds.has(g.id))
+})
+
+const joiningGuildId = ref(null)
+
+// Load all guilds on mount so available guilds are visible
+onMounted(() => {
+  guildStore.fetchAllGuilds()
+})
+
+async function doJoinGuild(guild) {
+  joiningGuildId.value = guild.id
+  try {
+    await guildsApi.joinGuild(guild.id)
+    await guildStore.fetchGuilds()
+    await guildStore.fetchAllGuilds()
+    if (!guildStore.currentGuild) guildStore.setCurrentGuild(guild)
+    uiStore.showToast(`Joined ${guild.name}!`, 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to join guild', 'error')
+  } finally {
+    joiningGuildId.value = null
+  }
+}
 
 // Simple SVG icon components using render functions
 const icons = {
@@ -231,6 +281,7 @@ async function doCreateGuild() {
       faction: newGuild.faction || null,
     })
     await guildStore.fetchGuilds()
+    await guildStore.fetchAllGuilds()
     guildStore.setCurrentGuild(guild)
     showCreateGuild.value = false
     newGuild.name = ''

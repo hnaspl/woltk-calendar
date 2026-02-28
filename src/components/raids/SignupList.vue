@@ -74,6 +74,30 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
                 </svg>
               </WowTooltip>
+
+              <!-- Officer actions -->
+              <div v-if="isOfficer" class="flex items-center gap-1 flex-shrink-0" @click.stop>
+                <select
+                  :value="signup.status"
+                  class="bg-bg-tertiary border border-border-default text-text-primary text-[10px] rounded px-1 py-0.5 focus:border-border-gold outline-none"
+                  @change="changeStatus(signup, $event.target.value)"
+                >
+                  <option value="going">Going</option>
+                  <option value="bench">Bench</option>
+                  <option value="tentative">Tentative</option>
+                  <option value="declined">Declined</option>
+                  <option value="late">Late</option>
+                </select>
+                <button
+                  class="text-red-400 hover:text-red-300 transition-colors p-0.5"
+                  title="Remove signup"
+                  @click="removeSignup(signup)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </CharacterTooltip>
         </div>
@@ -92,10 +116,16 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
+import * as signupsApi from '@/api/signups'
 
 const props = defineProps({
-  signups: { type: Array, default: () => [] }
+  signups: { type: Array, default: () => [] },
+  isOfficer: { type: Boolean, default: false },
+  guildId: { type: [Number, String], default: null },
+  eventId: { type: [Number, String], default: null }
 })
+
+const emit = defineEmits(['signup-updated', 'signup-removed'])
 
 const { getClassIcon } = useWowIcons()
 
@@ -118,5 +148,25 @@ function charProfessions(signup) {
 
 function charAchievements(signup) {
   return signup.character?.metadata?.achievement_points ?? null
+}
+
+async function changeStatus(signup, newStatus) {
+  if (!props.guildId || !props.eventId) return
+  try {
+    const updated = await signupsApi.updateSignup(props.guildId, props.eventId, signup.id, { status: newStatus })
+    emit('signup-updated', updated)
+  } catch {
+    // revert dropdown visually (parent will re-render)
+  }
+}
+
+async function removeSignup(signup) {
+  if (!props.guildId || !props.eventId) return
+  try {
+    await signupsApi.deleteSignup(props.guildId, props.eventId, signup.id)
+    emit('signup-removed', signup.id)
+  } catch {
+    // ignore
+  }
 }
 </script>

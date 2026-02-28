@@ -4,6 +4,7 @@ import * as guildsApi from '@/api/guilds'
 
 export const useGuildStore = defineStore('guild', () => {
   const guilds = ref([])
+  const allGuilds = ref([])
   const currentGuild = ref(null)
   const members = ref([])
   const loading = ref(false)
@@ -21,6 +22,14 @@ export const useGuildStore = defineStore('guild', () => {
       error.value = err?.response?.data?.message || 'Failed to load guilds'
     } finally {
       loading.value = false
+    }
+  }
+
+  async function fetchAllGuilds() {
+    try {
+      allGuilds.value = await guildsApi.getAllGuilds()
+    } catch {
+      // ignore
     }
   }
 
@@ -56,5 +65,5 @@ export const useGuildStore = defineStore('guild', () => {
     }
   }
 
-  return { guilds, currentGuild, members, loading, error, fetchGuilds, fetchGuild, setCurrentGuild, fetchMembers }
+  return { guilds, allGuilds, currentGuild, members, loading, error, fetchGuilds, fetchAllGuilds, fetchGuild, setCurrentGuild, fetchMembers }
 })

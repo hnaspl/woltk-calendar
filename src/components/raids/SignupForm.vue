@@ -71,8 +71,8 @@
         />
       </div>
 
-      <!-- Status -->
-      <div>
+      <!-- Status (only for editing existing signup) -->
+      <div v-if="existingSignup">
         <label class="block text-xs text-text-muted mb-1">Status *</label>
         <select
           v-model="form.status"
@@ -188,8 +188,12 @@ async function handleSubmit() {
     character_id: form.characterId,
     chosen_role:  form.chosenRole,
     chosen_spec:  form.chosenSpec || undefined,
-    status:       form.status,
     note:         form.note || undefined
+  }
+
+  // Only include status when updating an existing signup
+  if (props.existingSignup) {
+    payload.status = form.status
   }
 
   try {

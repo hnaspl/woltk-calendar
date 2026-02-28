@@ -77,7 +77,14 @@
 
           <!-- Right columns: signup list + lineup -->
           <div class="lg:col-span-2 space-y-6">
-            <SignupList :signups="signups" />
+            <SignupList
+              :signups="signups"
+              :is-officer="permissions.isOfficer.value"
+              :guild-id="guildId"
+              :event-id="event.id"
+              @signup-updated="onSignupUpdated"
+              @signup-removed="onSignupRemoved"
+            />
 
             <LineupBoard
               v-if="permissions.isOfficer.value"
@@ -241,6 +248,11 @@ function onSignupUpdated(updated) {
   const idx = signups.value.findIndex(s => s.id === updated.id)
   if (idx !== -1) signups.value[idx] = updated
   uiStore.showToast('Signup updated!', 'success')
+}
+
+function onSignupRemoved(signupId) {
+  signups.value = signups.value.filter(s => s.id !== signupId)
+  uiStore.showToast('Signup removed', 'success')
 }
 
 function formatDateTime(d) {

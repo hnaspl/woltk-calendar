@@ -99,7 +99,7 @@ class GuildMembership(db.Model):
     user: Mapped[User] = relationship("User", back_populates="memberships")
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "guild_id": self.guild_id,
             "user_id": self.user_id,
@@ -107,6 +107,10 @@ class GuildMembership(db.Model):
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+        if self.user is not None:
+            result["username"] = self.user.username
+            result["display_name"] = self.user.display_name
+        return result
 
     def __repr__(self) -> str:
         return f"<GuildMembership guild={self.guild_id} user={self.user_id} role={self.role}>"

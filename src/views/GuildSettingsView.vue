@@ -88,6 +88,9 @@
         <WowCard>
           <div class="flex items-center justify-between mb-4">
             <h2 class="wow-heading text-base">Members ({{ members.length }})</h2>
+            <WowButton variant="secondary" class="text-xs py-1 px-3" @click="showAddMember = true">
+              + Add Member
+            </WowButton>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -134,6 +137,37 @@
           <WowButton variant="danger" :loading="saving" @click="doKick">Remove</WowButton>
         </div>
       </template>
+    </WowModal>
+
+    <!-- Add Member modal -->
+    <WowModal v-model="showAddMember" title="Add Member" size="sm">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Search by username</label>
+          <input
+            v-model="addMemberQuery"
+            placeholder="Type username…"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            @input="searchUsers"
+          />
+        </div>
+        <div v-if="searchingUsers" class="text-xs text-text-muted">Searching…</div>
+        <div v-if="availableUsers.length > 0" class="max-h-40 overflow-y-auto space-y-1">
+          <button
+            v-for="u in availableUsers"
+            :key="u.id"
+            type="button"
+            class="w-full flex items-center justify-between px-3 py-2 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors text-sm"
+            @click="doAddMember(u)"
+          >
+            <span class="text-text-primary">{{ u.username }}</span>
+            <span class="text-xs text-accent-gold">Add</span>
+          </button>
+        </div>
+        <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers" class="text-xs text-text-muted">
+          No matching users found.
+        </div>
+      </div>
     </WowModal>
   </AppShell>
 </template>
@@ -248,6 +282,48 @@ const warmaneGuildRealm = ref('Icecrown')
 const fetchingWarmane = ref(false)
 const warmaneError = ref(null)
 const warmaneGuildData = ref(null)
+
+// Add member
+const showAddMember = ref(false)
+const addMemberQuery = ref('')
+const availableUsers = ref([])
+const searchingUsers = ref(false)
+let searchTimeout = null
+
+function searchUsers() {
+  clearTimeout(searchTimeout)
+  if (addMemberQuery.value.length < 2) {
+    availableUsers.value = []
+    return
+  }
+  searchingUsers.value = true
+  searchTimeout = setTimeout(async () => {
+    try {
+      availableUsers.value = await guildsApi.getAvailableUsers(
+        guildStore.currentGuild.id,
+        addMemberQuery.value
+      )
+    } catch {
+      availableUsers.value = []
+    } finally {
+      searchingUsers.value = false
+    }
+  }, 300)
+}
+
+async function doAddMember(user) {
+  try {
+    await guildsApi.addMember(guildStore.currentGuild.id, user.id)
+    await guildStore.fetchMembers(guildStore.currentGuild.id)
+    members.value = guildStore.members
+    showAddMember.value = false
+    addMemberQuery.value = ''
+    availableUsers.value = []
+    uiStore.showToast(`${user.username} added to guild`, 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+  }
+}
 
 async function fetchWarmaneGuild() {
   warmaneError.value = null
