@@ -162,16 +162,25 @@ def generate_events_from_series(series: EventSeries, count: int = 4) -> list[Rai
 # RaidEvent
 # ---------------------------------------------------------------------------
 
+def _ensure_utc(dt):
+    """Ensure a datetime has UTC timezone info."""
+    if dt is None:
+        return None
+    if isinstance(dt, str):
+        dt = datetime.fromisoformat(dt)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
-    starts_at = data["starts_at_utc"]
-    if isinstance(starts_at, str):
-        starts_at = datetime.fromisoformat(starts_at)
+    starts_at = _ensure_utc(data["starts_at_utc"])
     ends_at = data.get("ends_at_utc")
     if ends_at is None:
         duration = data.get("duration_minutes", 180)
         ends_at = starts_at + timedelta(minutes=duration)
     elif isinstance(ends_at, str):
-        ends_at = datetime.fromisoformat(ends_at)
+        ends_at = _ensure_utc(ends_at)
 
     event = RaidEvent(
         guild_id=guild_id,
@@ -191,7 +200,7 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
     )
     close_at = data.get("close_signups_at")
     if close_at:
-        close_at = datetime.fromisoformat(close_at) if isinstance(close_at, str) else close_at
+        close_at = _ensure_utc(close_at)
         if close_at >= starts_at:
             raise ValueError("close_signups_at must be before the event start time")
         event.close_signups_at = close_at
@@ -212,10 +221,12 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
     for key, value in data.items():
         if key in allowed:
             if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
-                value = datetime.fromisoformat(value)
+                value = _ensure_utc(value)
             setattr(event, key, value)
     # Validate close_signups_at against starts_at_utc
-    if event.close_signups_at and event.starts_at_utc and event.close_signups_at >= event.starts_at_utc:
+    close_at = _ensure_utc(event.close_signups_at) if event.close_signups_at else None
+    start_at = _ensure_utc(event.starts_at_utc) if event.starts_at_utc else None
+    if close_at and start_at and close_at >= start_at:
         raise ValueError("close_signups_at must be before the event start time")
     db.session.commit()
     return event

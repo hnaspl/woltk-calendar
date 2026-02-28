@@ -14,7 +14,7 @@
       <div class="bg-bg-secondary p-4">
         <div class="flex items-center gap-2 mb-3">
           <img :src="getRoleIcon('main_tank')" class="w-5 h-5 rounded" alt="Main Tank" />
-          <span class="text-blue-200 font-semibold text-sm">MT</span>
+          <span class="text-blue-200 font-semibold text-sm">Main Tank</span>
           <span class="ml-auto text-xs text-text-muted">{{ lineup.main_tanks.length }} / {{ mainTankSlots }}</span>
         </div>
         <LineupColumn
@@ -31,7 +31,7 @@
       <div class="bg-bg-secondary p-4">
         <div class="flex items-center gap-2 mb-3">
           <img :src="getRoleIcon('off_tank')" class="w-5 h-5 rounded" alt="Off Tank" />
-          <span class="text-cyan-300 font-semibold text-sm">OT</span>
+          <span class="text-cyan-300 font-semibold text-sm">Off Tank</span>
           <span class="ml-auto text-xs text-text-muted">{{ lineup.off_tanks.length }} / {{ offTankSlots }}</span>
         </div>
         <LineupColumn
@@ -147,7 +147,7 @@ const emit = defineEmits(['saved'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
 const saving = ref(false)
 
-const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'MT', off_tank: 'OT', healer: 'Healer', dps: 'DPS' }
+const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 

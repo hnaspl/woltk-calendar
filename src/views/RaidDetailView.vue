@@ -63,17 +63,57 @@
               v-if="event.status === 'open' || event.status === 'draft'"
               :event-id="event.id"
               :guild-id="guildId"
-              :existing-signup="mySignup"
+              :existing-signup="editingSignup"
               :signed-up-character-ids="mySignedUpCharacterIds"
               @signed-up="onSignedUp"
               @updated="onSignupUpdated"
             />
+            <!-- My signups list for switching active character -->
+            <WowCard v-if="mySignups.length > 0">
+              <h3 class="wow-heading text-base mb-3">My Signups ({{ mySignups.length }})</h3>
+              <div class="space-y-2">
+                <div
+                  v-for="s in mySignups"
+                  :key="s.id"
+                  class="flex items-center gap-2 px-3 py-2 rounded border text-sm transition-colors"
+                  :class="editingSignupId === s.id
+                    ? 'border-accent-gold bg-accent-gold/10'
+                    : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                >
+                  <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
+                    {{ s.character?.name ?? '?' }}
+                  </span>
+                  <span class="text-text-muted text-xs">{{ s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
+                  <span class="text-xs" :class="{
+                    'text-green-400': s.status === 'going',
+                    'text-yellow-400': s.status === 'tentative' || s.status === 'bench',
+                    'text-red-400': s.status === 'declined'
+                  }">{{ s.status }}</span>
+                  <div class="ml-auto flex gap-1">
+                    <button
+                      v-if="event.status === 'open' || event.status === 'draft'"
+                      class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
+                      @click="editingSignupId = editingSignupId === s.id ? null : s.id"
+                    >
+                      {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button
+                v-if="editingSignupId && (event.status === 'open' || event.status === 'draft')"
+                class="mt-2 text-xs text-accent-gold hover:underline"
+                @click="editingSignupId = null"
+              >
+                + Add another character
+              </button>
+            </WowCard>
             <CompositionSummary
               :signups="signups"
               :max-size="event.raid_size ?? event.size"
-              :tank-slots="event.tank_slots ?? 2"
-              :main-tank-slots="Math.min(1, event.tank_slots ?? 2)"
-              :off-tank-slots="Math.max(0, (event.tank_slots ?? 2) - 1)"
+              :tank-slots="event.tank_slots ?? 0"
+              :main-tank-slots="event.main_tank_slots ?? 1"
+              :off-tank-slots="event.off_tank_slots ?? 1"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
             />
@@ -96,9 +136,9 @@
               :event-id="event.id"
               :guild-id="guildId"
               :is-officer="permissions.isOfficer.value"
-              :tank-slots="event.tank_slots ?? 2"
-              :main-tank-slots="Math.min(1, event.tank_slots ?? 2)"
-              :off-tank-slots="Math.max(0, (event.tank_slots ?? 2) - 1)"
+              :tank-slots="event.tank_slots ?? 0"
+              :main-tank-slots="event.main_tank_slots ?? 1"
+              :off-tank-slots="event.off_tank_slots ?? 1"
               :healer-slots="event.healer_slots ?? 5"
               :dps-slots="event.dps_slots ?? 18"
               @saved="uiStore.showToast('Lineup saved!', 'success')"
@@ -217,6 +257,7 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
+const { getClassColor } = useWowIcons()
 
 const event = ref(null)
 const signups = ref([])
@@ -226,6 +267,7 @@ const actionLoading = ref(false)
 const confirmCancel = ref(false)
 const showEditModal = ref(false)
 const editError = ref(null)
+const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
 
 const editForm = reactive({
@@ -246,7 +288,10 @@ const mySignups = computed(() => {
   return signups.value.filter(s => s.user_id === authStore.user.id)
 })
 
-const mySignup = computed(() => mySignups.value[0] ?? null)
+const editingSignup = computed(() => {
+  if (!editingSignupId.value) return null
+  return mySignups.value.find(s => s.id === editingSignupId.value) ?? null
+})
 
 const mySignedUpCharacterIds = computed(() =>
   mySignups.value.map(s => s.character_id)
@@ -403,6 +448,7 @@ async function onSignupUpdated(updated) {
     if (idx !== -1) signups.value[idx] = updated
   }
   uiStore.showToast('Signup updated!', 'success')
+  editingSignupId.value = null
 }
 
 async function onSignupRemoved(signupId) {

@@ -33,9 +33,17 @@
               </div>
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2 text-center text-xs mb-4">
+          <div class="grid grid-cols-5 gap-2 text-center text-xs mb-4">
+            <div class="bg-blue-600/10 rounded p-1.5">
+              <div class="text-blue-200 font-bold">{{ def.main_tank_slots ?? 1 }}</div>
+              <div class="text-text-muted">Main Tank</div>
+            </div>
+            <div class="bg-cyan-500/10 rounded p-1.5">
+              <div class="text-cyan-300 font-bold">{{ def.off_tank_slots ?? 1 }}</div>
+              <div class="text-text-muted">Off Tank</div>
+            </div>
             <div class="bg-blue-500/10 rounded p-1.5">
-              <div class="text-blue-300 font-bold">{{ def.tank_slots ?? 2 }}</div>
+              <div class="text-blue-300 font-bold">{{ def.tank_slots ?? 0 }}</div>
               <div class="text-text-muted">Tanks</div>
             </div>
             <div class="bg-green-500/10 rounded p-1.5">
@@ -86,10 +94,18 @@
             <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
           </select>
         </div>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-5 gap-3">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Main Tank</label>
+            <input v-model.number="form.main_tank_slots" type="number" min="0" max="5" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Off Tank</label>
+            <input v-model.number="form.off_tank_slots" type="number" min="0" max="5" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Tank Slots</label>
-            <input v-model.number="form.tank_slots" type="number" min="1" max="10" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <input v-model.number="form.tank_slots" type="number" min="0" max="10" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Healer Slots</label>
@@ -159,7 +175,7 @@ const guildRealms = computed(() => {
   return [...realms].sort()
 })
 
-const form = reactive({ name: '', raid_type: '', size: '', realm: '', tank_slots: 2, healer_slots: 5, dps_slots: 18 })
+const form = reactive({ name: '', raid_type: '', size: '', realm: '', main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
 
 onMounted(async () => {
   loading.value = true
@@ -178,13 +194,13 @@ onMounted(async () => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_type: '', size: '', realm: '', tank_slots: 2, healer_slots: 5, dps_slots: 18 })
+  Object.assign(form, { name: '', raid_type: '', size: '', realm: '', main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(def) {
   editing.value = def
-  Object.assign(form, { name: def.name, raid_type: def.raid_type, size: def.size, realm: def.realm ?? '', tank_slots: def.tank_slots ?? 2, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
+  Object.assign(form, { name: def.name, raid_type: def.raid_type, size: def.size, realm: def.realm ?? '', main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, tank_slots: def.tank_slots ?? 0, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
   formError.value = null; showModal.value = true
 }
 

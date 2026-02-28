@@ -28,6 +28,8 @@ def create_raid_definition(guild_id: int, created_by: int, data: dict) -> RaidDe
         raid_type=data.get("raid_type"),
         realm=data.get("realm") or None,
         tank_slots=data.get("tank_slots"),
+        main_tank_slots=data.get("main_tank_slots"),
+        off_tank_slots=data.get("off_tank_slots"),
         healer_slots=data.get("healer_slots"),
         dps_slots=data.get("dps_slots"),
         notes=data.get("notes"),
@@ -46,7 +48,7 @@ def update_raid_definition(rd: RaidDefinition, data: dict) -> RaidDefinition:
         "code", "name", "expansion", "category", "default_raid_size",
         "supports_10", "supports_25", "supports_heroic", "is_active",
         "default_duration_minutes", "raid_type", "realm",
-        "tank_slots", "healer_slots", "dps_slots", "notes",
+        "tank_slots", "main_tank_slots", "off_tank_slots", "healer_slots", "dps_slots", "notes",
     }
     for key, value in data.items():
         if key in allowed:
