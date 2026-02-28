@@ -35,7 +35,7 @@ class Config:
     # --------------------------------------------------------- Remember cookie
     REMEMBER_COOKIE_HTTPONLY: bool = True
     REMEMBER_COOKIE_SAMESITE: str = "Lax"
-    REMEMBER_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    REMEMBER_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"  # mirrors session cookie
 
     # ------------------------------------------------------------------ CORS
     CORS_ORIGINS: list[str] = [
