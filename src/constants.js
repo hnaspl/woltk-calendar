@@ -37,11 +37,11 @@ export const RAID_TYPES = [
 ]
 
 export const ROLE_OPTIONS = [
-  { value: 'tank', label: 'Tank' },
+  { value: 'tank', label: 'Melee DPS' },
   { value: 'main_tank', label: 'Main Tank' },
   { value: 'off_tank', label: 'Off Tank' },
-  { value: 'healer', label: 'Healer' },
-  { value: 'dps', label: 'DPS' },
+  { value: 'healer', label: 'Heal' },
+  { value: 'dps', label: 'Range DPS' },
 ]
 
 export const CLASS_SPECS = {

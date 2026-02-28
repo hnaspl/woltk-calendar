@@ -341,7 +341,7 @@ const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
-const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))

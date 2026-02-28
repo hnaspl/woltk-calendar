@@ -163,7 +163,7 @@ import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
 import { ROLE_OPTIONS, CLASS_SPECS } from '@/constants'
 
-const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },

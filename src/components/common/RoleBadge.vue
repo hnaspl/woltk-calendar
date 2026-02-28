@@ -26,11 +26,11 @@ const { getRoleIcon } = useWowIcons()
 const iconUrl = computed(() => getRoleIcon(props.role))
 
 const ROLE_LABELS = {
-  tank: 'Tank',
+  tank: 'Melee DPS',
   main_tank: 'Main Tank',
   off_tank: 'Off Tank',
-  healer: 'Healer',
-  dps: 'DPS'
+  healer: 'Heal',
+  dps: 'Range DPS'
 }
 
 const roleLabel = computed(() => ROLE_LABELS[props.role?.toLowerCase()] ?? props.role)

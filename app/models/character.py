@@ -81,7 +81,7 @@ class Character(db.Model):
             "class_name": self.class_name,
             "primary_spec": self.primary_spec,
             "secondary_spec": self.secondary_spec,
-            "tertiary_spec": self.tertiary_spec,
+            "tertiary_spec": None,
             "default_role": self.default_role,
             "off_role": self.off_role,
             "is_main": self.is_main,

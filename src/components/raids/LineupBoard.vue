@@ -187,14 +187,14 @@ const benchQueue = ref([]) // Ordered list of bench signup objects from API
 const showRoleChangeModal = ref(false)
 const roleChangePending = ref(null) // { signup, targetKey, targetCol }
 
-const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
 const allColumns = computed(() => [
   { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },
   { key: 'off_tanks',  role: 'off_tank',  label: 'Off Tank',   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
-  { key: 'tanks',      role: 'tank',      label: 'Tanks',      labelClass: 'text-blue-300',  slots: props.tankSlots },
-  { key: 'healers',    role: 'healer',    label: 'Healers',    labelClass: 'text-green-300', slots: props.healerSlots },
-  { key: 'dps',        role: 'dps',       label: 'DPS',        labelClass: 'text-red-300',   slots: props.dpsSlots },
+  { key: 'tanks',      role: 'tank',      label: 'Melee DPS',  labelClass: 'text-blue-300',  slots: props.tankSlots },
+  { key: 'healers',    role: 'healer',    label: 'Heal',       labelClass: 'text-green-300', slots: props.healerSlots },
+  { key: 'dps',        role: 'dps',       label: 'Range DPS',  labelClass: 'text-red-300',   slots: props.dpsSlots },
 ])
 
 /** Only show columns that have at least 1 slot configured */

@@ -75,7 +75,6 @@
               <RoleBadge v-if="char.role" :role="char.role" />
               <SpecBadge v-if="char.spec" :spec="char.spec" />
               <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" />
-              <SpecBadge v-if="char.tertiary_spec" :spec="char.tertiary_spec" />
             </div>
             <!-- Synced metadata -->
             <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
@@ -224,10 +223,6 @@
           <input v-model="form.secondary_spec" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Tertiary Spec</label>
-          <input v-model="form.tertiary_spec" placeholder="e.g. Restoration, Arms…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-        </div>
-        <div>
           <label class="block text-xs text-text-muted mb-1">Warmane Armory URL</label>
           <input v-model="form.armory_url" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
@@ -302,7 +297,6 @@ function charToTooltip(char) {
     default_role: char.role,
     primary_spec: char.spec,
     secondary_spec: char.secondary_spec,
-    tertiary_spec: char.tertiary_spec,
     armory_url: char.armory_url,
     metadata: char.metadata ?? {}
   }
@@ -334,7 +328,7 @@ const guildRealms = computed(() => {
   return [...realms].sort()
 })
 
-const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', tertiary_spec: '', armory_url: '' })
+const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
 
 // Map backend response fields to display-friendly names
 function mapChar(c) {
@@ -345,7 +339,6 @@ function mapChar(c) {
     role: c.default_role || c.role,
     spec: c.primary_spec || c.spec,
     secondary_spec: c.secondary_spec,
-    tertiary_spec: c.tertiary_spec,
     armory_url: c.armory_url,
   }
 }
@@ -386,7 +379,7 @@ async function switchToArchived() {
 
 function openAddModal() {
   editingChar.value = null
-  Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', tertiary_spec: '', armory_url: '' })
+  Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
   formError.value = null
   lookingUp.value = false
   lookupResult.value = null
@@ -395,7 +388,7 @@ function openAddModal() {
 
 function openEditModal(char) {
   editingChar.value = char
-  Object.assign(form, { name: char.name, class: char.class, realm: char.realm, role: char.role ?? '', spec: char.spec ?? '', secondary_spec: char.secondary_spec ?? '', tertiary_spec: char.tertiary_spec ?? '', armory_url: char.armory_url ?? '' })
+  Object.assign(form, { name: char.name, class: char.class, realm: char.realm, role: char.role ?? '', spec: char.spec ?? '', secondary_spec: char.secondary_spec ?? '', armory_url: char.armory_url ?? '' })
   formError.value = null
   showModal.value = true
 }
@@ -426,9 +419,6 @@ async function lookupFromWarmane() {
       if (data.talents.length > 1) {
         form.secondary_spec = data.talents[1]?.tree || ''
       }
-      if (data.talents.length > 2) {
-        form.tertiary_spec = data.talents[2]?.tree || ''
-      }
     }
     // Store warmane data for metadata on save
     warmaneData.value = data
@@ -455,7 +445,6 @@ async function saveChar() {
       default_role: form.role || undefined,
       primary_spec: form.spec || undefined,
       secondary_spec: form.secondary_spec || undefined,
-      tertiary_spec: form.tertiary_spec || undefined,
       armory_url: form.armory_url || undefined,
     }
     // Include warmane metadata when creating from lookup
