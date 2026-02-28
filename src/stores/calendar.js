@@ -28,7 +28,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     loading.value = true
     error.value = null
     try {
-      const data = await eventsApi.getAllEvents({ ...params })
+      const data = await eventsApi.getAllEvents({ include_signup_count: true, ...params })
       events.value = data
     } catch (err) {
       error.value = err?.response?.data?.message || 'Failed to load events'
