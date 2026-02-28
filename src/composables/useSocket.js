@@ -54,11 +54,10 @@ export function useSocket() {
   onUnmounted(() => {
     s.off('connect', onConnect)
     s.off('disconnect', onDisconnect)
-    refCount--
-    if (refCount <= 0 && socket) {
+    refCount = Math.max(0, refCount - 1)
+    if (refCount === 0 && socket) {
       socket.disconnect()
       socket = null
-      refCount = 0
     }
   })
 

@@ -142,16 +142,21 @@ def _ensure_db_dir() -> None:
 
 def _register_socketio_handlers() -> None:
     """Register Socket.IO event handlers for room-based real-time updates."""
+    from flask_login import current_user
     from flask_socketio import join_room, leave_room
 
     @socketio.on("join_event")
     def handle_join(data):
+        if not current_user.is_authenticated:
+            return
         event_id = data.get("event_id")
         if event_id is not None:
             join_room(f"event_{event_id}")
 
     @socketio.on("leave_event")
     def handle_leave(data):
+        if not current_user.is_authenticated:
+            return
         event_id = data.get("event_id")
         if event_id is not None:
             leave_room(f"event_{event_id}")

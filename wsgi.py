@@ -1,4 +1,8 @@
-"""WSGI entry point for production servers (gunicorn, uWSGI, etc.)."""
+"""WSGI entry point.
+
+For development: python wsgi.py  (uses socketio.run with WebSocket support)
+For production:  gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 wsgi:app
+"""
 
 from app import create_app
 from app.extensions import socketio
