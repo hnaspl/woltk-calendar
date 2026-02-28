@@ -51,6 +51,17 @@ def create_app(config_override: dict | None = None) -> Flask:
     from app.api.v1 import register_blueprints
     register_blueprints(app)
 
+    # -------------------------------------------------- Health / root route
+    @app.route("/")
+    def index():
+        from flask import jsonify
+        return jsonify({"status": "ok", "app": "WotLK Calendar API", "version": "1.0.0"})
+
+    @app.route("/api/v1/health")
+    def health():
+        from flask import jsonify
+        return jsonify({"status": "ok"})
+
     # ------------------------------------------------------- CLI commands
     _register_commands(app)
 

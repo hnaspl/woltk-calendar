@@ -43,7 +43,7 @@ services:
     volumes:
       - ./backend:/app
     command: >
-      sh -c "flask db upgrade && flask seed && flask run --host=0.0.0.0 --port=5000"
+      sh -c "flask create-db && flask seed && flask run --host=0.0.0.0 --port=5000"
 
   frontend:
     build:
@@ -54,7 +54,7 @@ services:
     depends_on:
       - backend
     environment:
-      VITE_API_URL: http://localhost:5000
+      VITE_API_URL: http://backend:5000
     ports:
       - "5173:5173"
     volumes:
