@@ -40,6 +40,10 @@ def update_user(user_id: int):
     if user.id == current_user.id:
         return jsonify({"error": "Cannot modify your own account here"}), 400
 
+    # Protect the primary site admin (user ID 1) from being modified
+    if user.id == 1:
+        return jsonify({"error": "Cannot modify the primary site admin"}), 403
+
     data = request.get_json(silent=True) or {}
 
     if "is_active" in data:
@@ -59,6 +63,10 @@ def delete_user(user_id: int):
         return jsonify({"error": "User not found"}), 404
     if user.id == current_user.id:
         return jsonify({"error": "Cannot delete your own account"}), 400
+
+    # Protect the primary site admin (user ID 1) from being deleted
+    if user.id == 1:
+        return jsonify({"error": "Cannot delete the primary site admin"}), 403
 
     auth_service.delete_user(user)
     return jsonify({"message": "User deleted"}), 200

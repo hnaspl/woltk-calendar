@@ -159,3 +159,16 @@ def list_signups(raid_event_id: int) -> list[Signup]:
             .options(sa.orm.joinedload(Signup.character))
         ).scalars().unique().all()
     )
+
+
+def list_user_signups(user_id: int, event_ids: list[int] | None = None) -> list[Signup]:
+    """Return all signups for a user, optionally filtered by event IDs."""
+    query = (
+        sa.select(Signup)
+        .where(Signup.user_id == user_id)
+        .options(sa.orm.joinedload(Signup.character))
+        .options(sa.orm.joinedload(Signup.raid_event))
+    )
+    if event_ids is not None:
+        query = query.where(Signup.raid_event_id.in_(event_ids))
+    return list(db.session.execute(query).scalars().unique().all())

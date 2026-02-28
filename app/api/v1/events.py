@@ -191,3 +191,20 @@ def list_all_events():
     else:
         events = event_service.list_events_for_guilds(guild_ids)
     return jsonify([e.to_dict() for e in events]), 200
+
+
+@all_events_bp.get("/my-signups")
+@login_required
+def list_my_signups():
+    """Return all signups for the current user across all their guilds."""
+    from app.services import signup_service
+
+    signups = signup_service.list_user_signups(current_user.id)
+    result = []
+    for s in signups:
+        d = s.to_dict()
+        if s.raid_event is not None:
+            d["event_title"] = s.raid_event.title
+            d["guild_id"] = s.raid_event.guild_id
+        result.append(d)
+    return jsonify(result), 200

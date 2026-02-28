@@ -196,6 +196,17 @@ def update_member(guild_id: int, user_id: int):
         return jsonify({"error": "Member not found"}), 404
 
     data = request.get_json(silent=True) or {}
+
+    # Validate role changes: only guild_admin (or site admin) can promote/demote guild_admin
+    new_role = data.get("role")
+    is_site_admin = getattr(current_user, "is_admin", False)
+    caller_is_guild_admin = membership and membership.role == "guild_admin"
+
+    if new_role == "guild_admin" and not (is_site_admin or caller_is_guild_admin):
+        return jsonify({"error": "Only guild admins can promote to guild_admin"}), 403
+    if target.role == "guild_admin" and not (is_site_admin or caller_is_guild_admin):
+        return jsonify({"error": "Only guild admins can change a guild_admin's role"}), 403
+
     target = guild_service.update_member(target, data)
     return jsonify(target.to_dict()), 200
 

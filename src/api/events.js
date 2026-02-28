@@ -6,6 +6,9 @@ export const getEvents = (guildId, params = {}) =>
 export const getAllEvents = (params = {}) =>
   api.get('/events', { params })
 
+export const getMySignups = () =>
+  api.get('/events/my-signups')
+
 export const getEvent = (guildId, eventId) =>
   api.get(`/guilds/${guildId}/events/${eventId}`)
 

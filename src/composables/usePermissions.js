@@ -18,9 +18,14 @@ export function usePermissions() {
 
   const role = computed(() => membership.value?.role ?? 'member')
 
-  const isAdmin = computed(() =>
-    currentUser.value?.is_admin === true || role.value === 'guild_admin'
-  )
+  /** True if user is a site-wide admin (is_admin flag on user model) */
+  const isSiteAdmin = computed(() => currentUser.value?.is_admin === true)
+
+  /** True if user is a guild admin for the current guild */
+  const isGuildAdmin = computed(() => role.value === 'guild_admin')
+
+  /** True if user is a site admin OR guild admin */
+  const isAdmin = computed(() => isSiteAdmin.value || isGuildAdmin.value)
 
   const isOfficer = computed(() =>
     isAdmin.value || role.value === 'officer'
@@ -41,5 +46,5 @@ export function usePermissions() {
     }
   }
 
-  return { membership, role, isAdmin, isOfficer, isMember, can }
+  return { membership, role, isSiteAdmin, isGuildAdmin, isAdmin, isOfficer, isMember, can }
 }

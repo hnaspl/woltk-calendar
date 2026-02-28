@@ -107,16 +107,17 @@
                   <td class="px-4 py-2.5">
                     <select
                       :value="m.role"
-                      class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
+                      :disabled="!canChangeRole(m)"
+                      class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none disabled:opacity-50"
                       @change="updateRole(m, $event.target.value)"
                     >
                       <option value="member">Member</option>
                       <option value="officer">Officer</option>
-                      <option value="guild_admin">Admin</option>
+                      <option v-if="canSetGuildAdmin" value="guild_admin">Guild Admin</option>
                     </select>
                   </td>
                   <td class="px-4 py-2.5 text-right">
-                    <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
+                    <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
                       Remove
                     </WowButton>
                   </td>
@@ -173,19 +174,23 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
+import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
+const permissions = usePermissions()
+const authStore = useAuthStore()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -252,9 +257,25 @@ async function updateRole(member, role) {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
     uiStore.showToast('Role updated', 'success')
-  } catch {
-    uiStore.showToast('Failed to update role', 'error')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update role', 'error')
   }
+}
+
+/** Only site admins and guild admins can promote to guild_admin */
+const canSetGuildAdmin = computed(() =>
+  authStore.user?.is_admin || permissions.isGuildAdmin?.value
+)
+
+/** Can the current user change this member's role? */
+function canChangeRole(member) {
+  // Can't change own role
+  if (member.user_id === authStore.user?.id) return false
+  // Only site admin or guild_admin can modify a guild_admin
+  if (member.role === 'guild_admin') {
+    return authStore.user?.is_admin || permissions.isGuildAdmin?.value
+  }
+  return true
 }
 
 function confirmKick(member) {

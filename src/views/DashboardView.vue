@@ -122,7 +122,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
 import { useWowIcons } from '@/composables/useWowIcons'
-import * as signupsApi from '@/api/signups'
+import * as eventsApi from '@/api/events'
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
@@ -138,6 +138,12 @@ onMounted(async () => {
     await guildStore.fetchGuilds()
     if (guildStore.currentGuild) {
       await calStore.fetchEvents(guildStore.currentGuild.id)
+    }
+    // Fetch user's signups across all guilds
+    try {
+      mySignups.value = await eventsApi.getMySignups()
+    } catch {
+      mySignups.value = []
     }
   } finally {
     loading.value = false

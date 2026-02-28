@@ -26,7 +26,9 @@ def get_membership(guild_id: int, user_id: int) -> GuildMembership | None:
 
 
 def is_officer_or_admin(membership: GuildMembership | None) -> bool:
-    """Return True if membership role is officer or guild_admin."""
+    """Return True if membership role is officer or guild_admin, or user is site admin."""
+    if current_user and getattr(current_user, "is_admin", False):
+        return True
     if membership is None:
         return False
     return membership.role in (GuildRole.OFFICER.value, GuildRole.GUILD_ADMIN.value)
