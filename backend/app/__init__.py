@@ -103,17 +103,9 @@ def _register_commands(app: Flask) -> None:
     @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin password.")
     def create_admin_command(email: str | None, username: str | None, password: str) -> None:
         """Create an admin user with the given credentials."""
-        import os
-        if email:
-            os.environ["ADMIN_EMAIL"] = email
-        if username:
-            os.environ["ADMIN_USERNAME"] = username
-        os.environ["ADMIN_PASSWORD"] = password
-
         from app.seeds.admin_user import seed_admin_user
-        if seed_admin_user():
-            used_email = os.environ.get("ADMIN_EMAIL", "admin@wotlk-calendar.local")
-            click.echo(f"Admin user created: {used_email}")
+        if seed_admin_user(email=email, username=username, password=password):
+            click.echo(f"Admin user created: {email or 'admin@wotlk-calendar.local'}")
         else:
             click.echo("User with that email or username already exists.")
 
