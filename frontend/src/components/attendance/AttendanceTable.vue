@@ -91,7 +91,7 @@ const tableRows = computed(() => {
       charMap.set(cid, {
         characterId: cid,
         characterName: su.character?.name ?? '?',
-        class: su.character?.class ?? '',
+        class: su.character?.class_name ?? '',
         attended: new Set(),
         signedUp: new Set()
       })
@@ -106,7 +106,7 @@ const tableRows = computed(() => {
       charMap.set(cid, {
         characterId: cid,
         characterName: r.character?.name ?? '?',
-        class: r.character?.class ?? '',
+        class: r.character?.class_name ?? '',
         attended: new Set(),
         signedUp: new Set()
       })

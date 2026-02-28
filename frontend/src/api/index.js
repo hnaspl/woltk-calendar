@@ -9,7 +9,14 @@ const api = axios.create({
 // Response interceptor – unwrap data
 api.interceptors.response.use(
   res => res.data,
-  err => Promise.reject(err)
+  err => {
+    // Normalize backend error: backend returns {"error": "..."} but
+    // frontend catch blocks expect err.response.data.message
+    if (err.response?.data?.error && !err.response.data.message) {
+      err.response.data.message = err.response.data.error
+    }
+    return Promise.reject(err)
+  }
 )
 
 export default api

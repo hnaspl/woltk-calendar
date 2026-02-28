@@ -24,7 +24,7 @@
             :key="char.id"
             :value="char.id"
           >
-            {{ char.name }} ({{ char.class }} – {{ char.realm }})
+            {{ char.name }} ({{ char.class_name }} – {{ char.realm_name }})
           </option>
         </select>
       </div>

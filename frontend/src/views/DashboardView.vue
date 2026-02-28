@@ -97,7 +97,7 @@
           </div>
           <WowCard v-else v-for="su in mySignups" :key="su.id" class="py-2">
             <div class="flex items-center gap-2">
-              <ClassBadge v-if="su.character?.class" :class-name="su.character.class" />
+              <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
               <span class="text-sm text-text-primary flex-1 truncate">{{ su.event_title ?? 'Raid' }}</span>
               <StatusBadge :status="su.status" />
             </div>
