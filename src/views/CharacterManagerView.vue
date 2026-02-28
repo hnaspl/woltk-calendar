@@ -353,6 +353,11 @@ function mapChar(c) {
 onMounted(async () => {
   loading.value = true
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
+  if (!guildStore.currentGuild) {
+    error.value = 'You need to join a guild first before managing characters'
+    loading.value = false
+    return
+  }
   try {
     const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
     characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
@@ -439,6 +444,7 @@ const warmaneData = ref(null)
 
 async function saveChar() {
   formError.value = null
+  if (!guildStore.currentGuild) { formError.value = 'You need to join a guild first before adding characters'; return }
   if (!form.name || !form.class || !form.realm) { formError.value = 'Name, class and realm are required'; return }
   saving.value = true
   try {

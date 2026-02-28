@@ -145,7 +145,9 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 def update_signup(signup: Signup, data: dict) -> Signup:
     """Update a signup.  When a going player changes to a non-going status,
     their lineup slot is removed and the first matching bench player is
-    auto-promoted to fill the vacancy."""
+    auto-promoted to fill the vacancy.  When a going player's role changes,
+    they are removed from their lineup slot (moved to bench) so the lineup
+    board stays consistent."""
     from app.services import lineup_service
 
     old_status = signup.status
@@ -157,8 +159,18 @@ def update_signup(signup: Signup, data: dict) -> Signup:
             setattr(signup, key, value)
     db.session.commit()
 
-    # Auto-promote from bench when a going player leaves
     new_status = signup.status
+    new_role = signup.chosen_role
+
+    # When a going player's role changes, move them to bench
+    # (remove from lineup). They can be re-assigned to the new role's
+    # column via drag-and-drop on the Lineup Board.
+    if old_status == SignupStatus.GOING.value and new_status == SignupStatus.GOING.value and old_role and new_role and old_role != new_role:
+        signup.status = SignupStatus.BENCH.value
+        db.session.commit()
+        lineup_service.remove_slot_for_signup(signup.id)
+
+    # Auto-promote from bench when a going player leaves
     if old_status == SignupStatus.GOING.value and new_status != SignupStatus.GOING.value:
         lineup_service.remove_slot_for_signup(signup.id)
         _auto_promote_bench(signup.raid_event_id, old_role)
