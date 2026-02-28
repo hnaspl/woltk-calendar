@@ -40,8 +40,17 @@ def update_lineup(guild_id: int, event_id: int):
     if "tanks" in data or "healers" in data or "dps" in data:
         try:
             result = lineup_service.update_lineup_grouped(
-                event_id, data, current_user.id
+                event_id, data, current_user.id,
+                expected_version=data.get("version"),
             )
+        except lineup_service.LineupConflictError:
+            # Another officer saved the lineup since this officer last loaded it
+            fresh = lineup_service.get_lineup_grouped(event_id)
+            return jsonify({
+                "error": "lineup_conflict",
+                "message": "Lineup was modified by another officer",
+                "lineup": fresh,
+            }), 409
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400
         return jsonify(result), 200

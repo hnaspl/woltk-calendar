@@ -25,6 +25,15 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
     )
 
 
+def _lineup_version(grouped: dict) -> str:
+    """Compute a fingerprint from lineup signup IDs for conflict detection."""
+    parts = []
+    for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps"):
+        ids = ",".join(str(s["id"]) for s in grouped.get(key, []))
+        parts.append(f"{key}:{ids}")
+    return "|".join(parts)
+
+
 def get_lineup_grouped(raid_event_id: int) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
@@ -34,6 +43,7 @@ def get_lineup_grouped(raid_event_id: int) -> dict:
         key = role_map.get(slot.slot_group, "dps")
         if slot.signup is not None:
             grouped[key].append(slot.signup.to_dict())
+    grouped["version"] = _lineup_version(grouped)
     return grouped
 
 
@@ -116,10 +126,26 @@ def upsert_slot(
     return slot
 
 
+class LineupConflictError(Exception):
+    """Raised when the lineup was modified by another officer since last load."""
+    pass
+
+
 def update_lineup_grouped(
-    raid_event_id: int, data: dict, confirmed_by: int
+    raid_event_id: int, data: dict, confirmed_by: int,
+    expected_version: str | None = None,
 ) -> dict:
-    """Bulk-update lineup from grouped format {tanks: [signupId,...], ...}."""
+    """Bulk-update lineup from grouped format {tanks: [signupId,...], ...}.
+
+    If *expected_version* is provided, check the current lineup version first.
+    If it doesn't match, raise LineupConflictError so the caller can notify
+    the officer and reload the fresh lineup.
+    """
+    if expected_version is not None:
+        current = get_lineup_grouped(raid_event_id)
+        if current.get("version") != expected_version:
+            raise LineupConflictError()
+
     # Remove all existing slots for this event
     db.session.execute(
         sa.delete(LineupSlot).where(LineupSlot.raid_event_id == raid_event_id)

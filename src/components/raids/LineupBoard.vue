@@ -162,6 +162,7 @@ const {
 const uiStore = useUiStore()
 const saving = ref(false)
 const dirty = ref(false)
+const lineupVersion = ref(null)
 
 const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 
@@ -300,6 +301,7 @@ async function loadLineup() {
     lineup.value.tanks      = data.tanks      ?? []
     lineup.value.healers    = data.healers    ?? []
     lineup.value.dps        = data.dps        ?? []
+    lineupVersion.value     = data.version ?? null
     enforceSlotLimits()
   } catch {
     autoPopulateFromSignups()
@@ -404,7 +406,8 @@ async function saveLineup(auto = false) {
       off_tanks:  lineup.value.off_tanks.map(s => s.id),
       tanks:      lineup.value.tanks.map(s => s.id),
       healers:    lineup.value.healers.map(s => s.id),
-      dps:        lineup.value.dps.map(s => s.id)
+      dps:        lineup.value.dps.map(s => s.id),
+      version:    lineupVersion.value,
     })
     // Update local state from server response
     lineup.value.main_tanks = result.main_tanks ?? []
@@ -412,12 +415,27 @@ async function saveLineup(auto = false) {
     lineup.value.tanks      = result.tanks      ?? []
     lineup.value.healers    = result.healers    ?? []
     lineup.value.dps        = result.dps        ?? []
+    lineupVersion.value     = result.version ?? null
     dirty.value = false
     emit('saved', { auto })
   } catch (err) {
-    console.error('Failed to save lineup', err)
-    if (!auto) {
-      uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+    if (err?.response?.status === 409 && err?.response?.data?.error === 'lineup_conflict') {
+      // Another officer modified the lineup — apply their version and notify
+      const fresh = err.response.data.lineup
+      lineup.value.main_tanks = fresh.main_tanks ?? []
+      lineup.value.off_tanks  = fresh.off_tanks  ?? []
+      lineup.value.tanks      = fresh.tanks      ?? []
+      lineup.value.healers    = fresh.healers    ?? []
+      lineup.value.dps        = fresh.dps        ?? []
+      lineupVersion.value     = fresh.version ?? null
+      dirty.value = false
+      uiStore.showToast('Lineup was updated by another officer. Your changes were reset.', 'warning')
+      emit('saved', { auto: true })
+    } else {
+      console.error('Failed to save lineup', err)
+      if (!auto) {
+        uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+      }
     }
   } finally {
     saving.value = false

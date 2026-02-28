@@ -258,7 +258,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
@@ -422,6 +422,29 @@ async function pollSignups() {
 onUnmounted(() => {
   stopPolling()
   document.removeEventListener('visibilitychange', onVisibilityChange)
+})
+
+// Reload everything when navigating between events (same route, different id)
+watch(() => route.params.id, async (newId, oldId) => {
+  if (!newId || newId === oldId) return
+  stopPolling()
+  loading.value = true
+  error.value = null
+  editingSignupId.value = null
+  lineupCounts.value = null
+  try {
+    const [ev, su] = await Promise.all([
+      eventsApi.getEvent(guildId.value, newId),
+      signupsApi.getSignups(guildId.value, newId),
+    ])
+    event.value = ev
+    signups.value = su
+  } catch (err) {
+    error.value = err?.response?.data?.message ?? 'Failed to load raid details'
+  } finally {
+    loading.value = false
+  }
+  startPolling()
 })
 
 async function toggleLock() {
