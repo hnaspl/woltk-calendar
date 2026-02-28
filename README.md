@@ -71,12 +71,19 @@ The backend will be available at `http://localhost:5000`.
 ### CLI Commands
 
 ```bash
-flask seed          # Seed built-in WotLK raid definitions
-flask scheduler     # Start the APScheduler background scheduler
-flask worker        # Start the DB-backed job worker (polls job_queue)
-flask db upgrade    # Apply Alembic migrations
+flask seed              # Seed raid definitions + default admin user
+flask seed --reset      # Drop all tables, recreate, and re-seed
+flask create-admin      # Create admin user (interactive password prompt)
+flask create-admin --email admin@example.com --username myadmin --password
+flask scheduler         # Start the APScheduler background scheduler
+flask worker            # Start the DB-backed job worker (polls job_queue)
+flask db upgrade        # Apply Alembic migrations
 flask db migrate -m "message"  # Generate new migration
 ```
+
+**Admin user**: `flask seed` creates a default admin (`admin@wotlk-calendar.local` / `admin` / `admin`).
+Override via env vars: `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
+Use `flask create-admin` for custom credentials with an interactive password prompt.
 
 ### Frontend
 
@@ -232,6 +239,29 @@ flask db upgrade
 flask db migrate -m "add new field"
 flask db upgrade
 ```
+
+---
+
+## Warmane Integration
+
+This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It does **not** make live API calls to Warmane servers.
+
+### What's integrated
+
+| Feature | How it works |
+|---|---|
+| **Realms** | All 7 Warmane WotLK realms (Icecrown, Lordaeron, Onyxia, Blackrock, Frostwolf, Frostmourne, Neltharion) are available as dropdown selectors throughout the app |
+| **Armory URLs** | Characters can store a Warmane armory link (`https://armory.warmane.com/character/…`) for quick reference |
+| **WoW classes & roles** | All 10 WotLK classes and tank/healer/dps roles are built in |
+
+### What's NOT integrated
+
+- No live character sync from Warmane
+- No gear score fetching
+- No guild roster import
+- All character and event data is managed locally within the app
+
+The armory URL field on characters is a convenience link — click it to view the character on Warmane's armory in your browser.
 
 ---
 

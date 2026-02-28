@@ -7,13 +7,14 @@
 
         <div>
           <label class="block text-xs text-text-muted mb-1">Realm</label>
-          <input
+          <select
             :value="calStore.filters.realm"
-            type="text"
-            placeholder="All realms"
-            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
-            @input="calStore.setFilter('realm', $event.target.value)"
-          />
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            @change="calStore.setFilter('realm', $event.target.value)"
+          >
+            <option value="">All realms</option>
+            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+          </select>
         </div>
 
         <div>
@@ -100,6 +101,8 @@ const raidTypes = [
   { value: 'icc',    label: 'Icecrown Citadel' },
   { value: 'rs',     label: 'Ruby Sanctum' }
 ]
+
+const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
 
 onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()

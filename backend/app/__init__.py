@@ -37,6 +37,10 @@ def create_app(config_override: dict | None = None) -> Flask:
     # ------------------------------------------------------- Flask-Login
     login_manager.session_protection = "basic"
 
+    @app.before_request
+    def make_session_permanent():
+        session.permanent = True
+
     @login_manager.user_loader
     def load_user(user_id: str):
         from app.models.user import User

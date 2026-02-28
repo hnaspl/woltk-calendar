@@ -6,25 +6,10 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
-// Request interceptor – attach token from localStorage if present
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Response interceptor – handle 401 globally
+// Response interceptor – unwrap data
 api.interceptors.response.use(
   res => res.data,
-  err => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('access_token')
-      // Let the router guard handle the redirect
-    }
-    return Promise.reject(err)
-  }
+  err => Promise.reject(err)
 )
 
 export default api

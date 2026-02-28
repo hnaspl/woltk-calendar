@@ -78,7 +78,10 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Realm</label>
-          <input v-model="form.realm" placeholder="Icecrown" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <select v-model="form.realm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option value="">Select realm…</option>
+            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+          </select>
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
@@ -150,6 +153,8 @@ const raidTypes = [
   { value: 'ulduar', label: 'Ulduar' }, { value: 'toc', label: 'Trial of the Crusader' },
   { value: 'icc', label: 'Icecrown Citadel' }, { value: 'rs', label: 'Ruby Sanctum' }
 ]
+
+const warmaneRealms = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock', 'Frostwolf', 'Frostmourne', 'Neltharion']
 
 const form = reactive({ name: '', raid_type: '', size: '', realm: '', tank_slots: 2, healer_slots: 5, dps_slots: 18 })
 
