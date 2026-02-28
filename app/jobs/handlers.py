@@ -49,14 +49,12 @@ def auto_lock_upcoming_events(app: Flask) -> None:
 
     with app.app_context():
         cutoff = datetime.now(tz.utc) + timedelta(hours=4)
-        events = list(
-            db.session.execute(
+        events = db.session.execute(
                 sa.select(RaidEvent).where(
                     RaidEvent.status == "open",
                     RaidEvent.starts_at_utc <= cutoff,
                 )
             ).scalars().all()
-        )
         locked = 0
         for event in events:
             event.status = "locked"

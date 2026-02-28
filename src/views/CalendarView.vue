@@ -163,7 +163,7 @@ const creating = ref(false)
 const createError = ref(null)
 const eventForm = reactive({
   title: '',
-  guild_id: '',
+  guild_id: null,
   realm_name: '',
   raid_size: 25,
   starts_at_utc: '',
@@ -181,7 +181,7 @@ onMounted(async () => {
 })
 
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? '', realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', instructions: '' })
   createError.value = null
   showCreateModal.value = true
 }

@@ -136,16 +136,16 @@ const props = defineProps({
 })
 
 const show = ref(false)
-let hideTimeout = null
+const hideTimeout = ref(null)
 const { getClassIcon, getClassColor } = useWowIcons()
 
 function onMouseEnter() {
-  if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null }
+  if (hideTimeout.value) { clearTimeout(hideTimeout.value); hideTimeout.value = null }
   show.value = true
 }
 
 function onMouseLeave() {
-  hideTimeout = setTimeout(() => { show.value = false }, 150)
+  hideTimeout.value = setTimeout(() => { show.value = false }, 150)
 }
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
