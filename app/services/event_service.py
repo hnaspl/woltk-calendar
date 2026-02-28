@@ -192,8 +192,8 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
     close_at = data.get("close_signups_at")
     if close_at:
         close_at = datetime.fromisoformat(close_at) if isinstance(close_at, str) else close_at
-        if close_at <= starts_at:
-            raise ValueError("close_signups_at must be after the event start time")
+        if close_at >= starts_at:
+            raise ValueError("close_signups_at must be before the event start time")
         event.close_signups_at = close_at
     db.session.add(event)
     db.session.commit()
@@ -215,8 +215,8 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
                 value = datetime.fromisoformat(value)
             setattr(event, key, value)
     # Validate close_signups_at against starts_at_utc
-    if event.close_signups_at and event.starts_at_utc and event.close_signups_at <= event.starts_at_utc:
-        raise ValueError("close_signups_at must be after the event start time")
+    if event.close_signups_at and event.starts_at_utc and event.close_signups_at >= event.starts_at_utc:
+        raise ValueError("close_signups_at must be before the event start time")
     db.session.commit()
     return event
 

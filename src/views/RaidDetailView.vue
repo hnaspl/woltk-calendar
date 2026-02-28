@@ -151,7 +151,7 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
             <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            <span class="text-[10px] text-text-muted">Must be after event start time</span>
+            <span class="text-[10px] text-text-muted">Must be before event start time</span>
           </div>
         </div>
         <div>
@@ -349,8 +349,8 @@ async function saveEvent() {
     editError.value = 'Title and date are required'
     return
   }
-  if (editForm.close_signups_at && new Date(editForm.close_signups_at) <= new Date(editForm.starts_at_utc)) {
-    editError.value = 'Close signups time must be after the event start time'
+  if (editForm.close_signups_at && new Date(editForm.close_signups_at) >= new Date(editForm.starts_at_utc)) {
+    editError.value = 'Close signups time must be before the event start time'
     return
   }
   editError.value = null

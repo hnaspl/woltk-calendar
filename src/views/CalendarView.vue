@@ -212,8 +212,8 @@ async function createEvent() {
     createError.value = 'Title, guild and date are required'
     return
   }
-  if (eventForm.close_signups_at && new Date(eventForm.close_signups_at) <= new Date(eventForm.starts_at_utc)) {
-    createError.value = 'Close signups time must be after the event start time'
+  if (eventForm.close_signups_at && new Date(eventForm.close_signups_at) >= new Date(eventForm.starts_at_utc)) {
+    createError.value = 'Close signups time must be before the event start time'
     return
   }
   createError.value = null
