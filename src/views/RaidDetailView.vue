@@ -411,7 +411,7 @@ function openEditModal() {
   showEditModal.value = true
   // Fetch raid definitions
   if (guildId.value) {
-    raidDefsApi.getRaidDefinitions(guildId.value).then(defs => { editRaidDefs.value = defs }).catch(() => {})
+    raidDefsApi.getRaidDefinitions(guildId.value).then(defs => { editRaidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
   }
 }
 

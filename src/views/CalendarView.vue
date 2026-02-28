@@ -205,7 +205,7 @@ function openCreateModal() {
   showCreateModal.value = true
   // Load raid definitions for the current guild
   if (eventForm.guild_id) {
-    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(() => {})
+    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
   }
 }
 
@@ -215,7 +215,7 @@ function onGuildSelectChange() {
   // Fetch raid definitions for the selected guild
   eventForm.raid_definition_id = ''
   if (eventForm.guild_id) {
-    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(() => {})
+    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
   } else {
     raidDefs.value = []
   }
