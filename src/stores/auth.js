@@ -7,18 +7,22 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref(null)
 
+  // Deduplication: reuse the in-flight promise so concurrent callers
+  // (router guard + App.vue onMounted) share a single API request.
+  let _fetchPromise = null
+
   async function fetchMe() {
+    if (_fetchPromise) return _fetchPromise
+
     loading.value = true
     error.value = null
-    try {
-      const data = await authApi.getMe()
-      user.value = data
-    } catch (err) {
-      user.value = null
-      throw err
-    } finally {
-      loading.value = false
-    }
+
+    _fetchPromise = authApi.getMe()
+      .then(data => { user.value = data; return data })
+      .catch(err => { user.value = null; throw err })
+      .finally(() => { loading.value = false; _fetchPromise = null })
+
+    return _fetchPromise
   }
 
   async function login(email, password) {

@@ -32,6 +32,11 @@ class Config:
         seconds=int(os.environ.get("PERMANENT_SESSION_LIFETIME", "86400"))
     )
 
+    # --------------------------------------------------------- Remember cookie
+    REMEMBER_COOKIE_HTTPONLY: bool = True
+    REMEMBER_COOKIE_SAMESITE: str = "Lax"
+    REMEMBER_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+
     # ------------------------------------------------------------------ CORS
     CORS_ORIGINS: list[str] = [
         o.strip()

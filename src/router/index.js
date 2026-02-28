@@ -91,8 +91,6 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresAuth) return true
-
   const authStore = useAuthStore()
 
   // If we haven't checked auth yet, try fetching the current user
@@ -104,7 +102,13 @@ router.beforeEach(async (to) => {
     }
   }
 
-  if (!authStore.user) {
+  // Redirect authenticated users away from login/register
+  if (authStore.user && to.meta.requiresAuth === false) {
+    return { name: 'dashboard' }
+  }
+
+  // Redirect unauthenticated users away from protected pages
+  if (!authStore.user && to.meta.requiresAuth) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
