@@ -40,7 +40,7 @@ class Config:
     # ------------------------------------------------------------------ CORS
     CORS_ORIGINS: list[str] = [
         o.strip()
-        for o in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+        for o in os.environ.get("CORS_ORIGINS", "*").split(",")
         if o.strip()
     ]
 

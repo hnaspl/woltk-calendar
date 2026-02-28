@@ -35,7 +35,7 @@ services:
       FLASK_ENV: development
       SECRET_KEY: change-me-in-production
       DATABASE_URL: mysql+pymysql://wotlk:wotlkpassword@db:3306/wotlk_calendar
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: "*"
       SESSION_COOKIE_SECURE: "false"
       SESSION_COOKIE_SAMESITE: Lax
     ports:
