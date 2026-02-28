@@ -25,6 +25,7 @@ class User(UserMixin, db.Model):
     display_name: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="UTC")
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
+    is_admin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
@@ -50,6 +51,7 @@ class User(UserMixin, db.Model):
             "display_name": self.display_name,
             "timezone": self.timezone,
             "is_active": self.is_active,
+            "is_admin": self.is_admin,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

@@ -26,8 +26,18 @@
           v-for="g in guildStore.guilds"
           :key="g.id"
           :value="g.id"
-        >{{ g.name }}</option>
+        >{{ g.name }} ({{ g.realm_name }})</option>
       </select>
+      <button
+        type="button"
+        class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
+        @click="showCreateGuild = true"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Create Guild
+      </button>
     </div>
 
     <!-- Navigation links -->
@@ -61,15 +71,55 @@
       </div>
     </div>
   </aside>
+
+  <!-- Create Guild Modal -->
+  <Teleport to="body">
+    <div v-if="showCreateGuild" class="fixed inset-0 z-[100] flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/60" @click="showCreateGuild = false" />
+      <div class="relative bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md mx-4 p-6 z-10">
+        <h3 class="wow-heading text-lg mb-4">Create Guild</h3>
+        <form @submit.prevent="doCreateGuild" class="space-y-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" placeholder="My Guild" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Realm *</label>
+            <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">Select realm…</option>
+              <option v-for="r in WARMANE_REALMS" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Faction</label>
+            <select v-model="newGuild.faction" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">Select faction…</option>
+              <option value="Alliance">Alliance</option>
+              <option value="Horde">Horde</option>
+            </select>
+          </div>
+          <div v-if="createGuildError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createGuildError }}</div>
+          <div class="flex justify-end gap-3">
+            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">Cancel</button>
+            <button type="submit" :disabled="creatingGuild" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50">
+              {{ creatingGuild ? 'Creating…' : 'Create Guild' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { computed, h, ref, reactive } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { WARMANE_REALMS } from '@/constants'
+import * as guildsApi from '@/api/guilds'
 
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
@@ -103,32 +153,84 @@ const icons = {
   ]),
   templates: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' })
+  ]),
+  profile: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z' })
+  ]),
+  admin: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
   ])
 }
 
-const navGroups = computed(() => [
-  {
-    label: 'Overview',
-    items: [
-      { label: 'Dashboard', to: '/dashboard', icon: icons.dashboard },
-      { label: 'Calendar', to: '/calendar', icon: icons.calendar },
-      { label: 'Characters', to: '/characters', icon: icons.chars },
-      { label: 'Attendance', to: '/attendance', icon: icons.attendance }
-    ]
-  },
-  {
-    label: 'Guild',
-    items: [
-      { label: 'Settings', to: '/guild/settings', icon: icons.settings },
-      { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
-      { label: 'Templates', to: '/guild/templates', icon: icons.templates }
-    ]
+const navGroups = computed(() => {
+  const groups = [
+    {
+      label: 'Overview',
+      items: [
+        { label: 'Dashboard', to: '/dashboard', icon: icons.dashboard },
+        { label: 'Calendar', to: '/calendar', icon: icons.calendar },
+        { label: 'Characters', to: '/characters', icon: icons.chars },
+        { label: 'Attendance', to: '/attendance', icon: icons.attendance }
+      ]
+    },
+    {
+      label: 'Guild',
+      items: [
+        { label: 'Settings', to: '/guild/settings', icon: icons.settings },
+        { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
+        { label: 'Templates', to: '/guild/templates', icon: icons.templates }
+      ]
+    },
+    {
+      label: 'Account',
+      items: [
+        { label: 'Profile', to: '/profile', icon: icons.profile }
+      ]
+    }
+  ]
+  if (authStore.user?.is_admin) {
+    groups.push({
+      label: 'Administration',
+      items: [
+        { label: 'Admin Panel', to: '/admin', icon: icons.admin }
+      ]
+    })
   }
-])
+  return groups
+})
 
 function onGuildChange(e) {
   const id = e.target.value
   const guild = guildStore.guilds.find(g => String(g.id) === String(id))
   if (guild) guildStore.setCurrentGuild(guild)
+}
+
+// Create Guild
+const showCreateGuild = ref(false)
+const creatingGuild = ref(false)
+const createGuildError = ref(null)
+const newGuild = reactive({ name: '', realm_name: '', faction: '' })
+
+async function doCreateGuild() {
+  createGuildError.value = null
+  creatingGuild.value = true
+  try {
+    const guild = await guildsApi.createGuild({
+      name: newGuild.name,
+      realm_name: newGuild.realm_name,
+      faction: newGuild.faction || null,
+    })
+    await guildStore.fetchGuilds()
+    guildStore.setCurrentGuild(guild)
+    showCreateGuild.value = false
+    newGuild.name = ''
+    newGuild.realm_name = ''
+    newGuild.faction = ''
+    uiStore.showToast('Guild created!', 'success')
+  } catch (err) {
+    createGuildError.value = err?.response?.data?.message ?? 'Failed to create guild'
+  } finally {
+    creatingGuild.value = false
+  }
 }
 </script>

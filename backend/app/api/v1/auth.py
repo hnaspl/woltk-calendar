@@ -1,4 +1,4 @@
-"""Auth API: register, login, logout, me."""
+"""Auth API: register, login, logout, me, profile, change-password."""
 
 from __future__ import annotations
 
@@ -62,3 +62,31 @@ def logout():
 @login_required
 def me():
     return jsonify(current_user.to_dict()), 200
+
+
+@bp.put("/profile")
+@login_required
+def update_profile():
+    data = request.get_json(silent=True) or {}
+    user = auth_service.update_profile(current_user, data)
+    return jsonify(user.to_dict()), 200
+
+
+@bp.post("/change-password")
+@login_required
+def change_password():
+    data = request.get_json(silent=True) or {}
+    current_password = data.get("current_password") or ""
+    new_password = data.get("new_password") or ""
+
+    if not current_password or not new_password:
+        return jsonify({"error": "current_password and new_password are required"}), 400
+
+    if len(new_password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters"}), 400
+
+    if not auth_service.verify_password(current_user, current_password):
+        return jsonify({"error": "Current password is incorrect"}), 400
+
+    auth_service.change_password(current_user, new_password)
+    return jsonify({"message": "Password changed successfully"}), 200

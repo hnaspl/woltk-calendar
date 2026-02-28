@@ -41,6 +41,7 @@ def seed_admin_user(
         password_hash=bcrypt.generate_password_hash(password).decode("utf-8"),
         display_name=username,
         is_active=True,
+        is_admin=True,
     )
     db.session.add(user)
     db.session.commit()

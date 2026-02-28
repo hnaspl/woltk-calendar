@@ -13,8 +13,8 @@ export const getGuildMembers = (guildId) => api.get(`/guilds/${guildId}/members`
 export const updateMemberRole = (guildId, memberId, role) =>
   api.put(`/guilds/${guildId}/members/${memberId}`, { role })
 
-export const removeMember = (guildId, memberId) =>
-  api.delete(`/guilds/${guildId}/members/${memberId}`)
+export const removeMember = (guildId, userId) =>
+  api.delete(`/guilds/${guildId}/members/${userId}`)
 
 export const inviteMember = (guildId, payload) =>
   api.post(`/guilds/${guildId}/invites`, payload)

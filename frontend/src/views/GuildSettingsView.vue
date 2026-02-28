@@ -31,6 +31,59 @@
           </form>
         </WowCard>
 
+        <!-- Warmane Guild Lookup -->
+        <WowCard>
+          <h2 class="wow-heading text-base mb-4">Warmane Guild Info</h2>
+          <p class="text-text-muted text-sm mb-4">Fetch guild roster and info from the Warmane armory API.</p>
+          <form @submit.prevent="fetchWarmaneGuild" class="flex items-end gap-3 max-w-lg">
+            <div class="flex-1">
+              <label class="block text-xs text-text-muted mb-1">Guild Name</label>
+              <input v-model="warmaneGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            </div>
+            <div class="w-40">
+              <label class="block text-xs text-text-muted mb-1">Realm</label>
+              <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+              </select>
+            </div>
+            <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">Fetch</WowButton>
+          </form>
+
+          <div v-if="warmaneError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
+
+          <div v-if="warmaneGuildData" class="mt-4 space-y-3">
+            <div class="flex items-center gap-4 text-sm">
+              <span class="text-text-muted">Guild:</span>
+              <span class="text-text-primary font-medium">{{ warmaneGuildData.name }}</span>
+              <span v-if="warmaneGuildData.faction" class="px-2 py-0.5 rounded text-xs font-medium"
+                :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+              >{{ warmaneGuildData.faction }}</span>
+              <span class="text-text-muted">{{ warmaneGuildData.member_count }} members</span>
+            </div>
+
+            <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-64 overflow-y-auto">
+              <table class="w-full text-xs">
+                <thead class="sticky top-0">
+                  <tr class="bg-bg-tertiary border-b border-border-default">
+                    <th class="text-left px-3 py-2 text-text-muted uppercase">Name</th>
+                    <th class="text-left px-3 py-2 text-text-muted uppercase">Class</th>
+                    <th class="text-left px-3 py-2 text-text-muted uppercase">Level</th>
+                    <th class="text-left px-3 py-2 text-text-muted uppercase">Race</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border-default">
+                  <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50">
+                    <td class="px-3 py-1.5 text-text-primary">{{ ch.name }}</td>
+                    <td class="px-3 py-1.5 text-text-muted">{{ ch.class_name }}</td>
+                    <td class="px-3 py-1.5 text-text-muted">{{ ch.level }}</td>
+                    <td class="px-3 py-1.5 text-text-muted">{{ ch.race }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </WowCard>
+
         <!-- Members table -->
         <WowCard>
           <div class="flex items-center justify-between mb-4">
@@ -56,7 +109,7 @@
                     >
                       <option value="member">Member</option>
                       <option value="officer">Officer</option>
-                      <option value="admin">Admin</option>
+                      <option value="guild_admin">Admin</option>
                     </select>
                   </td>
                   <td class="px-4 py-2.5 text-right">
@@ -95,6 +148,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
+import * as warmaneApi from '@/api/warmane'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
@@ -116,7 +170,7 @@ onMounted(async () => {
     if (!guildStore.currentGuild) await guildStore.fetchGuilds()
     const g = guildStore.currentGuild
     if (g) {
-      Object.assign(form, { name: g.name ?? '', realm: g.realm ?? '', description: g.description ?? '' })
+      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? g.realm ?? '', description: g.description ?? '' })
       await guildStore.fetchMembers(g.id)
       members.value = guildStore.members
     }
@@ -131,7 +185,10 @@ async function saveGuild() {
   saveError.value = null
   saving.value = true
   try {
-    const updated = await guildsApi.updateGuild(guildStore.currentGuild.id, form)
+    const updated = await guildsApi.updateGuild(guildStore.currentGuild.id, {
+      name: form.name,
+      realm_name: form.realm,
+    })
     guildStore.currentGuild = updated
     uiStore.showToast('Guild settings saved', 'success')
   } catch (err) {
@@ -143,7 +200,7 @@ async function saveGuild() {
 
 async function updateRole(member, role) {
   try {
-    await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.id, role)
+    await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
     uiStore.showToast('Role updated', 'success')
   } catch {
@@ -159,14 +216,40 @@ function confirmKick(member) {
 async function doKick() {
   saving.value = true
   try {
-    await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.id)
-    members.value = members.value.filter(m => m.id !== kickTarget.value.id)
+    await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
+    members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
     uiStore.showToast('Member removed', 'success')
   } catch {
     uiStore.showToast('Failed to remove member', 'error')
   } finally {
     saving.value = false
+  }
+}
+
+// Warmane guild lookup
+const warmaneGuildName = ref('')
+const warmaneGuildRealm = ref('Icecrown')
+const fetchingWarmane = ref(false)
+const warmaneError = ref(null)
+const warmaneGuildData = ref(null)
+
+async function fetchWarmaneGuild() {
+  warmaneError.value = null
+  warmaneGuildData.value = null
+  const name = warmaneGuildName.value || form.name
+  const realm = warmaneGuildRealm.value || form.realm
+  if (!name || !realm) {
+    warmaneError.value = 'Guild name and realm are required'
+    return
+  }
+  fetchingWarmane.value = true
+  try {
+    warmaneGuildData.value = await warmaneApi.lookupGuild(realm, name)
+  } catch (err) {
+    warmaneError.value = err?.response?.data?.message ?? 'Guild not found on Warmane'
+  } finally {
+    fetchingWarmane.value = false
   }
 }
 </script>

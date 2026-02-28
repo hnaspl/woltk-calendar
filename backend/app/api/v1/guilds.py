@@ -139,3 +139,27 @@ def update_member(guild_id: int, user_id: int):
     data = request.get_json(silent=True) or {}
     target = guild_service.update_member(target, data)
     return jsonify(target.to_dict()), 200
+
+
+@bp.delete("/<int:guild_id>/members/<int:user_id>")
+@login_required
+def remove_member(guild_id: int, user_id: int):
+    membership = get_membership(guild_id, current_user.id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+
+    if user_id == current_user.id:
+        return jsonify({"error": "Cannot remove yourself"}), 400
+
+    target = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        return jsonify({"error": "Member not found"}), 404
+
+    db.session.delete(target)
+    db.session.commit()
+    return jsonify({"message": "Member removed"}), 200

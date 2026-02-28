@@ -7,6 +7,7 @@ from flask import Flask
 
 def register_blueprints(app: Flask) -> None:
     from app.api.v1 import (
+        admin,
         auth,
         guilds,
         characters,
@@ -25,6 +26,7 @@ def register_blueprints(app: Flask) -> None:
     guild_prefix = f"{prefix}/guilds/<int:guild_id>"
 
     app.register_blueprint(auth.bp, url_prefix=f"{prefix}/auth")
+    app.register_blueprint(admin.bp, url_prefix=f"{prefix}/admin")
     app.register_blueprint(guilds.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(characters.bp, url_prefix=f"{prefix}/characters")
     app.register_blueprint(raid_definitions.bp, url_prefix=f"{guild_prefix}/raid-definitions")
