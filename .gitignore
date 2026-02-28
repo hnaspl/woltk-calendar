@@ -1,2 +1,32 @@
-#
+# Python
 **/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.eggs/
+
+# Environment files
+.env
+*.env.local
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic
+backend/migrations/versions/*.pyc
