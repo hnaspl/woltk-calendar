@@ -83,7 +83,6 @@
           <option value="tentative">Tentative ?</option>
           <option value="declined">Declined ✗</option>
           <option value="late">Late ⧖</option>
-          <option value="bench">Bench</option>
         </select>
       </div>
 

@@ -1,18 +1,20 @@
 <template>
   <div
     class="relative inline-flex"
-    @mouseenter="show = true"
-    @mouseleave="show = false"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
     @focusin="show = true"
-    @focusout="show = false"
+    @focusout="onMouseLeave"
     tabindex="0"
   >
     <slot />
     <Transition name="fade">
       <div
         v-if="show && character"
-        class="absolute z-50 w-72 bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl pointer-events-none"
+        class="absolute z-50 w-72 bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl"
         :class="positionClass"
+        @mouseenter="onMouseEnter"
+        @mouseleave="onMouseLeave"
       >
         <!-- Header -->
         <div class="flex items-center gap-3 px-3 py-2 border-b border-[#2a3450] bg-[#161b22] rounded-t-lg">
@@ -36,7 +38,7 @@
             v-if="character.armory_url"
             :href="character.armory_url"
             target="_blank"
-            class="ml-auto text-[10px] text-amber-400 pointer-events-auto hover:underline flex-shrink-0"
+            class="ml-auto text-[10px] text-amber-400 hover:underline flex-shrink-0"
             @click.stop
           >Armory</a>
         </div>
@@ -134,7 +136,17 @@ const props = defineProps({
 })
 
 const show = ref(false)
+let hideTimeout = null
 const { getClassIcon, getClassColor } = useWowIcons()
+
+function onMouseEnter() {
+  if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null }
+  show.value = true
+}
+
+function onMouseLeave() {
+  hideTimeout = setTimeout(() => { show.value = false }, 150)
+}
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')

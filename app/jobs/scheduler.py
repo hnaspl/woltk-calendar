@@ -95,7 +95,7 @@ def init_scheduler(app) -> None:
     if not app.config.get("SCHEDULER_ENABLED", True):
         return
 
-    from app.jobs.handlers import process_job_queue
+    from app.jobs.handlers import process_job_queue, auto_lock_upcoming_events
 
     scheduler.configure(timezone=app.config.get("SCHEDULER_TIMEZONE", "UTC"))
 
@@ -106,6 +106,16 @@ def init_scheduler(app) -> None:
         trigger="interval",
         seconds=30,
         id="process_job_queue",
+        replace_existing=True,
+    )
+
+    # Auto-lock events starting within 4 hours (runs every 5 minutes)
+    scheduler.add_job(
+        func=auto_lock_upcoming_events,
+        args=[app],
+        trigger="interval",
+        minutes=5,
+        id="auto_lock_upcoming_events",
         replace_existing=True,
     )
 

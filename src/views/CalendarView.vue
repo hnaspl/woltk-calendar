@@ -92,10 +92,10 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Realm *</label>
-            <select v-model="eventForm.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select realm…</option>
-              <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+            <label class="block text-xs text-text-muted mb-1">Guild *</label>
+            <select v-model.number="eventForm.guild_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onGuildSelectChange">
+              <option value="">Select guild…</option>
+              <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
             </select>
           </div>
           <div>
@@ -163,6 +163,7 @@ const creating = ref(false)
 const createError = ref(null)
 const eventForm = reactive({
   title: '',
+  guild_id: '',
   realm_name: '',
   raid_size: 25,
   starts_at_utc: '',
@@ -171,34 +172,46 @@ const eventForm = reactive({
 })
 
 onMounted(async () => {
-  if (!guildStore.currentGuild) await guildStore.fetchGuilds()
+  await guildStore.fetchGuilds()
+  const tasks = [calStore.fetchEvents()]
   if (guildStore.currentGuild) {
-    await Promise.all([
-      calStore.fetchEvents(guildStore.currentGuild.id),
-      guildStore.fetchMembers(guildStore.currentGuild.id)
-    ])
+    tasks.push(guildStore.fetchMembers(guildStore.currentGuild.id))
   }
+  await Promise.all(tasks)
 })
 
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? '', realm_name: guildStore.currentGuild?.realm_name ?? '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', instructions: '' })
   createError.value = null
   showCreateModal.value = true
 }
 
+function onGuildSelectChange() {
+  const selected = guildStore.guilds.find(g => g.id === eventForm.guild_id)
+  if (selected) eventForm.realm_name = selected.realm_name
+}
+
 async function createEvent() {
-  if (!eventForm.title || !eventForm.realm_name || !eventForm.starts_at_utc) {
-    createError.value = 'Title, realm and date are required'
+  if (!eventForm.title || !eventForm.guild_id || !eventForm.starts_at_utc) {
+    createError.value = 'Title, guild and date are required'
     return
   }
   createError.value = null
   creating.value = true
   try {
-    const payload = { ...eventForm, status: 'open' }
-    const newEvent = await eventsApi.createEvent(guildStore.currentGuild.id, payload)
+    const payload = {
+      title: eventForm.title,
+      realm_name: eventForm.realm_name,
+      raid_size: eventForm.raid_size,
+      starts_at_utc: eventForm.starts_at_utc,
+      difficulty: eventForm.difficulty,
+      instructions: eventForm.instructions,
+      status: 'open'
+    }
+    const newEvent = await eventsApi.createEvent(eventForm.guild_id, payload)
     showCreateModal.value = false
     uiStore.showToast('Raid scheduled!', 'success')
-    await calStore.fetchEvents(guildStore.currentGuild.id)
+    await calStore.fetchEvents()
     router.push(`/raids/${newEvent.id}`)
   } catch (err) {
     createError.value = err?.response?.data?.message ?? 'Failed to schedule raid'

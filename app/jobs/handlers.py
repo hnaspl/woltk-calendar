@@ -38,6 +38,35 @@ def handle_send_notification(payload: dict) -> None:
     )
 
 
+def auto_lock_upcoming_events(app: Flask) -> None:
+    """Auto-lock events starting within 4 hours. Runs on a schedule."""
+    from datetime import datetime, timedelta, timezone as tz
+
+    import sqlalchemy as sa
+
+    from app.extensions import db
+    from app.models.raid import RaidEvent
+
+    with app.app_context():
+        cutoff = datetime.now(tz.utc) + timedelta(hours=4)
+        events = list(
+            db.session.execute(
+                sa.select(RaidEvent).where(
+                    RaidEvent.status == "open",
+                    RaidEvent.starts_at_utc <= cutoff,
+                )
+            ).scalars().all()
+        )
+        locked = 0
+        for event in events:
+            event.status = "locked"
+            event.locked_at = datetime.now(tz.utc)
+            locked += 1
+        if locked:
+            db.session.commit()
+            logger.info("Auto-locked %d events starting within 4h", locked)
+
+
 @register_handler("sync_all_characters")
 def handle_sync_all_characters(payload: dict) -> None:
     """Sync all active characters from the Warmane armory."""

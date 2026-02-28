@@ -80,11 +80,22 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 
 def update_signup(signup: Signup, data: dict) -> Signup:
+    """Update a signup. Auto-promotes a benched player when a 'going' player
+    changes to a non-going status (declined, bench, tentative, etc.)."""
+    old_status = signup.status
+    old_role = signup.chosen_role
+
     allowed = {"chosen_spec", "chosen_role", "status", "note"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)
     db.session.commit()
+
+    # If the player was going and is no longer going, auto-promote from bench
+    new_status = signup.status
+    if old_status == SignupStatus.GOING.value and new_status != SignupStatus.GOING.value:
+        _auto_promote_bench(signup.raid_event_id, old_role)
+
     return signup
 
 
