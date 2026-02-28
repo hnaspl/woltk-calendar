@@ -128,12 +128,38 @@
     </div>
 
   </WowCard>
+
+  <!-- Role change confirmation modal -->
+  <WowModal v-model="showRoleChangeModal" title="Change Player Role?" size="sm">
+    <div v-if="roleChangePending" class="space-y-3">
+      <p class="text-text-muted text-sm">
+        <strong class="text-text-primary">{{ roleChangePending.signup.character?.name ?? 'Player' }}</strong>
+        is signed up as
+        <strong class="text-accent-gold">{{ ROLE_LABEL_MAP[roleChangePending.signup.chosen_role] ?? roleChangePending.signup.chosen_role }}</strong>.
+      </p>
+      <p class="text-text-muted text-sm">
+        Do you want to change their role to
+        <strong class="text-accent-gold">{{ roleChangePending.targetCol.label }}</strong>
+        and place them in the lineup?
+      </p>
+      <p class="text-xs text-yellow-400/80">
+        This will update their signup role and move them into the {{ roleChangePending.targetCol.label }} column.
+      </p>
+    </div>
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <WowButton variant="secondary" @click="cancelRoleChange">Leave on Bench</WowButton>
+        <WowButton variant="primary" @click="confirmRoleChange">Change Role &amp; Place</WowButton>
+      </div>
+    </template>
+  </WowModal>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
+import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
@@ -163,6 +189,10 @@ const uiStore = useUiStore()
 const saving = ref(false)
 const dirty = ref(false)
 const lineupVersion = ref(null)
+
+// Role change confirmation modal state
+const showRoleChangeModal = ref(false)
+const roleChangePending = ref(null) // { signup, targetKey, targetCol }
 
 const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
 
@@ -224,10 +254,10 @@ function onDropColumn(e, targetKey) {
   const col = allColumns.value.find(c => c.key === targetKey)
   const signupRole = found.signup.chosen_role
 
-  // Strict role enforcement: roles are NOT interchangeable
+  // Role mismatch: show confirmation modal to change role
   if (col && signupRole !== col.role) {
-    const roleName = ROLE_LABEL_MAP[signupRole] ?? signupRole
-    uiStore.showToast(`${found.signup.character?.name ?? 'Player'} signed up as ${roleName}. Cannot place in ${col.label}.`, 'error')
+    roleChangePending.value = { signup: found.signup, sourceKey: found.key, sourceIdx: found.idx, targetKey, targetCol: col }
+    showRoleChangeModal.value = true
     return
   }
 
@@ -265,6 +295,44 @@ function onDropBench() {
     dirty.value = true
     autoSave()
   }
+}
+
+// ── Role change confirmation handlers ──
+function confirmRoleChange() {
+  const pending = roleChangePending.value
+  if (!pending) return
+
+  const { signup, sourceKey, sourceIdx, targetKey, targetCol } = pending
+
+  // Overflow check
+  const currentCount = lineup.value[targetKey].length
+  if (currentCount >= targetCol.slots) {
+    uiStore.showToast(`${targetCol.label} slots are full (${currentCount}/${targetCol.slots}). Remove someone first.`, 'error')
+    showRoleChangeModal.value = false
+    roleChangePending.value = null
+    return
+  }
+
+  // Remove from source column if coming from a role column
+  if (sourceKey !== 'bench' && sourceIdx >= 0) {
+    lineup.value[sourceKey].splice(sourceIdx, 1)
+  }
+
+  // Add to target (avoid duplicates)
+  const id = Number(signup.id)
+  if (!lineup.value[targetKey].find(s => Number(s.id) === id)) {
+    lineup.value[targetKey].push(signup)
+  }
+
+  dirty.value = true
+  autoSave()
+  showRoleChangeModal.value = false
+  roleChangePending.value = null
+}
+
+function cancelRoleChange() {
+  showRoleChangeModal.value = false
+  roleChangePending.value = null
 }
 
 // ── Auto-save on DnD ──

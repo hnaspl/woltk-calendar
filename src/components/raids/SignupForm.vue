@@ -42,20 +42,21 @@
             :key="r.value"
             type="button"
             class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded border text-sm transition-all"
-            :class="isRoleFull(r.value) && form.chosenRole !== r.value
-              ? 'border-red-800/50 text-text-muted/50 cursor-not-allowed'
-              : form.chosenRole === r.value
-                ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
-                : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+            :class="form.chosenRole === r.value
+              ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
+              : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
             :disabled="form.characterId === ''"
             @click="form.chosenRole = r.value"
           >
             <RoleBadge :role="r.value" />
-            <span v-if="roleSlotInfo[r.value]" class="text-[10px]" :class="isRoleFull(r.value) ? 'text-red-400' : 'text-text-muted'">
+            <span v-if="roleSlotInfo[r.value]" class="text-[10px]" :class="isRoleFull(r.value) ? 'text-yellow-400' : 'text-text-muted'">
               {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' Full' : '' }}
             </span>
           </button>
         </div>
+        <p v-if="form.chosenRole && isRoleFull(form.chosenRole)" class="mt-1.5 text-xs text-yellow-400/90">
+          ⚠ All {{ ROLE_LABEL_MAP[form.chosenRole] || form.chosenRole }} slots are full. You will be placed on the <strong>bench</strong> as the next candidate when a slot opens up.
+        </p>
       </div>
 
       <!-- Spec (multi-select, only when character selected) -->
@@ -292,6 +293,11 @@ async function handleSubmit() {
     chosen_role:  form.chosenRole,
     chosen_spec:  form.chosenSpec || undefined,
     note:         form.note || undefined
+  }
+
+  // Auto-bench when player knowingly selects a full role
+  if (!props.existingSignup && isRoleFull(form.chosenRole)) {
+    payload.force_bench = true
   }
 
   // Only include status when updating an existing signup
