@@ -257,7 +257,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
@@ -363,6 +363,45 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  startPolling()
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+// ── Live polling: refresh signups periodically so all players see changes ──
+const POLL_INTERVAL = 10_000 // 10 seconds
+let pollTimer = null
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(pollSignups, POLL_INTERVAL)
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+function onVisibilityChange() {
+  if (document.hidden) {
+    stopPolling()
+  } else {
+    pollSignups()
+    startPolling()
+  }
+}
+
+async function pollSignups() {
+  if (!guildId.value || !event.value) return
+  try {
+    const su = await signupsApi.getSignups(guildId.value, event.value.id)
+    signups.value = su
+  } catch {
+    // Silently ignore polling errors
+  }
+}
+
+onUnmounted(() => {
+  stopPolling()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 async function toggleLock() {
