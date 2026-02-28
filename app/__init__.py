@@ -34,14 +34,14 @@ def create_app(config_override: dict | None = None) -> Flask:
     # Enable WAL mode for SQLite (better concurrent read/write performance)
     if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
         from sqlalchemy import event as sa_event
+        from sqlalchemy.engine import Engine
 
-        with app.app_context():
-            @sa_event.listens_for(db.engine, "connect")
-            def _set_sqlite_pragma(dbapi_conn, connection_record):
-                cursor = dbapi_conn.cursor()
-                cursor.execute("PRAGMA journal_mode=WAL")
-                cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.close()
+        @sa_event.listens_for(Engine, "connect")
+        def _set_sqlite_pragma(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
 
     CORS(
         app,
@@ -125,8 +125,11 @@ def create_app(config_override: dict | None = None) -> Flask:
 
 def _ensure_db_dir() -> None:
     """Create the parent directory for file-based SQLite databases."""
-    db_path = db.engine.url.database
-    if db_path and db_path != ":memory:":
+    from flask import current_app
+
+    uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if uri.startswith("sqlite:///") and ":memory:" not in uri:
+        db_path = uri.replace("sqlite:///", "", 1)
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
