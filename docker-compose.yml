@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: wotlk_calendar_app
+    restart: unless-stopped
+    environment:
+      FLASK_APP: wsgi.py
+      FLASK_ENV: development
+      SECRET_KEY: change-me-in-production
+      CORS_ORIGINS: "*"
+      SESSION_COOKIE_SECURE: "false"
+      SESSION_COOKIE_SAMESITE: Lax
+    ports:
+      - "5000:5000"
+    volumes:
+      - sqlite_data:/app/instance
+
+volumes:
+  sqlite_data:

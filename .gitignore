@@ -1,1 +1,35 @@
-#
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.eggs/
+
+# Environment files
+.env
+*.env.local
+
+# Node
+node_modules/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic
+migrations/versions/*.pyc
+
+# SQLite test databases
+*.db
+instance/

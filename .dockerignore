@@ -1,0 +1,15 @@
+node_modules
+dist
+__pycache__
+*.pyc
+.git
+.gitignore
+.env
+*.md
+.vscode
+.idea
+backend
+frontend
+migrations
+instance
+*.db

@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── WoW theme CSS variables ─────────────────────────────────── */
+:root {
+  --color-bg-primary:    #0a0e17;
+  --color-bg-secondary:  #141926;
+  --color-bg-tertiary:   #1c2333;
+  --color-border:        #2a3450;
+  --color-border-gold:   #c9a930;
+  --color-accent-gold:   #f8d648;
+  --color-accent-blue:   #3fc7eb;
+  --color-text-primary:  #e8e6e0;
+  --color-text-muted:    #8b8d91;
+  --color-danger:        #e53e3e;
+  --color-success:       #38a169;
+
+  /* WoW class colors */
+  --class-death-knight: #C41E3A;
+  --class-druid:        #FF7C0A;
+  --class-hunter:       #AAD372;
+  --class-mage:         #3FC7EB;
+  --class-paladin:      #F48CBA;
+  --class-priest:       #FFFFFF;
+  --class-rogue:        #FFF468;
+  --class-shaman:       #0070DD;
+  --class-warlock:      #8788EE;
+  --class-warrior:      #C69B6D;
+}
+
+/* ── Base resets ─────────────────────────────────────────────── */
+html, body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ── Scrollbar styling ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-gold);
+}
+
+/* ── FullCalendar dark-theme overrides ───────────────────────── */
+.fc {
+  --fc-border-color: var(--color-border);
+  --fc-page-bg-color: var(--color-bg-secondary);
+  --fc-neutral-bg-color: var(--color-bg-tertiary);
+  --fc-list-event-hover-bg-color: var(--color-bg-tertiary);
+  --fc-today-bg-color: rgba(201, 169, 48, 0.08);
+  --fc-event-border-color: transparent;
+  color: var(--color-text-primary);
+}
+
+.fc .fc-toolbar-title {
+  font-family: 'Cinzel', serif;
+  color: var(--color-accent-gold);
+  font-size: 1.1rem;
+}
+
+.fc .fc-button {
+  background-color: var(--color-bg-tertiary) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+  font-size: 0.8rem !important;
+}
+
+.fc .fc-button:hover,
+.fc .fc-button-active {
+  background-color: var(--color-border-gold) !important;
+  border-color: var(--color-border-gold) !important;
+  color: #0a0e17 !important;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number,
+.fc .fc-list-event-title a {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--color-accent-gold);
+  font-weight: 700;
+}
+
+.fc .fc-event {
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  padding: 1px 4px;
+}
+
+.fc .fc-daygrid-event-dot {
+  border-color: var(--color-accent-gold);
+}
+
+.fc th {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border) !important;
+}
+
+.fc td {
+  border-color: var(--color-border) !important;
+}
+
+.fc .fc-list-day-cushion {
+  background-color: var(--color-bg-tertiary);
+}
+
+/* ── Utility classes ─────────────────────────────────────────── */
+.wow-heading {
+  font-family: 'Cinzel', serif;
+  color: var(--color-accent-gold);
+  letter-spacing: 0.05em;
+}
+
+.gold-divider {
+  border-color: var(--color-border-gold);
+  opacity: 0.4;
+}
+
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Role color utilities ────────────────────────────────────── */
+.role-tank    { color: #3FC7EB; }
+.role-healer  { color: #38a169; }
+.role-dps     { color: #e53e3e; }
+
+/* ── Transition helpers ──────────────────────────────────────── */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to       { opacity: 0; }
+
+.slide-enter-active, .slide-leave-active { transition: transform 0.25s ease, opacity 0.25s ease; }
+.slide-enter-from  { transform: translateX(-12px); opacity: 0; }
+.slide-leave-to    { transform: translateX(12px);  opacity: 0; }

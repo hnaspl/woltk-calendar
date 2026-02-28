@@ -1,0 +1,281 @@
+<template>
+  <AppShell>
+    <div class="flex flex-col md:flex-row h-full overflow-hidden">
+      <!-- Sidebar filters -->
+      <aside class="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-border-default bg-bg-secondary p-4 space-y-4 overflow-y-auto">
+        <h2 class="wow-heading text-base">Filters</h2>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Realm</label>
+          <select
+            :value="calStore.filters.realm"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            @change="calStore.setFilter('realm', $event.target.value)"
+          >
+            <option value="">All realms</option>
+            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Raid Type</label>
+          <select
+            :value="calStore.filters.raidType"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            @change="calStore.setFilter('raidType', $event.target.value)"
+          >
+            <option value="">All raids</option>
+            <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Size</label>
+          <select
+            :value="calStore.filters.size"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            @change="calStore.setFilter('size', $event.target.value)"
+          >
+            <option value="">All sizes</option>
+            <option value="10">10-man</option>
+            <option value="25">25-man</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Status</label>
+          <select
+            :value="calStore.filters.status"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            @change="calStore.setFilter('status', $event.target.value)"
+          >
+            <option value="">All statuses</option>
+            <option value="open">Open</option>
+            <option value="locked">Locked</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <WowButton variant="ghost" class="w-full text-xs" @click="calStore.clearFilters()">
+          Clear Filters
+        </WowButton>
+
+        <WowButton v-if="permissions.isOfficer.value" class="w-full text-sm" @click="openCreateModal">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Schedule Raid
+        </WowButton>
+      </aside>
+
+      <!-- Calendar -->
+      <div class="flex-1 p-4 overflow-y-auto">
+        <div v-if="calStore.loading" class="flex items-center justify-center h-64">
+          <div class="text-text-muted loading-pulse">Loading calendar…</div>
+        </div>
+        <RaidCalendar
+          v-else
+          :events="calStore.filteredEvents"
+          initial-view="dayGridMonth"
+          @event-click="onEventClick"
+        />
+      </div>
+    </div>
+
+    <!-- Schedule Raid Modal -->
+    <WowModal v-model="showCreateModal" title="Schedule Raid" size="md">
+      <form @submit.prevent="createEvent" class="space-y-4">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Guild *</label>
+          <select v-model.number="eventForm.guild_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onGuildSelectChange">
+            <option value="">Select guild…</option>
+            <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Raid Definition *</label>
+          <select v-model.number="eventForm.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
+            <option value="">Select raid definition…</option>
+            <optgroup label="Built-in Raids">
+              <option v-for="rd in builtinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </optgroup>
+            <optgroup v-if="customDefs.length" label="Custom Raids">
+              <option v-for="rd in customDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+            </optgroup>
+          </select>
+          <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Title *</label>
+          <input v-model="eventForm.title" required placeholder="e.g. ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Size</label>
+            <select v-model.number="eventForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option :value="10">10-man</option>
+              <option :value="25">25-man</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="normal">Normal</option>
+              <option value="heroic">Heroic</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
+            <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+            <input v-model="eventForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <span class="text-[10px] text-text-muted">Leave empty to auto-lock 4h before start</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Instructions</label>
+          <textarea v-model="eventForm.instructions" rows="2" placeholder="Bring flasks, food, etc." class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none placeholder:text-text-muted/50" />
+        </div>
+        <div v-if="createError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createError }}</div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showCreateModal = false">Cancel</WowButton>
+          <WowButton :loading="creating" @click="createEvent">Schedule</WowButton>
+        </div>
+      </template>
+    </WowModal>
+  </AppShell>
+</template>
+
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import AppShell from '@/components/layout/AppShell.vue'
+import RaidCalendar from '@/components/calendar/RaidCalendar.vue'
+import WowButton from '@/components/common/WowButton.vue'
+import WowModal from '@/components/common/WowModal.vue'
+import { useCalendarStore } from '@/stores/calendar'
+import { useGuildStore } from '@/stores/guild'
+import { usePermissions } from '@/composables/usePermissions'
+import { useUiStore } from '@/stores/ui'
+import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
+import * as eventsApi from '@/api/events'
+import * as raidDefsApi from '@/api/raidDefinitions'
+
+const calStore = useCalendarStore()
+const guildStore = useGuildStore()
+const uiStore = useUiStore()
+const permissions = usePermissions()
+const router = useRouter()
+
+const raidTypes = RAID_TYPES
+const warmaneRealms = WARMANE_REALMS
+
+const showCreateModal = ref(false)
+const creating = ref(false)
+const createError = ref(null)
+const raidDefs = ref([])
+
+const builtinDefs = computed(() => raidDefs.value.filter(d => d.is_builtin))
+const customDefs = computed(() => raidDefs.value.filter(d => !d.is_builtin))
+
+const eventForm = reactive({
+  title: '',
+  guild_id: null,
+  realm_name: '',
+  raid_definition_id: '',
+  raid_size: 25,
+  starts_at_utc: '',
+  difficulty: 'normal',
+  raid_type: '',
+  close_signups_at: '',
+  instructions: ''
+})
+
+onMounted(async () => {
+  await guildStore.fetchGuilds()
+  const tasks = [calStore.fetchEvents()]
+  if (guildStore.currentGuild) {
+    tasks.push(guildStore.fetchMembers(guildStore.currentGuild.id))
+  }
+  await Promise.all(tasks)
+})
+
+function openCreateModal() {
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
+  createError.value = null
+  showCreateModal.value = true
+  if (eventForm.guild_id) {
+    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+  }
+}
+
+function onGuildSelectChange() {
+  const selected = guildStore.guilds.find(g => g.id === eventForm.guild_id)
+  if (selected) eventForm.realm_name = selected.realm_name
+  eventForm.raid_definition_id = ''
+  if (eventForm.guild_id) {
+    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+  } else {
+    raidDefs.value = []
+  }
+}
+
+function onRaidDefChange() {
+  const rd = raidDefs.value.find(d => d.id === eventForm.raid_definition_id)
+  if (rd) {
+    eventForm.raid_type = rd.raid_type || rd.code || ''
+    eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+  }
+}
+
+async function createEvent() {
+  if (!eventForm.guild_id || !eventForm.starts_at_utc || !eventForm.raid_definition_id) {
+    createError.value = 'Guild, raid definition and start time are required'
+    return
+  }
+  if (!eventForm.title) {
+    const rd = raidDefs.value.find(d => d.id === eventForm.raid_definition_id)
+    eventForm.title = rd?.name ?? 'Raid'
+  }
+  if (eventForm.close_signups_at && new Date(eventForm.close_signups_at) >= new Date(eventForm.starts_at_utc)) {
+    createError.value = 'Close signups time must be before the event start time'
+    return
+  }
+  createError.value = null
+  creating.value = true
+  try {
+    const payload = {
+      title: eventForm.title,
+      realm_name: eventForm.realm_name,
+      raid_size: eventForm.raid_size,
+      starts_at_utc: eventForm.starts_at_utc,
+      difficulty: eventForm.difficulty,
+      raid_type: eventForm.raid_type || undefined,
+      raid_definition_id: eventForm.raid_definition_id || undefined,
+      close_signups_at: eventForm.close_signups_at || undefined,
+      instructions: eventForm.instructions,
+      status: 'open'
+    }
+    const newEvent = await eventsApi.createEvent(eventForm.guild_id, payload)
+    showCreateModal.value = false
+    uiStore.showToast('Raid scheduled!', 'success')
+    await calStore.fetchEvents()
+    router.push(`/raids/${newEvent.id}`)
+  } catch (err) {
+    createError.value = err?.response?.data?.message ?? 'Failed to schedule raid'
+  } finally {
+    creating.value = false
+  }
+}
+
+function onEventClick(event) {
+  router.push(`/raids/${event.id}`)
+}
+</script>
