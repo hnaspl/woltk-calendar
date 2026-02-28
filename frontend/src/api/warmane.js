@@ -5,3 +5,6 @@ export const lookupCharacter = (realm, name) =>
 
 export const lookupGuild = (realm, guildName) =>
   api.get(`/warmane/guild/${encodeURIComponent(realm)}/${encodeURIComponent(guildName)}`)
+
+export const syncCharacter = (characterId) =>
+  api.post('/warmane/sync-character', { character_id: characterId })

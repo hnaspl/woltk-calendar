@@ -251,20 +251,29 @@ This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It
 | Feature | How it works |
 |---|---|
 | **Realms** | All 7 Warmane WotLK realms (Icecrown, Lordaeron, Onyxia, Blackrock, Frostwolf, Frostmourne, Neltharion) are available as dropdown selectors throughout the app |
-| **Character lookup** | When adding a character, click "Lookup on Warmane" to auto-fill class and armory URL from the Warmane armory API. Falls back to manual entry if the API is unavailable. |
-| **Guild roster lookup** | `GET /api/v1/warmane/guild/{realm}/{name}` returns the guild roster with class data from Warmane |
+| **Character lookup** | When adding a character, click "Lookup on Warmane" to auto-fill class, armory URL, and more from the Warmane armory API. Falls back to manual entry if the API is unavailable. |
+| **Live character sync** | Click "Sync" on any character card to pull fresh data from Warmane: class, level, race, talent specs, professions, equipment, and achievement points. |
+| **Guild roster lookup** | `GET /api/v1/warmane/guild/{realm}/{name}` returns the full guild roster from Warmane |
+| **Equipment data** | Full gear list (17 slots with item names + item IDs) is stored on sync |
+| **Talent specs** | Dual spec talent trees are fetched and auto-fill primary/secondary spec fields |
 | **Armory URLs** | Characters store a Warmane armory link — auto-generated on import or manually entered |
-| **Deduplication** | Characters are unique per realm + name + guild. Both manual and imported characters are checked to prevent duplicates. |
+| **Deduplication** | Characters are unique per realm + name + guild. Both manual and imported characters are checked to prevent duplicates (409 Conflict). |
+| **Manual fallback** | All fields can still be filled in manually if the Warmane API is down or the character isn't found |
 | **WoW classes & roles** | All 10 WotLK classes and tank/healer/dps roles are built in |
+
+### What's NOT available from Warmane API
+
+- **Gear score** — Not returned by Warmane's API. Equipment items (with item IDs) are stored, so gear score could be calculated with an item database lookup in the future.
 
 ### Warmane API Endpoints (proxied)
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/v1/warmane/character/{realm}/{name}` | Look up a character on Warmane armory (returns class, level, race, faction, armory URL) |
-| `GET /api/v1/warmane/guild/{realm}/{guild_name}` | Look up a guild roster on Warmane armory (returns member list with class data) |
+| `GET /api/v1/warmane/character/{realm}/{name}` | Look up a character (returns class, level, race, equipment, talents, professions, achievement points) |
+| `GET /api/v1/warmane/guild/{realm}/{guild_name}` | Look up a guild roster (returns member list with class, level, race, professions) |
+| `POST /api/v1/warmane/sync-character` | Sync an existing character from Warmane (body: `{"character_id": 123}`) |
 
-> **Note:** The Warmane API (`armory.warmane.com/api`) is a public endpoint. If it's unreachable, character lookup will fail gracefully and you can enter data manually.
+> **Note:** The Warmane API (`armory.warmane.com/api`) is a public endpoint. If it's unreachable, all features fall back to manual entry gracefully.
 
 ---
 

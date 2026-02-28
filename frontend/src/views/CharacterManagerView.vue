@@ -46,14 +46,26 @@
             <div>
               <div class="font-bold text-text-primary">{{ char.name }}</div>
               <div class="text-xs text-text-muted">{{ char.realm }}</div>
+              <div v-if="char.metadata?.level" class="text-xs text-text-muted">
+                Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
+              </div>
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-1.5 mb-4">
+          <div class="flex flex-wrap gap-1.5 mb-2">
             <ClassBadge :class-name="char.class" />
             <RoleBadge v-if="char.role" :role="char.role" />
             <SpecBadge v-if="char.spec" :spec="char.spec" />
           </div>
+
+          <!-- Synced metadata -->
+          <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
+            {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
+          </div>
+          <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
+            Synced {{ new Date(char.metadata.last_synced).toLocaleDateString() }}
+          </div>
+          <div v-else class="mb-3"></div>
 
           <div class="flex gap-2">
             <WowButton
@@ -62,6 +74,12 @@
               class="flex-1 text-xs py-1.5"
               @click="setMain(char)"
             >Set Main</WowButton>
+            <WowButton
+              variant="secondary"
+              class="flex-1 text-xs py-1.5"
+              @click="syncFromWarmane(char)"
+              :loading="syncing === char.id"
+            >Sync</WowButton>
             <WowButton
               variant="secondary"
               class="flex-1 text-xs py-1.5"
@@ -188,6 +206,7 @@ const { getClassIcon } = useWowIcons()
 const characters = ref([])
 const loading = ref(true)
 const saving = ref(false)
+const syncing = ref(null)
 const lookingUp = ref(false)
 const lookupResult = ref(null)
 const error = ref(null)
@@ -232,6 +251,7 @@ function openAddModal() {
   editingChar.value = null
   Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
   formError.value = null
+  lookingUp.value = false
   lookupResult.value = null
   showModal.value = true
 }
@@ -305,6 +325,20 @@ async function setMain(char) {
     uiStore.showToast(`${char.name} set as main`, 'success')
   } catch {
     uiStore.showToast('Failed to set main', 'error')
+  }
+}
+
+async function syncFromWarmane(char) {
+  syncing.value = char.id
+  try {
+    const updated = await warmaneApi.syncCharacter(char.id)
+    const idx = characters.value.findIndex(c => c.id === char.id)
+    if (idx !== -1) characters.value[idx] = mapChar(updated)
+    uiStore.showToast(`${char.name} synced from Warmane`, 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Sync failed — character may not exist on Warmane', 'error')
+  } finally {
+    syncing.value = null
   }
 }
 
