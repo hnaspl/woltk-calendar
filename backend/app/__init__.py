@@ -91,6 +91,32 @@ def _register_commands(app: Flask) -> None:
         inserted = seed_raid_definitions()
         click.echo(f"Seeded {inserted} raid definition(s).")
 
+        from app.seeds.admin_user import seed_admin_user
+        if seed_admin_user():
+            click.echo("Created default admin user.")
+        else:
+            click.echo("Admin user already exists, skipped.")
+
+    @app.cli.command("create-admin")
+    @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")
+    @click.option("--username", default=None, help="Admin username (or set ADMIN_USERNAME env var).")
+    @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin password.")
+    def create_admin_command(email: str | None, username: str | None, password: str) -> None:
+        """Create an admin user with the given credentials."""
+        import os
+        if email:
+            os.environ["ADMIN_EMAIL"] = email
+        if username:
+            os.environ["ADMIN_USERNAME"] = username
+        os.environ["ADMIN_PASSWORD"] = password
+
+        from app.seeds.admin_user import seed_admin_user
+        if seed_admin_user():
+            used_email = os.environ.get("ADMIN_EMAIL", "admin@wotlk-calendar.local")
+            click.echo(f"Admin user created: {used_email}")
+        else:
+            click.echo("User with that email or username already exists.")
+
     @app.cli.command("create-db")
     def create_db_command() -> None:
         """Create all database tables."""
