@@ -77,17 +77,6 @@
 
               <!-- Officer actions -->
               <div v-if="isOfficer" class="flex items-center gap-1 flex-shrink-0" @click.stop>
-                <select
-                  :value="signup.status"
-                  class="bg-bg-tertiary border border-border-default text-text-primary text-[10px] rounded px-1 py-0.5 focus:border-border-gold outline-none"
-                  @change="changeStatus(signup, $event.target.value)"
-                >
-                  <option value="going">Going</option>
-                  <option value="bench">Bench</option>
-                  <option value="tentative">Tentative</option>
-                  <option value="declined">Declined</option>
-                  <option value="late">Late</option>
-                </select>
                 <button
                   class="text-red-400 hover:text-red-300 transition-colors p-0.5"
                   title="Remove signup"
@@ -148,16 +137,6 @@ function charProfessions(signup) {
 
 function charAchievements(signup) {
   return signup.character?.metadata?.achievement_points ?? null
-}
-
-async function changeStatus(signup, newStatus) {
-  if (!props.guildId || !props.eventId) return
-  try {
-    const updated = await signupsApi.updateSignup(props.guildId, props.eventId, signup.id, { status: newStatus })
-    emit('signup-updated', updated)
-  } catch (err) {
-    emit('signup-error', err?.response?.data?.message ?? 'Failed to change status')
-  }
 }
 
 async function removeSignup(signup) {

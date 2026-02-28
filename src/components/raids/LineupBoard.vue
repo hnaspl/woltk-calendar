@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, defineComponent, h } from 'vue'
+import { ref, computed, onMounted, watch, defineComponent, h } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
@@ -113,7 +113,7 @@ const saving = ref(false)
 
 const lineup = ref({ tanks: [], healers: [], dps: [] })
 
-onMounted(async () => {
+async function loadLineup() {
   try {
     const data = await lineupApi.getLineup(props.guildId, props.eventId)
     lineup.value.tanks   = data.tanks   ?? []
@@ -123,7 +123,15 @@ onMounted(async () => {
     // No existing lineup – auto-populate from going signups
     autoPopulateFromSignups()
   }
-})
+}
+
+onMounted(loadLineup)
+
+// Reload lineup when signups change (e.g. new signup, removal, status change)
+watch(
+  () => props.signups.map(s => `${s.id}:${s.status}`).join(','),
+  loadLineup
+)
 
 function autoPopulateFromSignups() {
   const going = props.signups.filter(s => s.status === 'going')
