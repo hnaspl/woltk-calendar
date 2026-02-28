@@ -13,10 +13,9 @@ build/
 .env
 *.env.local
 
-# Node / Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
+# Node
+node_modules/
+.vite/
 
 # IDE
 .vscode/
@@ -29,8 +28,8 @@ frontend/.vite/
 Thumbs.db
 
 # Alembic
-backend/migrations/versions/*.pyc
+migrations/versions/*.pyc
 
 # SQLite test databases
 *.db
-backend/instance/
+instance/

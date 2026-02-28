@@ -18,55 +18,57 @@ A **production-minded web app for Warmane WotLK raid management** — a calendar
 ```bash
 git clone <repo>
 cd woltk-calendar
-
-# Copy environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-
-# Start all services (MySQL + Flask backend + Vue frontend)
 docker compose up --build
 ```
 
-Access:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:5000/api/v1
+Access the app at **http://localhost:5000** — Flask serves both the API and the built Vue frontend from a single container.
 
 ---
 
-## Manual Setup
+## Manual Setup (Development)
 
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
 - MySQL 8.x running locally
 
-### Backend
+### Install & Run
 
 ```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your MySQL credentials
+# Install Node dependencies
+npm install
 
-# Run migrations
-flask db upgrade
+# Build the frontend (outputs to dist/)
+npm run build
 
-# Seed built-in WotLK raid definitions
+# Initialize database and seed data
+export FLASK_APP=wsgi.py
+export DATABASE_URL=mysql+pymysql://user:password@localhost:3306/wotlk_calendar
+flask create-db
 flask seed
 
-# Start development server
+# Start Flask (serves both API and built frontend)
 flask run
 ```
 
-The backend will be available at `http://localhost:5000`.
+The app will be available at `http://localhost:5000`.
+
+### Development with Vite HMR
+
+For frontend development with hot-reload:
+
+```bash
+# Terminal 1: Start Flask API server
+flask run
+
+# Terminal 2: Start Vite dev server (proxies /api to Flask)
+npm run dev
+```
+
+Then access `http://localhost:5173` for the Vite dev server with HMR.
 
 ### CLI Commands
 
@@ -74,103 +76,66 @@ The backend will be available at `http://localhost:5000`.
 flask seed              # Seed raid definitions + default admin user
 flask seed --reset      # Drop all tables, recreate, and re-seed
 flask create-admin      # Create admin user (interactive password prompt)
-flask create-admin --email admin@example.com --username myadmin --password
+flask create-db         # Create all database tables
 flask scheduler         # Start the APScheduler background scheduler
-flask worker            # Start the DB-backed job worker (polls job_queue)
-flask db upgrade        # Apply Alembic migrations
-flask db migrate -m "message"  # Generate new migration
+flask worker            # Start the DB-backed job worker
 ```
 
 **Admin user**: `flask seed` creates a default admin (`admin@wotlk-calendar.local` / `admin` / `admin`).
 Override via env vars: `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
-Use `flask create-admin` for custom credentials with an interactive password prompt.
-
-### Frontend
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit VITE_API_URL if your backend runs on a different port
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-The frontend will be available at `http://localhost:5173`.
 
 ---
 
 ## Environment Variables
 
-### Backend (`backend/.env`)
-
 | Variable | Default | Description |
 |---|---|---|
-| `SECRET_KEY` | — | Flask secret key (required in production) |
+| `SECRET_KEY` | `dev-secret-key-change-me` | Flask secret key (required in production) |
 | `DATABASE_URL` | — | Full MySQL connection URL |
 | `DB_HOST` | `localhost` | MySQL host (alternative to DATABASE_URL) |
 | `DB_PORT` | `3306` | MySQL port |
 | `DB_USER` | `user` | MySQL username |
 | `DB_PASSWORD` | `password` | MySQL password |
 | `DB_NAME` | `wotlk_calendar` | MySQL database name |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed CORS origins |
+| `CORS_ORIGINS` | `*` | Allowed CORS origins |
 | `SESSION_COOKIE_SECURE` | `false` | Set to `true` in production (HTTPS) |
 | `SCHEDULER_ENABLED` | `true` | Enable APScheduler |
 
-### Frontend (`frontend/.env`)
-
-| Variable | Default | Description |
-|---|---|---|
-| `VITE_API_URL` | `http://localhost:5000` | Backend API base URL |
-
 ---
 
-## Architecture
-
-### Backend Structure
+## Project Structure
 
 ```
-backend/
-├── app/
-│   ├── __init__.py          # create_app() factory
-│   ├── extensions.py        # db, migrate, login_manager, bcrypt
-│   ├── enums.py             # All enums (Realm, WowClass, Role, etc.)
-│   ├── constants.py         # WoW constants
-│   ├── models/              # SQLAlchemy 2.x models
-│   ├── services/            # Business logic (blueprints never touch DB directly)
-│   ├── api/v1/              # Blueprint-per-module REST API
-│   ├── jobs/                # DB-backed scheduler + worker
-│   ├── seeds/               # Seed data for WotLK raids
-│   └── utils/               # Auth helpers, permissions, pagination
-├── migrations/              # Alembic migrations
-├── config.py                # Config classes (Dev/Prod/Test)
-├── wsgi.py                  # WSGI entry point
-└── requirements.txt
-```
-
-### Frontend Structure
-
-```
-frontend/src/
-├── api/            # Axios API client modules (one per resource)
-├── composables/    # useAuth, usePermissions, useWowIcons
-├── components/     # Reusable UI components
-│   ├── layout/     # AppShell, AppSidebar, AppTopBar, AppBottomNav
-│   ├── common/     # ClassBadge, RoleBadge, WowCard, WowButton, etc.
-│   ├── calendar/   # RaidCalendar (FullCalendar wrapper)
-│   ├── raids/      # SignupForm, SignupList, CompositionSummary, LineupBoard
-│   └── attendance/ # AttendanceTable, AttendanceSummary
-├── router/         # Vue Router with auth guards
-├── stores/         # Pinia stores (auth, guild, calendar, ui)
-└── views/          # Page-level components
+wotlk-calendar/
+├── app/                    # Flask application
+│   ├── __init__.py         # create_app() factory + SPA serving
+│   ├── extensions.py       # db, migrate, login_manager, bcrypt
+│   ├── enums.py            # All enums (Realm, WowClass, Role, etc.)
+│   ├── constants.py        # WoW constants
+│   ├── models/             # SQLAlchemy 2.x models
+│   ├── services/           # Business logic
+│   ├── api/v1/             # Blueprint-per-module REST API
+│   ├── jobs/               # DB-backed scheduler + worker
+│   ├── seeds/              # Seed data for WotLK raids
+│   └── utils/              # Auth helpers, permissions, pagination
+├── src/                    # Vue 3 frontend source
+│   ├── main.js             # Vue app entry point
+│   ├── App.vue             # Root component
+│   ├── api/                # Axios API client modules
+│   ├── components/         # Reusable UI components
+│   ├── composables/        # useAuth, usePermissions, useWowIcons
+│   ├── router/             # Vue Router with auth guards
+│   ├── stores/             # Pinia stores (auth, guild, calendar, ui)
+│   └── views/              # Page-level components
+├── config.py               # Flask config classes (Dev/Prod/Test)
+├── wsgi.py                 # WSGI entry point
+├── index.html              # Vite HTML entry point
+├── vite.config.js          # Vite configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+├── package.json            # Node dependencies
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Single-stage Docker build
+└── docker-compose.yml      # MySQL + app (2 services)
 ```
 
 ---
@@ -203,7 +168,7 @@ When a raid event has enough confirmed signups for its raid size:
 - Series management with recurrence rules
 
 ### UI Theme
-WoW-inspired dark theme with official class colors, Wowhead CDN icons, gold accent colors.
+WoW-inspired dark theme with official class colors, local SVG icons, gold accent colors.
 
 ---
 
@@ -213,7 +178,8 @@ All endpoints are under `/api/v1/`. Authentication uses session cookies (Flask-L
 
 | Resource | Endpoints |
 |---|---|
-| Auth | POST /auth/register, POST /auth/login, POST /auth/logout, GET /auth/me |
+| Auth | POST /auth/register, POST /auth/login, POST /auth/logout, GET /auth/me, PUT /auth/profile, POST /auth/change-password |
+| Admin | GET/PUT/DELETE /admin/users |
 | Guilds | GET/POST /guilds, GET/PUT/DELETE /guilds/{id}, GET/POST /guilds/{id}/members |
 | Characters | GET/POST /characters, GET/PUT/DELETE /characters/{id} |
 | Raid Definitions | GET/POST /guilds/{id}/raid-definitions |
@@ -224,6 +190,7 @@ All endpoints are under `/api/v1/`. Authentication uses session cookies (Flask-L
 | Lineup | GET/PUT /guilds/{id}/events/{event_id}/lineup |
 | Attendance | GET/POST /guilds/{id}/events/{event_id}/attendance |
 | Notifications | GET /notifications, PUT /notifications/{id}/read |
+| Warmane | GET /warmane/character/{realm}/{name}, GET /warmane/guild/{realm}/{name}, POST /warmane/sync-character |
 
 ---
 
@@ -281,6 +248,6 @@ This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It
 
 1. Set `FLASK_ENV=production` and `SESSION_COOKIE_SECURE=true`
 2. Use a strong random `SECRET_KEY`
-3. Put Flask behind Nginx/Gunicorn
-4. Build Vue frontend: `npm run build` → serve `dist/` from Nginx
+3. Build: `docker compose up --build`
+4. Or deploy manually: `npm run build && gunicorn wsgi:app`
 5. Use a managed MySQL instance or secure your own

@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import logging
+import os
 
-from flask import Flask, jsonify, session
+from flask import Flask, jsonify, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
 from app.extensions import bcrypt, db, login_manager, migrate
 
+# Vite build output directory (relative to project root)
+DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
+
 
 def create_app(config_override: dict | None = None) -> Flask:
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=DIST_DIR, static_url_path="")
 
     # ----------------------------------------------------------------- Config
     app.config.from_object(get_config())
@@ -59,10 +63,6 @@ def create_app(config_override: dict | None = None) -> Flask:
     def bad_request(e):
         return jsonify({"error": str(e.description) if hasattr(e, "description") else "Bad request"}), 400
 
-    @app.errorhandler(404)
-    def not_found(e):
-        return jsonify({"error": "Not found"}), 404
-
     @app.errorhandler(405)
     def method_not_allowed(e):
         return jsonify({"error": "Method not allowed"}), 405
@@ -77,14 +77,28 @@ def create_app(config_override: dict | None = None) -> Flask:
         app.logger.exception("Unhandled exception: %s", e)
         return jsonify({"error": "Internal server error"}), 500
 
-    # -------------------------------------------------- Health / root route
-    @app.route("/")
-    def index():
-        return jsonify({"status": "ok", "app": "WotLK Calendar API", "version": "1.0.0"})
-
+    # ---------------------------------------- API health endpoint
     @app.route("/api/v1/health")
     def health():
         return jsonify({"status": "ok"})
+
+    # ---------------------------------------- Serve Vue SPA
+    @app.route("/")
+    def serve_index():
+        if os.path.isfile(os.path.join(DIST_DIR, "index.html")):
+            return send_from_directory(DIST_DIR, "index.html")
+        return jsonify({"status": "ok", "app": "WotLK Calendar API", "version": "1.0.0"})
+
+    @app.errorhandler(404)
+    def not_found(e):
+        # API routes return JSON 404
+        from flask import request
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Not found"}), 404
+        # SPA client-side routing: serve index.html for non-API routes
+        if os.path.isfile(os.path.join(DIST_DIR, "index.html")):
+            return send_from_directory(DIST_DIR, "index.html")
+        return jsonify({"error": "Not found"}), 404
 
     # ------------------------------------------------------- CLI commands
     _register_commands(app)

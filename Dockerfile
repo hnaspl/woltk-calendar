@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS base
+FROM python:3.11-slim
 
 # Install system deps for MySQL client + Node.js
 RUN apt-get update && apt-get install -y \
@@ -10,25 +10,24 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# ---------- Backend ----------
-WORKDIR /app/backend
-COPY backend/requirements.txt .
+WORKDIR /app
+
+# Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
-
-# ---------- Frontend ----------
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
+# Node dependencies
+COPY package*.json ./
 RUN npm ci
 
-COPY frontend/ .
+# Copy all source
+COPY . .
 
-# ---------- Startup script ----------
-WORKDIR /app
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+# Build frontend
+RUN npm run build
 
-EXPOSE 5000 5173
+ENV FLASK_APP=wsgi.py
 
-CMD ["/app/docker-entrypoint.sh"]
+EXPOSE 5000
+
+CMD ["sh", "-c", "flask create-db && flask seed && flask run --host=0.0.0.0 --port=5000"]
