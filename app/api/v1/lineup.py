@@ -9,6 +9,7 @@ from app.services import event_service, lineup_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
 from app.utils.realtime import emit_lineup_changed, emit_signups_changed
+from app.utils import notify
 
 bp = Blueprint("lineup", __name__)
 
@@ -56,6 +57,7 @@ def update_lineup(guild_id: int, event_id: int):
             return jsonify({"error": str(exc)}), 400
         emit_lineup_changed(event_id)
         emit_signups_changed(event_id)
+        notify.notify_officers_lineup_changed(event, current_user.id)
         return jsonify(result), 200
 
     # Legacy format: {slots: [{slot_group, slot_index, signup_id, ...}, ...]}

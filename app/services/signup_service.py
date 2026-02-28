@@ -93,6 +93,8 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
         db.session.delete(bench_slot)
         db.session.commit()
         lineup_service.auto_assign_slot(benched)
+        # Notify the promoted player
+        _notify_bench_promotion(benched)
         return
 
     # Fallback: no bench queue slots, use created_at ordering
@@ -118,7 +120,21 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     for candidate in candidates:
         if candidate.id not in existing_slot_ids:
             lineup_service.auto_assign_slot(candidate)
+            # Notify the promoted player
+            _notify_bench_promotion(candidate)
             return
+
+
+def _notify_bench_promotion(signup) -> None:
+    """Send a bench-promotion notification (best-effort, never raises)."""
+    try:
+        from app.utils.notify import notify_signup_promoted
+        from app.services import event_service
+        event = event_service.get_event(signup.raid_event_id)
+        if event:
+            notify_signup_promoted(signup, event)
+    except Exception:
+        pass
 
 
 def create_signup(

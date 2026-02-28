@@ -9,6 +9,7 @@ from app.services import event_service, signup_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
 from app.utils.realtime import emit_signups_changed
+from app.utils import notify
 
 bp = Blueprint("signups", __name__)
 
@@ -80,6 +81,16 @@ def create_signup(guild_id: int, event_id: int):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
     emit_signups_changed(event_id)
+
+    # Notify the signing-up player
+    char_name = signup.character.name if signup.character else "Unknown"
+    if signup.status == "bench":
+        notify.notify_signup_benched(signup, event)
+    else:
+        notify.notify_signup_confirmed(signup, event)
+    # Notify officers about the new signup
+    notify.notify_officers_new_signup(signup, event, char_name)
+
     return jsonify(signup.to_dict()), 201
 
 
@@ -102,8 +113,21 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
         return jsonify({"error": "Forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
+    old_role = signup.chosen_role
+    old_status = signup.status
     signup = signup_service.update_signup(signup, data)
     emit_signups_changed(event_id)
+
+    # Notify player if an officer changed their role or declined them
+    event = event_service.get_event(event_id)
+    if signup.user_id != current_user.id and event:
+        if data.get("chosen_role") and data["chosen_role"] != old_role:
+            notify.notify_role_changed(signup, event, old_role, signup.chosen_role)
+        if data.get("status") == "declined" and old_status != "declined":
+            notify.notify_signup_declined_by_officer(
+                signup, event, current_user.username
+            )
+
     return jsonify(signup.to_dict()), 200
 
 
@@ -124,6 +148,35 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
     if signup.user_id != current_user.id and not is_officer_or_admin(membership):
         return jsonify({"error": "Forbidden"}), 403
 
+    # Capture info before deletion for notifications
+    event = event_service.get_event(event_id)
+    signup_user_id = signup.user_id
+    signup_role = signup.chosen_role
+    char_name = signup.character.name if signup.character else "Unknown"
+    is_officer_action = signup.user_id != current_user.id
+
     signup_service.delete_signup(signup)
     emit_signups_changed(event_id)
+
+    if event:
+        if is_officer_action:
+            notify._notify(
+                user_id=signup_user_id,
+                notification_type="signup_removed",
+                title=f"Removed from {event.title}",
+                body=f"Your signup was removed by {current_user.username}.",
+                guild_id=event.guild_id,
+                raid_event_id=event.id,
+            )
+        else:
+            for officer_id in notify._get_officers(event.guild_id, exclude_user_id=signup_user_id):
+                notify._notify(
+                    user_id=officer_id,
+                    notification_type="officer_signup_left",
+                    title=f"{char_name} left {event.title}",
+                    body=f"Previously assigned as {signup_role}.",
+                    guild_id=event.guild_id,
+                    raid_event_id=event.id,
+                )
+
     return jsonify({"message": "Signup deleted"}), 200

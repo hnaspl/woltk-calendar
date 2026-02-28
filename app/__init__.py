@@ -177,6 +177,12 @@ def _register_socketio_handlers() -> None:
         if guild_id is not None:
             leave_room(f"guild_{guild_id}")
 
+    @socketio.on("connect")
+    def handle_connect():
+        """Auto-join the user's personal notification room on connect."""
+        if current_user.is_authenticated:
+            join_room(f"user_{current_user.id}")
+
 
 def _register_commands(app: Flask) -> None:
     import click

@@ -13,6 +13,7 @@ from app.services import guild_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
 from app.utils.realtime import emit_guild_changed, emit_guilds_changed
+from app.utils import notify
 
 bp = Blueprint("guilds", __name__, url_prefix="/guilds")
 
@@ -61,6 +62,7 @@ def join_guild(guild_id: int):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     emit_guild_changed(guild_id)
+    notify.notify_member_joined_guild(current_user.id, guild)
     return jsonify(membership.to_dict()), 201
 
 
@@ -216,6 +218,11 @@ def update_member(guild_id: int, user_id: int):
         return jsonify({"error": "Only guild admins can change a guild_admin's role"}), 403
 
     target = guild_service.update_member(target, data)
+    # Notify user if their role was changed
+    if new_role and user_id != current_user.id:
+        guild = guild_service.get_guild(guild_id)
+        if guild:
+            notify.notify_guild_role_changed(user_id, guild, new_role)
     return jsonify(target.to_dict()), 200
 
 
@@ -240,6 +247,10 @@ def remove_member(guild_id: int, user_id: int):
 
     db.session.delete(target)
     db.session.commit()
+    # Notify the removed user
+    guild = guild_service.get_guild(guild_id)
+    if guild:
+        notify.notify_removed_from_guild(user_id, guild)
     return jsonify({"message": "Member removed"}), 200
 
 

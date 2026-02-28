@@ -11,6 +11,7 @@ from app.services import event_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
 from app.utils.realtime import emit_events_changed
+from app.utils import notify
 
 bp = Blueprint("events", __name__)
 
@@ -57,6 +58,7 @@ def create_event(guild_id: int):
     except (ValueError, KeyError) as exc:
         return jsonify({"error": str(exc)}), 400
     emit_events_changed(guild_id)
+    notify.notify_event_created(event, guild_id)
     return jsonify(event.to_dict()), 201
 
 
@@ -86,6 +88,7 @@ def update_event(guild_id: int, event_id: int):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     emit_events_changed(guild_id)
+    notify.notify_event_updated(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -114,6 +117,7 @@ def lock_event(guild_id: int, event_id: int):
         return jsonify({"error": "Event not found"}), 404
     event = event_service.lock_event(event)
     emit_events_changed(guild_id)
+    notify.notify_event_locked(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -142,6 +146,7 @@ def cancel_event(guild_id: int, event_id: int):
         return jsonify({"error": "Event not found"}), 404
     event = event_service.cancel_event(event)
     emit_events_changed(guild_id)
+    notify.notify_event_cancelled(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -156,6 +161,7 @@ def complete_event(guild_id: int, event_id: int):
         return jsonify({"error": "Event not found"}), 404
     event = event_service.complete_event(event)
     emit_events_changed(guild_id)
+    notify.notify_event_completed(event)
     return jsonify(event.to_dict()), 200
 
 
