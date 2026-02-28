@@ -317,7 +317,8 @@ async function onDropUnassigned() {
     try {
       await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'going' })
       emit('saved', { auto: true })
-    } catch {
+    } catch (err) {
+      console.error('Failed to remove from bench', err)
       uiStore.showToast('Failed to remove from bench', 'error')
     }
     return
@@ -341,7 +342,8 @@ async function onDropBench() {
   // Update signup status to bench
   try {
     await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'bench' })
-  } catch {
+  } catch (err) {
+    console.error('Failed to move to bench', err)
     uiStore.showToast('Failed to move to bench', 'error')
     return
   }
