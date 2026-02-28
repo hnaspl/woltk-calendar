@@ -75,6 +75,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/guild/series',
+    name: 'series',
+    component: () => import('@/views/SeriesView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/',
     redirect: '/dashboard'
   },

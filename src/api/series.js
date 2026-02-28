@@ -10,3 +10,6 @@ export const updateSeries = (guildId, seriesId, payload) =>
 
 export const deleteSeries = (guildId, seriesId) =>
   api.delete(`/guilds/${guildId}/series/${seriesId}`)
+
+export const generateEvents = (guildId, seriesId, payload = {}) =>
+  api.post(`/guilds/${guildId}/series/${seriesId}/generate`, payload)
