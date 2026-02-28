@@ -45,18 +45,18 @@ function getRaidColor(raidType) {
 
 // Status indicators for calendar readability
 const statusIndicators = {
-  cancelled: { prefix: '✗ ', opacity: 0.5 },
-  completed: { prefix: '✓ ', opacity: 0.7 },
-  locked:    { prefix: '🔒 ', opacity: 1 },
-  draft:     { prefix: '📝 ', opacity: 0.6 },
+  cancelled: { prefix: '✗ ', borderColor: '#e53e3e' },
+  completed: { prefix: '✓ ', borderColor: '#48bb78' },
+  locked:    { prefix: '🔒 ', borderColor: '#ecc94b' },
+  draft:     { prefix: '📝 ', borderColor: '#a0aec0' },
 }
 
 function getStatusPrefix(status) {
   return statusIndicators[status]?.prefix ?? ''
 }
 
-function getStatusOpacity(status) {
-  return statusIndicators[status]?.opacity ?? 1
+function getStatusBorderColor(status) {
+  return statusIndicators[status]?.borderColor ?? 'transparent'
 }
 
 // Transform backend events to FullCalendar format
@@ -64,7 +64,6 @@ const fcEvents = computed(() =>
   props.events.map(ev => {
     const status = ev.status ?? 'open'
     const prefix = getStatusPrefix(status)
-    const opacity = getStatusOpacity(status)
     const baseColor = getRaidColor(ev.raid_type)
     return {
       id: String(ev.id),
@@ -72,7 +71,7 @@ const fcEvents = computed(() =>
       start: ev.starts_at_utc ?? ev.start_time ?? ev.date,
       end: ev.ends_at_utc ?? ev.end_time ?? null,
       backgroundColor: baseColor,
-      borderColor: status === 'cancelled' ? '#e53e3e' : status === 'completed' ? '#48bb78' : status === 'locked' ? '#ecc94b' : 'transparent',
+      borderColor: getStatusBorderColor(status),
       textColor: '#0a0e17',
       classNames: status !== 'open' ? [`fc-event-${status}`] : [],
       extendedProps: { ...ev }

@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-px bg-border-default" :class="{ 'md:grid-cols-2': columns.length === 2, 'md:grid-cols-3': columns.length === 3, 'md:grid-cols-4': columns.length === 4, 'md:grid-cols-5': columns.length >= 5 }">
+    <div class="grid grid-cols-1 gap-px bg-border-default" :class="gridClass">
       <div
         v-for="col in columns"
         :key="col.key"
@@ -168,6 +168,14 @@ const allColumns = computed(() => [
 
 /** Only show columns that have at least 1 slot configured */
 const columns = computed(() => allColumns.value.filter(c => c.slots > 0))
+
+const gridClass = computed(() => {
+  const count = columns.value.length
+  if (count <= 2) return 'md:grid-cols-2'
+  if (count === 3) return 'md:grid-cols-3'
+  if (count === 4) return 'md:grid-cols-4'
+  return 'md:grid-cols-5'
+})
 
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 
