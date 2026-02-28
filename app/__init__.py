@@ -123,9 +123,8 @@ def _sync_schema() -> None:
     from sqlalchemy import inspect as sa_inspect
 
     # Ensure the instance directory exists for SQLite file databases.
-    db_uri = str(db.engine.url)
-    if db_uri.startswith("sqlite:///") and not db_uri.startswith("sqlite:///:memory:"):
-        db_path = db_uri.replace("sqlite:///", "")
+    db_path = db.engine.url.database
+    if db_path and db_path != ":memory:":
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
