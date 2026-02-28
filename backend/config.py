@@ -61,6 +61,11 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     SESSION_COOKIE_SECURE: bool = True
+    CORS_ORIGINS: list[str] = [
+        o.strip()
+        for o in os.environ.get("CORS_ORIGINS", "").split(",")
+        if o.strip()
+    ]
 
 
 _config_map: dict[str, type[Config]] = {
