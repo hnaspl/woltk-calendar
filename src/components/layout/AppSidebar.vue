@@ -157,9 +157,10 @@ const isOfficerOrAdmin = computed(() => permissions.isOfficer.value || authStore
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
 // Available guilds = all guilds minus the ones user is already in
+// Use the is_member flag from the /guilds/all API response as the primary filter
 const availableGuilds = computed(() => {
   const memberIds = new Set(guildStore.guilds.map(g => g.id))
-  return guildStore.allGuilds.filter(g => !memberIds.has(g.id))
+  return guildStore.allGuilds.filter(g => !g.is_member && !memberIds.has(g.id))
 })
 
 const joiningGuildId = ref(null)
