@@ -86,3 +86,4 @@ class SlotGroup(str, Enum):
     OFF_TANK = "off_tank"
     HEALER = "healer"
     DPS = "dps"
+    BENCH = "bench"

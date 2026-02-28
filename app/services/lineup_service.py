@@ -28,7 +28,7 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
 def _lineup_version(grouped: dict) -> str:
     """Compute a fingerprint from lineup signup IDs for conflict detection."""
     parts = []
-    for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps"):
+    for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps", "bench_queue"):
         ids = ",".join(str(s["id"]) for s in grouped.get(key, []))
         parts.append(f"{key}:{ids}")
     return "|".join(parts)
@@ -38,11 +38,17 @@ def get_lineup_grouped(raid_event_id: int) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
     grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "tanks": [], "healers": [], "dps": []}
+    bench_queue: list = []
     role_map = {"main_tank": "main_tanks", "off_tank": "off_tanks", "tank": "tanks", "healer": "healers", "dps": "dps"}
     for slot in slots:
+        if slot.slot_group == "bench":
+            if slot.signup is not None:
+                bench_queue.append(slot.signup.to_dict())
+            continue
         key = role_map.get(slot.slot_group, "dps")
         if slot.signup is not None:
             grouped[key].append(slot.signup.to_dict())
+    grouped["bench_queue"] = bench_queue
     grouped["version"] = _lineup_version(grouped)
     return grouped
 
@@ -176,6 +182,23 @@ def update_lineup_grouped(
             )
             db.session.add(slot)
 
+    # Persist bench queue order
+    bench_queue_ids = data.get("bench_queue", [])
+    for idx, signup_id in enumerate(bench_queue_ids):
+        signup = db.session.get(Signup, signup_id)
+        if signup is None:
+            continue
+        slot = LineupSlot(
+            raid_event_id=raid_event_id,
+            slot_group="bench",
+            slot_index=idx,
+            signup_id=signup_id,
+            character_id=signup.character_id,
+            confirmed_by=confirmed_by,
+            confirmed_at=datetime.now(timezone.utc),
+        )
+        db.session.add(slot)
+
     db.session.commit()
     return get_lineup_grouped(raid_event_id)
 
@@ -206,3 +229,17 @@ def confirm_lineup(raid_event_id: int, confirmed_by: int) -> list[LineupSlot]:
             slot.confirmed_at = now
     db.session.commit()
     return slots
+
+
+def add_to_bench_queue(signup: Signup) -> None:
+    """Add a signup to the end of the bench queue."""
+    idx = _next_slot_index(signup.raid_event_id, "bench")
+    slot = LineupSlot(
+        raid_event_id=signup.raid_event_id,
+        slot_group="bench",
+        slot_index=idx,
+        signup_id=signup.id,
+        character_id=signup.character_id,
+    )
+    db.session.add(slot)
+    db.session.commit()

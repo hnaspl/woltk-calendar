@@ -75,7 +75,7 @@
       </div>
     </div>
 
-    <!-- Bench pool: players not assigned to a role column -->
+    <!-- Bench queue: ordered list of players waiting for a slot -->
     <div
       v-if="bench.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
@@ -85,10 +85,10 @@
       @dragleave="isOfficer && handleDragLeave($event, 'bench')"
       @drop.prevent="isOfficer && onDropBench()"
     >
-      <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">Bench ({{ bench.length }})</p>
+      <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">Bench Queue ({{ bench.length }})</p>
       <div class="flex flex-wrap gap-2">
         <CharacterTooltip
-          v-for="s in bench"
+          v-for="(s, i) in bench"
           :key="s.id"
           :character="s.character"
           position="top"
@@ -103,6 +103,7 @@
             @dragstart="onDragStart($event, s, 'bench', -1)"
             @dragend="onDragEnd"
           >
+            <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ i + 1 }}</span>
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
             <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
@@ -179,6 +180,7 @@ const uiStore = useUiStore()
 const saving = ref(false)
 const dirty = ref(false)
 const lineupVersion = ref(null)
+const benchQueue = ref([]) // Ordered list of bench signup objects from API
 
 // Role change confirmation modal state
 const showRoleChangeModal = ref(false)
@@ -266,6 +268,9 @@ function onDropColumn(e, targetKey) {
     lineup.value[found.key].splice(found.idx, 1)
   }
 
+  // Remove from bench queue when moving to a role column
+  benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+
   // Add to target (avoid duplicates)
   if (!lineup.value[targetKey].find(s => Number(s.id) === id)) {
     lineup.value[targetKey].push(found.signup)
@@ -279,9 +284,16 @@ function onDropBench() {
   const sourceKey = dragSourceKey.value
   const sourceIdx = dragSourceIndex.value
 
-  // Only act when dragged from a role column (remove from lineup)
+  // Only act when dragged from a role column (remove from lineup, add to end of bench queue)
   if (sourceKey && sourceKey !== 'bench' && sourceIdx >= 0) {
+    const removed = lineup.value[sourceKey][sourceIdx]
     lineup.value[sourceKey].splice(sourceIdx, 1)
+    // Add to end of bench queue
+    if (removed) {
+      const id = Number(removed.id)
+      benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+      benchQueue.value.push(removed)
+    }
     dirty.value = true
     autoSave()
   }
@@ -308,8 +320,11 @@ function confirmRoleChange() {
     lineup.value[sourceKey].splice(sourceIdx, 1)
   }
 
-  // Add to target (avoid duplicates)
+  // Remove from bench queue when placing in a role column
   const id = Number(signup.id)
+  benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+
+  // Add to target (avoid duplicates)
   if (!lineup.value[targetKey].find(s => Number(s.id) === id)) {
     lineup.value[targetKey].push(signup)
   }
@@ -359,6 +374,7 @@ async function loadLineup() {
     lineup.value.tanks      = data.tanks      ?? []
     lineup.value.healers    = data.healers    ?? []
     lineup.value.dps        = data.dps        ?? []
+    benchQueue.value        = data.bench_queue ?? []
     lineupVersion.value     = data.version ?? null
     enforceSlotLimits()
   } catch {
@@ -441,16 +457,41 @@ watch(lineupCounts, (counts) => {
   emit('lineup-updated', counts)
 }, { deep: true, immediate: true })
 
-const bench = computed(() =>
-  activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
-)
+const bench = computed(() => {
+  const allUnassigned = activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
+  const unassignedMap = new Map(allUnassigned.map(s => [Number(s.id), s]))
+
+  // Start with bench queue order (use fresh signup data for display)
+  const ordered = []
+  for (const bq of benchQueue.value) {
+    const fresh = unassignedMap.get(Number(bq.id))
+    if (fresh) {
+      ordered.push(fresh)
+      unassignedMap.delete(Number(bq.id))
+    }
+  }
+
+  // Append any remaining unassigned players not yet in queue (new signups)
+  for (const s of unassignedMap.values()) {
+    ordered.push(s)
+  }
+
+  return ordered
+})
 
 function profString(s) {
   return (s.character?.metadata?.professions ?? []).map(p => p.name).join(', ')
 }
 
 function removeFromRole(key, index) {
+  const removed = lineup.value[key][index]
   lineup.value[key].splice(index, 1)
+  // Add to end of bench queue
+  if (removed) {
+    const id = Number(removed.id)
+    benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+    benchQueue.value.push(removed)
+  }
   dirty.value = true
   autoSave()
 }
@@ -465,6 +506,7 @@ async function saveLineup(auto = false) {
       tanks:      lineup.value.tanks.map(s => s.id),
       healers:    lineup.value.healers.map(s => s.id),
       dps:        lineup.value.dps.map(s => s.id),
+      bench_queue: bench.value.map(s => s.id),
       version:    lineupVersion.value,
     })
     // Update local state from server response
@@ -473,6 +515,7 @@ async function saveLineup(auto = false) {
     lineup.value.tanks      = result.tanks      ?? []
     lineup.value.healers    = result.healers    ?? []
     lineup.value.dps        = result.dps        ?? []
+    benchQueue.value        = result.bench_queue ?? []
     lineupVersion.value     = result.version ?? null
     dirty.value = false
     emit('saved', { auto })
@@ -485,6 +528,7 @@ async function saveLineup(auto = false) {
       lineup.value.tanks      = fresh.tanks      ?? []
       lineup.value.healers    = fresh.healers    ?? []
       lineup.value.dps        = fresh.dps        ?? []
+      benchQueue.value        = fresh.bench_queue ?? []
       lineupVersion.value     = fresh.version ?? null
       dirty.value = false
       uiStore.showToast('Lineup was updated by another officer. Your changes were reset.', 'warning')

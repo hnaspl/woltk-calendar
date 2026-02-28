@@ -60,13 +60,37 @@ def get_role_counts(raid_event_id: int, roles: dict) -> dict:
 def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     """Promote the first matching benched signup to 'going'.
 
-    Preference order: mains before alts, then earliest created_at.
+    Uses bench queue order (slot_index) when bench lineup slots exist,
+    falling back to mains-first then earliest created_at.
     Also auto-assigns the promoted player to the lineup board.
     """
     from app.models.character import Character
+    from app.models.signup import LineupSlot
     from app.services import lineup_service
 
-    # Find benched signups for this role, prefer mains, then oldest
+    # First: check bench queue (explicit queue order via LineupSlots)
+    bench_slot = db.session.execute(
+        sa.select(LineupSlot)
+        .join(Signup, Signup.id == LineupSlot.signup_id)
+        .where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group == "bench",
+            Signup.chosen_role == role,
+            Signup.status == SignupStatus.BENCH.value,
+        )
+        .order_by(LineupSlot.slot_index.asc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+    if bench_slot is not None:
+        benched = bench_slot.signup
+        benched.status = SignupStatus.GOING.value
+        db.session.delete(bench_slot)
+        db.session.commit()
+        lineup_service.auto_assign_slot(benched)
+        return
+
+    # Fallback: no bench queue slots, use created_at ordering
     benched = db.session.execute(
         sa.select(Signup)
         .join(Character, Character.id == Signup.character_id)
@@ -136,9 +160,11 @@ def create_signup(
     db.session.add(signup)
     db.session.commit()
 
-    # Auto-assign to lineup board if going
+    # Auto-assign to lineup board if going, or add to bench queue if benched
     if status == SignupStatus.GOING.value:
         lineup_service.auto_assign_slot(signup)
+    elif status == SignupStatus.BENCH.value:
+        lineup_service.add_to_bench_queue(signup)
 
     return signup
 
