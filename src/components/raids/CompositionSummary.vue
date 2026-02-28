@@ -72,6 +72,18 @@ function countRole(role) {
 
 const roleSummary = computed(() => [
   {
+    name: 'main_tank',
+    count: countRole('main_tank'),
+    target: 1,
+    barClass: 'bg-blue-300'
+  },
+  {
+    name: 'off_tank',
+    count: countRole('off_tank'),
+    target: 1,
+    barClass: 'bg-cyan-400'
+  },
+  {
     name: 'tank',
     count: countRole('tank'),
     target: props.tankSlots,

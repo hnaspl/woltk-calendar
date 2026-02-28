@@ -129,6 +129,8 @@ const success = ref(false)
 
 const roles = [
   { value: 'tank' },
+  { value: 'main_tank', label: 'MT' },
+  { value: 'off_tank', label: 'OT' },
   { value: 'healer' },
   { value: 'dps' }
 ]

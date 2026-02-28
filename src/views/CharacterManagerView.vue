@@ -210,6 +210,8 @@
           <select v-model="form.role" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option value="">Select role…</option>
             <option value="tank">Tank</option>
+            <option value="main_tank">Main Tank</option>
+            <option value="off_tank">Off Tank</option>
             <option value="healer">Healer</option>
             <option value="dps">DPS</option>
           </select>

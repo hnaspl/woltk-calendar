@@ -28,8 +28,8 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
 def get_lineup_grouped(raid_event_id: int) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
-    grouped: dict[str, list] = {"tanks": [], "healers": [], "dps": []}
-    role_map = {"tank": "tanks", "healer": "healers", "dps": "dps"}
+    grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "tanks": [], "healers": [], "dps": []}
+    role_map = {"main_tank": "main_tanks", "off_tank": "off_tanks", "tank": "tanks", "healer": "healers", "dps": "dps"}
     for slot in slots:
         key = role_map.get(slot.slot_group, "dps")
         if slot.signup is not None:
@@ -113,7 +113,7 @@ def update_lineup_grouped(
     )
     db.session.flush()
 
-    role_map = {"tanks": "tank", "healers": "healer", "dps": "dps"}
+    role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "tanks": "tank", "healers": "healer", "dps": "dps"}
     for key, slot_group in role_map.items():
         signup_ids = data.get(key, [])
         for idx, signup_id in enumerate(signup_ids):

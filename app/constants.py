@@ -8,16 +8,16 @@ from app.enums import WowClass, Role
 # Class → available roles mapping
 # ---------------------------------------------------------------------------
 CLASS_ROLES: dict[WowClass, list[Role]] = {
-    WowClass.DEATH_KNIGHT: [Role.TANK, Role.DPS],
-    WowClass.DRUID: [Role.TANK, Role.HEALER, Role.DPS],
+    WowClass.DEATH_KNIGHT: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
+    WowClass.DRUID: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
     WowClass.HUNTER: [Role.DPS],
     WowClass.MAGE: [Role.DPS],
-    WowClass.PALADIN: [Role.TANK, Role.HEALER, Role.DPS],
+    WowClass.PALADIN: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
     WowClass.PRIEST: [Role.HEALER, Role.DPS],
     WowClass.ROGUE: [Role.DPS],
     WowClass.SHAMAN: [Role.HEALER, Role.DPS],
     WowClass.WARLOCK: [Role.DPS],
-    WowClass.WARRIOR: [Role.TANK, Role.DPS],
+    WowClass.WARRIOR: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
 }
 
 # ---------------------------------------------------------------------------
@@ -155,6 +155,6 @@ WARMANE_REALMS: list[str] = [
 # Standard role slot distribution for raid sizes
 # ---------------------------------------------------------------------------
 ROLE_SLOTS: dict[int, dict[str, int]] = {
-    10: {"tank": 2, "healer": 3, "dps": 5},
-    25: {"tank": 3, "healer": 6, "dps": 16},
+    10: {"tank": 2, "main_tank": 1, "off_tank": 1, "healer": 3, "dps": 5},
+    25: {"tank": 3, "main_tank": 1, "off_tank": 2, "healer": 6, "dps": 16},
 }

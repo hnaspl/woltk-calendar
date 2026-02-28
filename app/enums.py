@@ -30,6 +30,8 @@ class WowClass(str, Enum):
 
 class Role(str, Enum):
     TANK = "tank"
+    MAIN_TANK = "main_tank"
+    OFF_TANK = "off_tank"
     HEALER = "healer"
     DPS = "dps"
 
@@ -80,5 +82,7 @@ class JobStatus(str, Enum):
 
 class SlotGroup(str, Enum):
     TANK = "tank"
+    MAIN_TANK = "main_tank"
+    OFF_TANK = "off_tank"
     HEALER = "healer"
     DPS = "dps"

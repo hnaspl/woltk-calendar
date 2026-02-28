@@ -9,7 +9,41 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-px bg-border-default">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-px bg-border-default">
+      <!-- MAIN TANKS -->
+      <div class="bg-bg-secondary p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <img :src="getRoleIcon('main_tank')" class="w-5 h-5 rounded" alt="Main Tank" />
+          <span class="text-blue-200 font-semibold text-sm">MT</span>
+          <span class="ml-auto text-xs text-text-muted">{{ lineup.main_tanks.length }}</span>
+        </div>
+        <LineupColumn
+          role="main_tank"
+          :slots="lineup.main_tanks"
+          :signups="availableMainTanks"
+          :editable="isOfficer"
+          @assign="(s) => assignToRole('main_tanks', s)"
+          @remove="(i) => removeFromRole('main_tanks', i)"
+        />
+      </div>
+
+      <!-- OFF TANKS -->
+      <div class="bg-bg-secondary p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <img :src="getRoleIcon('off_tank')" class="w-5 h-5 rounded" alt="Off Tank" />
+          <span class="text-cyan-300 font-semibold text-sm">OT</span>
+          <span class="ml-auto text-xs text-text-muted">{{ lineup.off_tanks.length }}</span>
+        </div>
+        <LineupColumn
+          role="off_tank"
+          :slots="lineup.off_tanks"
+          :signups="availableOffTanks"
+          :editable="isOfficer"
+          @assign="(s) => assignToRole('off_tanks', s)"
+          @remove="(i) => removeFromRole('off_tanks', i)"
+        />
+      </div>
+
       <!-- TANKS -->
       <div class="bg-bg-secondary p-4">
         <div class="flex items-center gap-2 mb-3">
@@ -111,14 +145,16 @@ const emit = defineEmits(['saved'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
 const saving = ref(false)
 
-const lineup = ref({ tanks: [], healers: [], dps: [] })
+const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 
 async function loadLineup() {
   try {
     const data = await lineupApi.getLineup(props.guildId, props.eventId)
-    lineup.value.tanks   = data.tanks   ?? []
-    lineup.value.healers = data.healers ?? []
-    lineup.value.dps     = data.dps     ?? []
+    lineup.value.main_tanks = data.main_tanks ?? []
+    lineup.value.off_tanks  = data.off_tanks  ?? []
+    lineup.value.tanks      = data.tanks      ?? []
+    lineup.value.healers    = data.healers    ?? []
+    lineup.value.dps        = data.dps        ?? []
   } catch {
     // No existing lineup – auto-populate from going signups
     autoPopulateFromSignups()
@@ -135,9 +171,11 @@ watch(
 
 function autoPopulateFromSignups() {
   const going = props.signups.filter(s => s.status === 'going')
-  lineup.value.tanks   = going.filter(s => s.chosen_role === 'tank')
-  lineup.value.healers = going.filter(s => s.chosen_role === 'healer')
-  lineup.value.dps     = going.filter(s => s.chosen_role === 'dps')
+  lineup.value.main_tanks = going.filter(s => s.chosen_role === 'main_tank')
+  lineup.value.off_tanks  = going.filter(s => s.chosen_role === 'off_tank')
+  lineup.value.tanks      = going.filter(s => s.chosen_role === 'tank')
+  lineup.value.healers    = going.filter(s => s.chosen_role === 'healer')
+  lineup.value.dps        = going.filter(s => s.chosen_role === 'dps')
 }
 
 const activeSignups = computed(() =>
@@ -146,7 +184,7 @@ const activeSignups = computed(() =>
 
 const assignedIds = computed(() => {
   const ids = new Set()
-  ;[...lineup.value.tanks, ...lineup.value.healers, ...lineup.value.dps].forEach(s => ids.add(s.id))
+  ;[...lineup.value.main_tanks, ...lineup.value.off_tanks, ...lineup.value.tanks, ...lineup.value.healers, ...lineup.value.dps].forEach(s => ids.add(s.id))
   return ids
 })
 
@@ -154,9 +192,11 @@ const unassigned = computed(() =>
   activeSignups.value.filter(s => !assignedIds.value.has(s.id))
 )
 
-const availableTanks   = computed(() => unassigned.value.filter(s => s.chosen_role === 'tank'))
-const availableHealers = computed(() => unassigned.value.filter(s => s.chosen_role === 'healer'))
-const availableDps     = computed(() => unassigned.value.filter(s => s.chosen_role === 'dps'))
+const availableMainTanks = computed(() => unassigned.value.filter(s => s.chosen_role === 'main_tank'))
+const availableOffTanks  = computed(() => unassigned.value.filter(s => s.chosen_role === 'off_tank'))
+const availableTanks     = computed(() => unassigned.value.filter(s => s.chosen_role === 'tank'))
+const availableHealers   = computed(() => unassigned.value.filter(s => s.chosen_role === 'healer'))
+const availableDps       = computed(() => unassigned.value.filter(s => s.chosen_role === 'dps'))
 
 function assignToRole(role, signup) {
   lineup.value[role].push(signup)
@@ -170,9 +210,11 @@ async function saveLineup() {
   saving.value = true
   try {
     await lineupApi.saveLineup(props.guildId, props.eventId, {
-      tanks:   lineup.value.tanks.map(s => s.id),
-      healers: lineup.value.healers.map(s => s.id),
-      dps:     lineup.value.dps.map(s => s.id)
+      main_tanks: lineup.value.main_tanks.map(s => s.id),
+      off_tanks:  lineup.value.off_tanks.map(s => s.id),
+      tanks:      lineup.value.tanks.map(s => s.id),
+      healers:    lineup.value.healers.map(s => s.id),
+      dps:        lineup.value.dps.map(s => s.id)
     })
     emit('saved', lineup.value)
   } catch (err) {
