@@ -257,6 +257,9 @@ watch(
       form.chosenSpec  = s.chosen_spec   ?? ''
       form.status      = s.status        ?? 'going'
       form.note        = s.note          ?? ''
+    } else {
+      // Reset form when editing ends so spec doesn't persist from previous character
+      Object.assign(form, INITIAL_FORM)
     }
   },
   { immediate: true }

@@ -24,7 +24,7 @@
         <div class="flex items-center gap-2 mb-3">
           <img :src="getRoleIcon(col.role)" class="w-5 h-5 rounded" :alt="col.label" />
           <span :class="col.labelClass" class="font-semibold text-sm">{{ col.label }}</span>
-          <span class="ml-auto text-xs text-text-muted">{{ lineup[col.key].length }} / {{ col.slots }}</span>
+          <span class="ml-auto text-xs" :class="lineup[col.key].length >= col.slots ? 'text-red-400 font-semibold' : 'text-text-muted'">{{ lineup[col.key].length }} / {{ col.slots }}</span>
         </div>
         <div class="space-y-1.5 min-h-[2rem]">
           <!-- Assigned slots -->
@@ -117,6 +117,7 @@
             <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
             <span>{{ s.character?.name ?? '?' }}</span>
             <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
+            <span v-if="s.status === 'bench'" class="text-[10px] text-yellow-400 font-semibold">Bench</span>
             <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
               Lv{{ s.character.metadata.level }}
             </span>
@@ -235,6 +236,18 @@ function onDropColumn(e, targetKey) {
   const found = findSignupById(id)
   if (!found) return
 
+  // Overflow protection: check if target column is full
+  const col = allColumns.value.find(c => c.key === targetKey)
+  if (col) {
+    const currentCount = lineup.value[targetKey].length
+    // Don't count the item if it's already in this column (re-ordering)
+    const alreadyInTarget = lineup.value[targetKey].find(s => Number(s.id) === id)
+    if (!alreadyInTarget && currentCount >= col.slots) {
+      uiStore.showToast(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first or choose a different role.`, 'error')
+      return
+    }
+  }
+
   // Remove from source
   if (found.key !== 'unassigned') {
     lineup.value[found.key].splice(found.idx, 1)
@@ -304,7 +317,7 @@ function autoPopulateFromSignups() {
 
 // ── Computed helpers ──
 const activeSignups = computed(() =>
-  props.signups.filter(s => ['going', 'tentative'].includes(s.status))
+  props.signups.filter(s => ['going', 'tentative', 'bench'].includes(s.status))
 )
 
 const assignedIds = computed(() => {
@@ -338,6 +351,13 @@ function profString(s) {
 function onSelectAssign(e, key) {
   const found = unassigned.value.find(s => String(s.id) === e.target.value)
   if (found) {
+    // Overflow protection: check if column is full
+    const col = allColumns.value.find(c => c.key === key)
+    if (col && lineup.value[key].length >= col.slots) {
+      uiStore.showToast(`${col.label} slots are full (${lineup.value[key].length}/${col.slots}). Remove someone first or choose a different role.`, 'error')
+      e.target.value = ''
+      return
+    }
     lineup.value[key].push(found)
     dirty.value = true
     autoSave()
