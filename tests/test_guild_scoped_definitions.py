@@ -625,3 +625,153 @@ class TestCreateGuildAPI:
             # Note: the actual delete may fail due to cascading constraints
             # but we verify the permission check passes (not 403)
             assert resp.status_code != 403
+
+
+# ===========================================================================
+# Test: Copy template/series to guild
+# ===========================================================================
+
+class TestCopyTemplateToGuild:
+    """Verify copying templates and series to other guilds."""
+
+    def test_copy_template_creates_guild_copy(self, seeded):
+        """Copying a template creates a copy in the target guild."""
+        from app.services import event_service
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        rd = builtins[0]
+
+        tmpl = event_service.create_template(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"name": "Weekly ICC", "raid_definition_id": rd.id, "raid_size": 25}
+        )
+
+        copy = event_service.copy_template_to_guild(
+            tmpl, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        assert copy.guild_id == seeded["guild_b"].id
+        assert "Copy" in copy.name
+        assert copy.raid_size == tmpl.raid_size
+
+    def test_copy_template_unique_names(self, seeded):
+        """Multiple copies of same template get unique names."""
+        from app.services import event_service
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        rd = builtins[0]
+
+        tmpl = event_service.create_template(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"name": "Raid Night", "raid_definition_id": rd.id}
+        )
+
+        copy1 = event_service.copy_template_to_guild(
+            tmpl, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        copy2 = event_service.copy_template_to_guild(
+            tmpl, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        assert copy1.name != copy2.name
+
+    def test_copy_template_api(self, seeded, app):
+        """API endpoint copies template to another guild."""
+        from app.services import event_service
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        rd = builtins[0]
+
+        tmpl = event_service.create_template(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"name": "API Copy Test", "raid_definition_id": rd.id}
+        )
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild_b'].id}/templates/{tmpl.id}/copy",
+            )
+            assert resp.status_code == 201
+            data = resp.get_json()
+            assert data["guild_id"] == seeded["guild_b"].id
+            assert "Copy" in data["name"]
+
+
+class TestCopySeriesToGuild:
+    """Verify copying recurring series to other guilds."""
+
+    def test_copy_series_creates_guild_copy(self, seeded):
+        """Copying a series creates a copy in the target guild with derived realm."""
+        from app.services import event_service
+
+        series = event_service.create_series(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"title": "Weekly Raid", "realm_name": "Icecrown", "recurrence_rule": "weekly"}
+        )
+
+        copy = event_service.copy_series_to_guild(
+            series, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        assert copy.guild_id == seeded["guild_b"].id
+        assert "Copy" in copy.title
+        # Realm should be derived from target guild
+        assert copy.realm_name == "Lordaeron"
+
+    def test_copy_series_unique_titles(self, seeded):
+        """Multiple copies of same series get unique titles."""
+        from app.services import event_service
+
+        series = event_service.create_series(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"title": "ICC Night", "realm_name": "Icecrown", "recurrence_rule": "weekly"}
+        )
+
+        copy1 = event_service.copy_series_to_guild(
+            series, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        copy2 = event_service.copy_series_to_guild(
+            series, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        assert copy1.title != copy2.title
+
+    def test_copy_series_api(self, seeded, app):
+        """API endpoint copies series to another guild."""
+        from app.services import event_service
+
+        series = event_service.create_series(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"title": "API Series Copy", "realm_name": "Icecrown", "recurrence_rule": "weekly"}
+        )
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild_b'].id}/series/{series.id}/copy",
+            )
+            assert resp.status_code == 201
+            data = resp.get_json()
+            assert data["guild_id"] == seeded["guild_b"].id
+            assert "Copy" in data["title"]
+            assert data["realm_name"] == "Lordaeron"
+
+    def test_copy_series_preserves_settings(self, seeded):
+        """Copied series preserves recurrence, size, difficulty, duration."""
+        from app.services import event_service
+
+        series = event_service.create_series(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"title": "Biweekly Heroic", "realm_name": "Icecrown",
+             "recurrence_rule": "biweekly", "default_raid_size": 10,
+             "default_difficulty": "heroic", "duration_minutes": 240,
+             "start_time_local": "20:30"}
+        )
+
+        copy = event_service.copy_series_to_guild(
+            series, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        assert copy.recurrence_rule == "biweekly"
+        assert copy.default_raid_size == 10
+        assert copy.default_difficulty == "heroic"
+        assert copy.duration_minutes == 240
+        assert copy.start_time_local == "20:30"
