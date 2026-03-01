@@ -43,6 +43,18 @@
               <td class="px-4 py-2.5 text-right space-x-2">
                 <template v-if="u.id !== authStore.user.id">
                   <WowButton
+                    v-if="!u.is_admin"
+                    variant="secondary"
+                    class="text-xs py-1 px-2"
+                    @click="toggleAdmin(u)"
+                  >Promote Admin</WowButton>
+                  <WowButton
+                    v-else
+                    variant="secondary"
+                    class="text-xs py-1 px-2"
+                    @click="toggleAdmin(u)"
+                  >Revoke Admin</WowButton>
+                  <WowButton
                     v-if="u.is_active"
                     variant="secondary"
                     class="text-xs py-1 px-2"
@@ -174,6 +186,17 @@ async function toggleBlock(user) {
     uiStore.showToast(updated.is_active ? 'User unblocked' : 'User blocked', 'success')
   } catch {
     uiStore.showToast('Failed to update user', 'error')
+  }
+}
+
+async function toggleAdmin(user) {
+  try {
+    const updated = await adminApi.updateUser(user.id, { is_admin: !user.is_admin })
+    const idx = users.value.findIndex(u => u.id === user.id)
+    if (idx !== -1) users.value[idx] = updated
+    uiStore.showToast(updated.is_admin ? `${updated.username} promoted to Global Admin` : `${updated.username} admin revoked`, 'success')
+  } catch {
+    uiStore.showToast('Failed to update admin status', 'error')
   }
 }
 

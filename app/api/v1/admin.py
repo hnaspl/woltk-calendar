@@ -50,6 +50,9 @@ def update_user(user_id: int):
     if "is_active" in data:
         user = auth_service.set_user_active(user, bool(data["is_active"]))
 
+    if "is_admin" in data:
+        user = auth_service.set_user_admin(user, bool(data["is_admin"]))
+
     return jsonify(user.to_dict()), 200
 
 

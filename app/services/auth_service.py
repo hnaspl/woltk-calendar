@@ -80,6 +80,13 @@ def set_user_active(user: User, active: bool) -> User:
     return user
 
 
+def set_user_admin(user: User, admin: bool) -> User:
+    """Promote or revoke global admin status for a user."""
+    user.is_admin = admin
+    db.session.commit()
+    return user
+
+
 def delete_user(user: User) -> None:
     """Permanently delete a user."""
     db.session.delete(user)
