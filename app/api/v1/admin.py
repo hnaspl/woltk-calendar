@@ -166,4 +166,10 @@ def update_system_settings():
             else:
                 db.session.add(SystemSetting(key=key, value=val))
     db.session.commit()
+
+    # Reschedule auto-sync if autosync settings were changed
+    if "autosync_enabled" in data or "autosync_interval_minutes" in data:
+        from app.jobs.scheduler import _apply_autosync_schedule, get_autosync_config
+        _apply_autosync_schedule(get_autosync_config())
+
     return _system_settings_response()

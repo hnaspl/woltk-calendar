@@ -272,8 +272,6 @@ async function saveAutosync() {
       enabled: updated.autosync_enabled === 'true',
       interval_minutes: parseInt(updated.autosync_interval_minutes) || 60,
     }
-    // Also reschedule the job via the autosync endpoint
-    await adminApi.updateAutosyncSettings(autosyncForm.value)
     uiStore.showToast('Auto-sync settings saved', 'success')
   } catch {
     uiStore.showToast('Failed to save auto-sync settings', 'error')

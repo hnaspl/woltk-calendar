@@ -188,6 +188,24 @@ def _register_socketio_handlers() -> None:
             join_room(f"user_{current_user.id}")
 
 
+def _seed_system_settings_if_missing() -> int:
+    """Ensure default system settings exist in the database. Returns count of settings seeded."""
+    from app.models.system_setting import SystemSetting
+    defaults = {
+        "wowhead_tooltips": "true",
+        "autosync_enabled": "false",
+        "autosync_interval_minutes": "60",
+    }
+    seeded = 0
+    for key, default_value in defaults.items():
+        existing = db.session.get(SystemSetting, key)
+        if not existing:
+            db.session.add(SystemSetting(key=key, value=default_value))
+            seeded += 1
+    db.session.commit()
+    return seeded
+
+
 def _seed_permissions_if_empty(app: Flask) -> None:
     """Seed default permission roles and permissions if tables are empty."""
     try:
@@ -205,17 +223,9 @@ def _seed_permissions_if_empty(app: Flask) -> None:
 
     # Seed default system settings if missing
     try:
-        from app.models.system_setting import SystemSetting
-        defaults = {
-            "wowhead_tooltips": "true",
-            "autosync_enabled": "false",
-            "autosync_interval_minutes": "60",
-        }
-        for key, default_value in defaults.items():
-            existing = db.session.get(SystemSetting, key)
-            if not existing:
-                db.session.add(SystemSetting(key=key, value=default_value))
-        db.session.commit()
+        seeded = _seed_system_settings_if_missing()
+        if seeded:
+            app.logger.info("Seeded %d default system setting(s).", seeded)
     except Exception as exc:
         app.logger.warning("Failed to seed system settings: %s", exc)
 
@@ -248,19 +258,7 @@ def _register_commands(app: Flask) -> None:
         perm_count = seed_permissions()
         click.echo(f"Seeded {perm_count} role(s) with permissions.")
 
-        from app.models.system_setting import SystemSetting
-        defaults = {
-            "wowhead_tooltips": "true",
-            "autosync_enabled": "false",
-            "autosync_interval_minutes": "60",
-        }
-        seeded_settings = 0
-        for key, default_value in defaults.items():
-            existing = db.session.get(SystemSetting, key)
-            if not existing:
-                db.session.add(SystemSetting(key=key, value=default_value))
-                seeded_settings += 1
-        db.session.commit()
+        seeded_settings = _seed_system_settings_if_missing()
         if seeded_settings:
             click.echo(f"Seeded {seeded_settings} system setting(s).")
 
@@ -295,18 +293,6 @@ def _register_commands(app: Flask) -> None:
             click.echo(f"Seeded {created} role(s) with permissions.")
 
         # Seed default system settings if missing
-        from app.models.system_setting import SystemSetting
-        defaults = {
-            "wowhead_tooltips": "true",
-            "autosync_enabled": "false",
-            "autosync_interval_minutes": "60",
-        }
-        seeded_settings = 0
-        for key, default_value in defaults.items():
-            existing = db.session.get(SystemSetting, key)
-            if not existing:
-                db.session.add(SystemSetting(key=key, value=default_value))
-                seeded_settings += 1
-        db.session.commit()
+        seeded_settings = _seed_system_settings_if_missing()
         if seeded_settings:
             click.echo(f"Seeded {seeded_settings} system setting(s).")
