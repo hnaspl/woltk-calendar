@@ -53,7 +53,7 @@ export const CLASS_SPECS = {
   'Shaman':        ['Elemental', 'Enhancement', 'Restoration'],
   'Mage':          ['Arcane', 'Fire', 'Frost'],
   'Warlock':       ['Affliction', 'Demonology', 'Destruction'],
-  'Druid':         ['Balance', 'Feral', 'Restoration'],
+  'Druid':         ['Balance', 'Feral Combat', 'Restoration'],
   'Death Knight':  ['Blood', 'Frost', 'Unholy'],
 }
 

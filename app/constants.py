@@ -25,7 +25,7 @@ CLASS_ROLES: dict[WowClass, list[Role]] = {
 # ---------------------------------------------------------------------------
 CLASS_SPECS: dict[WowClass, list[str]] = {
     WowClass.DEATH_KNIGHT: ["Blood", "Frost", "Unholy"],
-    WowClass.DRUID: ["Balance", "Feral", "Restoration"],
+    WowClass.DRUID: ["Balance", "Feral Combat", "Restoration"],
     WowClass.HUNTER: ["Beast Mastery", "Marksmanship", "Survival"],
     WowClass.MAGE: ["Arcane", "Fire", "Frost"],
     WowClass.PALADIN: ["Holy", "Protection", "Retribution"],

@@ -131,36 +131,52 @@ export function useWowIcons() {
 
   function getSpecIcon(specName) {
     const specMap = {
+      // Warrior
       'arms':           spec_arms,
       'fury':           spec_fury,
       'protection warrior': icon_tank,
+      // Paladin
       'holy paladin':   spec_holy_paladin,
       'protection paladin': spec_prot_paladin,
       'retribution':    spec_retribution,
+      // Druid
       'balance':        spec_balance,
       'feral':          spec_feral,
+      'feral combat':   spec_feral,
       'restoration druid': spec_resto_druid,
+      // Hunter
       'beast mastery':  spec_bm,
       'marksmanship':   spec_mm,
       'survival':       spec_survival,
+      // Mage
       'arcane':         spec_arcane,
       'fire':           spec_fire,
       'frost mage':     spec_frost_mage,
+      // Warlock
       'affliction':     spec_affliction,
       'demonology':     spec_demonology,
       'destruction':    spec_destruction,
+      // Shaman
       'elemental':      spec_elemental,
       'enhancement':    spec_enhancement,
       'restoration shaman': spec_resto_shaman,
+      // Priest
       'holy priest':    spec_holy_priest,
       'discipline':     spec_discipline,
       'shadow':         spec_shadow,
+      // Rogue
       'assassination':  spec_assassination,
       'combat':         spec_combat,
       'subtlety':       spec_subtlety,
+      // Death Knight
       'blood':          spec_blood,
       'frost dk':       spec_frost_dk,
-      'unholy':         spec_unholy
+      'unholy':         spec_unholy,
+      // Unqualified aliases (Warmane returns bare tree names)
+      'protection':     icon_tank,
+      'holy':           spec_holy_paladin,
+      'frost':          spec_frost_mage,
+      'restoration':    spec_resto_druid,
     }
     const key = specName?.toLowerCase().trim() ?? ''
     return specMap[key] ?? icon_fallback
