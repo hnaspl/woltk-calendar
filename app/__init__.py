@@ -125,9 +125,9 @@ def create_app(config_override: dict | None = None) -> Flask:
             from app.jobs.scheduler import init_scheduler
             init_scheduler(app)
 
-        # Auto-migrate: drop legacy status column from signups table
+        # Seed default permission roles/permissions if tables are empty
         if not app.config.get("TESTING", False):
-            _auto_migrate(app)
+            _seed_permissions_if_empty(app)
 
     return app
 
@@ -188,92 +188,20 @@ def _register_socketio_handlers() -> None:
             join_room(f"user_{current_user.id}")
 
 
-def _auto_migrate(app: Flask) -> None:
-    """Run lightweight schema migrations for existing databases.
-
-    Currently handles:
-    - Dropping the legacy ``status`` column from ``signups`` if present.
-    - Adding ``duration_minutes`` column to ``raid_events`` if missing.
-    - Adding ``default_duration_minutes`` column to ``raid_definitions`` if missing.
-    - Creating permission system tables and seeding defaults if missing.
-    """
+def _seed_permissions_if_empty(app: Flask) -> None:
+    """Seed default permission roles and permissions if tables are empty."""
     try:
-        _drop_signups_status_column()
+        from app.models.permission import SystemRole
+        import sqlalchemy as sa
+        count = db.session.execute(
+            sa.select(sa.func.count()).select_from(SystemRole)
+        ).scalar()
+        if count == 0:
+            from app.seeds.permissions import seed_permissions
+            created = seed_permissions()
+            app.logger.info("Seeded %d default roles with permissions.", created)
     except Exception as exc:
-        app.logger.debug("Auto-migration: signups.status column already removed or not present: %s", exc)
-
-    try:
-        _add_duration_columns()
-    except Exception as exc:
-        app.logger.warning("Auto-migration: failed to add duration columns: %s", exc)
-
-    try:
-        _ensure_permission_tables(app)
-    except Exception as exc:
-        app.logger.warning("Auto-migration: failed to create permission tables: %s", exc)
-
-
-def _drop_signups_status_column() -> None:
-    """Drop the legacy ``status`` column from the signups table if it exists."""
-    from sqlalchemy import inspect, text
-
-    inspector = inspect(db.engine)
-    columns = [col["name"] for col in inspector.get_columns("signups")]
-    if "status" not in columns:
-        return
-
-    # SQLite ≥ 3.35 supports ALTER TABLE DROP COLUMN
-    with db.engine.begin() as conn:
-        conn.execute(text("ALTER TABLE signups DROP COLUMN status"))
-
-
-def _add_duration_columns() -> None:
-    """Add duration columns to raid_events and raid_definitions if missing."""
-    from sqlalchemy import inspect, text
-
-    inspector = inspect(db.engine)
-
-    # Add duration_minutes to raid_events
-    re_cols = [col["name"] for col in inspector.get_columns("raid_events")]
-    if "duration_minutes" not in re_cols:
-        with db.engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE raid_events ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 180"
-            ))
-
-    # Add default_duration_minutes to raid_definitions
-    rd_cols = [col["name"] for col in inspector.get_columns("raid_definitions")]
-    if "default_duration_minutes" not in rd_cols:
-        with db.engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE raid_definitions ADD COLUMN default_duration_minutes INTEGER NOT NULL DEFAULT 180"
-            ))
-
-
-def _ensure_permission_tables(app: Flask) -> None:
-    """Create permission system tables and seed defaults if not present."""
-    from sqlalchemy import inspect
-
-    inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
-
-    if "system_roles" not in tables:
-        # Create only the permission-related tables
-        from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
-        for model in [SystemRole, Permission, RolePermission, RoleGrantRule]:
-            model.__table__.create(db.engine, checkfirst=True)
-        app.logger.info("Auto-migration: created permission system tables.")
-
-    # Seed default roles/permissions if empty
-    from app.models.permission import SystemRole
-    import sqlalchemy as sa
-    count = db.session.execute(
-        sa.select(sa.func.count()).select_from(SystemRole)
-    ).scalar()
-    if count == 0:
-        from app.seeds.permissions import seed_permissions
-        created = seed_permissions()
-        app.logger.info("Auto-migration: seeded %d default roles with permissions.", created)
+        app.logger.warning("Failed to seed permissions: %s", exc)
 
 
 def _register_commands(app: Flask) -> None:
@@ -323,21 +251,13 @@ def _register_commands(app: Flask) -> None:
         db.create_all()
         click.echo("Database tables created.")
 
-    @app.cli.command("migrate-db")
-    def migrate_db_command() -> None:
-        """Run schema migrations on existing database."""
-        try:
-            _drop_signups_status_column()
-            click.echo("Migration: signups.status column dropped (if present).")
-        except Exception as exc:
-            click.echo(f"Migration note: {exc}")
-        try:
-            _add_duration_columns()
-            click.echo("Migration: duration columns added (if missing).")
-        except Exception as exc:
-            click.echo(f"Migration note: {exc}")
-        try:
-            _ensure_permission_tables(app)
-            click.echo("Migration: permission tables ensured.")
-        except Exception as exc:
-            click.echo(f"Migration note: {exc}")
+        # Seed permissions if empty
+        from app.models.permission import SystemRole
+        import sqlalchemy as sa
+        count = db.session.execute(
+            sa.select(sa.func.count()).select_from(SystemRole)
+        ).scalar()
+        if count == 0:
+            from app.seeds.permissions import seed_permissions
+            created = seed_permissions()
+            click.echo(f"Seeded {created} role(s) with permissions.")

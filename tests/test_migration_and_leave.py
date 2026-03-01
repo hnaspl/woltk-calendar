@@ -36,11 +36,8 @@ class TestStatusColumnMigration:
         assert "lineup_status" in d
         assert d["lineup_status"] == "going"
 
-    def test_migration_drops_status_if_present(self, app, seed):
-        """If an old database has a status column, auto-migrate removes it."""
-        from app import _drop_signups_status_column
-        # Column was never added in tests (clean schema), so this should be a no-op
-        _drop_signups_status_column()
+    def test_signups_table_has_no_status_column(self, seed):
+        """The signups table should never have a status column (part of base model)."""
         inspector = sa.inspect(db.engine)
         cols = [c["name"] for c in inspector.get_columns("signups")]
         assert "status" not in cols
