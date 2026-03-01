@@ -46,6 +46,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useTimezone } from '@/composables/useTimezone'
 
 const props = defineProps({
   events: { type: Array, default: () => [] },
@@ -55,6 +56,7 @@ const props = defineProps({
 const emit = defineEmits(['event-click', 'date-click'])
 
 const { getRaidIcon } = useWowIcons()
+const tzHelper = useTimezone()
 const calendarRef = ref(null)
 
 // Hover tooltip state
@@ -99,8 +101,7 @@ const statusLabels = {
 
 function formatTime(isoStr) {
   if (!isoStr) return ''
-  const d = new Date(isoStr)
-  return d.toLocaleString(undefined, {
+  return tzHelper.formatGuildTime(isoStr, {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false
   })

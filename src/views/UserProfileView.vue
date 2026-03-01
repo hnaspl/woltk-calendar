@@ -66,7 +66,7 @@ import * as authApi from '@/api/auth'
 
 const authStore = useAuthStore()
 
-const profileForm = reactive({ display_name: '', timezone: 'UTC' })
+const profileForm = reactive({ display_name: '', timezone: 'Europe/Warsaw' })
 const pwForm = reactive({ current_password: '', new_password: '', confirm_password: '' })
 
 const savingProfile = ref(false)
@@ -77,15 +77,25 @@ const pwError = ref(null)
 const pwSuccess = ref(null)
 
 const timezones = [
-  'UTC', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Warsaw',
-  'Europe/Moscow', 'Europe/Athens', 'US/Eastern', 'US/Central', 'US/Pacific',
-  'Asia/Tokyo', 'Australia/Sydney',
+  'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+  'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam', 'Europe/Brussels',
+  'Europe/Vienna', 'Europe/Prague', 'Europe/Budapest', 'Europe/Bucharest',
+  'Europe/Sofia', 'Europe/Athens', 'Europe/Helsinki', 'Europe/Stockholm',
+  'Europe/Oslo', 'Europe/Copenhagen', 'Europe/Lisbon', 'Europe/Dublin',
+  'Europe/Moscow', 'Europe/Kiev', 'Europe/Istanbul',
+  'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Sao_Paulo', 'America/Argentina/Buenos_Aires',
+  'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Seoul', 'Asia/Singapore',
+  'Asia/Kolkata', 'Asia/Dubai',
+  'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
+  'UTC',
 ]
 
 onMounted(() => {
   if (authStore.user) {
     profileForm.display_name = authStore.user.display_name || ''
-    profileForm.timezone = authStore.user.timezone || 'UTC'
+    profileForm.timezone = authStore.user.timezone || 'Europe/Warsaw'
   }
 })
 

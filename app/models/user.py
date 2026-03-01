@@ -23,7 +23,7 @@ class User(UserMixin, db.Model):
     username: Mapped[str] = mapped_column(sa.String(80), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     display_name: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
-    timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="UTC")
+    timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="Europe/Warsaw")
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     is_admin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(

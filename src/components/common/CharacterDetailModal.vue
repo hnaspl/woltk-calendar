@@ -154,15 +154,49 @@
             <!-- Equipment -->
             <div v-if="equipment.length > 0">
               <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">
-                Equipment ({{ equipment.length }} slots)
+                Equipment ({{ equipment.length }} items)
               </div>
-              <div class="max-h-40 overflow-y-auto space-y-1 pr-1 scrollbar-thin bg-bg-secondary rounded-lg p-2 border border-border-default">
+              <div class="grid grid-cols-1 gap-1 bg-bg-secondary rounded-lg p-2 border border-border-default max-h-72 overflow-y-auto scrollbar-thin">
                 <div
                   v-for="(item, i) in equipment"
                   :key="i"
-                  class="text-[11px] text-text-muted py-0.5 px-1"
+                  class="group relative flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors cursor-default"
                 >
-                  <span class="text-text-primary">{{ item.name }}</span>
+                  <!-- Slot icon -->
+                  <div class="w-8 h-8 flex-shrink-0 rounded border flex items-center justify-center text-[11px]"
+                    :class="itemQualityBorder(item)"
+                    :style="{ backgroundColor: 'rgba(0,0,0,0.4)' }"
+                  >
+                    <span class="text-text-muted">{{ equipSlotIcon(i) }}</span>
+                  </div>
+                  <!-- Item name -->
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] font-medium truncate" :class="itemQualityText(item)">
+                      {{ item.name }}
+                    </div>
+                    <div class="text-[10px] text-text-muted">{{ equipSlotLabel(i) }}</div>
+                  </div>
+                  <!-- Item ID badge -->
+                  <div v-if="item.item" class="flex-shrink-0">
+                    <a
+                      :href="`https://wowhead.com/wotlk/item=${item.item}`"
+                      target="_blank"
+                      class="text-[10px] text-amber-400/60 hover:text-amber-400 transition-colors"
+                      @click.stop
+                      :title="`Item #${item.item} — Click for Wowhead tooltip`"
+                    >🔗</a>
+                  </div>
+                  <!-- Tooltip on hover -->
+                  <div class="absolute left-0 bottom-full mb-1 z-50 hidden group-hover:block pointer-events-none w-56">
+                    <div class="bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl p-3 text-xs">
+                      <div class="font-bold mb-1" :class="itemQualityText(item)">{{ item.name }}</div>
+                      <div class="text-text-muted">{{ equipSlotLabel(i) }}</div>
+                      <div v-if="item.item" class="text-text-muted mt-1">Item ID: {{ item.item }}</div>
+                      <div v-if="item.transmog" class="mt-1 text-purple-300 text-[10px]">
+                        Transmogrified: {{ typeof item.transmog === 'object' ? item.transmog.name || item.transmog.item : item.transmog }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -179,7 +213,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
 
@@ -210,6 +244,48 @@ const equipment = computed(() => (meta.value.equipment ?? []).filter(e => e?.nam
 const hasStats = computed(() =>
   meta.value.gear_score || meta.value.honorable_kills || meta.value.faction || meta.value.guild
 )
+
+// Equipment slot labels & icons matching WoW armory order
+const EQUIP_SLOTS = [
+  { label: 'Head', icon: '🪖' },
+  { label: 'Neck', icon: '📿' },
+  { label: 'Shoulders', icon: '🛡' },
+  { label: 'Back', icon: '🧣' },
+  { label: 'Chest', icon: '👕' },
+  { label: 'Shirt', icon: '👔' },
+  { label: 'Tabard', icon: '🏴' },
+  { label: 'Wrists', icon: '⌚' },
+  { label: 'Hands', icon: '🧤' },
+  { label: 'Waist', icon: '🎗' },
+  { label: 'Legs', icon: '👖' },
+  { label: 'Feet', icon: '👢' },
+  { label: 'Ring 1', icon: '💍' },
+  { label: 'Ring 2', icon: '💍' },
+  { label: 'Trinket 1', icon: '🔮' },
+  { label: 'Trinket 2', icon: '🔮' },
+  { label: 'Main Hand', icon: '⚔' },
+  { label: 'Off Hand', icon: '🛡' },
+  { label: 'Ranged', icon: '🏹' },
+]
+
+function equipSlotLabel(index) {
+  return EQUIP_SLOTS[index]?.label ?? `Slot ${index + 1}`
+}
+
+function equipSlotIcon(index) {
+  return EQUIP_SLOTS[index]?.icon ?? '📦'
+}
+
+function itemQualityBorder(item) {
+  // Warmane equipment items don't always include quality; use item ID heuristic for epic+ items
+  if (!item.item) return 'border-[#2a3450]'
+  return 'border-purple-500/50'
+}
+
+function itemQualityText(item) {
+  if (!item.item) return 'text-text-primary'
+  return 'text-purple-300'
+}
 
 function formatPoints(points) {
   if (Array.isArray(points)) return points.join('/')

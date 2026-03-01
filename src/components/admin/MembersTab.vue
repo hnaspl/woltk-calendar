@@ -40,9 +40,12 @@
               </td>
               <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.joined_at ?? m.created_at) }}</td>
               <td class="px-4 py-2.5 text-right space-x-2">
-                <WowButton variant="ghost" class="text-xs py-1 px-2" @click="viewMemberChars(m)">
-                  Characters
-                </WowButton>
+                <button
+                  class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors"
+                  @click="viewMemberChars(m)"
+                >
+                  📋 Characters
+                </button>
                 <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
                   Remove
                 </WowButton>
@@ -147,40 +150,72 @@
     </WowModal>
 
     <!-- Member Characters modal -->
-    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="md">
+    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="lg">
       <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
       <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
-      <div v-else class="overflow-x-auto max-h-72 overflow-y-auto">
-        <table class="w-full text-xs">
-          <thead class="sticky top-0">
+      <div v-else class="overflow-x-auto max-h-96 overflow-y-auto">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-3 py-2 text-text-muted uppercase">Name</th>
-              <th class="text-left px-3 py-2 text-text-muted uppercase">Class</th>
-              <th class="text-left px-3 py-2 text-text-muted uppercase">Main</th>
-              <th class="text-left px-3 py-2 text-text-muted uppercase">Default Role</th>
-              <th class="text-left px-3 py-2 text-text-muted uppercase">Primary Spec</th>
-              <th class="text-left px-3 py-2 text-text-muted uppercase">Status</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Character</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Primary Spec</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Secondary Spec</th>
+              <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
+              <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
+              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Details</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
-            <tr v-for="c in memberChars" :key="c.id" class="hover:bg-bg-tertiary/50">
-              <td class="px-3 py-1.5 text-text-primary font-medium">{{ c.name }}</td>
-              <td class="px-3 py-1.5 text-text-muted">{{ c.class_name }}</td>
-              <td class="px-3 py-1.5">
-                <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase">Main</span>
-                <span v-else class="text-text-muted text-[10px]">Alt</span>
+            <tr v-for="c in memberChars" :key="c.id" class="hover:bg-bg-tertiary/50 transition-colors">
+              <td class="px-4 py-2.5">
+                <div class="flex items-center gap-2">
+                  <img :src="getClassIcon(c.class_name)" :alt="c.class_name" class="w-6 h-6 rounded flex-shrink-0" />
+                  <div>
+                    <span class="font-medium" :style="{ color: getClassColor(c.class_name) }">{{ c.name }}</span>
+                    <span class="text-text-muted text-xs ml-1.5">{{ c.class_name }}</span>
+                  </div>
+                </div>
               </td>
-              <td class="px-3 py-1.5 text-text-muted">{{ c.default_role || '—' }}</td>
-              <td class="px-3 py-1.5 text-text-muted">{{ c.primary_spec || '—' }}</td>
-              <td class="px-3 py-1.5">
-                <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px]">Active</span>
-                <span v-else class="text-red-400 text-[10px]">Archived</span>
+              <td class="px-4 py-2.5 text-text-muted text-xs capitalize">{{ c.default_role?.replace('_', ' ') || '—' }}</td>
+              <td class="px-4 py-2.5">
+                <div v-if="c.primary_spec" class="flex items-center gap-1.5">
+                  <img v-if="getSpecIcon(c.primary_spec, c.class_name)" :src="getSpecIcon(c.primary_spec, c.class_name)" class="w-4 h-4 rounded" />
+                  <span class="text-text-primary text-xs">{{ c.primary_spec }}</span>
+                </div>
+                <span v-else class="text-text-muted text-xs">—</span>
+              </td>
+              <td class="px-4 py-2.5">
+                <div v-if="c.secondary_spec" class="flex items-center gap-1.5">
+                  <img v-if="getSpecIcon(c.secondary_spec, c.class_name)" :src="getSpecIcon(c.secondary_spec, c.class_name)" class="w-4 h-4 rounded" />
+                  <span class="text-text-muted text-xs">{{ c.secondary_spec }}</span>
+                </div>
+                <span v-else class="text-text-muted text-xs">—</span>
+              </td>
+              <td class="px-4 py-2.5 text-center">
+                <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase px-1.5 py-0.5 bg-accent-gold/10 rounded">Main</span>
+                <span v-else class="text-text-muted text-[10px] px-1.5 py-0.5 bg-bg-secondary rounded">Alt</span>
+              </td>
+              <td class="px-4 py-2.5 text-center">
+                <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px] font-medium px-1.5 py-0.5 bg-green-400/10 rounded">Active</span>
+                <span v-else class="text-red-400 text-[10px] font-medium px-1.5 py-0.5 bg-red-400/10 rounded">Archived</span>
+              </td>
+              <td class="px-4 py-2.5 text-right">
+                <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openCharDetailModal(c)">
+                  🔍 View
+                </WowButton>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </WowModal>
+
+    <!-- Character Detail Modal -->
+    <CharacterDetailModal
+      v-model="showCharDetailModal"
+      :character="charDetailTarget"
+    />
   </div>
 </template>
 
@@ -189,10 +224,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
+import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
+import { useWowIcons } from '@/composables/useWowIcons'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
 import api from '@/api'
@@ -201,6 +238,7 @@ const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
 const permissions = usePermissions()
+const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -312,6 +350,15 @@ const showMemberChars = ref(false)
 const memberChars = ref([])
 const loadingMemberChars = ref(false)
 const memberCharsTitle = ref('Member Characters')
+
+// Character detail modal
+const showCharDetailModal = ref(false)
+const charDetailTarget = ref(null)
+
+function openCharDetailModal(character) {
+  charDetailTarget.value = character
+  showCharDetailModal.value = true
+}
 
 async function viewMemberChars(member) {
   const username = member.username ?? member.user?.username ?? 'Unknown'

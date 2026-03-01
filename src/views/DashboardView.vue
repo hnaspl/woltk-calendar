@@ -193,6 +193,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useTimezone } from '@/composables/useTimezone'
 import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
@@ -202,6 +203,7 @@ const guildStore = useGuildStore()
 const calStore = useCalendarStore()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
+const tzHelper = useTimezone()
 
 const loading = ref(true)
 const mySignups = ref([])
@@ -274,7 +276,7 @@ const sortedMySignups = computed(() => {
 
 function formatDateTime(d) {
   if (!d) return '?'
-  return new Date(d).toLocaleString('en-GB', {
+  return tzHelper.formatDualTime(d, {
     weekday: 'short', day: '2-digit', month: 'short',
     hour: '2-digit', minute: '2-digit'
   })

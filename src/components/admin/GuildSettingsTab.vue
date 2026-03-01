@@ -24,6 +24,13 @@
           <label class="block text-xs text-text-muted mb-1">Description</label>
           <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Guild Timezone</label>
+          <select v-model="form.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tz }}</option>
+          </select>
+          <p class="text-[10px] text-text-muted mt-1">All raid times will be displayed in this timezone by default.</p>
+        </div>
         <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
         <WowButton type="submit" :loading="saving">Save Changes</WowButton>
       </form>
@@ -101,9 +108,25 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const saveError = ref(null)
-const form = reactive({ name: '', realm: '', description: '' })
+const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
 const warmaneRealms = WARMANE_REALMS
 const isWarmaneSource = ref(false)
+
+const timezoneOptions = [
+  'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+  'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam', 'Europe/Brussels',
+  'Europe/Vienna', 'Europe/Prague', 'Europe/Budapest', 'Europe/Bucharest',
+  'Europe/Sofia', 'Europe/Athens', 'Europe/Helsinki', 'Europe/Stockholm',
+  'Europe/Oslo', 'Europe/Copenhagen', 'Europe/Lisbon', 'Europe/Dublin',
+  'Europe/Moscow', 'Europe/Kiev', 'Europe/Istanbul',
+  'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Sao_Paulo', 'America/Argentina/Buenos_Aires',
+  'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Seoul', 'Asia/Singapore',
+  'Asia/Kolkata', 'Asia/Dubai',
+  'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
+  'UTC',
+]
 
 async function loadGuildData() {
   loading.value = true
@@ -111,7 +134,7 @@ async function loadGuildData() {
   try {
     const g = guildStore.currentGuild
     if (g) {
-      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
+      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
       isWarmaneSource.value = !!g.warmane_source
     }
   } catch {
@@ -137,6 +160,7 @@ async function saveGuild() {
     const updated = await guildsApi.updateGuild(guildStore.currentGuild.id, {
       name: form.name,
       realm_name: form.realm,
+      timezone: form.timezone,
     })
     guildStore.currentGuild = updated
     uiStore.showToast('Guild settings saved', 'success')

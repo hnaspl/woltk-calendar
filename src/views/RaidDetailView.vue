@@ -408,6 +408,7 @@ import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
+import { useTimezone } from '@/composables/useTimezone'
 import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
@@ -421,6 +422,7 @@ const uiStore = useUiStore()
 const permissions = usePermissions()
 const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
+const tz = useTimezone()
 
 const event = ref(null)
 const signups = ref([])
@@ -882,7 +884,7 @@ async function resolveReplacement(requestId, action) {
 
 function formatDateTime(d) {
   if (!d) return '?'
-  return new Date(d).toLocaleString('en-GB', {
+  return tz.formatDualTime(d, {
     weekday: 'long', day: '2-digit', month: 'long',
     year: 'numeric', hour: '2-digit', minute: '2-digit'
   })

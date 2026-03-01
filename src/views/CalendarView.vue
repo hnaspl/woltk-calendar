@@ -5,17 +5,19 @@
       <aside class="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-border-default bg-bg-secondary p-4 space-y-4 overflow-y-auto">
         <h2 class="wow-heading text-base">Filters</h2>
 
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Realm</label>
-          <select
-            :value="calStore.filters.realm"
-            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-            @change="calStore.setFilter('realm', $event.target.value)"
-          >
-            <option value="">All realms</option>
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
-          </select>
+        <div v-if="guildStore.currentGuild?.realm_name" class="text-xs text-text-muted">
+          <span class="text-accent-gold">🌐</span> Realm: <span class="text-text-primary font-medium">{{ guildStore.currentGuild.realm_name }}</span>
         </div>
+
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            :checked="calStore.filters.showAllGuilds"
+            class="accent-accent-gold w-4 h-4 rounded"
+            @change="calStore.setFilter('showAllGuilds', $event.target.checked)"
+          />
+          <span class="text-xs text-text-muted">View raids from all my guilds</span>
+        </label>
 
         <div>
           <label class="block text-xs text-text-muted mb-1">Raid Type</label>
@@ -169,7 +171,7 @@ import { useGuildStore } from '@/stores/guild'
 import { usePermissions } from '@/composables/usePermissions'
 import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
-import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
+import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
 
@@ -181,7 +183,6 @@ const router = useRouter()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 
 const raidTypes = RAID_TYPES
-const warmaneRealms = WARMANE_REALMS
 
 const showCreateModal = ref(false)
 const creating = ref(false)

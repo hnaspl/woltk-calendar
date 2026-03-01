@@ -180,6 +180,12 @@
             <input id="allow-self-join" v-model="newGuild.allow_self_join" type="checkbox" class="w-4 h-4 rounded bg-bg-tertiary border border-border-default accent-accent-gold" />
             <label for="allow-self-join" class="text-sm text-text-muted">Allow users to join by themselves</label>
           </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Timezone</label>
+            <select v-model="newGuild.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option v-for="tz in GUILD_TIMEZONES" :key="tz" :value="tz">{{ tz }}</option>
+            </select>
+          </div>
           <div v-if="createGuildError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createGuildError }}</div>
           <div class="flex justify-end gap-3">
             <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="resetCreateGuild">Back</button>
@@ -366,7 +372,23 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
-const newGuild = reactive({ name: '', realm_name: '', faction: '', allow_self_join: true })
+const newGuild = reactive({ name: '', realm_name: '', faction: '', allow_self_join: true, timezone: 'Europe/Warsaw' })
+
+const GUILD_TIMEZONES = [
+  'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+  'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam', 'Europe/Brussels',
+  'Europe/Vienna', 'Europe/Prague', 'Europe/Budapest', 'Europe/Bucharest',
+  'Europe/Sofia', 'Europe/Athens', 'Europe/Helsinki', 'Europe/Stockholm',
+  'Europe/Oslo', 'Europe/Copenhagen', 'Europe/Lisbon', 'Europe/Dublin',
+  'Europe/Moscow', 'Europe/Kiev', 'Europe/Istanbul',
+  'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Sao_Paulo', 'America/Argentina/Buenos_Aires',
+  'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Seoul', 'Asia/Singapore',
+  'Asia/Kolkata', 'Asia/Dubai',
+  'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
+  'UTC',
+]
 
 // Guild Warmane lookup state
 const lookingUpGuild = ref(false)
@@ -463,6 +485,7 @@ async function doCreateGuild() {
       faction: newGuild.faction || null,
       allow_self_join: newGuild.allow_self_join,
       warmane_source: !!guildLookupMatch.value,
+      timezone: newGuild.timezone,
     })
     await guildStore.fetchGuilds()
     await guildStore.fetchAllGuilds()
@@ -472,6 +495,7 @@ async function doCreateGuild() {
     newGuild.realm_name = ''
     newGuild.faction = ''
     newGuild.allow_self_join = true
+    newGuild.timezone = 'Europe/Warsaw'
     guildLookupDone.value = false
     guildLookupMatch.value = null
     guildLookupMatches.value = []

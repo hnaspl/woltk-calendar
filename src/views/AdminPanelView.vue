@@ -15,8 +15,14 @@
         </div>
       </div>
 
+      <!-- Loading state while permissions are being fetched -->
+      <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
+        <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+        Loading admin panel…
+      </div>
+
       <!-- No permissions message -->
-      <div v-if="!hasAnyAdminPermission" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
+      <div v-else-if="!hasAnyAdminPermission" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
         You do not have any administrative permissions.
       </div>
 
@@ -62,10 +68,12 @@ import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildSettingsTab from '@/components/admin/GuildSettingsTab.vue'
 import SystemTab from '@/components/admin/SystemTab.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import api from '@/api'
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 const permissions = usePermissions()
 
 const allRoles = ref([])

@@ -107,6 +107,7 @@ def create_guild():
             region=data.get("region"),
             allow_self_join=data.get("allow_self_join", True),
             warmane_source=bool(data.get("warmane_source", False)),
+            timezone=data.get("timezone", "Europe/Warsaw"),
         )
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409
