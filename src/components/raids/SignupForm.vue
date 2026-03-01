@@ -36,10 +36,10 @@
         </div>
       </div>
 
-      <!-- Role -->
-      <div>
+      <!-- Role (hidden until character is selected) -->
+      <div v-if="form.characterId">
         <label class="text-xs text-text-muted mb-1 block">Role *</label>
-        <div v-if="form.characterId && roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
+        <div v-if="roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
           ⚠ There are no available role slots for this character's class in this raid. This character cannot sign up for this event.
         </div>
         <div v-else class="flex gap-2">
@@ -51,7 +51,6 @@
             :class="form.chosenRole === r.value
               ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
               : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
-            :disabled="form.characterId === ''"
             @click="form.chosenRole = r.value"
           >
             <RoleBadge :role="r.value" />
@@ -65,8 +64,8 @@
         </p>
       </div>
 
-      <!-- Spec (multi-select, only when character selected) -->
-      <div v-if="form.characterId">
+      <!-- Spec (multi-select, only when character selected and has valid roles) -->
+      <div v-if="form.characterId && roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">Spec (select one or more)</label>
         <div v-if="specOptions.length > 0" class="flex gap-2 mb-1">
           <button
@@ -88,8 +87,8 @@
         />
       </div>
 
-      <!-- Note -->
-      <div>
+      <!-- Note (hidden when character has no valid roles) -->
+      <div v-if="!form.characterId || roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">Note</label>
         <textarea
           v-model="form.note"
@@ -99,7 +98,7 @@
         />
       </div>
 
-      <WowButton type="submit" :loading="submitting" :disabled="form.characterId && roles.length === 0" class="w-full">
+      <WowButton v-if="!form.characterId || roles.length > 0" type="submit" :loading="submitting" class="w-full">
         {{ existingSignup ? 'Update Signup' : 'Sign Up' }}
       </WowButton>
     </form>
@@ -243,12 +242,15 @@ function toggleSpec(sp) {
   form.chosenSpec = current.join(', ')
 }
 
-/** Characters not yet signed up for this event (unless editing), excluding banned */
+/** Characters not yet signed up for this event (unless editing), excluding banned.
+ *  Main character is sorted first. */
 const availableCharacters = computed(() => {
-  if (props.existingSignup) return characters.value
-  return characters.value.filter(c =>
-    !props.signedUpCharacterIds.includes(c.id) && !props.bannedCharacterIds.includes(c.id)
-  )
+  const chars = props.existingSignup
+    ? characters.value
+    : characters.value.filter(c =>
+        !props.signedUpCharacterIds.includes(c.id) && !props.bannedCharacterIds.includes(c.id)
+      )
+  return chars.slice().sort((a, b) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0))
 })
 
 /** Check if selected character is banned (for edge cases) */
@@ -265,6 +267,14 @@ onMounted(async () => {
     characters.value = await charactersApi.getMyCharacters(props.guildId)
   } catch {
     // ignore – user may have no characters yet
+  }
+  // Auto-select main character if not editing an existing signup
+  if (!props.existingSignup && !form.characterId && availableCharacters.value.length > 0) {
+    const main = availableCharacters.value.find(c => c.is_main)
+    if (main) {
+      form.characterId = main.id
+      onCharacterChange()
+    }
   }
 })
 

@@ -8,7 +8,7 @@
     <div
       v-if="tooltip.visible"
       class="wow-event-tooltip"
-      :style="{ top: tooltip.y + 'px', left: tooltip.x + 'px' }"
+      :style="tooltipStyle"
     >
       <div class="tooltip-header">
         <img :src="tooltip.icon" class="tooltip-raid-icon" alt="" />
@@ -62,6 +62,7 @@ const tooltip = reactive({
   visible: false,
   x: 0,
   y: 0,
+  above: false,
   title: '',
   time: '',
   icon: '',
@@ -74,6 +75,19 @@ const tooltip = reactive({
 })
 
 let tooltipTimeout = null
+
+const tooltipStyle = computed(() => {
+  const style = { left: tooltip.x + 'px' }
+  if (tooltip.above) {
+    style.bottom = 'auto'
+    style.top = tooltip.y + 'px'
+    style.transform = 'translate(-50%, -100%)'
+  } else {
+    style.top = tooltip.y + 'px'
+    style.transform = 'translateX(-50%)'
+  }
+  return style
+})
 
 const statusLabels = {
   open: 'Open',
@@ -96,7 +110,7 @@ function showTooltip(info) {
   clearTimeout(tooltipTimeout)
   const ev = info.event.extendedProps
   const rect = info.el.getBoundingClientRect()
-  const wrapperRect = calendarRef.value?.$el?.getBoundingClientRect() ?? { left: 0, top: 0 }
+  const wrapperRect = calendarRef.value?.$el?.getBoundingClientRect() ?? { left: 0, top: 0, bottom: 0 }
 
   tooltip.title = info.event.title
   tooltip.time = formatTime(ev.starts_at_utc)
@@ -113,9 +127,17 @@ function showTooltip(info) {
   const now = new Date()
   tooltip.signupExpired = (closeAt && now > closeAt) || (startsAt && now > startsAt)
 
-  // Position relative to wrapper
+  // Position relative to wrapper; show above event if near bottom
   tooltip.x = rect.left - wrapperRect.left + rect.width / 2
-  tooltip.y = rect.bottom - wrapperRect.top + 4
+  const spaceBelow = wrapperRect.bottom - rect.bottom
+  if (spaceBelow < 160) {
+    // Not enough room below – show above
+    tooltip.y = rect.top - wrapperRect.top - 4
+    tooltip.above = true
+  } else {
+    tooltip.y = rect.bottom - wrapperRect.top + 4
+    tooltip.above = false
+  }
   tooltip.visible = true
 }
 
@@ -224,7 +246,7 @@ watch(() => props.events, () => {
 .wow-calendar-wrapper {
   background: var(--color-bg-secondary);
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -240,7 +262,6 @@ watch(() => props.events, () => {
   max-width: 280px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   pointer-events: none;
-  transform: translateX(-50%);
 }
 .tooltip-header {
   display: flex;

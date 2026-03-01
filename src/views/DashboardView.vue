@@ -108,7 +108,10 @@
                 <div class="flex-1 min-w-0">
                   <span class="text-sm text-text-primary truncate block">{{ su.event_title ?? 'Raid' }}</span>
                   <span v-if="raidLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidLabel(su.raid_type) }}</span>
-                  <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">{{ su.character.name }}</span>
+                  <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">
+                    {{ su.character.name }}
+                    <span v-if="su.chosen_spec" class="text-amber-200"> · {{ su.chosen_spec }}</span>
+                  </span>
                 </div>
                 <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
                   Bench{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}
@@ -157,7 +160,16 @@ onMounted(async () => {
     await calStore.fetchEvents()
     // Fetch user's signups across all guilds
     try {
-      mySignups.value = await eventsApi.getMySignups()
+      const allSignups = await eventsApi.getMySignups()
+      // Filter out signups for completed, cancelled, or past events
+      const nowMs = Date.now()
+      mySignups.value = allSignups.filter(su => {
+        const status = su.event_status
+        if (status === 'completed' || status === 'cancelled') return false
+        const startsAt = su.starts_at_utc
+        if (startsAt && new Date(startsAt).getTime() < nowMs) return false
+        return true
+      })
     } catch {
       mySignups.value = []
     }

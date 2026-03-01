@@ -28,48 +28,43 @@
         </div>
         <div class="space-y-1.5 min-h-[2rem]">
           <!-- Assigned slots -->
-          <CharacterTooltip
+          <div
             v-for="(s, i) in lineup[col.key]"
             :key="s.id"
-            :character="s.character"
-            position="bottom"
+            class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
+            :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
+            :draggable="isOfficer"
+            @dragstart="onDragStart($event, s, col.key, i)"
+            @dragend="onDragEnd"
           >
-            <div
-              class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
-              :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
-              :draggable="isOfficer"
-              @dragstart="onDragStart($event, s, col.key, i)"
-              @dragend="onDragEnd"
-            >
-              <img
-                :src="getClassIcon(s.character?.class_name)"
-                :alt="s.character?.class_name ?? ''"
-                class="w-6 h-6 rounded flex-shrink-0"
-                loading="lazy"
-              />
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1">
-                  <span
-                    class="text-xs font-medium truncate"
-                    :style="{ color: getClassColor(s.character?.class_name) ?? '#ccc' }"
-                  >{{ s.character?.name ?? '?' }}</span>
-                  <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
-                    Lv{{ s.character.metadata.level }}
-                  </span>
-                </div>
-                <div class="flex items-center gap-1 text-[10px] text-text-muted">
-                  <span v-if="s.chosen_spec" class="text-amber-300">{{ s.chosen_spec }}</span>
-                  <span v-if="profString(s)">{{ profString(s) }}</span>
-                </div>
+            <img
+              :src="getClassIcon(s.character?.class_name)"
+              :alt="s.character?.class_name ?? ''"
+              class="w-6 h-6 rounded flex-shrink-0"
+              loading="lazy"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1">
+                <span
+                  class="text-xs font-medium truncate"
+                  :style="{ color: getClassColor(s.character?.class_name) ?? '#ccc' }"
+                >{{ s.character?.name ?? '?' }}</span>
+                <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+                  Lv{{ s.character.metadata.level }}
+                </span>
               </div>
-              <button
-                v-if="isOfficer"
-                type="button"
-                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
-                @click="removeFromRole(col.key, i)"
-              >×</button>
+              <div class="flex items-center gap-1 text-[10px] text-text-muted">
+                <span v-if="s.chosen_spec" class="text-amber-300">{{ s.chosen_spec }}</span>
+                <span v-if="profString(s)">{{ profString(s) }}</span>
+              </div>
             </div>
-          </CharacterTooltip>
+            <button
+              v-if="isOfficer"
+              type="button"
+              class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
+              @click="removeFromRole(col.key, i)"
+            >×</button>
+          </div>
 
         </div>
       </div>
@@ -87,31 +82,26 @@
     >
       <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">Bench Queue ({{ bench.length }})</p>
       <div class="flex flex-wrap gap-2">
-        <CharacterTooltip
+        <div
           v-for="(s, i) in bench"
           :key="s.id"
-          :character="s.character"
-          position="top"
+          class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
+          :class="{
+            'cursor-grab active:cursor-grabbing': isOfficer,
+            'opacity-50': draggedId === s.id
+          }"
+          :draggable="isOfficer"
+          @dragstart="onDragStart($event, s, 'bench', -1)"
+          @dragend="onDragEnd"
         >
-          <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
-            :class="{
-              'cursor-grab active:cursor-grabbing': isOfficer,
-              'opacity-50': draggedId === s.id
-            }"
-            :draggable="isOfficer"
-            @dragstart="onDragStart($event, s, 'bench', -1)"
-            @dragend="onDragEnd"
-          >
-            <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ i + 1 }}</span>
-            <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
-            <span>{{ s.character?.name ?? '?' }}</span>
-            <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
-            <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
-              Lv{{ s.character.metadata.level }}
-            </span>
-          </div>
-        </CharacterTooltip>
+          <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ i + 1 }}</span>
+          <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
+          <span>{{ s.character?.name ?? '?' }}</span>
+          <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
+          <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+            Lv{{ s.character.metadata.level }}
+          </span>
+        </div>
       </div>
       <p v-if="bench.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
         Drop here to move to bench
@@ -152,7 +142,6 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
-import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'

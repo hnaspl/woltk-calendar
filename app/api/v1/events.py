@@ -223,5 +223,7 @@ def list_my_signups():
             d["event_title"] = s.raid_event.title
             d["raid_type"] = s.raid_event.raid_type
             d["guild_id"] = s.raid_event.guild_id
+            d["event_status"] = s.raid_event.status
+            d["starts_at_utc"] = s.raid_event.starts_at_utc.isoformat() if s.raid_event.starts_at_utc else None
         result.append(d)
     return jsonify(result), 200

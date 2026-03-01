@@ -202,3 +202,27 @@ class TestAdminRemoveAutoPromote:
         # s3 should now be promoted from bench to lineup
         assert lineup_service.has_role_slot(s3.id)
         assert lineup_service.get_bench_info(s3.id) is None
+
+
+class TestMySignupsEndpoint:
+    """Verify the /events/my-signups endpoint returns event metadata."""
+
+    def test_my_signups_includes_event_status_and_starts_at(self, seed):
+        """The my-signups endpoint should include event_status and starts_at_utc."""
+        s = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        signups = signup_service.list_user_signups(seed["user1"].id)
+        assert len(signups) == 1
+        su = signups[0]
+        assert su.raid_event is not None
+        assert su.raid_event.status == "open"
+        assert su.raid_event.starts_at_utc is not None
