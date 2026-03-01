@@ -52,6 +52,9 @@
         <KeepAlive>
           <MembersTab v-if="activeTab === 'members'" />
           <RolesTab v-else-if="activeTab === 'roles'" />
+          <DefinitionsTab v-else-if="activeTab === 'definitions'" />
+          <TemplatesTab v-else-if="activeTab === 'templates'" />
+          <SeriesTab v-else-if="activeTab === 'series'" />
           <GuildSettingsTab v-else-if="activeTab === 'guild'" />
           <SystemTab v-else-if="activeTab === 'system'" />
         </KeepAlive>
@@ -67,6 +70,9 @@ import MembersTab from '@/components/admin/MembersTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildSettingsTab from '@/components/admin/GuildSettingsTab.vue'
 import SystemTab from '@/components/admin/SystemTab.vue'
+import DefinitionsTab from '@/components/admin/DefinitionsTab.vue'
+import TemplatesTab from '@/components/admin/TemplatesTab.vue'
+import SeriesTab from '@/components/admin/SeriesTab.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
@@ -110,6 +116,15 @@ const icons = {
   ]),
   system: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' })
+  ]),
+  definitions: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' })
+  ]),
+  templates: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' })
+  ]),
+  series: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' })
   ])
 }
 
@@ -117,6 +132,9 @@ const icons = {
 const allTabs = [
   { id: 'members', label: 'Members', icon: icons.members, permission: 'update_member_roles' },
   { id: 'roles', label: 'Roles & Permissions', icon: icons.roles, permission: 'manage_roles' },
+  { id: 'definitions', label: 'Raid Definitions', icon: icons.definitions, permission: 'manage_raid_definitions' },
+  { id: 'templates', label: 'Templates', icon: icons.templates, permission: 'manage_templates' },
+  { id: 'series', label: 'Recurring Raids', icon: icons.series, permission: 'manage_series' },
   { id: 'guild', label: 'Guild Settings', icon: icons.guild, permission: 'update_guild_settings' },
   { id: 'system', label: 'System', icon: icons.system, permission: 'list_system_users' },
 ]
