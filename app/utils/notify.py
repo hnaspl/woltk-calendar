@@ -379,7 +379,7 @@ def notify_member_joined_guild(user_id: int, guild) -> None:
             user_id=officer_id,
             notification_type="guild_member_joined",
             title=f"👤 New member joined {guild.name} {tag}",
-            body=f"A new member has joined the guild {guild.name} on {guild.realm_name}.",
+            body="A new member has joined your guild.",
             guild_id=guild.id,
         )
 
@@ -390,7 +390,7 @@ def notify_removed_from_guild(user_id: int, guild) -> None:
         user_id=user_id,
         notification_type="guild_member_removed",
         title=f"Removed from {guild.name} {_guild_tag(guild)}",
-        body=f"You have been removed from the guild {guild.name} on {guild.realm_name}.",
+        body="You have been removed from this guild.",
         guild_id=guild.id,
     )
 
@@ -399,15 +399,15 @@ def notify_guild_role_changed(user_id: int, guild, new_role: str) -> None:
     """Notify a user that their guild role was changed."""
     # Look up the display name for the new role
     from app.models.permission import SystemRole
-    role_obj = db.session.execute(
+    display_name = db.session.execute(
         sa.select(SystemRole.display_name).where(SystemRole.name == new_role)
     ).scalar_one_or_none()
-    display = role_obj if role_obj else new_role.replace("_", " ").title()
+    display = display_name if display_name else new_role.replace("_", " ").title()
     _notify(
         user_id=user_id,
         notification_type="guild_role_changed",
         title=f"🏅 Rank changed to {display} in {guild.name} {_guild_tag(guild)}",
-        body=f"Your rank in {guild.name} ({guild.realm_name}) has been changed to {display}.",
+        body=f"Your rank has been changed to {display}.",
         guild_id=guild.id,
     )
 
