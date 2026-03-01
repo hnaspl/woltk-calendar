@@ -354,7 +354,7 @@ import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
-import { RAID_TYPES } from '@/constants'
+import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
@@ -826,17 +826,6 @@ function formatDateTime(d) {
 }
 
 function raidLabel(raidType) {
-  if (!raidType) return raidType
-  const found = RAID_TYPES.find(r => r.value === raidType)
-  return found ? found.label : raidType
-}
-
-function formatDuration(minutes) {
-  if (!minutes) return '?'
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h > 0 && m > 0) return `${h}h ${m}m`
-  if (h > 0) return `${h}h`
-  return `${m}m`
+  return raidTypeLabel(raidType)
 }
 </script>

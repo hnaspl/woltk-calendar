@@ -227,7 +227,8 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
             setattr(event, key, value)
     # Recompute ends_at_utc from duration if duration was provided
     if "duration_minutes" in data and event.starts_at_utc:
-        event.ends_at_utc = _ensure_utc(event.starts_at_utc) + timedelta(minutes=event.duration_minutes)
+        start_time = _ensure_utc(data["starts_at_utc"]) if "starts_at_utc" in data else _ensure_utc(event.starts_at_utc)
+        event.ends_at_utc = start_time + timedelta(minutes=event.duration_minutes)
     # Validate close_signups_at against starts_at_utc
     close_at = _ensure_utc(event.close_signups_at) if event.close_signups_at else None
     start_at = _ensure_utc(event.starts_at_utc) if event.starts_at_utc else None

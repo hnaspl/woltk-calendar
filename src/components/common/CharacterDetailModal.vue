@@ -14,6 +14,7 @@
           <!-- Close button (top-left) -->
           <button
             class="absolute top-3 left-3 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-[#161b22] border border-[#2a3450] text-text-muted hover:text-text-primary hover:border-border-gold transition-colors"
+            aria-label="Close character details"
             @click="$emit('update:modelValue', false)"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

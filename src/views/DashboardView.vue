@@ -193,7 +193,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { RAID_TYPES } from '@/constants'
+import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 
@@ -280,19 +280,8 @@ function formatDateTime(d) {
   })
 }
 
-function formatDuration(minutes) {
-  if (!minutes) return '?'
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h > 0 && m > 0) return `${h}h ${m}m`
-  if (h > 0) return `${h}h`
-  return `${m}m`
-}
-
 function raidLabel(raidType) {
-  if (!raidType) return null
-  const found = RAID_TYPES.find(r => r.value === raidType)
-  return found ? found.label : raidType
+  return raidTypeLabel(raidType)
 }
 
 const BENCH_ROLE_LABELS = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }

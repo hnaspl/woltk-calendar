@@ -87,3 +87,20 @@ export function normalizeSpecName(treeName, className) {
   if (prefix) return prefix
   return tree
 }
+
+/** Format a duration in minutes to a human-readable string like "3h" or "2h 30m". */
+export function formatDuration(minutes) {
+  if (!minutes) return '?'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
+}
+
+/** Get human-readable label for a raid type code. */
+export function raidTypeLabel(raidType) {
+  if (!raidType) return raidType
+  const found = RAID_TYPES.find(r => r.value === raidType)
+  return found ? found.label : raidType
+}

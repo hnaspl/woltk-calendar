@@ -117,6 +117,7 @@
                   >🏆 {{ charAchievements(signup) }}</span>
                   <button
                     class="text-[10px] text-text-muted hover:text-accent-gold transition-colors ml-auto flex-shrink-0"
+                    :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
                     @click.stop="openCharacterModal(signup.character)"
                   >View Details</button>
                 </div>
