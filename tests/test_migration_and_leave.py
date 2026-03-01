@@ -823,6 +823,13 @@ class TestAdminLineupUpdateAutoPromote:
         assert lineup_service.has_role_slot(s_other.id)
         assert not lineup_service.has_role_slot(s_alt.id)
 
+        # Expire all objects to simulate a fresh HTTP request where Signup
+        # objects are NOT in the identity map.  This forces db.session.get()
+        # inside update_lineup_grouped to hit the database, which triggers
+        # auto-flush of any pending LineupSlot INSERTs — the root cause of
+        # the ghost role-slot bug that db.session.delete() (vs expunge) fixes.
+        db.session.expire_all()
+
         # Admin places hunter alt in DPS alongside druid in main_tank.
         # One-char-per-player: the new placement (alt→DPS) wins, druid→bench.
         result = lineup_service.update_lineup_grouped(
@@ -845,3 +852,14 @@ class TestAdminLineupUpdateAutoPromote:
         assert bench_info is not None, \
             "Druid main should be on bench, not disappear"
         assert bench_info["waiting_for"] == "main_tank"
+
+        # Verify no ghost role slots: exactly 2 role slots total (alt + other)
+        import sqlalchemy as sa
+        role_slot_count = db.session.execute(
+            sa.select(sa.func.count(LineupSlot.id)).where(
+                LineupSlot.raid_event_id == seed["event"].id,
+                LineupSlot.slot_group != "bench",
+            )
+        ).scalar_one()
+        assert role_slot_count == 2, \
+            f"Expected 2 role slots (alt + other), got {role_slot_count}"

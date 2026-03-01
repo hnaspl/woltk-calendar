@@ -258,47 +258,53 @@ def update_lineup_grouped(
         for sid in sids:
             _old_signup_role[sid] = role
 
-    for key, slot_group in role_map.items():
-        signup_ids = data.get(key, [])
-        for idx, signup_id in enumerate(signup_ids):
-            signup = db.session.get(Signup, signup_id)
-            if signup is None:
-                continue
-            # Enforce one character per player in lineup
-            if signup.user_id in user_slot_map:
-                prev_sid, prev_group, prev_slot_obj = user_slot_map[signup.user_id]
-                # Decide which signup is the "new" placement.
-                # A signup is new if it wasn't in the same role slot before.
-                prev_is_old = (_old_signup_role.get(prev_sid) == prev_group)
-                curr_is_old = (_old_signup_role.get(signup_id) == slot_group)
-                if prev_is_old and not curr_is_old:
-                    # Current signup is the new placement — it wins.
-                    # Remove the previous signup's slot and bench it.
-                    db.session.expunge(prev_slot_obj)
-                    if prev_group in new_role_signups:
-                        new_role_signups[prev_group].discard(prev_sid)
-                    overflow_to_bench.append(prev_sid)
-                else:
-                    # Previous signup keeps its slot; current goes to bench.
-                    overflow_to_bench.append(signup_id)
+    # Use no_autoflush to prevent SQLAlchemy from auto-flushing pending
+    # LineupSlot INSERTs when db.session.get() needs to query the database.
+    # Without this, auto-flush can persist a slot before we get a chance to
+    # expunge it during one-char-per-player conflict resolution, leaving a
+    # ghost role slot in the database.
+    with db.session.no_autoflush:
+        for key, slot_group in role_map.items():
+            signup_ids = data.get(key, [])
+            for idx, signup_id in enumerate(signup_ids):
+                signup = db.session.get(Signup, signup_id)
+                if signup is None:
                     continue
-            # Sync signup's chosen_role to match the lineup column
-            if signup.chosen_role != slot_group:
-                # Validate class-role constraint before changing role
-                _validate_class_role_lineup(signup, slot_group)
-                signup.chosen_role = slot_group
-            new_role_signups.setdefault(slot_group, set()).add(signup_id)
-            slot = LineupSlot(
-                raid_event_id=raid_event_id,
-                slot_group=slot_group,
-                slot_index=idx,
-                signup_id=signup_id,
-                character_id=signup.character_id if signup else None,
-                confirmed_by=confirmed_by,
-                confirmed_at=datetime.now(timezone.utc),
-            )
-            db.session.add(slot)
-            user_slot_map[signup.user_id] = (signup_id, slot_group, slot)
+                # Enforce one character per player in lineup
+                if signup.user_id in user_slot_map:
+                    prev_sid, prev_group, prev_slot_obj = user_slot_map[signup.user_id]
+                    # Decide which signup is the "new" placement.
+                    # A signup is new if it wasn't in the same role slot before.
+                    prev_is_old = (_old_signup_role.get(prev_sid) == prev_group)
+                    curr_is_old = (_old_signup_role.get(signup_id) == slot_group)
+                    if prev_is_old and not curr_is_old:
+                        # Current signup is the new placement — it wins.
+                        # Remove the previous signup's slot and bench it.
+                        db.session.expunge(prev_slot_obj)
+                        if prev_group in new_role_signups:
+                            new_role_signups[prev_group].discard(prev_sid)
+                        overflow_to_bench.append(prev_sid)
+                    else:
+                        # Previous signup keeps its slot; current goes to bench.
+                        overflow_to_bench.append(signup_id)
+                        continue
+                # Sync signup's chosen_role to match the lineup column
+                if signup.chosen_role != slot_group:
+                    # Validate class-role constraint before changing role
+                    _validate_class_role_lineup(signup, slot_group)
+                    signup.chosen_role = slot_group
+                new_role_signups.setdefault(slot_group, set()).add(signup_id)
+                slot = LineupSlot(
+                    raid_event_id=raid_event_id,
+                    slot_group=slot_group,
+                    slot_index=idx,
+                    signup_id=signup_id,
+                    character_id=signup.character_id if signup else None,
+                    confirmed_by=confirmed_by,
+                    confirmed_at=datetime.now(timezone.utc),
+                )
+                db.session.add(slot)
+                user_slot_map[signup.user_id] = (signup_id, slot_group, slot)
 
     # Identify signups the admin moved from role slots to bench so they can
     # be placed at the END of the bench queue (lower priority for auto-promote).
