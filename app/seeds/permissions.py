@@ -35,6 +35,7 @@ ALL_PERMISSIONS = [
 
     # Signups
     ("sign_up", "Sign Up", "Sign up for raid events", "signups"),
+    ("view_signups", "View Signups", "View other players' signups and signup details", "signups"),
     ("delete_own_signup", "Delete Own Signup", "Remove own signup from events", "signups"),
     ("decline_own_signup", "Decline Own Signup", "Decline own lineup placement", "signups"),
     ("manage_signups", "Manage Signups", "Decline/delete other players' signups", "signups"),
@@ -94,6 +95,7 @@ ROLE_PERMISSIONS = {
         "manage_own_characters", "view_attendance", "view_guild",
         "view_notifications",
         # Raid leader specifics
+        "view_signups",
         "update_lineup", "confirm_lineup", "reorder_bench",
         "manage_signups", "ban_characters", "unban_characters",
         "request_replacement", "view_member_characters",
@@ -103,6 +105,7 @@ ROLE_PERMISSIONS = {
         "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
         "manage_own_characters", "view_attendance", "view_guild",
         "view_notifications",
+        "view_signups",
         "update_lineup", "confirm_lineup", "reorder_bench",
         "manage_signups", "ban_characters", "unban_characters",
         "request_replacement", "view_member_characters",
@@ -119,6 +122,7 @@ ROLE_PERMISSIONS = {
         "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
         "manage_own_characters", "view_attendance", "view_guild",
         "view_notifications",
+        "view_signups",
         "update_lineup", "confirm_lineup", "reorder_bench",
         "manage_signups", "ban_characters", "unban_characters",
         "request_replacement", "view_member_characters",
@@ -136,6 +140,7 @@ ROLE_PERMISSIONS = {
         "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
         "manage_own_characters", "view_attendance", "view_guild",
         "view_notifications",
+        "view_signups",
         "update_lineup", "confirm_lineup", "reorder_bench",
         "manage_signups", "ban_characters", "unban_characters",
         "request_replacement", "view_member_characters",

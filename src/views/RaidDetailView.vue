@@ -139,37 +139,64 @@
                   class="space-y-2"
                 >
                   <div
-                    class="flex items-center gap-2 px-3 py-2 rounded border text-sm transition-colors"
+                    class="px-3 py-2.5 rounded border text-sm transition-colors"
                     :class="editingSignupId === s.id
                       ? 'border-accent-gold bg-accent-gold/10'
                       : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
                   >
-                    <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
-                      {{ s.character?.name ?? '?' }}
-                    </span>
-                    <span class="text-text-muted text-xs">{{ ROLE_LABEL_MAP[s.chosen_role] || s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
-                    <span v-if="s.note" class="text-text-muted text-[10px] italic truncate max-w-[120px]" :title="s.note">📝 {{ s.note }}</span>
-                    <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
-                      Bench{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
-                    </span>
-                    <span v-else-if="s.lineup_status === 'declined'" class="text-xs text-red-400">declined</span>
-                    <span v-else class="text-xs text-green-400">in lineup</span>
-                    <div class="ml-auto flex gap-1">
-                      <button
-                        v-if="event.status === 'open' || event.status === 'draft'"
-                        class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
-                        @click="editingSignupId = editingSignupId === s.id ? null : s.id"
-                      >
-                        {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
-                      </button>
-                      <button
-                        v-if="event.status === 'open' || event.status === 'draft'"
-                        class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
-                        @click="leaveRaid(s)"
-                      >
-                        Leave Raid
-                      </button>
+                    <div class="flex items-center gap-2">
+                      <img
+                        :src="getClassIcon(s.character?.class_name)"
+                        :alt="s.character?.class_name ?? ''"
+                        class="w-8 h-8 rounded flex-shrink-0"
+                      />
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
+                            {{ s.character?.name ?? '?' }}
+                          </span>
+                          <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
+                          <RoleBadge :role="s.chosen_role" />
+                          <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+                            Bench{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
+                          </span>
+                          <span v-else-if="s.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">declined</span>
+                          <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">in lineup</span>
+                        </div>
+                        <!-- Specializations -->
+                        <div v-if="s.chosen_spec" class="flex items-center gap-1 mt-1 flex-wrap">
+                          <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+                        </div>
+                        <!-- Professions with icons -->
+                        <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span
+                            v-for="prof in mySignupProfessions(s)"
+                            :key="prof.name"
+                            class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
+                          >
+                            <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
+                            {{ prof.name }} {{ prof.skill || '' }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex flex-col gap-1 flex-shrink-0">
+                        <button
+                          v-if="event.status === 'open' || event.status === 'draft'"
+                          class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
+                          @click="editingSignupId = editingSignupId === s.id ? null : s.id"
+                        >
+                          {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
+                        </button>
+                        <button
+                          v-if="event.status === 'open' || event.status === 'draft'"
+                          class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                          @click="leaveRaid(s)"
+                        >
+                          Leave Raid
+                        </button>
+                      </div>
                     </div>
+                    <p v-if="s.note" class="text-text-muted text-[10px] italic mt-1.5 ml-10">📝 {{ s.note }}</p>
                   </div>
                   <!-- Pending character replacement request -->
                   <div
@@ -221,9 +248,10 @@
             />
           </div>
 
-          <!-- Right columns: signup list -->
+          <!-- Right columns: signup list or composition summary -->
           <div class="lg:col-span-2">
             <SignupList
+              v-if="permissions.can('view_signups')"
               :signups="signups"
               :can-manage="permissions.can('manage_signups')"
               :guild-id="guildId"
@@ -232,6 +260,16 @@
               @signup-updated="onSignupUpdated"
               @signup-removed="onSignupRemoved"
               @signup-error="msg => uiStore.showToast(msg, 'error')"
+            />
+            <CompositionSummary
+              v-else
+              :lineup-counts="lineupCounts"
+              :max-size="event.raid_size ?? event.size"
+              :melee-dps-slots="event.melee_dps_slots ?? 0"
+              :main-tank-slots="event.main_tank_slots ?? 1"
+              :off-tank-slots="event.off_tank_slots ?? 1"
+              :healer-slots="event.healer_slots ?? 5"
+              :range-dps-slots="event.range_dps_slots ?? 18"
             />
           </div>
         </div>
@@ -356,6 +394,9 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
+import ClassBadge from '@/components/common/ClassBadge.vue'
+import RoleBadge from '@/components/common/RoleBadge.vue'
+import SpecBadge from '@/components/common/SpecBadge.vue'
 import SignupForm from '@/components/raids/SignupForm.vue'
 import SignupList from '@/components/raids/SignupList.vue'
 import CompositionSummary from '@/components/raids/CompositionSummary.vue'
@@ -378,8 +419,7 @@ const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
-const { getRaidIcon } = useWowIcons()
-const { getClassColor } = useWowIcons()
+const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 
 const event = ref(null)
@@ -397,6 +437,11 @@ const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
 const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
+
+function mySignupProfessions(s) {
+  return (s.character?.metadata?.professions ?? []).slice(0, 2)
+}
+
 const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))

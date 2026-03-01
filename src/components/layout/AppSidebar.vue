@@ -195,7 +195,7 @@
 
 <script setup>
 import { computed, h, ref, reactive, onMounted, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
@@ -213,6 +213,8 @@ const { on, off } = useSocket()
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
+const router = useRouter()
+const route = useRoute()
 const permissions = usePermissions()
 
 const canManageGuild = computed(() => permissions.can('create_events'))
@@ -351,7 +353,13 @@ const navGroups = computed(() => {
 function onGuildChange(e) {
   const id = e.target.value
   const guild = guildStore.guilds.find(g => String(g.id) === String(id))
-  if (guild) guildStore.setCurrentGuild(guild)
+  if (guild) {
+    guildStore.setCurrentGuild(guild)
+    // Navigate to calendar when switching guilds from a guild-specific view (e.g., raid detail)
+    if (route.path.startsWith('/raids/') || route.path.startsWith('/events/')) {
+      router.push('/calendar')
+    }
+  }
 }
 
 // Create Guild

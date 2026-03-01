@@ -57,11 +57,18 @@
                   class="text-[9px] px-1 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/30 leading-none"
                 >{{ s.guild_role_display }}</span>
               </div>
-              <div class="flex items-center gap-1 text-[10px] text-text-muted flex-wrap">
-                <template v-if="s.chosen_spec">
-                  <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
-                </template>
-                <span v-if="profString(s)">{{ profString(s) }}</span>
+              <div v-if="s.chosen_spec" class="flex items-center gap-1 text-[10px] text-text-muted flex-wrap">
+                <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+              </div>
+              <div v-if="charProfessions(s).length > 0" class="flex items-center gap-1.5 text-[10px] text-text-muted flex-wrap mt-0.5">
+                <span
+                  v-for="prof in charProfessions(s)"
+                  :key="prof.name"
+                  class="inline-flex items-center gap-0.5 px-1 py-px bg-[#1c2333] border border-[#2a3450] rounded"
+                >
+                  <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3 h-3 rounded-sm" />
+                  {{ prof.name }}
+                </span>
               </div>
             </div>
             <button
@@ -147,7 +154,7 @@
     </div>
     <template #footer>
       <div class="flex justify-end gap-3">
-        <WowButton variant="secondary" @click="cancelRoleChange">Leave on Bench</WowButton>
+        <WowButton variant="secondary" @click="cancelRoleChange">Place on Bench</WowButton>
         <WowButton variant="primary" @click="confirmRoleChange">Change Role &amp; Place</WowButton>
       </div>
     </template>
@@ -182,7 +189,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['saved', 'lineup-updated'])
-const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
+const { getClassIcon, getClassColor, getRoleIcon, getProfessionIcon } = useWowIcons()
 const {
   draggedId, dragSourceKey, dragSourceIndex, dragOverTarget,
   isDragging, startDrag, endDrag, handleDragOver, handleDragLeave,
@@ -564,8 +571,8 @@ const visibleBenchByRole = computed(() => {
     .filter(group => group.players.length > 0)
 })
 
-function profString(s) {
-  return (s.character?.metadata?.professions ?? []).map(p => p.name).join(', ')
+function charProfessions(s) {
+  return (s.character?.metadata?.professions ?? []).slice(0, 2)
 }
 
 // ── Bench reorder drag-and-drop (officers only) ──
