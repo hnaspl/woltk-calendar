@@ -40,8 +40,8 @@ import pytest
 
 @pytest.fixture
 def raid_seed(db, ctx):
-    """Create a realistic 25-man raid scenario with 12 players, varied
-    classes, multiple characters per player, and a standard slot layout.
+    """Create a 12-player raid scenario with varied classes, multiple
+    characters per player, and a standard slot layout.
 
     Slot layout (ICC-25 style):
       main_tank: 1, off_tank: 2, tank (melee DPS): 0,
