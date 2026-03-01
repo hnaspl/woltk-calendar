@@ -25,6 +25,22 @@ import raid_rs from '@/assets/icons/wow/inv_misc_head_dragon_red.jpg'
 
 import icon_fallback from '@/assets/icons/wow/inv_misc_questionmark.jpg'
 
+// Profession icons
+import prof_alchemy from '@/assets/icons/wow/trade_alchemy.jpg'
+import prof_blacksmithing from '@/assets/icons/wow/trade_blacksmithing.jpg'
+import prof_enchanting from '@/assets/icons/wow/trade_engraving.jpg'
+import prof_engineering from '@/assets/icons/wow/trade_engineering.jpg'
+import prof_herbalism from '@/assets/icons/wow/trade_herbalism.jpg'
+import prof_jewelcrafting from '@/assets/icons/wow/inv_misc_gem_01.jpg'
+import prof_leatherworking from '@/assets/icons/wow/trade_leatherworking.jpg'
+import prof_mining from '@/assets/icons/wow/trade_mining.jpg'
+import prof_skinning from '@/assets/icons/wow/inv_misc_armorkit_17.jpg'
+import prof_tailoring from '@/assets/icons/wow/trade_tailoring.jpg'
+import prof_inscription from '@/assets/icons/wow/inv_misc_herb_07.jpg'
+import prof_cooking from '@/assets/icons/wow/inv_misc_food_15.jpg'
+import prof_first_aid from '@/assets/icons/wow/spell_holy_sealofsacrifice.jpg'
+import prof_fishing from '@/assets/icons/wow/spell_nature_thunderclap.jpg'
+
 import spec_arms from '@/assets/icons/wow/ability_warrior_savageblow.jpg'
 import spec_fury from '@/assets/icons/wow/ability_warrior_innerrage.jpg'
 import spec_holy_paladin from '@/assets/icons/wow/spell_holy_holybolt.jpg'
@@ -89,6 +105,23 @@ const RAID_ICONS = {
   toc:     raid_toc,
   icc:     raid_icc,
   rs:      raid_rs
+}
+
+const PROFESSION_ICONS = {
+  alchemy:        prof_alchemy,
+  blacksmithing:  prof_blacksmithing,
+  enchanting:     prof_enchanting,
+  engineering:    prof_engineering,
+  herbalism:      prof_herbalism,
+  jewelcrafting:  prof_jewelcrafting,
+  leatherworking: prof_leatherworking,
+  mining:         prof_mining,
+  skinning:       prof_skinning,
+  tailoring:      prof_tailoring,
+  inscription:    prof_inscription,
+  cooking:        prof_cooking,
+  'first aid':    prof_first_aid,
+  fishing:        prof_fishing,
 }
 
 // WoW class hex colors
@@ -186,5 +219,9 @@ export function useWowIcons() {
     return icon_fallback
   }
 
-  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS }
+  function getProfessionIcon(profName) {
+    return PROFESSION_ICONS[profName?.toLowerCase().trim()] ?? icon_fallback
+  }
+
+  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, getProfessionIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS, PROFESSION_ICONS }
 }

@@ -35,13 +35,13 @@
                   <span class="text-accent-gold">📅</span>
                   <span><strong class="text-text-primary">Starts:</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
                 </div>
-                <div v-if="event.ends_at_utc || event.end_time" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">🏁</span>
-                  <span><strong class="text-text-primary">Ends:</strong> {{ formatDateTime(event.ends_at_utc ?? event.end_time) }}</span>
+                <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">⏱️</span>
+                  <span><strong class="text-text-primary">Duration:</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
                 </div>
                 <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⚔️</span>
-                  <span><strong class="text-text-primary">Raid:</strong> {{ event.raid_type }}</span>
+                  <span><strong class="text-text-primary">Raid:</strong> {{ raidLabel(event.raid_type) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📝</span>
@@ -61,6 +61,10 @@
                     </template>
                     <span class="ml-1 text-text-muted">({{ signups.length }} signed up)</span>
                   </span>
+                </div>
+                <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">🔒</span>
+                  <span><strong class="text-text-primary">Signups Close:</strong> {{ formatDateTime(event.close_signups_at) }}</span>
                 </div>
                 <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">🌐</span>
@@ -278,10 +282,14 @@
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
-            <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            <span class="text-[10px] text-text-muted">Must be before event start time</span>
+            <label class="block text-xs text-text-muted mb-1">Approx. Duration (minutes)</label>
+            <input v-model.number="editForm.duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+          <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <span class="text-[10px] text-text-muted">Must be before event start time</span>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Instructions</label>
@@ -390,6 +398,7 @@ const editForm = reactive({
   difficulty: 'normal',
   status: 'open',
   starts_at_utc: '',
+  duration_minutes: 180,
   close_signups_at: '',
   instructions: ''
 })
@@ -643,6 +652,7 @@ function openEditModal() {
     difficulty: event.value.difficulty ?? 'normal',
     status: event.value.status ?? 'open',
     starts_at_utc: toLocalDatetime(event.value.starts_at_utc ?? event.value.start_time),
+    duration_minutes: event.value.duration_minutes ?? 180,
     close_signups_at: toLocalDatetime(event.value.close_signups_at),
     instructions: event.value.instructions ?? event.value.description ?? ''
   })
@@ -659,6 +669,7 @@ function onEditRaidDefChange() {
   if (rd) {
     editForm.raid_type = rd.raid_type || rd.code || ''
     editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    if (rd.default_duration_minutes) editForm.duration_minutes = rd.default_duration_minutes
   }
 }
 
@@ -683,6 +694,7 @@ async function saveEvent() {
       difficulty: editForm.difficulty,
       status: editForm.status,
       starts_at_utc: editForm.starts_at_utc,
+      duration_minutes: editForm.duration_minutes,
       close_signups_at: editForm.close_signups_at || undefined,
       instructions: editForm.instructions
     }
@@ -811,5 +823,20 @@ function formatDateTime(d) {
     weekday: 'long', day: '2-digit', month: 'long',
     year: 'numeric', hour: '2-digit', minute: '2-digit'
   })
+}
+
+function raidLabel(raidType) {
+  if (!raidType) return raidType
+  const found = RAID_TYPES.find(r => r.value === raidType)
+  return found ? found.label : raidType
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return '?'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
 }
 </script>

@@ -94,6 +94,10 @@
             <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
           </select>
         </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Default Duration (minutes)</label>
+          <input v-model.number="form.default_duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
         <div class="grid grid-cols-5 gap-3">
           <div>
             <label class="block text-xs text-text-muted mb-1">Main Tank</label>
@@ -175,7 +179,7 @@ const guildRealms = computed(() => {
   return [...realms].sort()
 })
 
-const form = reactive({ name: '', raid_type: '', size: '', realm: '', main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
+const form = reactive({ name: '', raid_type: '', size: '', realm: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
 
 onMounted(async () => {
   loading.value = true
@@ -194,13 +198,13 @@ onMounted(async () => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_type: '', size: '', realm: guildStore.currentGuild?.realm_name ?? '', main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
+  Object.assign(form, { name: '', raid_type: '', size: '', realm: guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(def) {
   editing.value = def
-  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, realm: def.realm ?? guildStore.currentGuild?.realm_name ?? '', main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, tank_slots: def.tank_slots ?? 0, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
+  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, realm: def.realm ?? guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: def.default_duration_minutes ?? 180, main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, tank_slots: def.tank_slots ?? 0, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
   formError.value = null; showModal.value = true
 }
 

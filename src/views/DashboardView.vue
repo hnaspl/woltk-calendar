@@ -116,9 +116,14 @@
                     <RaidSizeBadge v-if="ev.raid_size || ev.size" :size="ev.raid_size ?? ev.size" />
                     <StatusBadge :status="ev.status ?? 'open'" />
                   </div>
-                  <div class="text-sm text-text-muted mt-1">
-                    {{ formatDateTime(ev.starts_at_utc ?? ev.start_time ?? ev.date) }}
-                    <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" class="ml-2" />
+                  <div class="text-sm text-text-muted mt-1 flex items-center gap-2 flex-wrap">
+                    <span>📅 {{ formatDateTime(ev.starts_at_utc ?? ev.start_time ?? ev.date) }}</span>
+                    <span v-if="ev.duration_minutes" class="text-text-muted">· ⏱️ ~{{ formatDuration(ev.duration_minutes) }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span v-if="raidLabel(ev.raid_type)" class="text-[10px] text-amber-300">⚔️ {{ raidLabel(ev.raid_type) }}</span>
+                    <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" />
+                    <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 Signups close {{ formatDateTime(ev.close_signups_at) }}</span>
                   </div>
                 </div>
                 <svg class="w-5 h-5 text-text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,12 +140,12 @@
           <div v-if="loading" class="space-y-2">
             <div v-for="i in 3" :key="i" class="h-14 rounded bg-bg-secondary border border-border-default loading-pulse" />
           </div>
-          <div v-else-if="mySignups.length === 0" class="text-center py-8 text-text-muted text-sm">
+          <div v-else-if="sortedMySignups.length === 0" class="text-center py-8 text-text-muted text-sm">
             No signups yet.
           </div>
           <RouterLink
             v-else
-            v-for="su in mySignups"
+            v-for="su in sortedMySignups"
             :key="su.id"
             :to="`/raids/${su.raid_event_id}`"
             class="block"
@@ -159,7 +164,7 @@
                   </span>
                 </div>
                 <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                  Bench{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}{{ su.bench_info?.waiting_for ? ' · ' + benchRoleLabel(su.bench_info.waiting_for) : '' }}
+                  Queue{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}{{ su.bench_info?.waiting_for ? ' · ' + benchRoleLabel(su.bench_info.waiting_for) : '' }}
                 </span>
                 <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">Declined</span>
                 <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">In Lineup</span>
@@ -250,12 +255,38 @@ const missingResponseCount = computed(() => {
   return upcomingEvents.value.filter(ev => !signedUpEventIds.has(ev.id)).length
 })
 
+// Sort: lineup first, then bench ordered by queue position, then declined
+const sortedMySignups = computed(() => {
+  return [...mySignups.value].sort((a, b) => {
+    const statusOrder = { going: 0, bench: 1, declined: 2 }
+    const aOrder = statusOrder[a.lineup_status] ?? 1
+    const bOrder = statusOrder[b.lineup_status] ?? 1
+    if (aOrder !== bOrder) return aOrder - bOrder
+    // Within bench, sort by queue position
+    if (a.lineup_status === 'bench' && b.lineup_status === 'bench') {
+      const aPos = a.bench_info?.queue_position ?? 999
+      const bPos = b.bench_info?.queue_position ?? 999
+      return aPos - bPos
+    }
+    return 0
+  })
+})
+
 function formatDateTime(d) {
   if (!d) return '?'
   return new Date(d).toLocaleString('en-GB', {
     weekday: 'short', day: '2-digit', month: 'short',
     hour: '2-digit', minute: '2-digit'
   })
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return '?'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
 }
 
 function raidLabel(raidType) {

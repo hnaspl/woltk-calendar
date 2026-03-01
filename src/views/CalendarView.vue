@@ -126,10 +126,14 @@
             </select>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-3 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
             <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Duration (minutes)</label>
+            <input v-model.number="eventForm.duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
@@ -194,6 +198,7 @@ const eventForm = reactive({
   raid_definition_id: '',
   raid_size: 25,
   starts_at_utc: '',
+  duration_minutes: 180,
   difficulty: 'normal',
   raid_type: '',
   close_signups_at: '',
@@ -228,7 +233,7 @@ onUnmounted(() => {
 })
 
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', duration_minutes: 180, difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
   if (eventForm.guild_id) {
@@ -252,6 +257,7 @@ function onRaidDefChange() {
   if (rd) {
     eventForm.raid_type = rd.raid_type || rd.code || ''
     eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    if (rd.default_duration_minutes) eventForm.duration_minutes = rd.default_duration_minutes
   }
 }
 
@@ -276,6 +282,7 @@ async function createEvent() {
       realm_name: eventForm.realm_name,
       raid_size: eventForm.raid_size,
       starts_at_utc: eventForm.starts_at_utc,
+      duration_minutes: eventForm.duration_minutes,
       difficulty: eventForm.difficulty,
       raid_type: eventForm.raid_type || undefined,
       raid_definition_id: eventForm.raid_definition_id || undefined,

@@ -87,117 +87,100 @@
             </div>
 
             <!-- Normal display -->
-            <CharacterTooltip
+            <div
               v-else
-              :character="signup.character"
-              position="left"
+              class="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
             >
-              <div
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors cursor-default w-full"
-              >
-                <!-- Class icon -->
-                <img
-                  v-if="signup.character?.class_name"
-                  :src="getClassIcon(signup.character.class_name)"
-                  :alt="signup.character.class_name"
-                  class="w-8 h-8 rounded border border-border-default flex-shrink-0"
-                />
-                <div class="w-8 h-8 rounded bg-bg-secondary flex-shrink-0" v-else />
+              <!-- Class icon -->
+              <img
+                v-if="signup.character?.class_name"
+                :src="getClassIcon(signup.character.class_name)"
+                :alt="signup.character.class_name"
+                class="w-7 h-7 rounded border border-border-default flex-shrink-0 mt-0.5"
+              />
+              <div class="w-7 h-7 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
 
-                <!-- Name + badges - structured layout -->
-                <div class="flex-1 min-w-0">
-                  <!-- Row 1: Name + Level -->
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-sm font-semibold text-text-primary truncate">
-                      {{ signup.character?.name ?? 'Unknown' }}
-                    </span>
-                    <span v-if="charLevel(signup)" class="text-[10px] text-text-muted bg-bg-secondary px-1.5 py-0.5 rounded">
-                      Lv{{ charLevel(signup) }}
-                    </span>
-                  </div>
-                  <!-- Row 2: Class / Role / Spec badges -->
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
-                    <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
-                    <template v-if="signup.chosen_spec">
-                      <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
-                    </template>
-                  </div>
-                  <!-- Row 3: Professions (separate row for clarity) -->
-                  <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span
-                      v-for="prof in charProfessions(signup)"
-                      :key="prof.name"
-                      class="text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
-                    >
-                      {{ prof.name }} {{ prof.skill }}
-                    </span>
-                  </div>
-                  <!-- Gear score note -->
-                  <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-1">
-                    ⚔️ GS: {{ signup.gear_score_note }}
-                  </div>
-                  <!-- Bench queue position -->
-                  <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-1 flex items-center gap-1">
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
-                      ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
-                    </span>
-                  </div>
-                  <!-- Officer action buttons (under queue info) -->
-                  <div v-if="isOfficer" class="flex items-center gap-1.5 mt-1.5" @click.stop>
-                    <button
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
-                      @click="startEdit(signup)"
-                    >
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
-                      @click="startReplaceCharacter(signup)"
-                    >
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                      </svg>
-                      Replace
-                    </button>
-                    <button
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
-                      @click="removeSignup(signup)"
-                    >
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                      </svg>
-                      Remove
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Right side: Achievement points + Note -->
-                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+              <!-- Content -->
+              <div class="flex-1 min-w-0">
+                <!-- Row 1: Name + Level + Achievements + View Details -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-sm font-semibold text-text-primary truncate">
+                    {{ signup.character?.name ?? 'Unknown' }}
+                  </span>
+                  <span v-if="charLevel(signup)" class="inline-flex items-center gap-0.5 text-[10px] font-medium text-accent-gold bg-accent-gold/10 px-1.5 py-0.5 rounded-full border border-accent-gold/20">
+                    {{ charLevel(signup) }}
+                  </span>
                   <span
                     v-if="charAchievements(signup)"
                     class="text-[10px] text-amber-400"
                     title="Achievement Points"
-                  >
-                    🏆 {{ charAchievements(signup) }}
-                  </span>
-                  <WowTooltip v-if="signup.note" :text="signup.note" position="left">
-                    <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                    </svg>
-                  </WowTooltip>
+                  >🏆 {{ charAchievements(signup) }}</span>
+                  <button
+                    class="text-[10px] text-text-muted hover:text-accent-gold transition-colors ml-auto flex-shrink-0"
+                    @click.stop="openCharacterModal(signup.character)"
+                  >View Details</button>
                 </div>
-
+                <!-- Row 2: Class / Role / Spec badges -->
+                <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                  <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
+                  <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
+                  <template v-if="signup.chosen_spec">
+                    <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
+                  </template>
+                </div>
+                <!-- Row 3: Professions with icons -->
+                <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span
+                    v-for="prof in charProfessions(signup)"
+                    :key="prof.name"
+                    class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
+                  >
+                    <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
+                    {{ prof.name }} {{ prof.skill }}
+                  </span>
+                </div>
+                <!-- Gear score note -->
+                <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-1">
+                  ⚔️ GS: {{ signup.gear_score_note }}
+                </div>
+                <!-- Note -->
+                <div v-if="signup.note" class="text-[10px] text-text-muted mt-1 italic truncate" :title="signup.note">
+                  📝 {{ signup.note }}
+                </div>
+                <!-- Bench queue position -->
+                <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-1 flex items-center gap-1">
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
+                    ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
+                  </span>
+                </div>
+                <!-- Officer action buttons -->
+                <div v-if="isOfficer" class="flex items-center gap-1.5 mt-1.5" @click.stop>
+                  <button
+                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
+                    @click="startEdit(signup)"
+                  >Edit</button>
+                  <button
+                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
+                    @click="startReplaceCharacter(signup)"
+                  >Replace</button>
+                  <button
+                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
+                    @click="removeSignup(signup)"
+                  >Remove</button>
+                </div>
               </div>
-            </CharacterTooltip>
+            </div>
           </template>
         </div>
       </div>
     </template>
   </WowCard>
+
+  <!-- Character detail modal -->
+  <CharacterDetailModal
+    v-model="showCharacterModal"
+    :character="characterModalTarget"
+  />
 
   <!-- Remove confirmation modal (officer only) -->
   <WowModal v-model="showRemoveModal" :title="'Remove ' + (removeTarget?.character?.name ?? 'Player')">
@@ -287,7 +270,7 @@ import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
 import WowTooltip from '@/components/common/WowTooltip.vue'
-import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
+import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import * as signupsApi from '@/api/signups'
 import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
@@ -304,7 +287,16 @@ const props = defineProps({
 
 const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])
 
-const { getClassIcon } = useWowIcons()
+const { getClassIcon, getProfessionIcon } = useWowIcons()
+
+// --- Character detail modal ---
+const showCharacterModal = ref(false)
+const characterModalTarget = ref(null)
+
+function openCharacterModal(character) {
+  characterModalTarget.value = character
+  showCharacterModal.value = true
+}
 
 const LINEUP_GROUPS = [
   { key: 'going',    label: 'In Lineup', cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },

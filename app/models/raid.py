@@ -231,6 +231,7 @@ class RaidEvent(db.Model):
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     starts_at_utc: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
     ends_at_utc: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     raid_size: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=25)
     difficulty: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="normal")
     status: Mapped[str] = mapped_column(
@@ -284,6 +285,7 @@ class RaidEvent(db.Model):
             "realm_name": self.realm_name,
             "starts_at_utc": self.starts_at_utc.isoformat() if self.starts_at_utc else None,
             "ends_at_utc": self.ends_at_utc.isoformat() if self.ends_at_utc else None,
+            "duration_minutes": self.duration_minutes,
             "raid_size": self.raid_size,
             "difficulty": self.difficulty,
             "status": self.status,

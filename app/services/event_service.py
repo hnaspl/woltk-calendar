@@ -175,9 +175,9 @@ def _ensure_utc(dt):
 
 def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
     starts_at = _ensure_utc(data["starts_at_utc"])
+    duration = data.get("duration_minutes", 180)
     ends_at = data.get("ends_at_utc")
     if ends_at is None:
-        duration = data.get("duration_minutes", 180)
         ends_at = starts_at + timedelta(minutes=duration)
     elif isinstance(ends_at, str):
         ends_at = _ensure_utc(ends_at)
@@ -192,6 +192,7 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         realm_name=data["realm_name"],
         starts_at_utc=starts_at,
         ends_at_utc=ends_at,
+        duration_minutes=duration,
         raid_size=data.get("raid_size", 25),
         difficulty=data.get("difficulty", "normal"),
         status=data.get("status", "open"),
@@ -217,12 +218,16 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
     allowed = {
         "title", "realm_name", "starts_at_utc", "ends_at_utc", "raid_size",
         "difficulty", "status", "instructions", "raid_type", "close_signups_at",
-        "raid_definition_id",
+        "raid_definition_id", "duration_minutes",
     }
     for key, value in data.items():
         if key in allowed:
             if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
                 value = _ensure_utc(value)
+            setattr(event, key, value)
+    # Recompute ends_at_utc from duration if duration was provided
+    if "duration_minutes" in data and event.starts_at_utc:
+        event.ends_at_utc = _ensure_utc(event.starts_at_utc) + timedelta(minutes=event.duration_minutes)
             setattr(event, key, value)
     # Validate close_signups_at against starts_at_utc
     close_at = _ensure_utc(event.close_signups_at) if event.close_signups_at else None
