@@ -344,14 +344,17 @@ def update_lineup_grouped(
         except Exception:
             pass
 
-    # Detect roles that lost signups and auto-promote bench players.
+    # Auto-promote bench players into freed role slots.
     # Admin-benched signups are at the end of the queue so other waiting
     # players get promoted first.
+    # Import here to avoid circular dependency (signup_service ↔ lineup_service).
     from app.services.signup_service import _auto_promote_bench
 
     for role, old_ids in old_role_signups.items():
         new_ids = new_role_signups.get(role, set())
-        freed_count = len(old_ids - new_ids) - len(new_ids - old_ids)
+        removed_count = len(old_ids - new_ids)
+        added_count = len(new_ids - old_ids)
+        freed_count = removed_count - added_count  # net freed slots
         for _ in range(max(freed_count, 0)):
             _auto_promote_bench(raid_event_id, role)
 
