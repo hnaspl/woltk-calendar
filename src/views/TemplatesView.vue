@@ -86,6 +86,18 @@
           <textarea v-model="form.default_instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
+        <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="applyToAllGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+            <span class="text-sm text-text-primary">Also create in my other guilds</span>
+          </label>
+          <div v-if="applyToAllGuilds" class="mt-2 space-y-1 pl-6">
+            <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
+              <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <span class="text-xs text-text-muted">{{ g.name }} <span class="text-text-muted/60">({{ g.realm_name }})</span></span>
+            </label>
+          </div>
+        </div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
@@ -126,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -162,6 +174,12 @@ const applyDate = ref('')
 const warmaneRealms = WARMANE_REALMS
 
 const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '' })
+const applyToAllGuilds = ref(false)
+const selectedGuildIds = ref([])
+
+const otherGuilds = computed(() =>
+  guildStore.guilds.filter(g => g.id !== guildStore.currentGuild?.id)
+)
 
 onMounted(async () => {
   loading.value = true
@@ -186,6 +204,8 @@ onMounted(async () => {
 function openAddModal() {
   editing.value = null
   Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '' })
+  applyToAllGuilds.value = false
+  selectedGuildIds.value = otherGuilds.value.map(g => g.id)
   formError.value = null; showModal.value = true
 }
 
@@ -216,6 +236,12 @@ async function saveTemplate() {
       if (idx !== -1) templates.value[idx] = updated
     } else {
       templates.value.push(await templatesApi.createTemplate(guildStore.currentGuild.id, payload))
+      // Also create in other selected guilds
+      if (applyToAllGuilds.value && selectedGuildIds.value.length > 0) {
+        for (const guildId of selectedGuildIds.value) {
+          try { await templatesApi.createTemplate(guildId, payload) } catch { /* skip failures */ }
+        }
+      }
     }
     showModal.value = false
     uiStore.showToast(editing.value ? 'Template updated' : 'Template created', 'success')

@@ -62,8 +62,8 @@
             <WowButton v-if="def.is_builtin" variant="secondary" class="flex-1 text-xs py-1.5" @click="copyToGuild(def)">
               📋 Copy to Guild
             </WowButton>
-            <WowButton variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">Edit</WowButton>
-            <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="confirmDelete(def)">✕</WowButton>
+            <WowButton v-if="!def.is_builtin || canManageDefaults" variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">Edit</WowButton>
+            <WowButton v-if="!def.is_builtin || canManageDefaults" variant="danger" class="text-xs py-1.5 px-3" @click="confirmDelete(def)">✕</WowButton>
           </div>
         </WowCard>
       </div>
@@ -176,13 +176,17 @@ import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
+import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
 import * as raidDefsApi from '@/api/raidDefinitions'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
+const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
+
+const canManageDefaults = computed(() => permissions.can('manage_default_definitions'))
 
 const definitions = ref([])
 const loading = ref(true)
