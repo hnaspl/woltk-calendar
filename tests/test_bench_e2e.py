@@ -256,7 +256,7 @@ class TestDefaultRoleAutoPopulation:
     """Character creation auto-populates default_role from CLASS_ROLES."""
 
     def test_hunter_gets_dps_default(self, seed, db):
-        """A Hunter with no explicit default_role gets 'dps'."""
+        """A Hunter with no explicit default_role gets 'range_dps'."""
         char = character_service.create_character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             data={"realm_name": "Icecrown", "name": "AutoHunter", "class_name": "Hunter"},

@@ -183,8 +183,8 @@ WARMANE_REALMS: list[str] = [
 # ---------------------------------------------------------------------------
 # Standard role slot distribution for raid sizes
 # ---------------------------------------------------------------------------
-# Generic "tank" slots default to 0; main_tank + off_tank cover the tank budget.
-# Players can still sign up as generic "tank" and be cross-assigned by officers.
+# Generic "melee_dps" slots default to 0; main_tank + off_tank cover the tank budget.
+# Players can still sign up as generic "melee_dps" and be cross-assigned by officers.
 ROLE_SLOTS: dict[int, dict[str, int]] = {
     10: {"main_tank": 1, "off_tank": 1, "melee_dps": 0, "healer": 3, "range_dps": 5},
     25: {"main_tank": 1, "off_tank": 2, "melee_dps": 0, "healer": 6, "range_dps": 16},

@@ -38,7 +38,7 @@ def update_lineup(guild_id: int, event_id: int):
 
     data = request.get_json(silent=True) or {}
 
-    # Support grouped format: {tanks: [id,...], healers: [id,...], dps: [id,...]}
+    # Support grouped format: {melee_dps: [id,...], healers: [id,...], range_dps: [id,...]}
     if "melee_dps" in data or "healers" in data or "range_dps" in data:
         try:
             result = lineup_service.update_lineup_grouped(

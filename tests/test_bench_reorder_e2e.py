@@ -412,7 +412,7 @@ class TestQueuePositionNotification:
         assert n.type == "queue_position_changed"
         assert "Hunter1" in n.title
         assert "#3" in n.body
-        assert "Dps" in n.body  # _role_name('dps') -> 'Dps'
+        assert "Range Dps" in n.body  # _role_name('range_dps') -> 'Range Dps'
 
     def test_position_change_after_reorder(self, bench_seed, db):
         """Reordering bench triggers position change detection."""
