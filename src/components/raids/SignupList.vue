@@ -319,7 +319,7 @@ const editForm = reactive({ chosen_role: '', chosen_spec: '' })
 /** Get allowed roles for a signup's character class, filtered by event available roles */
 function editRolesForClass(signup) {
   const className = signup.character?.class_name
-  if (!className) return ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
+  if (!className) return []
   const classRoles = CLASS_ROLES[className] ?? []
   return ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value) && classRoles.includes(r.value))
 }
@@ -352,7 +352,9 @@ function toggleEditSpec(sp) {
 
 function startEdit(signup) {
   editingSignupId.value = signup.id
-  editForm.chosen_role = signup.chosen_role ?? ''
+  const validRoles = editRolesForClass(signup)
+  const currentRole = signup.chosen_role ?? ''
+  editForm.chosen_role = validRoles.some(r => r.value === currentRole) ? currentRole : (validRoles[0]?.value ?? '')
   editForm.chosen_spec = signup.chosen_spec ?? ''
 }
 
