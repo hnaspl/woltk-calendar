@@ -98,11 +98,27 @@ def copy_raid_definition_to_guild(
     source: RaidDefinition, guild_id: int, created_by: int
 ) -> RaidDefinition:
     """Copy a raid definition into a specific guild as a non-builtin copy."""
+    # Find a unique code/name by checking existing definitions
+    base_code = source.code
+    base_name = source.name
+    suffix = 1
+    while True:
+        code = f"{base_code}_copy{suffix}" if suffix > 1 else f"{base_code}_copy"
+        name = f"{base_name} (Copy {suffix})" if suffix > 1 else f"{base_name} (Copy)"
+        existing = db.session.execute(
+            sa.select(RaidDefinition).where(
+                RaidDefinition.guild_id == guild_id,
+                RaidDefinition.code == code,
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            break
+        suffix += 1
     copy = RaidDefinition(
         guild_id=guild_id,
         created_by=created_by,
-        code=f"{source.code}_copy",
-        name=f"{source.name} (Copy)",
+        code=code,
+        name=name,
         expansion=source.expansion,
         category=source.category,
         default_raid_size=source.default_raid_size,
