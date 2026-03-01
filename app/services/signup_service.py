@@ -453,7 +453,10 @@ def resolve_replacement(
 ) -> CharacterReplacement:
     """Resolve a character replacement request.
 
-    action: 'confirm' or 'decline'
+    action: 'confirm', 'decline', or 'leave'
+    - confirm: swap the character on the signup and lineup slots
+    - decline: reject the replacement request, keep current character
+    - leave: player leaves the raid entirely; auto-promotes from bench
     """
     from datetime import datetime, timezone
 
@@ -479,6 +482,29 @@ def resolve_replacement(
         req.status = "confirmed"
     elif action == "decline":
         req.status = "declined"
+    elif action == "leave":
+        req.status = "left"
+        signup = get_signup(req.signup_id)
+        if signup is not None:
+            req.resolved_at = datetime.now(timezone.utc)
+            # Clean up all replacement requests for this signup before deletion
+            all_reqs = db.session.execute(
+                sa.select(CharacterReplacement).where(
+                    CharacterReplacement.signup_id == signup.id,
+                )
+            ).scalars().all()
+            for r in all_reqs:
+                if r.status == "pending":
+                    r.status = "cancelled"
+                    r.resolved_at = datetime.now(timezone.utc)
+            db.session.commit()
+            # Now delete the signup (triggers auto-promote from bench)
+            # First delete all replacement records referencing this signup
+            for r in all_reqs:
+                db.session.delete(r)
+            db.session.flush()
+            delete_signup(signup)
+            return req
     else:
         raise ValueError(f"Invalid action: {action}")
 

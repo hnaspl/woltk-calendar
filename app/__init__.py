@@ -125,6 +125,10 @@ def create_app(config_override: dict | None = None) -> Flask:
             from app.jobs.scheduler import init_scheduler
             init_scheduler(app)
 
+        # Auto-migrate: drop legacy status column from signups table
+        if not app.config.get("TESTING", False):
+            _auto_migrate(app)
+
     return app
 
 
@@ -184,6 +188,32 @@ def _register_socketio_handlers() -> None:
             join_room(f"user_{current_user.id}")
 
 
+def _auto_migrate(app: Flask) -> None:
+    """Run lightweight schema migrations for existing databases.
+
+    Currently handles:
+    - Dropping the legacy ``status`` column from ``signups`` if present.
+    """
+    try:
+        _drop_signups_status_column()
+    except Exception:
+        app.logger.debug("Auto-migration: signups.status column already removed or not present.")
+
+
+def _drop_signups_status_column() -> None:
+    """Drop the legacy ``status`` column from the signups table if it exists."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    columns = [col["name"] for col in inspector.get_columns("signups")]
+    if "status" not in columns:
+        return
+
+    # SQLite ≥ 3.35 supports ALTER TABLE DROP COLUMN
+    with db.engine.begin() as conn:
+        conn.execute(text("ALTER TABLE signups DROP COLUMN status"))
+
+
 def _register_commands(app: Flask) -> None:
     import click
 
@@ -226,3 +256,12 @@ def _register_commands(app: Flask) -> None:
         _ensure_db_dir()
         db.create_all()
         click.echo("Database tables created.")
+
+    @app.cli.command("migrate-db")
+    def migrate_db_command() -> None:
+        """Run schema migrations on existing database."""
+        try:
+            _drop_signups_status_column()
+            click.echo("Migration complete: signups.status column dropped (if present).")
+        except Exception as exc:
+            click.echo(f"Migration note: {exc}")

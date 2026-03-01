@@ -337,8 +337,8 @@ def resolve_replace_request(guild_id: int, event_id: int, request_id: int):
 
     data = request.get_json(silent=True) or {}
     action = data.get("action")
-    if action not in ("confirm", "decline"):
-        return jsonify({"error": "action must be 'confirm' or 'decline'"}), 400
+    if action not in ("confirm", "decline", "leave"):
+        return jsonify({"error": "action must be 'confirm', 'decline', or 'leave'"}), 400
 
     try:
         req = signup_service.resolve_replacement(request_id, action)
@@ -354,4 +354,5 @@ def resolve_replace_request(guild_id: int, event_id: int, request_id: int):
             )
 
     emit_signups_changed(event_id)
+    emit_lineup_changed(event_id)
     return jsonify(req.to_dict()), 200
