@@ -26,9 +26,13 @@ def _load_autosync_config() -> dict:
 
         enabled_row = db.session.get(SystemSetting, "autosync_enabled")
         interval_row = db.session.get(SystemSetting, "autosync_interval_minutes")
+        try:
+            interval = int(interval_row.value) if interval_row else 60
+        except (ValueError, TypeError):
+            interval = 60
         return {
             "enabled": enabled_row.value == "true" if enabled_row else False,
-            "interval_minutes": int(interval_row.value) if interval_row else 60,
+            "interval_minutes": interval,
         }
     except Exception:
         return dict(_DEFAULT_AUTOSYNC)

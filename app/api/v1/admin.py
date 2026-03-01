@@ -159,7 +159,10 @@ def update_system_settings():
     int_keys = {"autosync_interval_minutes"}
     for key in int_keys:
         if key in data:
-            val = str(max(5, int(data[key])))
+            try:
+                val = str(max(5, int(data[key])))
+            except (ValueError, TypeError):
+                return jsonify({"error": f"Invalid integer value for '{key}'"}), 400
             existing = db.session.get(SystemSetting, key)
             if existing:
                 existing.value = val
