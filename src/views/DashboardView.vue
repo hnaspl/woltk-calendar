@@ -183,6 +183,7 @@ import ClassBadge from '@/components/common/ClassBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
+import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
@@ -191,6 +192,7 @@ import * as signupsApi from '@/api/signups'
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const calStore = useCalendarStore()
+const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 
 const loading = ref(true)
@@ -265,6 +267,10 @@ async function resolveReplacement(req, action) {
     await signupsApi.resolveReplaceRequest(req.guild_id, req.event_id, req.id, { action })
     // Remove from local list
     replacementRequests.value = replacementRequests.value.filter(r => r.id !== req.id)
+    uiStore.showToast(
+      action === 'confirm' ? 'Character swap confirmed!' : action === 'leave' ? 'Left the raid.' : 'Character swap declined.',
+      action === 'confirm' ? 'success' : 'info'
+    )
     // Refresh signups in case lineup status changed
     try {
       const allSignups = await eventsApi.getMySignups()
@@ -276,7 +282,9 @@ async function resolveReplacement(req, action) {
         if (startsAt && new Date(startsAt).getTime() < nowMs) return false
         return true
       })
-    } catch { /* ignore */ }
-  } catch { /* ignore */ }
+    } catch { /* signups refresh is best-effort */ }
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to process replacement', 'error')
+  }
 }
 </script>
