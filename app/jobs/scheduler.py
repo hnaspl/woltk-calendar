@@ -38,37 +38,8 @@ def _load_autosync_config() -> dict:
         return dict(_DEFAULT_AUTOSYNC)
 
 
-def _save_autosync_config(config: dict) -> None:
-    """Save auto-sync config to system_settings table."""
-    from app.models.system_setting import SystemSetting
-    from app.extensions import db
-
-    for key, val in [
-        ("autosync_enabled", "true" if config.get("enabled") else "false"),
-        ("autosync_interval_minutes", str(config.get("interval_minutes", 60))),
-    ]:
-        existing = db.session.get(SystemSetting, key)
-        if existing:
-            existing.value = val
-        else:
-            db.session.add(SystemSetting(key=key, value=val))
-    db.session.commit()
-
-
 def get_autosync_config() -> dict:
     return _load_autosync_config()
-
-
-def update_autosync_config(data: dict) -> dict:
-    config = _load_autosync_config()
-    if "enabled" in data:
-        config["enabled"] = bool(data["enabled"])
-    if "interval_minutes" in data:
-        val = int(data["interval_minutes"])
-        config["interval_minutes"] = max(5, val)  # minimum 5 minutes
-    _save_autosync_config(config)
-    _apply_autosync_schedule(config)
-    return config
 
 
 def _run_autosync(app) -> None:

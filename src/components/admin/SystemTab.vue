@@ -77,64 +77,23 @@
       </div>
     </WowCard>
 
-    <!-- Auto-Sync Settings -->
+    <!-- System Settings -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">Warmane Character Auto-Sync</h2>
-      <p class="text-text-muted text-sm mb-4">Automatically sync all active characters from the Warmane armory at a scheduled interval.</p>
+      <h2 class="wow-heading text-base mb-4">System Settings</h2>
 
-      <div v-if="autosyncLoading" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else class="space-y-4 max-w-lg">
-        <div class="flex items-center gap-4">
-          <label class="text-sm text-text-primary">Auto-Sync Enabled</label>
-          <button
-            type="button"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-            :class="autosyncForm.enabled ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
-            @click="autosyncForm.enabled = !autosyncForm.enabled"
-          >
-            <span
-              class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
-              :class="autosyncForm.enabled ? 'translate-x-6' : 'translate-x-1'"
-            />
-          </button>
-        </div>
-
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Sync Interval (minutes)</label>
-          <select v-model.number="autosyncForm.interval_minutes" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="15">Every 15 minutes</option>
-            <option :value="30">Every 30 minutes</option>
-            <option :value="60">Every hour</option>
-            <option :value="120">Every 2 hours</option>
-            <option :value="360">Every 6 hours</option>
-            <option :value="720">Every 12 hours</option>
-            <option :value="1440">Every 24 hours</option>
-          </select>
-        </div>
-
-        <div class="flex gap-3">
-          <WowButton :loading="autosyncSaving" @click="saveAutosync">Save Settings</WowButton>
-          <WowButton variant="secondary" :loading="syncing" @click="triggerManualSync">Sync Now</WowButton>
-        </div>
-      </div>
-    </WowCard>
-
-    <!-- Global System Settings -->
-    <WowCard>
-      <h2 class="wow-heading text-base mb-4">Global Settings</h2>
-
-      <div v-if="sysSettingsLoading" class="h-16 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else class="space-y-4 max-w-lg">
+      <div v-if="sysSettingsLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else class="space-y-6 max-w-lg">
+        <!-- Wowhead Tooltips -->
         <label class="flex items-center gap-3 cursor-pointer">
           <button
             type="button"
             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
-            :class="sysSettingsForm.wowhead_tooltips ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
-            @click="sysSettingsForm.wowhead_tooltips = !sysSettingsForm.wowhead_tooltips"
+            :class="settingsForm.wowhead_tooltips ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+            @click="settingsForm.wowhead_tooltips = !settingsForm.wowhead_tooltips"
           >
             <span
               class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
-              :class="sysSettingsForm.wowhead_tooltips ? 'translate-x-6' : 'translate-x-1'"
+              :class="settingsForm.wowhead_tooltips ? 'translate-x-6' : 'translate-x-1'"
             />
           </button>
           <div>
@@ -142,7 +101,47 @@
             <p class="text-[10px] text-text-muted mt-0.5">When enabled, hovering equipment items shows rich tooltips with full item statistics from Wowhead. When disabled, basic item info is shown inline.</p>
           </div>
         </label>
-        <WowButton :loading="sysSettingsSaving" @click="saveSysSettings">Save Settings</WowButton>
+
+        <!-- Auto-Sync -->
+        <div class="border-t border-border-default pt-4">
+          <h3 class="text-sm text-text-primary font-medium mb-3">Warmane Character Auto-Sync</h3>
+          <p class="text-text-muted text-xs mb-3">Automatically sync all active characters from the Warmane armory at a scheduled interval.</p>
+
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <button
+                type="button"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+                :class="settingsForm.autosync_enabled ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+                @click="settingsForm.autosync_enabled = !settingsForm.autosync_enabled"
+              >
+                <span
+                  class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                  :class="settingsForm.autosync_enabled ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
+              <span class="text-sm text-text-primary">Auto-Sync Enabled</span>
+            </label>
+
+            <div>
+              <label class="block text-xs text-text-muted mb-1">Sync Interval</label>
+              <select v-model.number="settingsForm.autosync_interval_minutes" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option :value="15">Every 15 minutes</option>
+                <option :value="30">Every 30 minutes</option>
+                <option :value="60">Every hour</option>
+                <option :value="120">Every 2 hours</option>
+                <option :value="360">Every 6 hours</option>
+                <option :value="720">Every 12 hours</option>
+                <option :value="1440">Every 24 hours</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">Save Settings</WowButton>
+          <WowButton variant="secondary" :loading="syncing" @click="triggerManualSync">Sync Now</WowButton>
+        </div>
       </div>
     </WowCard>
 
@@ -178,16 +177,15 @@ const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const deleting = ref(false)
 
-// Auto-sync state
-const autosyncLoading = ref(true)
-const autosyncSaving = ref(false)
-const syncing = ref(false)
-const autosyncForm = ref({ enabled: false, interval_minutes: 60 })
-
-// System settings state
+// System settings state (unified)
 const sysSettingsLoading = ref(true)
 const sysSettingsSaving = ref(false)
-const sysSettingsForm = ref({ wowhead_tooltips: true })
+const syncing = ref(false)
+const settingsForm = ref({
+  wowhead_tooltips: true,
+  autosync_enabled: false,
+  autosync_interval_minutes: 60,
+})
 
 onMounted(async () => {
   loading.value = true
@@ -199,21 +197,19 @@ onMounted(async () => {
     loading.value = false
   }
 
-  // Load all system settings (includes autosync + wowhead_tooltips)
+  // Load all system settings from unified endpoint
   sysSettingsLoading.value = true
-  autosyncLoading.value = true
   try {
     const settings = await adminApi.getSystemSettings()
-    sysSettingsForm.value = { wowhead_tooltips: settings.wowhead_tooltips !== 'false' }
-    autosyncForm.value = {
-      enabled: settings.autosync_enabled === 'true',
-      interval_minutes: parseInt(settings.autosync_interval_minutes) || 60,
+    settingsForm.value = {
+      wowhead_tooltips: settings.wowhead_tooltips !== 'false',
+      autosync_enabled: settings.autosync_enabled === 'true',
+      autosync_interval_minutes: parseInt(settings.autosync_interval_minutes) || 60,
     }
   } catch {
     // ignore – defaults are fine
   } finally {
     sysSettingsLoading.value = false
-    autosyncLoading.value = false
   }
 })
 
@@ -261,22 +257,24 @@ async function doDelete() {
   }
 }
 
-async function saveAutosync() {
-  autosyncSaving.value = true
+async function saveAllSettings() {
+  sysSettingsSaving.value = true
   try {
     const updated = await adminApi.updateSystemSettings({
-      autosync_enabled: autosyncForm.value.enabled,
-      autosync_interval_minutes: autosyncForm.value.interval_minutes,
+      wowhead_tooltips: settingsForm.value.wowhead_tooltips,
+      autosync_enabled: settingsForm.value.autosync_enabled,
+      autosync_interval_minutes: settingsForm.value.autosync_interval_minutes,
     })
-    autosyncForm.value = {
-      enabled: updated.autosync_enabled === 'true',
-      interval_minutes: parseInt(updated.autosync_interval_minutes) || 60,
+    settingsForm.value = {
+      wowhead_tooltips: updated.wowhead_tooltips !== 'false',
+      autosync_enabled: updated.autosync_enabled === 'true',
+      autosync_interval_minutes: parseInt(updated.autosync_interval_minutes) || 60,
     }
-    uiStore.showToast('Auto-sync settings saved', 'success')
+    uiStore.showToast('System settings saved', 'success')
   } catch {
-    uiStore.showToast('Failed to save auto-sync settings', 'error')
+    uiStore.showToast('Failed to save system settings', 'error')
   } finally {
-    autosyncSaving.value = false
+    sysSettingsSaving.value = false
   }
 }
 
@@ -289,21 +287,6 @@ async function triggerManualSync() {
     uiStore.showToast('Sync failed', 'error')
   } finally {
     syncing.value = false
-  }
-}
-
-async function saveSysSettings() {
-  sysSettingsSaving.value = true
-  try {
-    const updated = await adminApi.updateSystemSettings({
-      wowhead_tooltips: sysSettingsForm.value.wowhead_tooltips,
-    })
-    sysSettingsForm.value = { wowhead_tooltips: updated.wowhead_tooltips !== 'false' }
-    uiStore.showToast('System settings saved', 'success')
-  } catch {
-    uiStore.showToast('Failed to save system settings', 'error')
-  } finally {
-    sysSettingsSaving.value = false
   }
 }
 
