@@ -12,5 +12,8 @@ export const markAllRead = () =>
 export const deleteNotification = (notifId) =>
   api.delete(`/notifications/${notifId}`)
 
+export const deleteAllNotifications = () =>
+  api.delete('/notifications')
+
 export const getUnreadCount = () =>
   api.get('/notifications/unread-count')

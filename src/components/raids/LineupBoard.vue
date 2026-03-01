@@ -80,16 +80,19 @@
       @dragleave="isOfficer && handleDragLeave($event, 'bench')"
       @drop.prevent="isOfficer && onDropBench()"
     >
-      <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">Bench Queue ({{ bench.length }})</p>
-      <div v-if="benchByRole.length > 0" class="space-y-3">
-        <div v-for="group in benchByRole" :key="group.role">
+      <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">
+        Bench Queue ({{ bench.length }})
+        <span v-if="!isOfficer && currentUserId" class="text-text-muted normal-case"> — showing your characters</span>
+      </p>
+      <div v-if="visibleBenchByRole.length > 0" class="space-y-3">
+        <div v-for="group in visibleBenchByRole" :key="group.role">
           <div class="flex items-center gap-1.5 mb-1.5">
             <img :src="getRoleIcon(group.role)" class="w-4 h-4 rounded" :alt="group.label" />
             <span class="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{{ group.label }} ({{ group.players.length }})</span>
           </div>
           <div class="flex flex-wrap gap-2">
             <div
-              v-for="s in group.players"
+              v-for="(s, benchIdx) in group.players"
               :key="s.id"
               class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
               :class="{
@@ -99,6 +102,8 @@
               :draggable="isOfficer"
               @dragstart="onDragStart($event, s, 'bench', -1)"
               @dragend="onDragEnd"
+              @dragover.prevent="isOfficer && handleBenchItemDragOver($event, group.role, benchIdx)"
+              @drop.prevent.stop="isOfficer && onDropBenchItem(group.role, benchIdx)"
             >
               <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ s.roleQueuePos }}</span>
               <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
@@ -161,6 +166,7 @@ const props = defineProps({
   eventId:        { type: [Number,String], required: true },
   guildId:        { type: [Number,String], required: true },
   isOfficer:      { type: Boolean, default: false },
+  currentUserId:  { type: [Number,String], default: null },
   tankSlots:      { type: Number, default: 0 },
   mainTankSlots:  { type: Number, default: 1 },
   offTankSlots:   { type: Number, default: 1 },
@@ -538,8 +544,86 @@ const benchByRole = computed(() => {
     .map(r => ({ role: r, label: ROLE_LABEL_MAP[r] || r, players: groups[r] }))
 })
 
+/** Visible bench queue: officers see full queue, members see only their own characters. */
+const visibleBenchByRole = computed(() => {
+  if (props.isOfficer) return benchByRole.value
+  const uid = props.currentUserId ? Number(props.currentUserId) : null
+  if (!uid) return benchByRole.value
+  return benchByRole.value
+    .map(group => ({
+      ...group,
+      players: group.players.filter(p => p.user_id === uid),
+    }))
+    .filter(group => group.players.length > 0)
+})
+
 function profString(s) {
   return (s.character?.metadata?.professions ?? []).map(p => p.name).join(', ')
+}
+
+// ── Bench reorder drag-and-drop (officers only) ──
+
+function handleBenchItemDragOver(e, role, idx) {
+  // Allow drop between bench items for reordering
+  e.dataTransfer.dropEffect = 'move'
+}
+
+function onDropBenchItem(targetRole, targetIdx) {
+  dragOverTarget.value = null
+  const id = Number(draggedId.value)
+  if (!id) return
+
+  // Only handle reorder within bench
+  const found = findSignupById(id)
+  if (!found || found.key !== 'bench') return
+
+  const currentBench = [...bench.value]
+  const fromIdx = currentBench.findIndex(s => Number(s.id) === id)
+  if (fromIdx === -1) return
+
+  // Compute the target index in the flat bench array from the role + position
+  const flatTargetIdx = getFlatBenchIndex(targetRole, targetIdx)
+  if (flatTargetIdx === -1 || flatTargetIdx === fromIdx) return
+
+  // Move the item in the array
+  const [moved] = currentBench.splice(fromIdx, 1)
+  const insertIdx = flatTargetIdx > fromIdx ? flatTargetIdx - 1 : flatTargetIdx
+  currentBench.splice(insertIdx, 0, moved)
+
+  // Update benchQueue to match new order
+  benchQueue.value = currentBench.map(s => ({ id: s.id, chosen_role: s.chosen_role }))
+
+  // Save reorder to backend
+  saveBenchReorder(currentBench.map(s => Number(s.id)))
+}
+
+function getFlatBenchIndex(role, roleIdx) {
+  // Convert role + role-relative index to a flat bench array index
+  let flatIdx = 0
+  for (const s of bench.value) {
+    const sRole = s.chosen_role || 'dps'
+    if (sRole === role) {
+      if (roleIdx === 0) return flatIdx
+      roleIdx--
+    }
+    flatIdx++
+  }
+  return flatIdx
+}
+
+let benchReorderTimer = null
+async function saveBenchReorder(orderedIds) {
+  // Debounce bench reorder saves
+  clearTimeout(benchReorderTimer)
+  benchReorderTimer = setTimeout(async () => {
+    try {
+      const result = await lineupApi.reorderBench(props.guildId, props.eventId, orderedIds)
+      benchQueue.value = result.bench_queue ?? []
+      lineupVersion.value = result.version ?? null
+    } catch (err) {
+      console.error('Failed to save bench reorder', err)
+    }
+  }, 300)
 }
 
 function removeFromRole(key, index) {

@@ -49,12 +49,20 @@
           >
             <div class="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3450]">
               <span class="text-sm font-semibold text-text-primary">Notifications</span>
-              <button
-                v-if="notifications.length > 0"
-                type="button"
-                class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors"
-                @click="markAllAsRead"
-              >Mark all read</button>
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="notifications.length > 0"
+                  type="button"
+                  class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors"
+                  @click="markAllAsRead"
+                >Mark all read</button>
+                <button
+                  v-if="notifications.length > 0"
+                  type="button"
+                  class="text-[10px] text-red-400 hover:text-red-300 transition-colors"
+                  @click="clearAllNotifications"
+                >Clear all</button>
+              </div>
             </div>
             <div class="max-h-72 overflow-y-auto">
               <div v-if="notifications.length === 0" class="px-4 py-6 text-center text-sm text-text-muted">
@@ -77,6 +85,16 @@
                     <p v-if="n.body" class="text-xs text-text-muted mt-0.5 line-clamp-2">{{ n.body }}</p>
                     <p class="text-[10px] text-text-muted mt-1">{{ formatTime(n.created_at) }}</p>
                   </div>
+                  <button
+                    type="button"
+                    class="flex-shrink-0 mt-0.5 p-0.5 rounded text-text-muted hover:text-red-400 hover:bg-red-900/20 transition-colors"
+                    title="Delete notification"
+                    @click.stop="deleteNotification(n)"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -190,6 +208,22 @@ async function markAllAsRead() {
   try {
     await notifApi.markAllRead()
     notifications.value.forEach(n => { if (!n.read_at) n.read_at = new Date().toISOString() })
+    unreadCount.value = 0
+  } catch { /* ignore */ }
+}
+
+async function deleteNotification(n) {
+  try {
+    await notifApi.deleteNotification(n.id)
+    notifications.value = notifications.value.filter(x => x.id !== n.id)
+    if (!n.read_at) unreadCount.value = Math.max(0, unreadCount.value - 1)
+  } catch { /* ignore */ }
+}
+
+async function clearAllNotifications() {
+  try {
+    await notifApi.deleteAllNotifications()
+    notifications.value = []
     unreadCount.value = 0
   } catch { /* ignore */ }
 }

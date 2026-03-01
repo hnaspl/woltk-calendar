@@ -21,7 +21,7 @@
           </span>
           <span class="text-xs text-text-muted">({{ group.items.length }})</span>
         </div>
-        <div class="space-y-1.5">
+        <div class="space-y-2">
           <template v-for="signup in group.items" :key="signup.id">
             <!-- Inline edit form (officer only) -->
             <div v-if="editingSignupId === signup.id" class="px-3 py-3 rounded-lg bg-bg-tertiary border border-border-gold space-y-3">
@@ -93,32 +93,36 @@
               position="left"
             >
               <div
-                class="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors cursor-default w-full"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors cursor-default w-full"
               >
                 <!-- Class icon -->
                 <img
                   v-if="signup.character?.class_name"
                   :src="getClassIcon(signup.character.class_name)"
                   :alt="signup.character.class_name"
-                  class="w-7 h-7 rounded border border-border-default flex-shrink-0"
+                  class="w-8 h-8 rounded border border-border-default flex-shrink-0"
                 />
-                <div class="w-7 h-7 rounded bg-bg-secondary flex-shrink-0" v-else />
+                <div class="w-8 h-8 rounded bg-bg-secondary flex-shrink-0" v-else />
 
-                <!-- Name + badges -->
+                <!-- Name + badges - structured layout -->
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-text-primary truncate">
+                  <!-- Row 1: Name + Level -->
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-sm font-semibold text-text-primary truncate">
                       {{ signup.character?.name ?? 'Unknown' }}
                     </span>
-                    <span v-if="charLevel(signup)" class="text-[10px] text-text-muted">
+                    <span v-if="charLevel(signup)" class="text-[10px] text-text-muted bg-bg-secondary px-1.5 py-0.5 rounded">
                       Lv{{ charLevel(signup) }}
                     </span>
                   </div>
-                  <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <!-- Row 2: Class / Role / Spec badges -->
+                  <div class="flex items-center gap-2 flex-wrap">
                     <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
                     <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
                     <SpecBadge v-if="signup.chosen_spec" :spec="signup.chosen_spec" />
-                    <!-- Professions inline -->
+                  </div>
+                  <!-- Row 3: Professions (separate row for clarity) -->
+                  <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
                     <span
                       v-for="prof in charProfessions(signup)"
                       :key="prof.name"
@@ -128,15 +132,17 @@
                     </span>
                   </div>
                   <!-- Gear score note -->
-                  <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-0.5">
-                    GS: {{ signup.gear_score_note }}
+                  <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-1">
+                    ⚔️ GS: {{ signup.gear_score_note }}
                   </div>
                   <!-- Bench queue position -->
-                  <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-0.5">
-                    ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
+                  <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-1 flex items-center gap-1">
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
+                      ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
+                    </span>
                   </div>
                   <!-- Officer action buttons (under queue info) -->
-                  <div v-if="isOfficer" class="flex items-center gap-1.5 mt-1" @click.stop>
+                  <div v-if="isOfficer" class="flex items-center gap-1.5 mt-1.5" @click.stop>
                     <button
                       class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
                       @click="startEdit(signup)"
@@ -167,21 +173,21 @@
                   </div>
                 </div>
 
-                <!-- Achievement points -->
-                <span
-                  v-if="charAchievements(signup)"
-                  class="text-[10px] text-amber-400 flex-shrink-0"
-                  title="Achievement Points"
-                >
-                  🏆 {{ charAchievements(signup) }}
-                </span>
-
-                <!-- Note -->
-                <WowTooltip v-if="signup.note" :text="signup.note" position="left">
-                  <svg class="w-4 h-4 text-text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                  </svg>
-                </WowTooltip>
+                <!-- Right side: Achievement points + Note -->
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span
+                    v-if="charAchievements(signup)"
+                    class="text-[10px] text-amber-400"
+                    title="Achievement Points"
+                  >
+                    🏆 {{ charAchievements(signup) }}
+                  </span>
+                  <WowTooltip v-if="signup.note" :text="signup.note" position="left">
+                    <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                    </svg>
+                  </WowTooltip>
+                </div>
 
               </div>
             </CharacterTooltip>

@@ -29,13 +29,46 @@
                 <LockBadge :locked="event.status === 'locked' || event.is_locked" />
               </div>
 
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
-                <span>📅 {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
-                <span v-if="event.ends_at_utc || event.end_time">→ {{ formatDateTime(event.ends_at_utc ?? event.end_time) }}</span>
-                <RealmBadge v-if="event.realm_name || event.realm" :realm="event.realm_name ?? event.realm" />
+              <!-- Informative details grid -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm mt-2">
+                <div class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">📅</span>
+                  <span><strong class="text-text-primary">Starts:</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+                </div>
+                <div v-if="event.ends_at_utc || event.end_time" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">🏁</span>
+                  <span><strong class="text-text-primary">Ends:</strong> {{ formatDateTime(event.ends_at_utc ?? event.end_time) }}</span>
+                </div>
+                <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">⚔️</span>
+                  <span><strong class="text-text-primary">Raid:</strong> {{ event.raid_type }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">📝</span>
+                  <span>
+                    <strong class="text-text-primary">Signups:</strong>
+                    <template v-if="event.status === 'locked' || event.is_locked">
+                      <span class="text-red-400 font-medium">Closed</span>
+                    </template>
+                    <template v-else-if="event.status === 'cancelled'">
+                      <span class="text-red-400 font-medium">Cancelled</span>
+                    </template>
+                    <template v-else-if="event.status === 'completed'">
+                      <span class="text-text-muted">Completed</span>
+                    </template>
+                    <template v-else>
+                      <span class="text-green-400 font-medium">Open</span>
+                    </template>
+                    <span class="ml-1 text-text-muted">({{ signups.length }} signed up)</span>
+                  </span>
+                </div>
+                <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">🌐</span>
+                  <span><strong class="text-text-primary">Realm:</strong> {{ event.realm_name ?? event.realm }}</span>
+                </div>
               </div>
 
-              <p v-if="event.instructions || event.description" class="mt-3 text-sm text-text-muted">
+              <p v-if="event.instructions || event.description" class="mt-3 text-sm text-text-muted border-t border-border-default pt-2">
                 {{ event.instructions ?? event.description }}
               </p>
             </div>
@@ -181,6 +214,7 @@
               :event-id="event.id"
               :guild-id="guildId"
               :is-officer="permissions.isOfficer.value"
+              :current-user-id="authStore.user?.id"
               :tank-slots="event.tank_slots ?? 0"
               :main-tank-slots="event.main_tank_slots ?? 1"
               :off-tank-slots="event.off_tank_slots ?? 1"
@@ -300,7 +334,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
-import RealmBadge from '@/components/common/RealmBadge.vue'
+// RealmBadge removed - realm info shown inline in header
 import LockBadge from '@/components/common/LockBadge.vue'
 import SignupForm from '@/components/raids/SignupForm.vue'
 import SignupList from '@/components/raids/SignupList.vue'
