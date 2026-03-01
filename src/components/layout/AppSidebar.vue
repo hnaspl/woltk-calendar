@@ -50,7 +50,7 @@
       </div>
 
       <button
-        v-if="canManageGuild"
+        v-if="canCreateGuild"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
         @click="showCreateGuild = true"
@@ -224,6 +224,7 @@ const route = useRoute()
 const permissions = usePermissions()
 
 const canManageGuild = computed(() => permissions.can('create_events'))
+const canCreateGuild = computed(() => permissions.can('create_guild'))
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 

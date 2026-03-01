@@ -11,7 +11,7 @@ from app.extensions import db
 from app.models.guild import Guild, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, has_permission, can_grant_role
+from app.utils.permissions import get_membership, has_permission, can_grant_role, has_any_guild_permission
 from app.utils.realtime import emit_guild_changed, emit_guilds_changed
 from app.utils import notify
 
@@ -95,6 +95,8 @@ def available_users(guild_id: int):
 @bp.post("")
 @login_required
 def create_guild():
+    if not has_any_guild_permission(current_user.id, "create_guild"):
+        return jsonify({"error": "Permission 'create_guild' required"}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": "name and realm_name are required"}), 400

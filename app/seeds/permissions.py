@@ -56,13 +56,14 @@ ALL_PERMISSIONS = [
     ("view_attendance", "View Attendance", "View attendance records", "attendance"),
     ("record_attendance", "Record Attendance", "Record raid attendance", "attendance"),
 
-    # Raid definitions & templates
-    ("manage_raid_definitions", "Manage Raid Definitions", "Create/edit raid definitions", "definitions"),
-    ("manage_default_definitions", "Manage Default Definitions", "Edit/delete built-in (seeded) raid definitions", "definitions"),
-    ("manage_templates", "Manage Templates", "Create/edit event templates", "definitions"),
-    ("manage_series", "Manage Series", "Create/edit event series", "definitions"),
+    # Raid definitions & templates (guild-scoped)
+    ("manage_raid_definitions", "Manage Guild Raid Definitions", "Create/edit/delete guild-scoped raid definitions", "definitions"),
+    ("manage_default_definitions", "Manage Default Definitions", "Edit/delete built-in (seeded) global raid definitions", "definitions"),
+    ("manage_templates", "Manage Guild Templates", "Create/edit/delete guild-scoped event templates", "definitions"),
+    ("manage_series", "Manage Guild Series", "Create/edit/delete guild-scoped recurring event series", "definitions"),
 
     # Guild management
+    ("create_guild", "Create Guild", "Create new guilds", "guild"),
     ("view_guild", "View Guild", "View guild information", "guild"),
     ("update_guild_settings", "Update Guild Settings", "Modify guild settings", "guild"),
     ("delete_guild", "Delete Guild", "Delete the guild", "guild"),
@@ -117,7 +118,7 @@ ROLE_PERMISSIONS = {
         "record_attendance",
         "manage_raid_definitions", "manage_templates", "manage_series",
         "add_members", "remove_members", "update_member_roles",
-        "update_guild_settings", "delete_guild",
+        "update_guild_settings",
     ],
     "guild_admin": [
         # All officer permissions +
@@ -133,9 +134,9 @@ ROLE_PERMISSIONS = {
         "record_attendance",
         "manage_raid_definitions", "manage_templates", "manage_series",
         "add_members", "remove_members", "update_member_roles",
-        "update_guild_settings", "delete_guild",
+        "update_guild_settings",
         # Guild admin specifics
-        "manage_roles",
+        "create_guild", "delete_guild", "manage_roles",
     ],
     "global_admin": [
         # All permissions
@@ -152,9 +153,9 @@ ROLE_PERMISSIONS = {
         "manage_raid_definitions", "manage_default_definitions",
         "manage_templates", "manage_series",
         "add_members", "remove_members", "update_member_roles",
-        "update_guild_settings", "delete_guild",
-        "manage_roles",
-        # Admin-only
+        "update_guild_settings",
+        # Admin specifics
+        "create_guild", "delete_guild", "manage_roles",
         "list_system_users", "manage_system_users",
         "trigger_sync", "manage_autosync",
         "manage_system_settings",

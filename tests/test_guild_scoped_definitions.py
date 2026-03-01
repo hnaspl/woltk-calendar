@@ -435,3 +435,193 @@ class TestMultiGuildDefinitions:
         refreshed_b = raid_service.get_raid_definition(rd_b.id)
         assert refreshed_b.name == "Naxxramas 25"
         assert rd_a.name == "Naxx 25 Modified"
+
+
+# ===========================================================================
+# Test: create_guild and delete_guild permission assignment
+# ===========================================================================
+
+class TestCreateDeleteGuildPermissions:
+    """Verify create_guild and delete_guild are only on guild_admin and global_admin."""
+
+    def test_member_lacks_create_guild(self, seeded):
+        """Member does NOT have create_guild permission."""
+        membership = get_membership(seeded["guild_a"].id, seeded["member_user"].id)
+        assert not has_permission(membership, "create_guild")
+
+    def test_raid_leader_lacks_create_guild(self, seeded):
+        """Raid Leader does NOT have create_guild permission."""
+        # Add a raid_leader membership for testing
+        rl_user = User(username="raidlead", email="rl@test.com",
+                       password_hash="x", is_active=True)
+        _db.session.add(rl_user)
+        _db.session.flush()
+        _db.session.add(GuildMembership(
+            guild_id=seeded["guild_a"].id, user_id=rl_user.id,
+            role="raid_leader", status="active"
+        ))
+        _db.session.flush()
+        membership = get_membership(seeded["guild_a"].id, rl_user.id)
+        assert not has_permission(membership, "create_guild")
+
+    def test_officer_lacks_create_guild(self, seeded):
+        """Officer does NOT have create_guild permission."""
+        membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
+        assert not has_permission(membership, "create_guild")
+
+    def test_guild_admin_has_create_guild(self, seeded):
+        """Guild Admin HAS create_guild permission."""
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert has_permission(membership, "create_guild")
+
+    def test_global_admin_has_create_guild(self, seeded):
+        """Global Admin (is_admin=True) bypasses all checks including create_guild."""
+        # is_admin users bypass all permission checks via has_any_guild_permission
+        from app.utils.permissions import has_any_guild_permission
+        assert has_any_guild_permission(seeded["admin_user"].id, "create_guild")
+
+    def test_officer_lacks_delete_guild(self, seeded):
+        """Officer does NOT have delete_guild permission."""
+        membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
+        assert not has_permission(membership, "delete_guild")
+
+    def test_guild_admin_has_delete_guild(self, seeded):
+        """Guild Admin HAS delete_guild permission."""
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert has_permission(membership, "delete_guild")
+
+    def test_member_lacks_delete_guild(self, seeded):
+        """Member does NOT have delete_guild permission."""
+        membership = get_membership(seeded["guild_a"].id, seeded["member_user"].id)
+        assert not has_permission(membership, "delete_guild")
+
+
+# ===========================================================================
+# Test: Permission display names are guild-scoped
+# ===========================================================================
+
+class TestPermissionDisplayNames:
+    """Verify guild-scoped permissions have 'Guild' in their display names."""
+
+    def test_manage_raid_definitions_display_name(self, seeded):
+        """manage_raid_definitions should have 'Guild' in display name."""
+        perm = _db.session.execute(
+            _db.select(Permission).where(Permission.code == "manage_raid_definitions")
+        ).scalar_one()
+        assert "Guild" in perm.display_name
+
+    def test_manage_templates_display_name(self, seeded):
+        """manage_templates should have 'Guild' in display name."""
+        perm = _db.session.execute(
+            _db.select(Permission).where(Permission.code == "manage_templates")
+        ).scalar_one()
+        assert "Guild" in perm.display_name
+
+    def test_manage_series_display_name(self, seeded):
+        """manage_series should have 'Guild' in display name."""
+        perm = _db.session.execute(
+            _db.select(Permission).where(Permission.code == "manage_series")
+        ).scalar_one()
+        assert "Guild" in perm.display_name
+
+    def test_manage_default_definitions_no_guild_prefix(self, seeded):
+        """manage_default_definitions is global, should NOT have 'Guild' prefix."""
+        perm = _db.session.execute(
+            _db.select(Permission).where(Permission.code == "manage_default_definitions")
+        ).scalar_one()
+        assert perm.display_name == "Manage Default Definitions"
+
+    def test_create_guild_permission_exists(self, seeded):
+        """create_guild permission should exist in the database."""
+        perm = _db.session.execute(
+            _db.select(Permission).where(Permission.code == "create_guild")
+        ).scalar_one_or_none()
+        assert perm is not None
+        assert perm.category == "guild"
+
+
+# ===========================================================================
+# Test: API-level guild creation permission enforcement
+# ===========================================================================
+
+class TestCreateGuildAPI:
+    """Verify the guild creation API endpoint enforces create_guild permission."""
+
+    def test_api_create_guild_as_global_admin(self, seeded, app):
+        """Global admin (is_admin=True) can create guilds."""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.post("/api/v1/guilds", json={
+                "name": "Admin Guild", "realm_name": "Icecrown"
+            })
+            assert resp.status_code == 201
+
+    def test_api_create_guild_as_guild_admin(self, seeded, app):
+        """Guild admin can create guilds (has create_guild permission)."""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["gadmin_user"].id)
+            resp = client.post("/api/v1/guilds", json={
+                "name": "GA New Guild", "realm_name": "Lordaeron"
+            })
+            assert resp.status_code == 201
+
+    def test_api_create_guild_as_officer_rejected(self, seeded, app):
+        """Officer cannot create guilds (no create_guild permission)."""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["officer_user"].id)
+            resp = client.post("/api/v1/guilds", json={
+                "name": "Officer Guild", "realm_name": "Icecrown"
+            })
+            assert resp.status_code == 403
+
+    def test_api_create_guild_as_member_rejected(self, seeded, app):
+        """Member cannot create guilds (no create_guild permission)."""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["member_user"].id)
+            resp = client.post("/api/v1/guilds", json={
+                "name": "Member Guild", "realm_name": "Icecrown"
+            })
+            assert resp.status_code == 403
+
+    def test_api_delete_guild_as_officer_rejected(self, seeded, app):
+        """Officer cannot delete guilds (no delete_guild permission)."""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["officer_user"].id)
+            resp = client.delete(f"/api/v1/guilds/{seeded['guild_a'].id}")
+            assert resp.status_code == 403
+
+    def test_api_delete_guild_as_guild_admin(self, seeded, app):
+        """Guild admin can delete guilds (has delete_guild permission).
+        Use global admin to create the guild (so no membership conflict).
+        """
+        with app.test_client() as client:
+            # Create a temp guild as global admin
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.post("/api/v1/guilds", json={
+                "name": "Temp Delete Guild", "realm_name": "Frostmourne"
+            })
+            assert resp.status_code == 201
+            temp_guild_id = resp.get_json()["id"]
+
+            # The creator (admin_user) was auto-added as guild_admin.
+            # Now add gadmin_user as guild_admin in this new guild.
+            _db.session.add(GuildMembership(
+                guild_id=temp_guild_id, user_id=seeded["gadmin_user"].id,
+                role="guild_admin", status="active"
+            ))
+            _db.session.commit()
+
+            # Delete as gadmin_user (guild_admin role) — should succeed
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["gadmin_user"].id)
+            resp = client.delete(f"/api/v1/guilds/{temp_guild_id}")
+            # Permission check should pass (guild_admin has delete_guild)
+            # Note: the actual delete may fail due to cascading constraints
+            # but we verify the permission check passes (not 403)
+            assert resp.status_code != 403

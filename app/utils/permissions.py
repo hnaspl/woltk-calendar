@@ -61,6 +61,44 @@ def has_permission(membership: GuildMembership | None, permission_code: str) -> 
     return result is not None
 
 
+def has_any_guild_permission(user_id: int, permission_code: str) -> bool:
+    """Check if the user has a permission in ANY of their active guild memberships.
+
+    Useful for non-guild-scoped actions like creating a guild, where the user
+    doesn't yet belong to the target guild.  Site admins bypass all checks.
+    """
+    if current_user and getattr(current_user, "is_admin", False):
+        return True
+
+    # Find all active memberships for this user
+    memberships = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.user_id == user_id,
+            GuildMembership.status == MemberStatus.ACTIVE.value,
+        )
+    ).scalars().all()
+
+    # If user has no memberships, check the default "member" role
+    if not memberships:
+        result = db.session.execute(
+            sa.select(sa.literal(1))
+            .select_from(RolePermission)
+            .join(SystemRole, RolePermission.role_id == SystemRole.id)
+            .join(Permission, RolePermission.permission_id == Permission.id)
+            .where(
+                SystemRole.name == "member",
+                Permission.code == permission_code,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        return result is not None
+
+    for m in memberships:
+        if has_permission(m, permission_code):
+            return True
+    return False
+
+
 def get_user_permissions(membership: GuildMembership | None) -> list[str]:
     """Return all permission codes for the user's current role.
 
