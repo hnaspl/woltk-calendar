@@ -218,6 +218,8 @@ def update_lineup_grouped(
 
     # Snapshot which roles had signups before the update so we can detect
     # freed slots and trigger auto-promotion afterwards.
+    # We also snapshot bench signups to detect orphaned signups (signups in
+    # the old lineup that are missing from the new data entirely).
     old_role_signups: dict[str, set[int]] = {}
     old_bench_ids: set[int] = set()
     old_slots = db.session.execute(
@@ -304,7 +306,8 @@ def update_lineup_grouped(
     # automatically placed at the end of the bench so they don't disappear.
     all_old_ids = all_old_role_ids | old_bench_ids
     explicit_bench_ids = {_entry_id(e) for e in all_bench}
-    accounted_ids = all_new_role_ids | explicit_bench_ids | {None}
+    accounted_ids = all_new_role_ids | explicit_bench_ids
+    accounted_ids.discard(None)  # ignore None entries from _entry_id
     orphaned_ids = all_old_ids - accounted_ids
     for oid in orphaned_ids:
         all_bench.append(oid)
