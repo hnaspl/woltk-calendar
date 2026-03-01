@@ -301,7 +301,19 @@ class RaidEvent(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_signup_count:
-            result["signup_count"] = len(self.signups) if self.signups else 0
+            from app.models.signup import LineupSlot
+            signup_ids = [s.id for s in (self.signups or [])]
+            if signup_ids:
+                active_ids = set(
+                    db.session.execute(
+                        sa.select(LineupSlot.signup_id).where(
+                            LineupSlot.signup_id.in_(signup_ids)
+                        ).distinct()
+                    ).scalars().all()
+                )
+                result["signup_count"] = len(active_ids)
+            else:
+                result["signup_count"] = 0
         return result
 
     def __repr__(self) -> str:

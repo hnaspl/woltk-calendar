@@ -175,8 +175,8 @@ const upcomingEvents = computed(() =>
     .slice(0, 8)
 )
 
-const myGoingCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'going' || (!s.lineup_status && !s.bench_info)).length)
-const myBenchCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'bench' || s.bench_info).length)
+const myGoingCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'going').length)
+const myBenchCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'bench').length)
 const missingResponseCount = computed(() => {
   const signedUpEventIds = new Set(mySignups.value.map(s => s.raid_event_id))
   return upcomingEvents.value.filter(ev => !signedUpEventIds.has(ev.id)).length
