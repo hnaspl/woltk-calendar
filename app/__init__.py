@@ -266,8 +266,9 @@ def _ensure_permission_tables(app: Flask) -> None:
 
     # Seed default roles/permissions if empty
     from app.models.permission import SystemRole as SR
+    import sqlalchemy as _sa
     count = db.session.execute(
-        __import__("sqlalchemy").select(__import__("sqlalchemy").func.count()).select_from(SR)
+        _sa.select(_sa.func.count()).select_from(SR)
     ).scalar()
     if count == 0:
         from app.seeds.permissions import seed_permissions

@@ -48,6 +48,8 @@ def create_event(guild_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "create_events"):
         return jsonify({"error": "Permission 'create_events' required"}), 403
+    data = request.get_json(silent=True) or {}
+    required = {"title", "realm_name", "starts_at_utc"}
     missing = required - data.keys()
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400

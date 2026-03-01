@@ -79,6 +79,10 @@ def confirm_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "confirm_lineup"):
         return jsonify({"error": "Permission 'confirm_lineup' required"}), 403
+    event = event_service.get_event(event_id)
+    if event is None or event.guild_id != guild_id:
+        return jsonify({"error": "Event not found"}), 404
+    slots = lineup_service.confirm_lineup(event_id, current_user.id)
     return jsonify([s.to_dict() for s in slots]), 200
 
 
