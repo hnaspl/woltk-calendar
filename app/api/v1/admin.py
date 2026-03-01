@@ -125,10 +125,14 @@ def trigger_sync():
 @login_required
 def get_system_settings():
     """Return all global system settings. Any logged-in user can read."""
+    return _system_settings_response()
+
+
+def _system_settings_response():
+    """Build the system settings JSON response with defaults."""
     from app.models.system_setting import SystemSetting
     rows = db.session.execute(db.select(SystemSetting)).scalars().all()
     settings = {r.key: r.value for r in rows}
-    # Provide defaults for known settings
     if "wowhead_tooltips" not in settings:
         settings["wowhead_tooltips"] = "true"
     return jsonify(settings), 200
@@ -143,19 +147,15 @@ def update_system_settings():
         return err
     from app.models.system_setting import SystemSetting
     data = request.get_json(silent=True) or {}
-    allowed_keys = {"wowhead_tooltips"}
-    for key, value in data.items():
-        if key not in allowed_keys:
-            continue
-        existing = db.session.get(SystemSetting, key)
-        if existing:
-            existing.value = str(value).lower()
-        else:
-            db.session.add(SystemSetting(key=key, value=str(value).lower()))
+    # Boolean settings — validate and store as "true"/"false"
+    bool_keys = {"wowhead_tooltips"}
+    for key in bool_keys:
+        if key in data:
+            val = "true" if data[key] in (True, "true", "1", 1) else "false"
+            existing = db.session.get(SystemSetting, key)
+            if existing:
+                existing.value = val
+            else:
+                db.session.add(SystemSetting(key=key, value=val))
     db.session.commit()
-    # Return updated settings
-    rows = db.session.execute(db.select(SystemSetting)).scalars().all()
-    settings = {r.key: r.value for r in rows}
-    if "wowhead_tooltips" not in settings:
-        settings["wowhead_tooltips"] = "true"
-    return jsonify(settings), 200
+    return _system_settings_response()
