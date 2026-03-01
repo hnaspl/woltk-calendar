@@ -478,7 +478,6 @@ def reorder_bench_queue(
             role_counters[role] += 1
             old_positions_by_role[slot.signup_id] = (role, role_counters[role])
 
-    # Rewrite bench slot_index values to match new order
     # Build a set of bench signup IDs for validation
     bench_signup_ids = {s.signup_id for s in bench_slots}
 
@@ -488,14 +487,33 @@ def reorder_bench_queue(
     remaining = [s.signup_id for s in bench_slots if s.signup_id not in set(valid_ordered)]
     final_order = valid_ordered + remaining
 
-    # Map signup_id -> slot for quick lookup
+    # Use a two-phase update to avoid UNIQUE constraint collisions.
+    # Phase 1: Set all slot_index to negative temporary values.
     slot_map = {s.signup_id: s for s in bench_slots}
     for idx, signup_id in enumerate(final_order):
         slot = slot_map.get(signup_id)
         if slot:
-            slot.slot_index = idx
+            db.session.execute(
+                sa.update(LineupSlot)
+                .where(LineupSlot.id == slot.id)
+                .values(slot_index=-(idx + 1000))
+            )
+    db.session.flush()
 
+    # Phase 2: Set to final non-negative values.
+    for idx, signup_id in enumerate(final_order):
+        slot = slot_map.get(signup_id)
+        if slot:
+            db.session.execute(
+                sa.update(LineupSlot)
+                .where(LineupSlot.id == slot.id)
+                .values(slot_index=idx)
+            )
     db.session.commit()
+
+    # Expire cached ORM objects so they re-read from DB
+    for slot in bench_slots:
+        db.session.expire(slot)
 
     # Calculate new per-role positions and detect changes
     new_role_counters: dict[str, int] = {}
