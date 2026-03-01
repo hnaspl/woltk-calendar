@@ -227,3 +227,25 @@ def list_my_signups():
             d["starts_at_utc"] = s.raid_event.starts_at_utc.isoformat() if s.raid_event.starts_at_utc else None
         result.append(d)
     return jsonify(result), 200
+
+
+@all_events_bp.get("/my-replacement-requests")
+@login_required
+def list_my_replacement_requests():
+    """Return all pending replacement requests for the current user across all guilds."""
+    from app.services import signup_service
+
+    requests = signup_service.get_pending_replacements_for_user(current_user.id)
+    result = []
+    for r in requests:
+        d = r.to_dict()
+        if r.signup and r.signup.raid_event is not None:
+            ev = r.signup.raid_event
+            d["event_title"] = ev.title
+            d["raid_type"] = ev.raid_type
+            d["guild_id"] = ev.guild_id
+            d["event_id"] = ev.id
+            d["event_status"] = ev.status
+            d["starts_at_utc"] = ev.starts_at_utc.isoformat() if ev.starts_at_utc else None
+        result.append(d)
+    return jsonify(result), 200

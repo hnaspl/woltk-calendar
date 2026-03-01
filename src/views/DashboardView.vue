@@ -42,6 +42,49 @@
         </WowCard>
       </div>
 
+      <!-- Pending Replacement Requests -->
+      <div v-if="replacementRequests.length > 0" class="space-y-3">
+        <h2 class="wow-heading text-lg">⚡ Pending Character Swaps</h2>
+        <div v-for="req in replacementRequests" :key="req.id">
+          <WowCard class="border-blue-700 bg-blue-900/10">
+            <div class="space-y-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-blue-300 text-xs font-semibold">Character Swap Requested</span>
+                <span v-if="req.event_title" class="text-xs text-text-muted">·</span>
+                <RouterLink
+                  v-if="req.event_id && req.guild_id"
+                  :to="`/raids/${req.event_id}`"
+                  class="text-xs text-accent-gold hover:underline"
+                >{{ req.event_title ?? 'Raid' }}</RouterLink>
+                <span v-if="req.starts_at_utc" class="text-[10px] text-text-muted">{{ formatDateTime(req.starts_at_utc) }}</span>
+              </div>
+              <p class="text-text-muted text-xs">
+                <strong class="text-text-primary">{{ req.requester_name }}</strong>
+                wants to replace
+                <strong class="text-text-primary">{{ req.old_character?.name ?? '?' }}</strong>
+                with
+                <strong class="text-accent-gold">{{ req.new_character?.name ?? '?' }}</strong>
+                <span v-if="req.reason" class="italic"> — {{ req.reason }}</span>
+              </p>
+              <div class="flex gap-2">
+                <button
+                  class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
+                  @click="resolveReplacement(req, 'confirm')"
+                >Confirm</button>
+                <button
+                  class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                  @click="resolveReplacement(req, 'decline')"
+                >Decline</button>
+                <button
+                  class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
+                  @click="resolveReplacement(req, 'leave')"
+                >Leave Raid</button>
+              </div>
+            </div>
+          </WowCard>
+        </div>
+      </div>
+
       <!-- Main grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Upcoming raids (2/3 width) -->
@@ -143,6 +186,7 @@ import { useCalendarStore } from '@/stores/calendar'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
+import * as signupsApi from '@/api/signups'
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
@@ -151,6 +195,7 @@ const { getRaidIcon } = useWowIcons()
 
 const loading = ref(true)
 const mySignups = ref([])
+const replacementRequests = ref([])
 
 onMounted(async () => {
   loading.value = true
@@ -172,6 +217,12 @@ onMounted(async () => {
       })
     } catch {
       mySignups.value = []
+    }
+    // Fetch pending replacement requests
+    try {
+      replacementRequests.value = await eventsApi.getMyReplacementRequests()
+    } catch {
+      replacementRequests.value = []
     }
   } finally {
     loading.value = false
@@ -206,5 +257,26 @@ function raidLabel(raidType) {
   if (!raidType) return null
   const found = RAID_TYPES.find(r => r.value === raidType)
   return found ? found.label : raidType
+}
+
+async function resolveReplacement(req, action) {
+  if (!req.guild_id || !req.event_id) return
+  try {
+    await signupsApi.resolveReplaceRequest(req.guild_id, req.event_id, req.id, { action })
+    // Remove from local list
+    replacementRequests.value = replacementRequests.value.filter(r => r.id !== req.id)
+    // Refresh signups in case lineup status changed
+    try {
+      const allSignups = await eventsApi.getMySignups()
+      const nowMs = Date.now()
+      mySignups.value = allSignups.filter(su => {
+        const status = su.event_status
+        if (status === 'completed' || status === 'cancelled') return false
+        const startsAt = su.starts_at_utc
+        if (startsAt && new Date(startsAt).getTime() < nowMs) return false
+        return true
+      })
+    } catch { /* ignore */ }
+  } catch { /* ignore */ }
 }
 </script>

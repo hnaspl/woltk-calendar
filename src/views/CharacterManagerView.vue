@@ -172,7 +172,7 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
-          This character is synced from Warmane armory. Fields are locked. Use <strong class="mx-1">Sync</strong> to update from armory.
+          This character is synced from Warmane armory. Fields are locked. Use <strong class="mx-1">Sync</strong> to update from armory.<template v-if="!isRoleLocked"> Role can still be changed.</template>
         </div>
 
         <!-- STEP 1: Armory import (only when adding, not editing) -->
@@ -230,7 +230,7 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Role</label>
-            <select v-model="form.role" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+            <select v-model="form.role" :disabled="isRoleLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">Select role…</option>
               <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
@@ -356,6 +356,9 @@ const warmaneRealms = WARMANE_REALMS
 
 /** Lock all fields when editing a character imported from armory */
 const isArmoryLocked = computed(() => !!editingChar.value && !!editingChar.value.armory_url)
+
+/** Role should remain editable for armory chars when class has multiple roles */
+const isRoleLocked = computed(() => isArmoryLocked.value && filteredRoles.value.length <= 1)
 
 /** Lock realm when adding a new character and guild has a realm */
 const isRealmLocked = computed(() => !editingChar.value && !!guildStore.currentGuild?.realm_name)

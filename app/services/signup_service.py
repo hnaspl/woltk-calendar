@@ -441,7 +441,8 @@ def get_pending_replacements_for_user(user_id: int) -> list[CharacterReplacement
                 sa.orm.joinedload(CharacterReplacement.old_character),
                 sa.orm.joinedload(CharacterReplacement.new_character),
                 sa.orm.joinedload(CharacterReplacement.requester),
-                sa.orm.joinedload(CharacterReplacement.signup),
+                sa.orm.joinedload(CharacterReplacement.signup)
+                    .joinedload(Signup.raid_event),
             )
         ).scalars().unique().all()
     )
