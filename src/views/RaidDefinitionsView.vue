@@ -320,8 +320,6 @@ function openCopyModal(def) {
   showCopyModal.value = true
 }
 
-let pendingSave = null
-
 async function saveDef() {
   formError.value = null
   if (!form.name || !form.raid_type || !form.size) { formError.value = 'Name, type and size are required'; return }
@@ -330,7 +328,6 @@ async function saveDef() {
 
   // Check if multi-guild is checked but no guilds selected
   if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
-    pendingSave = true
     showNoGuildConfirm.value = true
     return
   }
@@ -340,7 +337,6 @@ async function saveDef() {
 
 function goBackToForm() {
   showNoGuildConfirm.value = false
-  pendingSave = null
 }
 
 async function confirmSaveCurrentOnly() {
@@ -350,11 +346,12 @@ async function confirmSaveCurrentOnly() {
 }
 
 async function doSave() {
-  saving.value = true
   const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
   const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
+  if (!targetGuild) { formError.value = 'Please select a guild'; return }
+  saving.value = true
   // Set realm from selected guild
-  const payload = { ...form, realm: targetGuild?.realm_name ?? '' }
+  const payload = { ...form, realm: targetGuild.realm_name ?? '' }
   try {
     if (editing.value) {
       const updated = await raidDefsApi.updateRaidDefinition(targetGuildId, editing.value.id, payload)

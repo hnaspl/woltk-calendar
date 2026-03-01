@@ -411,11 +411,12 @@ async function confirmSaveCurrentOnly() {
 }
 
 async function doSave() {
-  saving.value = true
   const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
   const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
+  if (!targetGuild) { formError.value = 'Please select a guild'; return }
+  saving.value = true
   // Derive realm_name from selected guild
-  const payload = { ...form, realm_name: targetGuild?.realm_name ?? '' }
+  const payload = { ...form, realm_name: targetGuild.realm_name ?? '' }
   try {
     if (editing.value) {
       const updated = await seriesApi.updateSeries(targetGuildId, editing.value.id, payload)
