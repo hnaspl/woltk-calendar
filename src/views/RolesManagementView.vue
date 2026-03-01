@@ -11,7 +11,7 @@
         <!-- Roles list -->
         <WowCard>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="wow-heading text-base">System Roles ({{ roles.length }})</h2>
+            <h2 class="wow-heading text-base">All Roles ({{ roles.length }})</h2>
             <WowButton @click="openCreateRole">+ New Role</WowButton>
           </div>
 
@@ -235,15 +235,15 @@
       <form @submit.prevent="doCreateGrantRule" class="space-y-4">
         <div>
           <label class="block text-xs text-text-muted mb-1">Granter Role (who can assign)</label>
-          <select v-model.number="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select role…</option>
+          <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option :value="null" disabled>Select role…</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Grantee Role (role to be assigned)</label>
-          <select v-model.number="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select role…</option>
+          <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option :value="null" disabled>Select role…</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
@@ -309,8 +309,8 @@ const showGrantRuleModal = ref(false)
 const creatingGrantRule = ref(false)
 const grantRuleError = ref(null)
 const grantRuleForm = reactive({
-  granter_role_id: '',
-  grantee_role_id: ''
+  granter_role_id: null,
+  grantee_role_id: null
 })
 
 // Computed
@@ -361,8 +361,8 @@ async function loadPermissions() {
   permissionsLoading.value = true
   try {
     allPermissions.value = await rolesApi.getPermissions()
-  } catch {
-    // ignore
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load permissions', 'error')
   } finally {
     permissionsLoading.value = false
   }
@@ -372,8 +372,8 @@ async function loadGrantRules() {
   grantRulesLoading.value = true
   try {
     grantRules.value = await rolesApi.getGrantRules()
-  } catch {
-    // ignore
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load grant rules', 'error')
   } finally {
     grantRulesLoading.value = false
   }
@@ -465,8 +465,8 @@ async function doCreateGrantRule() {
     })
     uiStore.showToast('Grant rule added', 'success')
     showGrantRuleModal.value = false
-    grantRuleForm.granter_role_id = ''
-    grantRuleForm.grantee_role_id = ''
+    grantRuleForm.granter_role_id = null
+    grantRuleForm.grantee_role_id = null
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
     grantRuleError.value = err?.response?.data?.message ?? 'Failed to add grant rule'
