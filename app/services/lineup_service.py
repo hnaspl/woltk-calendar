@@ -453,11 +453,11 @@ def update_lineup(raid_event_id: int, slots_data: list[dict], confirmed_by: int)
 def reorder_bench_queue(
     raid_event_id: int,
     ordered_signup_ids: list[int],
-) -> dict:
+) -> tuple[dict, list[tuple]]:
     """Reorder bench queue to match the provided signup ID order.
 
-    Returns the updated grouped lineup dict.  Also returns a list of
-    (signup, old_position, new_position) tuples for position changes.
+    Returns a tuple of (grouped lineup dict, position changes list).
+    Position changes are (signup, old_position, new_position) tuples.
     """
     # Fetch existing bench lineup slots for this event
     bench_slots = list(db.session.execute(

@@ -431,7 +431,8 @@ class TestQueuePositionNotification:
             event.id, [s5.id, s4.id, s3.id]
         )
 
-        # All three changed positions
+        # All three changed positions: s3 was #1 → #3, s5 was #3 → #1
+        # s4 stays at position #2 (middle of reversal), so only 2 changes
         assert len(changes) == 2  # s4 stays at #2, only s3 and s5 swap
         changed_ids = {c[0].id for c in changes}
         assert s3.id in changed_ids  # was #1, now #3
