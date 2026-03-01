@@ -42,10 +42,14 @@ export function usePermissions() {
     }
   }
 
-  // Auto-fetch when guild changes
+  // Auto-fetch when guild changes (only when user is authenticated)
   watch(
-    () => currentGuild.value?.id,
-    () => { fetchPermissions() },
+    () => [currentGuild.value?.id, currentUser.value?.id],
+    () => {
+      if (currentGuild.value && currentUser.value) {
+        fetchPermissions()
+      }
+    },
     { immediate: true }
   )
 

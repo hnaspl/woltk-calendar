@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
@@ -93,6 +95,9 @@ def create_role():
 
     if not name or not display_name:
         return jsonify({"error": "name and display_name are required"}), 400
+
+    if not re.match(r"^[a-z0-9_-]+$", name):
+        return jsonify({"error": "Role name may only contain lowercase letters, digits, underscores, and hyphens"}), 400
 
     # Check uniqueness
     existing = db.session.execute(

@@ -217,12 +217,14 @@ def update_member(guild_id: int, user_id: int):
             return jsonify({"error": f"You do not have permission to assign the '{new_role}' role"}), 403
         # Cannot change role of someone with a higher-level role
         from app.models.permission import SystemRole
-        caller_role = db.session.execute(
-            sa.select(SystemRole).where(SystemRole.name == membership.role)
-        ).scalar_one_or_none() if membership else None
-        target_role = db.session.execute(
-            sa.select(SystemRole).where(SystemRole.name == target.role)
-        ).scalar_one_or_none()
+        role_names = [membership.role, target.role] if membership else [target.role]
+        roles_by_name = {}
+        for sr in db.session.execute(
+            sa.select(SystemRole).where(SystemRole.name.in_(role_names))
+        ).scalars().all():
+            roles_by_name[sr.name] = sr
+        caller_role = roles_by_name.get(membership.role) if membership else None
+        target_role = roles_by_name.get(target.role)
         can_bypass_level = has_permission(None, "manage_system_users")
         if not can_bypass_level and caller_role and target_role and target_role.level >= caller_role.level:
             return jsonify({"error": "Cannot modify a member with equal or higher role level"}), 403

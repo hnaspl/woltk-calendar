@@ -92,15 +92,21 @@ def can_grant_role(membership: GuildMembership | None, target_role_name: str) ->
     if membership is None:
         return False
 
+    # Fetch the target role ID first, then check grant rules
+    target_role = db.session.execute(
+        sa.select(SystemRole).where(SystemRole.name == target_role_name)
+    ).scalar_one_or_none()
+    if target_role is None:
+        return False
+
+    granter = sa.orm.aliased(SystemRole)
     result = db.session.execute(
         sa.select(sa.literal(1))
         .select_from(RoleGrantRule)
-        .join(SystemRole, RoleGrantRule.granter_role_id == SystemRole.id)
+        .join(granter, RoleGrantRule.granter_role_id == granter.id)
         .where(
-            SystemRole.name == membership.role,
-            RoleGrantRule.grantee_role_id == sa.select(SystemRole.id).where(
-                SystemRole.name == target_role_name
-            ).correlate_except(SystemRole).scalar_subquery(),
+            granter.name == membership.role,
+            RoleGrantRule.grantee_role_id == target_role.id,
         )
         .limit(1)
     ).scalar_one_or_none()
