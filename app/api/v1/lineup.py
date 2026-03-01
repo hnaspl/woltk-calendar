@@ -39,7 +39,7 @@ def update_lineup(guild_id: int, event_id: int):
     data = request.get_json(silent=True) or {}
 
     # Support grouped format: {tanks: [id,...], healers: [id,...], dps: [id,...]}
-    if "tanks" in data or "healers" in data or "dps" in data:
+    if "melee_dps" in data or "healers" in data or "range_dps" in data:
         try:
             result = lineup_service.update_lineup_grouped(
                 event_id, data, current_user.id,
@@ -113,7 +113,7 @@ def reorder_bench(guild_id: int, event_id: int):
             user_id=signup.user_id,
             event=event,
             character_name=char_name,
-            role=signup.chosen_role or "dps",
+            role=signup.chosen_role or "range_dps",
             new_position=new_pos,
         )
 

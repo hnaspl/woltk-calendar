@@ -89,11 +89,11 @@ const CLASS_ICONS = {
 }
 
 const ROLE_ICONS = {
-  tank:      icon_tank,
+  melee_dps: icon_tank,
   main_tank: icon_tank,
   off_tank:  icon_tank,
   healer:    icon_healer,
-  dps:       icon_dps
+  range_dps: icon_dps
 }
 
 const RAID_ICONS = {

@@ -284,7 +284,7 @@ function raidLabel(raidType) {
   return raidTypeLabel(raidType)
 }
 
-const BENCH_ROLE_LABELS = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
+const BENCH_ROLE_LABELS = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 function benchRoleLabel(role) {
   return BENCH_ROLE_LABELS[role] || role
 }

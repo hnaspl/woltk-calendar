@@ -61,7 +61,7 @@ def bench_seed(db, ctx):
 
         char = Character(
             user_id=user.id, guild_id=guild.id, realm_name="Icecrown",
-            name=f"Hunter{i}", class_name="Hunter", default_role="dps",
+            name=f"Hunter{i}", class_name="Hunter", default_role="range_dps",
             is_main=True, is_active=True,
         )
         db.session.add(char)
@@ -72,8 +72,8 @@ def bench_seed(db, ctx):
     raid_def = RaidDefinition(
         guild_id=guild.id, code="reorder_raid", name="Reorder Raid",
         default_raid_size=2,
-        dps_slots=2, main_tank_slots=0, off_tank_slots=0,
-        tank_slots=0, healer_slots=0,
+        range_dps_slots=2, main_tank_slots=0, off_tank_slots=0,
+        melee_dps_slots=0, healer_slots=0,
     )
     db.session.add(raid_def)
     db.session.flush()
@@ -103,7 +103,7 @@ def _create_signup_going(event, user, char):
     """Create a signup that goes into the lineup (role slot)."""
     return signup_service.create_signup(
         raid_event_id=event.id, user_id=user.id,
-        character_id=char.id, chosen_role="dps",
+        character_id=char.id, chosen_role="range_dps",
         chosen_spec=None, note=None, raid_size=event.raid_size,
         event=event,
     )
@@ -114,7 +114,7 @@ def _create_signup_bench(event, user, char):
     try:
         signup_service.create_signup(
             raid_event_id=event.id, user_id=user.id,
-            character_id=char.id, chosen_role="dps",
+            character_id=char.id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
@@ -122,7 +122,7 @@ def _create_signup_bench(event, user, char):
         pass
     return signup_service.create_signup(
         raid_event_id=event.id, user_id=user.id,
-        character_id=char.id, chosen_role="dps",
+        character_id=char.id, chosen_role="range_dps",
         chosen_spec=None, note=None, raid_size=event.raid_size,
         force_bench=True, event=event,
     )
@@ -379,7 +379,7 @@ class TestNotificationCharacterNames:
         notification_service.delete_all_notifications(users[0].id)
 
         with patch("app.utils.notify._push_to_user"):
-            notify_role_changed(s1, event, "dps", "healer")
+            notify_role_changed(s1, event, "range_dps", "healer")
 
         notifs = notification_service.list_notifications(users[0].id)
         n = notifs[0]
@@ -402,7 +402,7 @@ class TestQueuePositionNotification:
                 user_id=users[0].id,
                 event=event,
                 character_name="Hunter1",
-                role="dps",
+                role="range_dps",
                 new_position=3,
             )
 
@@ -451,7 +451,7 @@ class TestNotificationClearAndDelete:
                 user_id=user.id,
                 event=bench_seed["event"],
                 character_name="Hunter1",
-                role="dps",
+                role="range_dps",
                 new_position=1,
             )
 
@@ -474,7 +474,7 @@ class TestNotificationClearAndDelete:
                 user_id=user1.id,
                 event=bench_seed["event"],
                 character_name="Hunter1",
-                role="dps",
+                role="range_dps",
                 new_position=1,
             )
 
@@ -499,7 +499,7 @@ class TestNotificationClearAndDelete:
                     user_id=user.id,
                     event=event,
                     character_name="Hunter1",
-                    role="dps",
+                    role="range_dps",
                     new_position=i,
                 )
 
@@ -521,11 +521,11 @@ class TestNotificationClearAndDelete:
         with patch("app.utils.notify._push_to_user"):
             notify_queue_position_changed(
                 user_id=user1.id, event=event,
-                character_name="Hunter1", role="dps", new_position=1,
+                character_name="Hunter1", role="range_dps", new_position=1,
             )
             notify_queue_position_changed(
                 user_id=user2.id, event=event,
-                character_name="Hunter2", role="dps", new_position=2,
+                character_name="Hunter2", role="range_dps", new_position=2,
             )
 
         notification_service.delete_all_notifications(user1.id)
@@ -649,7 +649,7 @@ class TestBenchReorderFullE2E:
 
         # Verify lineup is intact
         grouped = lineup_service.get_lineup_grouped(event.id)
-        lineup_ids = {s["id"] for s in grouped["dps"]}
+        lineup_ids = {s["id"] for s in grouped["range_dps"]}
         assert s1.id in lineup_ids
         assert s2.id in lineup_ids
 
@@ -658,7 +658,7 @@ class TestBenchReorderFullE2E:
 
         # Verify lineup is still intact
         grouped2 = lineup_service.get_lineup_grouped(event.id)
-        lineup_ids2 = {s["id"] for s in grouped2["dps"]}
+        lineup_ids2 = {s["id"] for s in grouped2["range_dps"]}
         assert lineup_ids2 == lineup_ids
 
     def test_multiple_reorders_converge(self, bench_seed, db):

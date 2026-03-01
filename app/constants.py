@@ -8,16 +8,16 @@ from app.enums import WowClass, Role
 # Class → available roles mapping
 # ---------------------------------------------------------------------------
 CLASS_ROLES: dict[WowClass, list[Role]] = {
-    WowClass.DEATH_KNIGHT: [Role.MAIN_TANK, Role.OFF_TANK, Role.TANK],
-    WowClass.DRUID: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.TANK, Role.DPS],
-    WowClass.HUNTER: [Role.DPS],
-    WowClass.MAGE: [Role.DPS],
-    WowClass.PALADIN: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.TANK],
-    WowClass.PRIEST: [Role.HEALER, Role.DPS],
-    WowClass.ROGUE: [Role.TANK],
-    WowClass.SHAMAN: [Role.HEALER, Role.TANK, Role.DPS],
-    WowClass.WARLOCK: [Role.DPS],
-    WowClass.WARRIOR: [Role.MAIN_TANK, Role.OFF_TANK, Role.TANK],
+    WowClass.DEATH_KNIGHT: [Role.MAIN_TANK, Role.OFF_TANK, Role.MELEE_DPS],
+    WowClass.DRUID: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.MELEE_DPS, Role.RANGE_DPS],
+    WowClass.HUNTER: [Role.RANGE_DPS],
+    WowClass.MAGE: [Role.RANGE_DPS],
+    WowClass.PALADIN: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.MELEE_DPS],
+    WowClass.PRIEST: [Role.HEALER, Role.RANGE_DPS],
+    WowClass.ROGUE: [Role.MELEE_DPS],
+    WowClass.SHAMAN: [Role.HEALER, Role.MELEE_DPS, Role.RANGE_DPS],
+    WowClass.WARLOCK: [Role.RANGE_DPS],
+    WowClass.WARRIOR: [Role.MAIN_TANK, Role.OFF_TANK, Role.MELEE_DPS],
 }
 
 # ---------------------------------------------------------------------------
@@ -186,6 +186,6 @@ WARMANE_REALMS: list[str] = [
 # Generic "tank" slots default to 0; main_tank + off_tank cover the tank budget.
 # Players can still sign up as generic "tank" and be cross-assigned by officers.
 ROLE_SLOTS: dict[int, dict[str, int]] = {
-    10: {"main_tank": 1, "off_tank": 1, "tank": 0, "healer": 3, "dps": 5},
-    25: {"main_tank": 1, "off_tank": 2, "tank": 0, "healer": 6, "dps": 16},
+    10: {"main_tank": 1, "off_tank": 1, "melee_dps": 0, "healer": 3, "range_dps": 5},
+    25: {"main_tank": 1, "off_tank": 2, "melee_dps": 0, "healer": 6, "range_dps": 16},
 }

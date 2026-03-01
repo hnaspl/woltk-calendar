@@ -37,11 +37,11 @@ export const RAID_TYPES = [
 ]
 
 export const ROLE_OPTIONS = [
-  { value: 'tank', label: 'Melee DPS' },
+  { value: 'melee_dps', label: 'Melee DPS' },
   { value: 'main_tank', label: 'Main Tank' },
   { value: 'off_tank', label: 'Off Tank' },
   { value: 'healer', label: 'Heal' },
-  { value: 'dps', label: 'Range DPS' },
+  { value: 'range_dps', label: 'Range DPS' },
 ]
 
 export const CLASS_SPECS = {
@@ -59,16 +59,16 @@ export const CLASS_SPECS = {
 
 /** Class → allowed roles (backend role values) */
 export const CLASS_ROLES = {
-  'Death Knight':  ['main_tank', 'off_tank', 'tank'],
-  'Druid':         ['main_tank', 'off_tank', 'healer', 'tank', 'dps'],
-  'Hunter':        ['dps'],
-  'Mage':          ['dps'],
-  'Paladin':       ['main_tank', 'off_tank', 'healer', 'tank'],
-  'Priest':        ['healer', 'dps'],
-  'Rogue':         ['tank'],
-  'Shaman':        ['healer', 'tank', 'dps'],
-  'Warlock':       ['dps'],
-  'Warrior':       ['main_tank', 'off_tank', 'tank'],
+  'Death Knight':  ['main_tank', 'off_tank', 'melee_dps'],
+  'Druid':         ['main_tank', 'off_tank', 'healer', 'melee_dps', 'range_dps'],
+  'Hunter':        ['range_dps'],
+  'Mage':          ['range_dps'],
+  'Paladin':       ['main_tank', 'off_tank', 'healer', 'melee_dps'],
+  'Priest':        ['healer', 'range_dps'],
+  'Rogue':         ['melee_dps'],
+  'Shaman':        ['healer', 'melee_dps', 'range_dps'],
+  'Warlock':       ['range_dps'],
+  'Warrior':       ['main_tank', 'off_tank', 'melee_dps'],
 }
 
 /**

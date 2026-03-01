@@ -32,7 +32,7 @@ class TestBenchAutoPromote:
         # Player 1 signs up (going)
         s1 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
+            character_id=seed["char1"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
@@ -42,7 +42,7 @@ class TestBenchAutoPromote:
         # Player 2 signs up (going — fills last DPS slot)
         s2 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user2"].id,
-            character_id=seed["char2"].id, chosen_role="dps",
+            character_id=seed["char2"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
@@ -52,7 +52,7 @@ class TestBenchAutoPromote:
         try:
             signup_service.create_signup(
                 raid_event_id=event.id, user_id=seed["user3"].id,
-                character_id=seed["char3"].id, chosen_role="dps",
+                character_id=seed["char3"].id, chosen_role="range_dps",
                 chosen_spec=None, note=None, raid_size=event.raid_size,
                 event=event,
             )
@@ -63,7 +63,7 @@ class TestBenchAutoPromote:
         # Force bench
         s3 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user3"].id,
-            character_id=seed["char3"].id, chosen_role="dps",
+            character_id=seed["char3"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             force_bench=True, event=event,
         )
@@ -98,19 +98,19 @@ class TestBenchAutoPromote:
 
         s1 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
+            character_id=seed["char1"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
         s2 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user2"].id,
-            character_id=seed["char2"].id, chosen_role="dps",
+            character_id=seed["char2"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
         s3 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user3"].id,
-            character_id=seed["char3"].id, chosen_role="dps",
+            character_id=seed["char3"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             force_bench=True, event=event,
         )
@@ -133,19 +133,19 @@ class TestBenchAutoPromote:
 
         s1 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
+            character_id=seed["char1"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
         s2 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user2"].id,
-            character_id=seed["char2"].id, chosen_role="dps",
+            character_id=seed["char2"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
         s3 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user3"].id,
-            character_id=seed["char3"].id, chosen_role="dps",
+            character_id=seed["char3"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             force_bench=True, event=event,
         )
@@ -175,19 +175,19 @@ class TestSlotCountingDecoupled:
 
         s1 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
+            character_id=seed["char1"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
         s2 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user2"].id,
-            character_id=seed["char2"].id, chosen_role="dps",
+            character_id=seed["char2"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
         s3 = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user3"].id,
-            character_id=seed["char3"].id, chosen_role="dps",
+            character_id=seed["char3"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             force_bench=True, event=event,
         )
@@ -195,7 +195,7 @@ class TestSlotCountingDecoupled:
         total = signup_service._count_assigned_slots(event.id)
         assert total == 2  # s1 + s2, not s3 (bench)
 
-        role_count = signup_service._count_assigned_slots_by_role(event.id, "dps")
+        role_count = signup_service._count_assigned_slots_by_role(event.id, "range_dps")
         assert role_count == 2
 
 
@@ -226,18 +226,18 @@ class TestClassRoleValidation:
         event = seed["event"]
         s = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
+            character_id=seed["char1"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
-        assert s.chosen_role == "dps"
+        assert s.chosen_role == "range_dps"
 
     def test_role_change_validated(self, seed, db):
         """Changing role via update_signup validates class constraints."""
         event = seed["event"]
         s = signup_service.create_signup(
             raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
+            character_id=seed["char1"].id, chosen_role="range_dps",
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
@@ -261,7 +261,7 @@ class TestDefaultRoleAutoPopulation:
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             data={"realm_name": "Icecrown", "name": "AutoHunter", "class_name": "Hunter"},
         )
-        assert char.default_role == "dps"
+        assert char.default_role == "range_dps"
 
     def test_warrior_gets_main_tank_default(self, seed, db):
         """A Warrior with no explicit default_role gets 'main_tank' (first in list)."""
@@ -320,8 +320,8 @@ class TestBenchQueueOrder:
         # Raid with 2 DPS slots
         rd = RDModel(
             guild_id=guild.id, code="queue_test", name="Queue Test",
-            default_raid_size=2, dps_slots=2,
-            main_tank_slots=0, off_tank_slots=0, tank_slots=0, healer_slots=0,
+            default_raid_size=2, range_dps_slots=2,
+            main_tank_slots=0, off_tank_slots=0, melee_dps_slots=0, healer_slots=0,
         )
         db.session.add(rd)
         db.session.flush()
@@ -339,18 +339,18 @@ class TestBenchQueueOrder:
 
         # Fill 2 slots
         s0 = signup_service.create_signup(
-            ev.id, users[0].id, chars[0].id, "dps", None, None, 2, event=ev
+            ev.id, users[0].id, chars[0].id, "range_dps", None, None, 2, event=ev
         )
         s1 = signup_service.create_signup(
-            ev.id, users[1].id, chars[1].id, "dps", None, None, 2, event=ev
+            ev.id, users[1].id, chars[1].id, "range_dps", None, None, 2, event=ev
         )
         # Bench 2 more
         s2 = signup_service.create_signup(
-            ev.id, users[2].id, chars[2].id, "dps", None, None, 2,
+            ev.id, users[2].id, chars[2].id, "range_dps", None, None, 2,
             force_bench=True, event=ev
         )
         s3 = signup_service.create_signup(
-            ev.id, users[3].id, chars[3].id, "dps", None, None, 2,
+            ev.id, users[3].id, chars[3].id, "range_dps", None, None, 2,
             force_bench=True, event=ev
         )
 

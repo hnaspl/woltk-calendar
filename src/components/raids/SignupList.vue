@@ -283,14 +283,14 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import * as signupsApi from '@/api/signups'
 import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
 
-const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
+const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 const props = defineProps({
   signups: { type: Array, default: () => [] },
   canManage: { type: Boolean, default: false },
   guildId: { type: [Number, String], default: null },
   eventId: { type: [Number, String], default: null },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] }
+  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] }
 })
 
 const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])

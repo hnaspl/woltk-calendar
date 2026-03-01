@@ -104,11 +104,11 @@
           :guild-id="guildId"
           :can-manage="permissions.can('update_lineup')"
           :current-user-id="authStore.user?.id"
-          :tank-slots="event.tank_slots ?? 0"
+          :melee-dps-slots="event.melee_dps_slots ?? 0"
           :main-tank-slots="event.main_tank_slots ?? 1"
           :off-tank-slots="event.off_tank_slots ?? 1"
           :healer-slots="event.healer_slots ?? 5"
-          :dps-slots="event.dps_slots ?? 18"
+          :range-dps-slots="event.range_dps_slots ?? 18"
           @saved="onLineupSaved"
           @lineup-updated="onLineupUpdated"
         />
@@ -213,11 +213,11 @@
             <CompositionSummary
               :lineup-counts="lineupCounts"
               :max-size="event.raid_size ?? event.size"
-              :tank-slots="event.tank_slots ?? 0"
+              :melee-dps-slots="event.melee_dps_slots ?? 0"
               :main-tank-slots="event.main_tank_slots ?? 1"
               :off-tank-slots="event.off_tank_slots ?? 1"
               :healer-slots="event.healer_slots ?? 5"
-              :dps-slots="event.dps_slots ?? 18"
+              :range-dps-slots="event.range_dps_slots ?? 18"
             />
           </div>
 
@@ -439,13 +439,13 @@ const bannedCharacterIds = computed(() =>
 )
 
 const availableRoles = computed(() => {
-  if (!event.value) return ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
+  if (!event.value) return ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps']
   const roles = []
   if ((event.value.main_tank_slots ?? 1) > 0) roles.push('main_tank')
   if ((event.value.off_tank_slots ?? 1) > 0) roles.push('off_tank')
-  if ((event.value.tank_slots ?? 0) > 0) roles.push('tank')
+  if ((event.value.melee_dps_slots ?? 0) > 0) roles.push('melee_dps')
   if ((event.value.healer_slots ?? 5) > 0) roles.push('healer')
-  if ((event.value.dps_slots ?? 18) > 0) roles.push('dps')
+  if ((event.value.range_dps_slots ?? 18) > 0) roles.push('range_dps')
   return roles
 })
 
@@ -455,9 +455,9 @@ const roleSlotInfo = computed(() => {
   const slotMap = {
     main_tank: event.value.main_tank_slots ?? 1,
     off_tank:  event.value.off_tank_slots ?? 1,
-    tank:      event.value.tank_slots ?? 0,
+    melee_dps: event.value.melee_dps_slots ?? 0,
     healer:    event.value.healer_slots ?? 5,
-    dps:       event.value.dps_slots ?? 18,
+    range_dps: event.value.range_dps_slots ?? 18,
   }
   const info = {}
   for (const [role, max] of Object.entries(slotMap)) {

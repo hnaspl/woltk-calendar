@@ -43,7 +43,7 @@
               <div class="text-text-muted">Off Tank</div>
             </div>
             <div class="bg-blue-500/10 rounded p-1.5">
-              <div class="text-blue-300 font-bold">{{ def.tank_slots ?? 0 }}</div>
+              <div class="text-blue-300 font-bold">{{ def.melee_dps_slots ?? 0 }}</div>
               <div class="text-text-muted">Melee DPS</div>
             </div>
             <div class="bg-green-500/10 rounded p-1.5">
@@ -51,7 +51,7 @@
               <div class="text-text-muted">Heal</div>
             </div>
             <div class="bg-red-500/10 rounded p-1.5">
-              <div class="text-red-300 font-bold">{{ def.dps_slots ?? 18 }}</div>
+              <div class="text-red-300 font-bold">{{ def.range_dps_slots ?? 18 }}</div>
               <div class="text-text-muted">Range DPS</div>
             </div>
           </div>
@@ -109,7 +109,7 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Melee DPS Slots</label>
-            <input v-model.number="form.tank_slots" type="number" min="0" max="10" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <input v-model.number="form.melee_dps_slots" type="number" min="0" max="10" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Heal Slots</label>
@@ -117,7 +117,7 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Range DPS Slots</label>
-            <input v-model.number="form.dps_slots" type="number" min="1" max="30" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <input v-model.number="form.range_dps_slots" type="number" min="1" max="30" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
@@ -179,7 +179,7 @@ const guildRealms = computed(() => {
   return [...realms].sort()
 })
 
-const form = reactive({ name: '', raid_type: '', size: '', realm: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
+const form = reactive({ name: '', raid_type: '', size: '', realm: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
 
 onMounted(async () => {
   loading.value = true
@@ -198,13 +198,13 @@ onMounted(async () => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_type: '', size: '', realm: guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, tank_slots: 0, healer_slots: 5, dps_slots: 18 })
+  Object.assign(form, { name: '', raid_type: '', size: '', realm: guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(def) {
   editing.value = def
-  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, realm: def.realm ?? guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: def.default_duration_minutes ?? 180, main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, tank_slots: def.tank_slots ?? 0, healer_slots: def.healer_slots ?? 5, dps_slots: def.dps_slots ?? 18 })
+  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, realm: def.realm ?? guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: def.default_duration_minutes ?? 180, main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, melee_dps_slots: def.melee_dps_slots ?? 0, healer_slots: def.healer_slots ?? 5, range_dps_slots: def.range_dps_slots ?? 18 })
   formError.value = null; showModal.value = true
 }
 
@@ -213,7 +213,7 @@ function confirmDelete(def) { deleteTarget.value = def; showDeleteConfirm.value 
 async function saveDef() {
   formError.value = null
   if (!form.name || !form.raid_type || !form.size) { formError.value = 'Name, type and size are required'; return }
-  const totalSlots = (form.main_tank_slots || 0) + (form.off_tank_slots || 0) + (form.tank_slots || 0) + (form.healer_slots || 0) + (form.dps_slots || 0)
+  const totalSlots = (form.main_tank_slots || 0) + (form.off_tank_slots || 0) + (form.melee_dps_slots || 0) + (form.healer_slots || 0) + (form.range_dps_slots || 0)
   if (totalSlots > form.size) { formError.value = `Total slots (${totalSlots}) cannot exceed raid size (${form.size})`; return }
   saving.value = true
   try {

@@ -30,7 +30,7 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
 def _lineup_version(grouped: dict) -> str:
     """Compute a fingerprint from lineup signup IDs for conflict detection."""
     parts = []
-    for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps", "bench_queue"):
+    for key in ("main_tanks", "off_tanks", "melee_dps", "healers", "range_dps", "bench_queue"):
         ids = ",".join(str(s["id"]) for s in grouped.get(key, []))
         parts.append(f"{key}:{ids}")
     return "|".join(parts)
@@ -39,15 +39,15 @@ def _lineup_version(grouped: dict) -> str:
 def get_lineup_grouped(raid_event_id: int) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
-    grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "tanks": [], "healers": [], "dps": []}
+    grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "melee_dps": [], "healers": [], "range_dps": []}
     bench_queue: list = []
-    role_map = {"main_tank": "main_tanks", "off_tank": "off_tanks", "tank": "tanks", "healer": "healers", "dps": "dps"}
+    role_map = {"main_tank": "main_tanks", "off_tank": "off_tanks", "melee_dps": "melee_dps", "healer": "healers", "range_dps": "range_dps"}
     for slot in slots:
         if slot.slot_group == "bench":
             if slot.signup is not None:
                 bench_queue.append(slot.signup.to_dict())
             continue
-        key = role_map.get(slot.slot_group, "dps")
+        key = role_map.get(slot.slot_group, "range_dps")
         if slot.signup is not None:
             grouped[key].append(slot.signup.to_dict())
     grouped["bench_queue"] = bench_queue
@@ -239,7 +239,7 @@ def update_lineup_grouped(
     )
     db.session.flush()
 
-    role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "tanks": "tank", "healers": "healer", "dps": "dps"}
+    role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "melee_dps": "melee_dps", "healers": "healer", "range_dps": "range_dps"}
     # Track users who already have a character in a role slot to enforce
     # one-character-per-player.  When a conflict is detected the NEW
     # placement wins (admin explicitly put the character there) and the
@@ -257,9 +257,9 @@ def update_lineup_grouped(
         slot_limits = {
             "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
             "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
-            "tank": rd.tank_slots if rd and rd.tank_slots is not None else 0,
+            "melee_dps": rd.melee_dps_slots if rd and rd.melee_dps_slots is not None else 0,
             "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
-            "dps": rd.dps_slots if rd and rd.dps_slots is not None else 18,
+            "range_dps": rd.range_dps_slots if rd and rd.range_dps_slots is not None else 18,
         }
         for key, slot_group in role_map.items():
             limit = slot_limits.get(slot_group)
@@ -473,7 +473,7 @@ def reorder_bench_queue(
     for slot in bench_slots:
         signup = db.session.get(Signup, slot.signup_id)
         if signup:
-            role = signup.chosen_role or "dps"
+            role = signup.chosen_role or "range_dps"
             role_counters.setdefault(role, 0)
             role_counters[role] += 1
             old_positions_by_role[slot.signup_id] = (role, role_counters[role])
@@ -522,7 +522,7 @@ def reorder_bench_queue(
         signup = db.session.get(Signup, signup_id)
         if not signup:
             continue
-        role = signup.chosen_role or "dps"
+        role = signup.chosen_role or "range_dps"
         new_role_counters.setdefault(role, 0)
         new_role_counters[role] += 1
         new_pos = new_role_counters[role]

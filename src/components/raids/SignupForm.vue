@@ -150,7 +150,7 @@ import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
 import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
 
-const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
+const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -158,7 +158,7 @@ const props = defineProps({
   existingSignup: { type: Object, default: null },
   signedUpCharacterIds: { type: Array, default: () => [] },
   bannedCharacterIds: { type: Array, default: () => [] },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] },
+  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] },
   roleSlotInfo: { type: Object, default: () => ({}) }
 })
 

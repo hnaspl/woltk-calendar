@@ -66,17 +66,17 @@ def seed(db, ctx):
     # always has a valid role assigned (matches production behavior).
     char1 = Character(
         user_id=user1.id, guild_id=guild.id, realm_name="Icecrown",
-        name="HunterOne", class_name="Hunter", default_role="dps",
+        name="HunterOne", class_name="Hunter", default_role="range_dps",
         is_main=True, is_active=True,
     )
     char2 = Character(
         user_id=user2.id, guild_id=guild.id, realm_name="Icecrown",
-        name="HunterTwo", class_name="Hunter", default_role="dps",
+        name="HunterTwo", class_name="Hunter", default_role="range_dps",
         is_main=True, is_active=True,
     )
     char3 = Character(
         user_id=user3.id, guild_id=guild.id, realm_name="Icecrown",
-        name="HunterThree", class_name="Hunter", default_role="dps",
+        name="HunterThree", class_name="Hunter", default_role="range_dps",
         is_main=False, is_active=True,
     )
     db.session.add_all([char1, char2, char3])
@@ -86,8 +86,8 @@ def seed(db, ctx):
     raid_def = RaidDefinition(
         guild_id=guild.id, code="test_raid", name="Test Raid",
         default_raid_size=2,
-        dps_slots=2, main_tank_slots=0, off_tank_slots=0,
-        tank_slots=0, healer_slots=0,
+        range_dps_slots=2, main_tank_slots=0, off_tank_slots=0,
+        melee_dps_slots=0, healer_slots=0,
     )
     db.session.add(raid_def)
     db.session.flush()

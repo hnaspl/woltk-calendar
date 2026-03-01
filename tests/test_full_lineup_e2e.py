@@ -89,7 +89,7 @@ def raid_seed(db, ctx):
 
     # P1: Druid MT + Hunter DPS alt
     chars["p1_druid"] = mk("u1", "DruidTank", "Druid", "main_tank")
-    chars["p1_hunter"] = mk("u1", "HunterAlt", "Hunter", "dps", is_main=False)
+    chars["p1_hunter"] = mk("u1", "HunterAlt", "Hunter", "range_dps", is_main=False)
 
     # P2: Warrior MT
     chars["p2_warrior"] = mk("u2", "WarriorMT", "Warrior", "main_tank")
@@ -99,7 +99,7 @@ def raid_seed(db, ctx):
 
     # P4: Death Knight OT + Rogue mDPS alt
     chars["p4_dk"] = mk("u4", "DKOT", "Death Knight", "off_tank")
-    chars["p4_rogue"] = mk("u4", "RogueAlt", "Rogue", "tank", is_main=False)
+    chars["p4_rogue"] = mk("u4", "RogueAlt", "Rogue", "melee_dps", is_main=False)
 
     # P5: Priest healer
     chars["p5_priest"] = mk("u5", "PriestHeal", "Priest", "healer")
@@ -109,23 +109,23 @@ def raid_seed(db, ctx):
 
     # P7: Druid healer + Druid dps alt
     chars["p7_druid_heal"] = mk("u7", "DruidHeal", "Druid", "healer")
-    chars["p7_druid_dps"] = mk("u7", "DruidBalance", "Druid", "dps", is_main=False)
+    chars["p7_druid_dps"] = mk("u7", "DruidBalance", "Druid", "range_dps", is_main=False)
 
     # P8: Hunter DPS
-    chars["p8_hunter"] = mk("u8", "HunterDPS", "Hunter", "dps")
+    chars["p8_hunter"] = mk("u8", "HunterDPS", "Hunter", "range_dps")
 
     # P9: Mage DPS
-    chars["p9_mage"] = mk("u9", "MageDPS", "Mage", "dps")
+    chars["p9_mage"] = mk("u9", "MageDPS", "Mage", "range_dps")
 
     # P10: Warlock DPS
-    chars["p10_warlock"] = mk("u10", "WarlockDPS", "Warlock", "dps")
+    chars["p10_warlock"] = mk("u10", "WarlockDPS", "Warlock", "range_dps")
 
     # P11: Hunter DPS + Shaman healer alt
-    chars["p11_hunter"] = mk("u11", "HunterMain", "Hunter", "dps")
+    chars["p11_hunter"] = mk("u11", "HunterMain", "Hunter", "range_dps")
     chars["p11_shaman"] = mk("u11", "ShamanAlt", "Shaman", "healer", is_main=False)
 
     # P12: Mage DPS (will be bench-only)
-    chars["p12_mage"] = mk("u12", "MageBench", "Mage", "dps")
+    chars["p12_mage"] = mk("u12", "MageBench", "Mage", "range_dps")
 
     db.session.flush()
 
@@ -133,8 +133,8 @@ def raid_seed(db, ctx):
     raid_def = RaidDefinition(
         guild_id=guild.id, code="icc_test", name="ICC Test",
         default_raid_size=12,
-        main_tank_slots=1, off_tank_slots=2, tank_slots=0,
-        healer_slots=3, dps_slots=6,
+        main_tank_slots=1, off_tank_slots=2, melee_dps_slots=0,
+        healer_slots=3, range_dps_slots=6,
     )
     db.session.add(raid_def)
     db.session.flush()
@@ -185,7 +185,7 @@ def _bench_ids(result):
 def _all_role_ids(result):
     """Extract all signup IDs from all role slots."""
     ids = set()
-    for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps"):
+    for key in ("main_tanks", "off_tanks", "melee_dps", "healers", "range_dps"):
         for e in result.get(key, []):
             ids.add(e["id"])
     return ids
@@ -213,10 +213,10 @@ class TestFullLineupE2E:
         s["p6"] = _signup(raid_seed, "u6", "p6_shaman", "healer")
         s["p7"] = _signup(raid_seed, "u7", "p7_druid_heal", "healer")
         # Fill DPS (6 slots)
-        s["p8"] = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s["p9"] = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s["p10"] = _signup(raid_seed, "u10", "p10_warlock", "dps")
-        s["p11"] = _signup(raid_seed, "u11", "p11_hunter", "dps")
+        s["p8"] = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s["p9"] = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s["p10"] = _signup(raid_seed, "u10", "p10_warlock", "range_dps")
+        s["p11"] = _signup(raid_seed, "u11", "p11_hunter", "range_dps")
 
         # Verify all are in role slots
         for key, su in s.items():
@@ -224,7 +224,7 @@ class TestFullLineupE2E:
                 f"{key} should be in a role slot"
 
         # P12 signs up for DPS → still has room (6 slots, only 4 DPS)
-        s["p12"] = _signup(raid_seed, "u12", "p12_mage", "dps")
+        s["p12"] = _signup(raid_seed, "u12", "p12_mage", "range_dps")
         assert lineup_service.has_role_slot(s["p12"].id), \
             "P12 should get DPS slot (5/6 filled)"
 
@@ -238,7 +238,7 @@ class TestFullLineupE2E:
         """When a player with a char in lineup signs up with an alt,
         the alt is forced to bench."""
         s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s1_alt = _signup(raid_seed, "u1", "p1_hunter", "dps")
+        s1_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps")
 
         assert lineup_service.has_role_slot(s1.id), \
             "Main char should be in lineup"
@@ -246,23 +246,23 @@ class TestFullLineupE2E:
             "Alt should be benched (one-char-per-player)"
         bench = lineup_service.get_bench_info(s1_alt.id)
         assert bench is not None
-        assert bench["waiting_for"] == "dps"
+        assert bench["waiting_for"] == "range_dps"
 
     # -- 2. Admin lineup update basics --
 
     def test_admin_reorder_lineup(self, raid_seed):
         """Admin can reorder players within the same role."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps")
 
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
-            {"dps": [s10.id, s8.id, s9.id], "bench_queue": []},
+            {"range_dps": [s10.id, s8.id, s9.id], "bench_queue": []},
             confirmed_by=raid_seed["users"]["u1"].id,
         )
 
-        dps_ids = _role_ids(result, "dps")
+        dps_ids = _role_ids(result, "range_dps")
         assert dps_ids == [s10.id, s8.id, s9.id], \
             "DPS order should match admin's arrangement"
 
@@ -270,19 +270,19 @@ class TestFullLineupE2E:
         """Admin can move a player from role slot to bench. When there
         are free DPS slots, auto-promote will fill them from the bench."""
         # Fill all 6 DPS slots so moving one actually frees a slot
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps")
-        s11 = _signup(raid_seed, "u11", "p11_hunter", "dps")
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps")
-        s1 = _signup(raid_seed, "u1", "p1_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps")
+        s11 = _signup(raid_seed, "u11", "p11_hunter", "range_dps")
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps")
+        s1 = _signup(raid_seed, "u1", "p1_hunter", "range_dps")
 
         # All 6 slots filled. Now admin moves s10 to bench.
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
             {
-                "dps": [s8.id, s9.id, s11.id, s12.id, s1.id],
-                "bench_queue": [{"id": s10.id, "chosen_role": "dps"}],
+                "range_dps": [s8.id, s9.id, s11.id, s12.id, s1.id],
+                "bench_queue": [{"id": s10.id, "chosen_role": "range_dps"}],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
         )
@@ -299,9 +299,9 @@ class TestFullLineupE2E:
         """Admin places P1's hunter alt in DPS while P1's druid is in
         main_tank. The new placement (hunter→DPS) wins, druid→bench."""
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_hunter = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_hunter = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                            force_bench=True)
-        s_other = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_other = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         assert lineup_service.has_role_slot(s_druid.id)
         assert not lineup_service.has_role_slot(s_hunter.id)
@@ -312,7 +312,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_hunter.id, s_other.id],
+                "range_dps": [s_hunter.id, s_other.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -329,9 +329,9 @@ class TestFullLineupE2E:
         """After cross-role swap, the evicted char must NOT be auto-promoted
         back because the same player already has a char in lineup."""
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_hunter = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_hunter = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                            force_bench=True)
-        s_other = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_other = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         # Set 2 main_tank slots so there's a "free" slot after eviction
         raid_seed["raid_def"].main_tank_slots = 2
@@ -342,7 +342,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_hunter.id, s_other.id],
+                "range_dps": [s_hunter.id, s_other.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -362,9 +362,9 @@ class TestFullLineupE2E:
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
         s_warrior = _signup(raid_seed, "u2", "p2_warrior", "main_tank",
                             force_bench=True)
-        s_hunter = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_hunter = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                            force_bench=True)
-        s_other = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_other = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         db.session.expire_all()
 
@@ -372,7 +372,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_hunter.id, s_other.id],
+                "range_dps": [s_hunter.id, s_other.id],
                 "bench_queue": [
                     {"id": s_warrior.id, "chosen_role": "main_tank"},
                 ],
@@ -396,8 +396,8 @@ class TestFullLineupE2E:
         entirely, it should be auto-benched (not disappear). If the role
         has free slots, the orphan may be auto-promoted back."""
         s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
         # Fill main_tank with another player so the freed slot gets taken
         s2 = _signup(raid_seed, "u2", "p2_warrior", "main_tank",
                      force_bench=True)
@@ -407,7 +407,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "main_tanks": [s2.id],
-                "dps": [s8.id, s9.id],
+                "range_dps": [s8.id, s9.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -423,8 +423,8 @@ class TestFullLineupE2E:
         """A bench signup missing from the new bench_queue data should
         be preserved (auto-benched at the end)."""
         s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s_bench = _signup(raid_seed, "u9", "p9_mage", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s_bench = _signup(raid_seed, "u9", "p9_mage", "range_dps",
                           force_bench=True)
 
         # Admin doesn't include bench player in new data
@@ -432,7 +432,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "main_tanks": [s1.id],
-                "dps": [s8.id],
+                "range_dps": [s8.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -446,18 +446,18 @@ class TestFullLineupE2E:
     def test_remove_from_lineup_promotes_bench(self, raid_seed):
         """Removing a player from DPS should auto-promote the first
         bench player waiting for that role."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
             {
-                "dps": [s9.id],
+                "range_dps": [s9.id],
                 "bench_queue": [
-                    {"id": s8.id, "chosen_role": "dps"},
-                    {"id": s10.id, "chosen_role": "dps"},
+                    {"id": s8.id, "chosen_role": "range_dps"},
+                    {"id": s10.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -470,7 +470,7 @@ class TestFullLineupE2E:
     def test_bench_promote_respects_role_match(self, raid_seed):
         """Auto-promotion only promotes players waiting for the freed role."""
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
         # Put a healer on bench — shouldn't be promoted for main_tank
         s5 = _signup(raid_seed, "u5", "p5_priest", "healer",
                      force_bench=True)
@@ -479,7 +479,7 @@ class TestFullLineupE2E:
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
             {
-                "dps": [s8.id],
+                "range_dps": [s8.id],
                 "bench_queue": [
                     {"id": s_druid.id, "chosen_role": "main_tank"},
                     {"id": s5.id, "chosen_role": "healer"},
@@ -496,12 +496,12 @@ class TestFullLineupE2E:
         """Auto-promotion should skip a bench player whose other char
         is already in the active lineup."""
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
         # P1's hunter alt on bench for DPS
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
         # P9 on bench for DPS
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps",
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps",
                      force_bench=True)
 
         # Remove P8 from DPS (frees a slot)
@@ -509,11 +509,11 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [],
+                "range_dps": [],
                 "bench_queue": [
-                    {"id": s_alt.id, "chosen_role": "dps"},
-                    {"id": s8.id, "chosen_role": "dps"},
-                    {"id": s9.id, "chosen_role": "dps"},
+                    {"id": s_alt.id, "chosen_role": "range_dps"},
+                    {"id": s8.id, "chosen_role": "range_dps"},
+                    {"id": s9.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -531,9 +531,9 @@ class TestFullLineupE2E:
 
     def test_decline_frees_slot_and_promotes(self, raid_seed):
         """Declining a signup frees the role slot and auto-promotes."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         assert lineup_service.has_role_slot(s8.id)
@@ -546,9 +546,9 @@ class TestFullLineupE2E:
 
     def test_delete_signup_frees_slot_and_promotes(self, raid_seed):
         """Deleting a signup frees the role slot and auto-promotes."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         signup_service.delete_signup(s8)
@@ -569,13 +569,13 @@ class TestFullLineupE2E:
         s["h1"] = _signup(raid_seed, "u5", "p5_priest", "healer")
         s["h2"] = _signup(raid_seed, "u6", "p6_shaman", "healer")
         s["h3"] = _signup(raid_seed, "u7", "p7_druid_heal", "healer")
-        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s["d3"] = _signup(raid_seed, "u10", "p10_warlock", "dps")
-        s["d4"] = _signup(raid_seed, "u11", "p11_hunter", "dps")
+        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s["d3"] = _signup(raid_seed, "u10", "p10_warlock", "range_dps")
+        s["d4"] = _signup(raid_seed, "u11", "p11_hunter", "range_dps")
 
         # P1's hunter alt and P2's warrior on bench
-        s["p1_alt"] = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s["p1_alt"] = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                               force_bench=True)
         s["p2"] = _signup(raid_seed, "u2", "p2_warrior", "main_tank",
                           force_bench=True)
@@ -598,7 +598,7 @@ class TestFullLineupE2E:
                 "main_tanks": [s["mt"].id],
                 "off_tanks": [s["ot1"].id, s["ot2"].id],
                 "healers": [s["h1"].id, s["h2"].id, s["h3"].id],
-                "dps": [s["p1_alt"].id, s["d1"].id, s["d2"].id,
+                "range_dps": [s["p1_alt"].id, s["d1"].id, s["d2"].id,
                         s["d3"].id, s["d4"].id],
                 "bench_queue": [
                     {"id": s["p2"].id, "chosen_role": "main_tank"},
@@ -629,11 +629,11 @@ class TestFullLineupE2E:
         exactly one LineupSlot."""
         s_mt = _signup(raid_seed, "u1", "p1_druid", "main_tank")
         s_ot = _signup(raid_seed, "u3", "p3_paladin", "off_tank")
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s_d2 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s_d2 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
-        s_bench = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s_bench = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                           force_bench=True)
 
         db.session.expire_all()
@@ -644,9 +644,9 @@ class TestFullLineupE2E:
             {
                 "main_tanks": [s_mt.id],
                 "off_tanks": [s_ot.id],
-                "dps": [s_alt.id, s_d1.id, s_d2.id],
+                "range_dps": [s_alt.id, s_d1.id, s_d2.id],
                 "bench_queue": [
-                    {"id": s_bench.id, "chosen_role": "dps"},
+                    {"id": s_bench.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -670,10 +670,10 @@ class TestFullLineupE2E:
         """Admin replaces P7's healer druid with P7's balance druid in
         DPS. One-char-per-player: the new placement wins."""
         s_heal = _signup(raid_seed, "u7", "p7_druid_heal", "healer")
-        s_dps_alt = _signup(raid_seed, "u7", "p7_druid_dps", "dps",
+        s_dps_alt = _signup(raid_seed, "u7", "p7_druid_dps", "range_dps",
                             force_bench=True)
         s_other_h = _signup(raid_seed, "u5", "p5_priest", "healer")
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         db.session.expire_all()
 
@@ -681,7 +681,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "healers": [s_heal.id, s_other_h.id],
-                "dps": [s_dps_alt.id, s_d1.id],
+                "range_dps": [s_dps_alt.id, s_d1.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -700,11 +700,11 @@ class TestFullLineupE2E:
         """P4 has DK in off_tank. Admin places P4's rogue alt in
         tank (melee DPS). DK evicted to bench."""
         # Need tank slots for rogue
-        raid_seed["raid_def"].tank_slots = 2
+        raid_seed["raid_def"].melee_dps_slots = 2
         db.session.commit()
 
         s_dk = _signup(raid_seed, "u4", "p4_dk", "off_tank")
-        s_rogue = _signup(raid_seed, "u4", "p4_rogue", "tank",
+        s_rogue = _signup(raid_seed, "u4", "p4_rogue", "melee_dps",
                           force_bench=True)
         s_ot = _signup(raid_seed, "u3", "p3_paladin", "off_tank")
 
@@ -714,7 +714,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "off_tanks": [s_dk.id, s_ot.id],
-                "tanks": [s_rogue.id],
+                "melee_dps": [s_rogue.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -730,10 +730,10 @@ class TestFullLineupE2E:
     def test_hunter_to_shaman_healer_swap(self, raid_seed):
         """P11 has hunter in DPS. Admin places P11's shaman alt as healer.
         Hunter evicted to bench for DPS."""
-        s_hunter = _signup(raid_seed, "u11", "p11_hunter", "dps")
+        s_hunter = _signup(raid_seed, "u11", "p11_hunter", "range_dps")
         s_shaman = _signup(raid_seed, "u11", "p11_shaman", "healer",
                            force_bench=True)
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
         s_h1 = _signup(raid_seed, "u5", "p5_priest", "healer")
 
         db.session.expire_all()
@@ -742,7 +742,7 @@ class TestFullLineupE2E:
             raid_seed["event"].id,
             {
                 "healers": [s_shaman.id, s_h1.id],
-                "dps": [s_hunter.id, s_d1.id],
+                "range_dps": [s_hunter.id, s_d1.id],
                 "bench_queue": [],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -758,22 +758,22 @@ class TestFullLineupE2E:
     def test_bench_queue_ordering_after_admin_ops(self, raid_seed):
         """After admin moves players around, bench queue should have
         correct ordering: admin-demoted players at end."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                       force_bench=True)
 
         # Admin moves s8 to bench, keeps s9 in DPS
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
             {
-                "dps": [s9.id],
+                "range_dps": [s9.id],
                 "bench_queue": [
-                    {"id": s10.id, "chosen_role": "dps"},
-                    {"id": s12.id, "chosen_role": "dps"},
-                    {"id": s8.id, "chosen_role": "dps"},
+                    {"id": s10.id, "chosen_role": "range_dps"},
+                    {"id": s12.id, "chosen_role": "range_dps"},
+                    {"id": s8.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -793,12 +793,12 @@ class TestFullLineupE2E:
 
     def test_lineup_conflict_detection(self, raid_seed):
         """Passing wrong expected_version should raise LineupConflictError."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         with pytest.raises(lineup_service.LineupConflictError):
             lineup_service.update_lineup_grouped(
                 raid_seed["event"].id,
-                {"dps": [s8.id], "bench_queue": []},
+                {"range_dps": [s8.id], "bench_queue": []},
                 confirmed_by=raid_seed["users"]["u1"].id,
                 expected_version="wrong-version",
             )
@@ -811,12 +811,12 @@ class TestFullLineupE2E:
         s5 = _signup(raid_seed, "u5", "p5_priest", "healer")
         assert lineup_service.has_role_slot(s5.id)
 
-        signup_service.update_signup(s5, {"chosen_role": "dps"})
+        signup_service.update_signup(s5, {"chosen_role": "range_dps"})
 
         assert not lineup_service.has_role_slot(s5.id)
         bench = lineup_service.get_bench_info(s5.id)
         assert bench is not None
-        assert bench["waiting_for"] == "dps"
+        assert bench["waiting_for"] == "range_dps"
 
     # -- 15. Full E2E: build → swap → bench → promote → verify --
 
@@ -839,18 +839,18 @@ class TestFullLineupE2E:
         s["h1"] = _signup(raid_seed, "u5", "p5_priest", "healer")
         s["h2"] = _signup(raid_seed, "u6", "p6_shaman", "healer")
         s["h3"] = _signup(raid_seed, "u7", "p7_druid_heal", "healer")
-        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s["d3"] = _signup(raid_seed, "u10", "p10_warlock", "dps")
-        s["d4"] = _signup(raid_seed, "u11", "p11_hunter", "dps")
+        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s["d3"] = _signup(raid_seed, "u10", "p10_warlock", "range_dps")
+        s["d4"] = _signup(raid_seed, "u11", "p11_hunter", "range_dps")
         # P1's hunter alt on bench
-        s["p1_alt"] = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s["p1_alt"] = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                               force_bench=True)
         # P2 warrior on bench for MT
         s["p2"] = _signup(raid_seed, "u2", "p2_warrior", "main_tank",
                           force_bench=True)
         # P12 on bench for DPS
-        s["p12"] = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s["p12"] = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                            force_bench=True)
 
         # Step 1: Verify initial state — all slots filled
@@ -871,11 +871,11 @@ class TestFullLineupE2E:
                 "main_tanks": [s["mt"].id],
                 "off_tanks": [s["ot1"].id, s["ot2"].id],
                 "healers": [s["h1"].id, s["h2"].id, s["h3"].id],
-                "dps": [s["p1_alt"].id, s["d1"].id, s["d2"].id,
+                "range_dps": [s["p1_alt"].id, s["d1"].id, s["d2"].id,
                         s["d3"].id, s["d4"].id],
                 "bench_queue": [
                     {"id": s["p2"].id, "chosen_role": "main_tank"},
-                    {"id": s["p12"].id, "chosen_role": "dps"},
+                    {"id": s["p12"].id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -926,16 +926,16 @@ class TestFullLineupE2E:
         s["mt"] = _signup(raid_seed, "u1", "p1_druid", "main_tank")
         s["ot"] = _signup(raid_seed, "u3", "p3_paladin", "off_tank")
         s["h1"] = _signup(raid_seed, "u5", "p5_priest", "healer")
-        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s["bench"] = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s["bench"] = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                              force_bench=True)
 
         result = lineup_service.get_lineup_grouped(raid_seed["event"].id)
 
         # Collect IDs per group
         all_groups = {}
-        for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps"):
+        for key in ("main_tanks", "off_tanks", "melee_dps", "healers", "range_dps"):
             all_groups[key] = set(_role_ids(result, key))
         all_groups["bench_queue"] = set(_bench_ids(result))
 
@@ -952,20 +952,20 @@ class TestFullLineupE2E:
     def test_bench_info_role_and_position(self, raid_seed):
         """Bench info should correctly report waiting_for role and
         queue position."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps",
                      force_bench=True)
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps",
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps",
                      force_bench=True)
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         info8 = lineup_service.get_bench_info(s8.id)
         info9 = lineup_service.get_bench_info(s9.id)
         info10 = lineup_service.get_bench_info(s10.id)
 
-        assert info8["waiting_for"] == "dps"
-        assert info9["waiting_for"] == "dps"
-        assert info10["waiting_for"] == "dps"
+        assert info8["waiting_for"] == "range_dps"
+        assert info9["waiting_for"] == "range_dps"
+        assert info10["waiting_for"] == "range_dps"
 
         # Queue positions should be sequential
         positions = sorted([info8["queue_position"],
@@ -982,9 +982,9 @@ class TestPlayerLeaveRaid:
     def test_player_leaves_from_role_slot_promotes_bench(self, raid_seed):
         """When a player in a role slot leaves, the first matching bench
         player for that role is auto-promoted."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         assert lineup_service.has_role_slot(s8.id)
@@ -1003,11 +1003,11 @@ class TestPlayerLeaveRaid:
     def test_player_leaves_from_bench_no_promotion(self, raid_seed):
         """When a bench player leaves, no auto-promotion happens
         (no role slot was freed)."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                       force_bench=True)
 
         # P10 leaves from bench
@@ -1026,11 +1026,11 @@ class TestPlayerLeaveRaid:
         to the freed DPS slot since the user no longer has a char
         in the lineup."""
         s_main = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
         # Another bench player for DPS
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps",
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps",
                      force_bench=True)
 
         assert lineup_service.has_role_slot(s_main.id)
@@ -1049,12 +1049,12 @@ class TestPlayerLeaveRaid:
     def test_player_leaves_lineup_multiple_bench_fifo(self, raid_seed):
         """When a DPS leaves, the first bench player for DPS (FIFO) should
         be promoted, not the second one."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
         # Two bench players
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                       force_bench=True)
 
         # Verify bench ordering
@@ -1078,9 +1078,9 @@ class TestDeclineSignup:
     def test_decline_from_role_slot_promotes_bench(self, raid_seed):
         """Declining a signup in a role slot frees the slot and
         auto-promotes from bench."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         signup_service.decline_signup(s8)
@@ -1091,11 +1091,11 @@ class TestDeclineSignup:
 
     def test_decline_from_bench_no_promotion(self, raid_seed):
         """Declining a bench signup frees no role slot — no promotion."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                       force_bench=True)
 
         signup_service.decline_signup(s10)
@@ -1113,14 +1113,14 @@ class TestCharacterReplacementFlows:
     def test_replacement_decline_keeps_original(self, raid_seed):
         """When a player declines a character replacement request,
         the original character stays in the lineup, unchanged."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         # Officer requests replacement: P8's hunter → a new alt
         alt = Character(
             user_id=raid_seed["users"]["u8"].id,
             guild_id=raid_seed["guild"].id,
             realm_name="Icecrown", name="HunterAlt8",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(alt)
@@ -1147,13 +1147,13 @@ class TestCharacterReplacementFlows:
     def test_replacement_confirm_swaps_character(self, raid_seed):
         """Confirming a replacement swaps the character on the signup
         and lineup slots, keeping the same position."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         alt = Character(
             user_id=raid_seed["users"]["u8"].id,
             guild_id=raid_seed["guild"].id,
             realm_name="Icecrown", name="HunterSwap8",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(alt)
@@ -1176,16 +1176,16 @@ class TestCharacterReplacementFlows:
     def test_replacement_leave_deletes_signup_and_promotes(self, raid_seed):
         """When a player chooses 'leave' on a replacement request,
         their signup is deleted entirely and bench promotes."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         alt = Character(
             user_id=raid_seed["users"]["u8"].id,
             guild_id=raid_seed["guild"].id,
             realm_name="Icecrown", name="HunterLeave8",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(alt)
@@ -1211,9 +1211,9 @@ class TestCharacterReplacementFlows:
         request on one char. The other char (on bench) should become
         eligible for promotion since the user no longer has a lineup char."""
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         # Create replacement request for druid
         alt_druid = Character(
@@ -1251,9 +1251,9 @@ class TestAdminRemovePlayer:
 
     def test_admin_removes_lineup_player_promotes_bench(self, raid_seed):
         """Admin removes a player from DPS. Bench player auto-promoted."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         # Admin removes P8
@@ -1265,11 +1265,11 @@ class TestAdminRemovePlayer:
 
     def test_admin_removes_bench_player_no_promotion(self, raid_seed):
         """Admin removes a bench player. No promotion happens."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                       force_bench=True)
 
         # Admin removes P10 from bench
@@ -1286,11 +1286,11 @@ class TestAdminRemovePlayer:
         main_tank (wrong role), but P2's warrior (bench for main_tank)
         should be promoted."""
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
         s_warrior = _signup(raid_seed, "u2", "p2_warrior", "main_tank",
                             force_bench=True)
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         signup_service.delete_signup(s_druid)
 
@@ -1304,13 +1304,13 @@ class TestAdminRemovePlayer:
     def test_admin_removes_multiple_players_sequential_promotion(self, raid_seed):
         """Admin removes two DPS players. Two bench players should be
         promoted in FIFO order."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
-        s11 = _signup(raid_seed, "u11", "p11_hunter", "dps",
+        s11 = _signup(raid_seed, "u11", "p11_hunter", "range_dps",
                       force_bench=True)
-        s12 = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s12 = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                       force_bench=True)
 
         # Admin removes two lineup players
@@ -1342,12 +1342,12 @@ class TestBanCharacterFromRaid:
         )
 
         with pytest.raises(ValueError, match="permanently kicked"):
-            _signup(raid_seed, "u8", "p8_hunter", "dps")
+            _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
     def test_ban_after_remove_prevents_re_signup(self, raid_seed):
         """Admin removes a player and bans them. Player cannot re-sign up."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         # Admin removes and bans
@@ -1364,7 +1364,7 @@ class TestBanCharacterFromRaid:
 
         # Banned player can't sign up again
         with pytest.raises(ValueError, match="permanently kicked"):
-            _signup(raid_seed, "u8", "p8_hunter", "dps")
+            _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
     def test_ban_one_char_other_char_can_signup(self, raid_seed):
         """Banning one character doesn't prevent the player's other
@@ -1393,22 +1393,22 @@ class TestBanCharacterFromRaid:
         )
 
         with pytest.raises(ValueError, match="permanently kicked"):
-            _signup(raid_seed, "u8", "p8_hunter", "dps")
+            _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         # Officer removes ban
         assert signup_service.remove_ban(event_id, char_id) is True
 
         # Now signup works
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
         assert lineup_service.has_role_slot(s8.id)
 
     def test_ban_delete_promote_full_flow(self, raid_seed):
         """Full flow: player in lineup → admin removes → bans →
         bench player promoted → banned player can't re-signup →
         ban lifted → player signs up → goes to bench (slot full)."""
-        s8 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s9 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s10 = _signup(raid_seed, "u10", "p10_warlock", "dps",
+        s8 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s9 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s10 = _signup(raid_seed, "u10", "p10_warlock", "range_dps",
                       force_bench=True)
 
         char_id = raid_seed["chars"]["p8_hunter"].id
@@ -1427,18 +1427,18 @@ class TestBanCharacterFromRaid:
 
         # Step 3: P8 can't sign up
         with pytest.raises(ValueError, match="permanently kicked"):
-            _signup(raid_seed, "u8", "p8_hunter", "dps")
+            _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         # Step 4: Ban lifted
         signup_service.remove_ban(event_id, char_id)
 
         # Step 5: P8 signs up — DPS slots full (s9 + s10), goes to bench
-        s8_new = _signup(raid_seed, "u8", "p8_hunter", "dps",
+        s8_new = _signup(raid_seed, "u8", "p8_hunter", "range_dps",
                          force_bench=True)
         assert not lineup_service.has_role_slot(s8_new.id)
         bench = lineup_service.get_bench_info(s8_new.id)
         assert bench is not None
-        assert bench["waiting_for"] == "dps"
+        assert bench["waiting_for"] == "range_dps"
 
 
 class TestMultiCharPlayerScenarios:
@@ -1449,9 +1449,9 @@ class TestMultiCharPlayerScenarios:
         """Player has main in MT and alt on bench for DPS. Main leaves.
         Alt stays on bench, not promoted (wrong role)."""
         s_mt = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         signup_service.delete_signup(s_mt)
 
@@ -1459,12 +1459,12 @@ class TestMultiCharPlayerScenarios:
         assert not lineup_service.has_role_slot(s_alt.id)
         bench = lineup_service.get_bench_info(s_alt.id)
         assert bench is not None
-        assert bench["waiting_for"] == "dps"
+        assert bench["waiting_for"] == "range_dps"
 
     def test_leave_all_chars_clears_all_slots(self, raid_seed):
         """Player leaves with all their characters. All slots cleared."""
         s_mt = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
 
         signup_service.delete_signup(s_mt)
@@ -1478,9 +1478,9 @@ class TestMultiCharPlayerScenarios:
         """Ban P1's druid. P1's hunter alt (on bench for DPS) should
         remain on bench and be promotable when a DPS slot frees up."""
         s_mt = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s_d2 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s_d2 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
 
         # Admin removes druid and bans
@@ -1508,11 +1508,11 @@ class TestMultiCharPlayerScenarios:
         5. P12 (bench DPS) should be promoted to freed DPS slot
         """
         s_druid = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s_alt = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s_alt = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                         force_bench=True)
-        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s_d2 = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s_bench = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s_d1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s_d2 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s_bench = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                           force_bench=True)
 
         db.session.expire_all()
@@ -1522,9 +1522,9 @@ class TestMultiCharPlayerScenarios:
             raid_seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_alt.id, s_d1.id, s_d2.id],
+                "range_dps": [s_alt.id, s_d1.id, s_d2.id],
                 "bench_queue": [
-                    {"id": s_bench.id, "chosen_role": "dps"},
+                    {"id": s_bench.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -1570,17 +1570,17 @@ class TestCompleteLifecycleWithAllFlows:
         s["h1"] = _signup(raid_seed, "u5", "p5_priest", "healer")
         s["h2"] = _signup(raid_seed, "u6", "p6_shaman", "healer")
         s["h3"] = _signup(raid_seed, "u7", "p7_druid_heal", "healer")
-        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "dps")
-        s["d3"] = _signup(raid_seed, "u10", "p10_warlock", "dps")
-        s["d4"] = _signup(raid_seed, "u11", "p11_hunter", "dps")
+        s["d1"] = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s["d2"] = _signup(raid_seed, "u9", "p9_mage", "range_dps")
+        s["d3"] = _signup(raid_seed, "u10", "p10_warlock", "range_dps")
+        s["d4"] = _signup(raid_seed, "u11", "p11_hunter", "range_dps")
 
         # Bench players
-        s["p1_alt"] = _signup(raid_seed, "u1", "p1_hunter", "dps",
+        s["p1_alt"] = _signup(raid_seed, "u1", "p1_hunter", "range_dps",
                               force_bench=True)
         s["p2"] = _signup(raid_seed, "u2", "p2_warrior", "main_tank",
                           force_bench=True)
-        s["p12"] = _signup(raid_seed, "u12", "p12_mage", "dps",
+        s["p12"] = _signup(raid_seed, "u12", "p12_mage", "range_dps",
                            force_bench=True)
 
         # --- Step 1: Verify initial state ---
@@ -1601,11 +1601,11 @@ class TestCompleteLifecycleWithAllFlows:
                 "main_tanks": [s["mt"].id],
                 "off_tanks": [s["ot1"].id, s["ot2"].id],
                 "healers": [s["h1"].id, s["h2"].id, s["h3"].id],
-                "dps": [s["p1_alt"].id, s["d1"].id, s["d2"].id,
+                "range_dps": [s["p1_alt"].id, s["d1"].id, s["d2"].id,
                         s["d3"].id, s["d4"].id],
                 "bench_queue": [
                     {"id": s["p2"].id, "chosen_role": "main_tank"},
-                    {"id": s["p12"].id, "chosen_role": "dps"},
+                    {"id": s["p12"].id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
@@ -1636,7 +1636,7 @@ class TestCompleteLifecycleWithAllFlows:
         )
 
         with pytest.raises(ValueError, match="permanently kicked"):
-            _signup(raid_seed, "u8", "p8_hunter", "dps")
+            _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         # --- Step 5: P4 gets replacement request → declines ---
         req = signup_service.create_replacement_request(
@@ -1714,7 +1714,7 @@ class TestDeclineDoesNotRePromote:
         The slot should remain empty — the declined player must NOT
         be re-promoted."""
         s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s2 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s2 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
         # No bench players for main_tank
 
         assert lineup_service.has_role_slot(s1.id)
@@ -1761,11 +1761,11 @@ class TestDeclineDoesNotRePromote:
         for ukey, ckey in [("u8", "p8_hunter"), ("u9", "p9_mage"),
                            ("u10", "p10_warlock"), ("u11", "p11_hunter"),
                            ("u5", "p5_priest"), ("u6", "p6_shaman")]:
-            s = _signup(raid_seed, ukey, ckey, "dps")
+            s = _signup(raid_seed, ukey, ckey, "range_dps")
             dps_signups.append(s)
 
         # P12 signs up for DPS (bench — slots full)
-        s_bench = _signup(raid_seed, "u12", "p12_mage", "dps", force_bench=True)
+        s_bench = _signup(raid_seed, "u12", "p12_mage", "range_dps", force_bench=True)
 
         assert lineup_service.has_role_slot(dps_signups[0].id)
         assert lineup_service.get_bench_info(s_bench.id) is not None
@@ -1797,8 +1797,8 @@ class TestAdminBenchNotOverridden:
         """Admin explicitly benches a DPS player when other DPS slots are
         still free. The player should stay on bench, not be re-promoted."""
         # Only 2 of 6 DPS slots filled
-        s1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
-        s2 = _signup(raid_seed, "u9", "p9_mage", "dps")
+        s1 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
+        s2 = _signup(raid_seed, "u9", "p9_mage", "range_dps")
 
         assert lineup_service.has_role_slot(s1.id)
         assert lineup_service.has_role_slot(s2.id)
@@ -1809,8 +1809,8 @@ class TestAdminBenchNotOverridden:
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
             {
-                "dps": [s2.id],
-                "bench_queue": [{"id": s1.id, "chosen_role": "dps"}],
+                "range_dps": [s2.id],
+                "bench_queue": [{"id": s1.id, "chosen_role": "range_dps"}],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
         )
@@ -1926,7 +1926,7 @@ class TestSlotLimitEnforcement:
                  ("u1", "p1_hunter"), ("u12", "p12_mage")]
         for i, (ukey, ckey) in enumerate(pairs):
             # First 6 fill the slots, last 2 need force_bench
-            s = _signup(raid_seed, ukey, ckey, "dps",
+            s = _signup(raid_seed, ukey, ckey, "range_dps",
                         force_bench=(i >= 6))
             signups.append(s)
 
@@ -1935,11 +1935,11 @@ class TestSlotLimitEnforcement:
         all_ids = [s.id for s in signups]
         result = lineup_service.update_lineup_grouped(
             raid_seed["event"].id,
-            {"dps": all_ids},
+            {"range_dps": all_ids},
             confirmed_by=raid_seed["users"]["u1"].id,
         )
 
-        dps_ids = _role_ids(result, "dps")
+        dps_ids = _role_ids(result, "range_dps")
         assert len(dps_ids) <= 6, \
             f"DPS slots should be capped at 6, got {len(dps_ids)}"
         # First 6 should be in DPS
@@ -1954,7 +1954,7 @@ class TestSlotLimitEnforcement:
     def test_within_limit_no_truncation(self, raid_seed):
         """When signups fit within slot limits, nothing is truncated."""
         s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
-        s2 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s2 = _signup(raid_seed, "u8", "p8_hunter", "range_dps")
 
         db.session.expire_all()
 
@@ -1962,14 +1962,14 @@ class TestSlotLimitEnforcement:
             raid_seed["event"].id,
             {
                 "main_tanks": [s1.id],
-                "dps": [s2.id],
+                "range_dps": [s2.id],
             },
             confirmed_by=raid_seed["users"]["u1"].id,
         )
 
         mt_ids = _role_ids(result, "main_tanks")
         assert s1.id in mt_ids
-        dps_ids = _role_ids(result, "dps")
+        dps_ids = _role_ids(result, "range_dps")
         assert s2.id in dps_ids
         bench = _bench_ids(result)
         assert s1.id not in bench

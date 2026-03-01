@@ -170,11 +170,11 @@ const props = defineProps({
   guildId:        { type: [Number,String], required: true },
   canManage:      { type: Boolean, default: false },
   currentUserId:  { type: [Number,String], default: null },
-  tankSlots:      { type: Number, default: 0 },
+  meleeDpsSlots:  { type: Number, default: 0 },
   mainTankSlots:  { type: Number, default: 1 },
   offTankSlots:   { type: Number, default: 1 },
   healerSlots:    { type: Number, default: 5 },
-  dpsSlots:       { type: Number, default: 18 }
+  rangeDpsSlots:  { type: Number, default: 18 }
 })
 
 const emit = defineEmits(['saved', 'lineup-updated'])
@@ -193,14 +193,14 @@ const benchQueue = ref([]) // Ordered list of bench signup objects from API
 const showRoleChangeModal = ref(false)
 const roleChangePending = ref(null) // { signup, targetKey, targetCol }
 
-const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
+const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 const allColumns = computed(() => [
   { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },
   { key: 'off_tanks',  role: 'off_tank',  label: 'Off Tank',   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
-  { key: 'tanks',      role: 'tank',      label: 'Melee DPS',  labelClass: 'text-blue-300',  slots: props.tankSlots },
+  { key: 'melee_dps',  role: 'melee_dps', label: 'Melee DPS',  labelClass: 'text-blue-300',  slots: props.meleeDpsSlots },
   { key: 'healers',    role: 'healer',    label: 'Heal',       labelClass: 'text-green-300', slots: props.healerSlots },
-  { key: 'dps',        role: 'dps',       label: 'Range DPS',  labelClass: 'text-red-300',   slots: props.dpsSlots },
+  { key: 'range_dps',  role: 'range_dps', label: 'Range DPS',  labelClass: 'text-red-300',   slots: props.rangeDpsSlots },
 ])
 
 /** Only show columns that have at least 1 slot configured */
@@ -214,7 +214,7 @@ const gridClass = computed(() => {
   return 'md:grid-cols-5'
 })
 
-const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
+const lineup = ref({ main_tanks: [], off_tanks: [], melee_dps: [], healers: [], range_dps: [] })
 
 // ── Drag handlers (state managed by useDragDrop composable) ──
 
@@ -231,7 +231,7 @@ function onDragEnd() {
 }
 
 function findSignupById(id) {
-  for (const key of ['main_tanks', 'off_tanks', 'tanks', 'healers', 'dps']) {
+  for (const key of ['main_tanks', 'off_tanks', 'melee_dps', 'healers', 'range_dps']) {
     const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
@@ -408,9 +408,9 @@ async function loadLineup() {
     if (dirty.value) return
     lineup.value.main_tanks = data.main_tanks ?? []
     lineup.value.off_tanks  = data.off_tanks  ?? []
-    lineup.value.tanks      = data.tanks      ?? []
+    lineup.value.melee_dps  = data.melee_dps  ?? []
     lineup.value.healers    = data.healers    ?? []
-    lineup.value.dps        = data.dps        ?? []
+    lineup.value.range_dps  = data.range_dps  ?? []
     benchQueue.value        = data.bench_queue ?? []
     lineupVersion.value     = data.version ?? null
     enforceSlotLimits()
@@ -473,9 +473,9 @@ function autoPopulateFromSignups() {
   const going = props.signups.filter(s => s.lineup_status === 'going')
   lineup.value.main_tanks = going.filter(s => s.chosen_role === 'main_tank')
   lineup.value.off_tanks  = going.filter(s => s.chosen_role === 'off_tank')
-  lineup.value.tanks      = going.filter(s => s.chosen_role === 'tank')
+  lineup.value.melee_dps  = going.filter(s => s.chosen_role === 'melee_dps')
   lineup.value.healers    = going.filter(s => s.chosen_role === 'healer')
-  lineup.value.dps        = going.filter(s => s.chosen_role === 'dps')
+  lineup.value.range_dps  = going.filter(s => s.chosen_role === 'range_dps')
   enforceSlotLimits()
 }
 
@@ -486,7 +486,7 @@ const activeSignups = computed(() =>
 
 const assignedIds = computed(() => {
   const ids = new Set()
-  ;['main_tanks', 'off_tanks', 'tanks', 'healers', 'dps'].forEach(k =>
+  ;['main_tanks', 'off_tanks', 'melee_dps', 'healers', 'range_dps'].forEach(k =>
     lineup.value[k].forEach(s => ids.add(Number(s.id)))
   )
   return ids
@@ -496,9 +496,9 @@ const assignedIds = computed(() => {
 const lineupCounts = computed(() => ({
   main_tank: lineup.value.main_tanks.length,
   off_tank:  lineup.value.off_tanks.length,
-  tank:      lineup.value.tanks.length,
+  melee_dps: lineup.value.melee_dps.length,
   healer:    lineup.value.healers.length,
-  dps:       lineup.value.dps.length,
+  range_dps: lineup.value.range_dps.length,
 }))
 
 watch(lineupCounts, (counts) => {
@@ -532,7 +532,7 @@ const benchByRole = computed(() => {
   const groups = {}
   const counters = {} // per-role position counter
   for (const s of bench.value) {
-    const role = s.chosen_role || 'dps'
+    const role = s.chosen_role || 'range_dps'
     if (!groups[role]) {
       groups[role] = []
       counters[role] = 0
@@ -541,7 +541,7 @@ const benchByRole = computed(() => {
     groups[role].push({ ...s, roleQueuePos: counters[role] })
   }
   // Return entries sorted by role label for consistent display
-  const roleOrder = ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
+  const roleOrder = ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps']
   return roleOrder
     .filter(r => groups[r])
     .map(r => ({ role: r, label: ROLE_LABEL_MAP[r] || r, players: groups[r] }))
@@ -604,7 +604,7 @@ function getFlatBenchIndex(role, roleIdx) {
   // Convert role + role-relative index to a flat bench array index
   let flatIdx = 0
   for (const s of bench.value) {
-    const sRole = s.chosen_role || 'dps'
+    const sRole = s.chosen_role || 'range_dps'
     if (sRole === role) {
       if (roleIdx === 0) return flatIdx
       roleIdx--
@@ -649,18 +649,18 @@ async function saveLineup(auto = false) {
     const result = await lineupApi.saveLineup(props.guildId, props.eventId, {
       main_tanks: lineup.value.main_tanks.map(s => s.id),
       off_tanks:  lineup.value.off_tanks.map(s => s.id),
-      tanks:      lineup.value.tanks.map(s => s.id),
+      melee_dps:  lineup.value.melee_dps.map(s => s.id),
       healers:    lineup.value.healers.map(s => s.id),
-      dps:        lineup.value.dps.map(s => s.id),
+      range_dps:  lineup.value.range_dps.map(s => s.id),
       bench_queue: bench.value.map(s => ({ id: s.id, chosen_role: s.chosen_role })),
       version:    lineupVersion.value,
     })
     // Update local state from server response
     lineup.value.main_tanks = result.main_tanks ?? []
     lineup.value.off_tanks  = result.off_tanks  ?? []
-    lineup.value.tanks      = result.tanks      ?? []
+    lineup.value.melee_dps  = result.melee_dps  ?? []
     lineup.value.healers    = result.healers    ?? []
-    lineup.value.dps        = result.dps        ?? []
+    lineup.value.range_dps  = result.range_dps  ?? []
     benchQueue.value        = result.bench_queue ?? []
     lineupVersion.value     = result.version ?? null
     dirty.value = false
@@ -671,9 +671,9 @@ async function saveLineup(auto = false) {
       const fresh = err.response.data.lineup
       lineup.value.main_tanks = fresh.main_tanks ?? []
       lineup.value.off_tanks  = fresh.off_tanks  ?? []
-      lineup.value.tanks      = fresh.tanks      ?? []
+      lineup.value.melee_dps  = fresh.melee_dps  ?? []
       lineup.value.healers    = fresh.healers    ?? []
-      lineup.value.dps        = fresh.dps        ?? []
+      lineup.value.range_dps  = fresh.range_dps  ?? []
       benchQueue.value        = fresh.bench_queue ?? []
       lineupVersion.value     = fresh.version ?? null
       dirty.value = false

@@ -50,11 +50,11 @@ const props = defineProps({
   lineupCounts: { type: Object, default: null },
   maxSize: { type: Number, default: null },
   // Slot targets from the raid definition
-  tankSlots:      { type: Number, default: 2 },
+  meleeDpsSlots:  { type: Number, default: 2 },
   mainTankSlots:  { type: Number, default: 1 },
   offTankSlots:   { type: Number, default: 1 },
   healerSlots:    { type: Number, default: 5 },
-  dpsSlots:       { type: Number, default: 18 }
+  rangeDpsSlots:  { type: Number, default: 18 }
 })
 
 function countRole(role) {
@@ -62,7 +62,7 @@ function countRole(role) {
 }
 
 const total = computed(() =>
-  countRole('main_tank') + countRole('off_tank') + countRole('tank') + countRole('healer') + countRole('dps')
+  countRole('main_tank') + countRole('off_tank') + countRole('melee_dps') + countRole('healer') + countRole('range_dps')
 )
 
 const roleSummary = computed(() => [
@@ -79,9 +79,9 @@ const roleSummary = computed(() => [
     barClass: 'bg-cyan-400'
   },
   {
-    name: 'tank',
-    count: countRole('tank'),
-    target: props.tankSlots,
+    name: 'melee_dps',
+    count: countRole('melee_dps'),
+    target: props.meleeDpsSlots,
     barClass: 'bg-blue-400'
   },
   {
@@ -91,9 +91,9 @@ const roleSummary = computed(() => [
     barClass: 'bg-green-400'
   },
   {
-    name: 'dps',
-    count: countRole('dps'),
-    target: props.dpsSlots,
+    name: 'range_dps',
+    count: countRole('range_dps'),
+    target: props.rangeDpsSlots,
     barClass: 'bg-red-400'
   }
 ].filter(r => r.target > 0))

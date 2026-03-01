@@ -25,7 +25,7 @@ class TestStatusColumnMigration:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -52,7 +52,7 @@ class TestReplacementLeaveAction:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -63,7 +63,7 @@ class TestReplacementLeaveAction:
         alt_char = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="AltChar", class_name="Hunter",
-            default_role="dps", is_main=False, is_active=True,
+            default_role="range_dps", is_main=False, is_active=True,
         )
         db.session.add(alt_char)
         db.session.commit()
@@ -91,7 +91,7 @@ class TestReplacementLeaveAction:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -101,7 +101,7 @@ class TestReplacementLeaveAction:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -112,7 +112,7 @@ class TestReplacementLeaveAction:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -129,7 +129,7 @@ class TestReplacementLeaveAction:
         alt_char = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="AltChar2", class_name="Hunter",
-            default_role="dps", is_main=False, is_active=True,
+            default_role="range_dps", is_main=False, is_active=True,
         )
         db.session.add(alt_char)
         db.session.commit()
@@ -160,7 +160,7 @@ class TestReplacementConfirmWithConflict:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -171,7 +171,7 @@ class TestReplacementConfirmWithConflict:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -208,7 +208,7 @@ class TestAdminRemoveAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -218,7 +218,7 @@ class TestAdminRemoveAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -229,7 +229,7 @@ class TestAdminRemoveAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -258,7 +258,7 @@ class TestMySignupsEndpoint:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -283,7 +283,7 @@ class TestRoleChangeMovesBench:
         shaman = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="ShamanOne",
-            class_name="Shaman", default_role="dps",
+            class_name="Shaman", default_role="range_dps",
             is_main=True, is_active=True,
         )
         db.session.add(shaman)
@@ -295,7 +295,7 @@ class TestRoleChangeMovesBench:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=shaman.id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -322,7 +322,7 @@ class TestOneCharPerPlayerInLineup:
         char1b = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterOneAlt",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(char1b)
@@ -333,7 +333,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -346,7 +346,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=char1b.id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -361,7 +361,7 @@ class TestOneCharPerPlayerInLineup:
         char1b = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterOneAlt",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(char1b)
@@ -372,7 +372,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -382,7 +382,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -394,7 +394,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=char1b.id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -407,7 +407,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -429,7 +429,7 @@ class TestOneCharPerPlayerInLineup:
         char1b = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterOneAlt",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(char1b)
@@ -440,7 +440,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -451,7 +451,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -462,7 +462,7 @@ class TestOneCharPerPlayerInLineup:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=char1b.id,
-            chosen_role="dps",
+            chosen_role="range_dps",
             chosen_spec=None,
             note=None,
             raid_size=seed["event"].raid_size,
@@ -492,7 +492,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -500,7 +500,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -509,7 +509,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True, event=seed["event"],
         )
@@ -522,10 +522,10 @@ class TestAdminLineupUpdateAutoPromote:
         result = lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s2.id],
+                "range_dps": [s2.id],
                 "bench_queue": [
-                    {"id": s1.id, "chosen_role": "dps"},
-                    {"id": s3.id, "chosen_role": "dps"},
+                    {"id": s1.id, "chosen_role": "range_dps"},
+                    {"id": s3.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=seed["user1"].id,
@@ -548,7 +548,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -556,7 +556,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -564,7 +564,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True, event=seed["event"],
         )
@@ -573,10 +573,10 @@ class TestAdminLineupUpdateAutoPromote:
         lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s2.id],
+                "range_dps": [s2.id],
                 "bench_queue": [
-                    {"id": s1.id, "chosen_role": "dps"},
-                    {"id": s3.id, "chosen_role": "dps"},
+                    {"id": s1.id, "chosen_role": "range_dps"},
+                    {"id": s3.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=seed["user1"].id,
@@ -592,7 +592,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -600,7 +600,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -608,7 +608,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True, event=seed["event"],
         )
@@ -617,8 +617,8 @@ class TestAdminLineupUpdateAutoPromote:
         lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s2.id, s1.id],
-                "bench_queue": [{"id": s3.id, "chosen_role": "dps"}],
+                "range_dps": [s2.id, s1.id],
+                "bench_queue": [{"id": s3.id, "chosen_role": "range_dps"}],
             },
             confirmed_by=seed["user1"].id,
         )
@@ -634,7 +634,7 @@ class TestAdminLineupUpdateAutoPromote:
         char1b = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterOneAlt",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(char1b)
@@ -645,7 +645,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -654,7 +654,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=char1b.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -663,7 +663,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -677,7 +677,7 @@ class TestAdminLineupUpdateAutoPromote:
         lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s1b.id, s1.id, s2.id],
+                "range_dps": [s1b.id, s1.id, s2.id],
                 "bench_queue": [],
             },
             confirmed_by=seed["user1"].id,
@@ -698,7 +698,7 @@ class TestAdminLineupUpdateAutoPromote:
         char1b = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterOneAlt2",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(char1b)
@@ -709,7 +709,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -718,7 +718,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -727,7 +727,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=char1b.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -742,7 +742,7 @@ class TestAdminLineupUpdateAutoPromote:
         lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s1b.id, s2.id],
+                "range_dps": [s1b.id, s2.id],
                 "bench_queue": [],
             },
             confirmed_by=seed["user1"].id,
@@ -757,7 +757,7 @@ class TestAdminLineupUpdateAutoPromote:
         bench_info = lineup_service.get_bench_info(s1.id)
         assert bench_info is not None, \
             "Main character should be auto-benched, not disappear"
-        assert bench_info["waiting_for"] == "dps"
+        assert bench_info["waiting_for"] == "range_dps"
 
     def test_admin_cross_role_same_player_swap(self, seed):
         """When char1 is main_tank and admin places char2 (same player) in DPS,
@@ -775,7 +775,7 @@ class TestAdminLineupUpdateAutoPromote:
         hunter_alt = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterAlt",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add_all([druid_char, hunter_alt])
@@ -784,7 +784,7 @@ class TestAdminLineupUpdateAutoPromote:
         # Update event to have main_tank and DPS slots
         seed["event"].raid_size = 10
         seed["raid_def"].main_tank_slots = 1
-        seed["raid_def"].dps_slots = 2
+        seed["raid_def"].range_dps_slots = 2
         db.session.commit()
 
         # Druid in main_tank slot
@@ -801,7 +801,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -810,7 +810,7 @@ class TestAdminLineupUpdateAutoPromote:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=hunter_alt.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -833,7 +833,7 @@ class TestAdminLineupUpdateAutoPromote:
             seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_alt.id, s_other.id],
+                "range_dps": [s_alt.id, s_other.id],
                 "bench_queue": [],
             },
             confirmed_by=seed["user1"].id,
@@ -882,7 +882,7 @@ class TestCrossRoleSwapAutoPromotion:
         hunter_alt = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterDPS",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add_all([druid_char, hunter_alt])
@@ -891,7 +891,7 @@ class TestCrossRoleSwapAutoPromotion:
         # Set up event with main_tank and DPS slots
         seed["event"].raid_size = 10
         seed["raid_def"].main_tank_slots = 2
-        seed["raid_def"].dps_slots = 2
+        seed["raid_def"].range_dps_slots = 2
         db.session.commit()
 
         # Druid in main_tank slot
@@ -908,7 +908,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -917,7 +917,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=hunter_alt.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -931,7 +931,7 @@ class TestCrossRoleSwapAutoPromotion:
             seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_alt.id, s_other.id],
+                "range_dps": [s_alt.id, s_other.id],
                 "bench_queue": [],
             },
             confirmed_by=seed["user1"].id,
@@ -962,7 +962,7 @@ class TestCrossRoleSwapAutoPromotion:
         hunter_alt = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterDPSalt",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         # Another player's warrior for main_tank bench
@@ -977,7 +977,7 @@ class TestCrossRoleSwapAutoPromotion:
 
         seed["event"].raid_size = 10
         seed["raid_def"].main_tank_slots = 1
-        seed["raid_def"].dps_slots = 2
+        seed["raid_def"].range_dps_slots = 2
         db.session.commit()
 
         # Druid in main_tank slot
@@ -994,7 +994,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -1003,7 +1003,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=hunter_alt.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -1032,7 +1032,7 @@ class TestCrossRoleSwapAutoPromotion:
             seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_alt.id, s_dps.id],
+                "range_dps": [s_alt.id, s_dps.id],
                 "bench_queue": [
                     {"id": s_warrior.id, "chosen_role": "main_tank"},
                 ],
@@ -1064,7 +1064,7 @@ class TestCrossRoleSwapAutoPromotion:
         hunter_alt = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterLast",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         warrior_bench = Character(
@@ -1078,7 +1078,7 @@ class TestCrossRoleSwapAutoPromotion:
 
         seed["event"].raid_size = 10
         seed["raid_def"].main_tank_slots = 1
-        seed["raid_def"].dps_slots = 2
+        seed["raid_def"].range_dps_slots = 2
         db.session.commit()
 
         s_druid = signup_service.create_signup(
@@ -1093,7 +1093,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -1101,7 +1101,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=hunter_alt.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -1125,7 +1125,7 @@ class TestCrossRoleSwapAutoPromotion:
             seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_alt.id, s_dps.id],
+                "range_dps": [s_alt.id, s_dps.id],
                 "bench_queue": [
                     {"id": s_warrior.id, "chosen_role": "main_tank"},
                 ],
@@ -1156,7 +1156,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=seed["char1"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -1165,7 +1165,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -1174,7 +1174,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user3"].id,
             character_id=seed["char3"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True, event=seed["event"],
         )
@@ -1184,7 +1184,7 @@ class TestCrossRoleSwapAutoPromotion:
         alt = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="AltE2E",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add(alt)
@@ -1195,7 +1195,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=alt.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -1215,10 +1215,10 @@ class TestCrossRoleSwapAutoPromotion:
         lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s1_alt.id, s2.id],
+                "range_dps": [s1_alt.id, s2.id],
                 "bench_queue": [
-                    {"id": s1.id, "chosen_role": "dps"},
-                    {"id": s3.id, "chosen_role": "dps"},
+                    {"id": s1.id, "chosen_role": "range_dps"},
+                    {"id": s3.id, "chosen_role": "range_dps"},
                 ],
             },
             confirmed_by=seed["user1"].id,
@@ -1258,7 +1258,7 @@ class TestCrossRoleSwapAutoPromotion:
         hunter = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterNoDup",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add_all([druid, hunter])
@@ -1266,7 +1266,7 @@ class TestCrossRoleSwapAutoPromotion:
 
         seed["event"].raid_size = 10
         seed["raid_def"].main_tank_slots = 1
-        seed["raid_def"].dps_slots = 2
+        seed["raid_def"].range_dps_slots = 2
         db.session.commit()
 
         s_druid = signup_service.create_signup(
@@ -1281,7 +1281,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -1289,7 +1289,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=hunter.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -1301,7 +1301,7 @@ class TestCrossRoleSwapAutoPromotion:
             seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_hunter.id, s_other.id],
+                "range_dps": [s_hunter.id, s_other.id],
                 "bench_queue": [],
             },
             confirmed_by=seed["user1"].id,
@@ -1332,7 +1332,7 @@ class TestCrossRoleSwapAutoPromotion:
         hunter = Character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             realm_name="Icecrown", name="HunterBoard",
-            class_name="Hunter", default_role="dps",
+            class_name="Hunter", default_role="range_dps",
             is_main=False, is_active=True,
         )
         db.session.add_all([druid, hunter])
@@ -1340,7 +1340,7 @@ class TestCrossRoleSwapAutoPromotion:
 
         seed["event"].raid_size = 10
         seed["raid_def"].main_tank_slots = 1
-        seed["raid_def"].dps_slots = 2
+        seed["raid_def"].range_dps_slots = 2
         db.session.commit()
 
         s_druid = signup_service.create_signup(
@@ -1355,7 +1355,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user2"].id,
             character_id=seed["char2"].id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             event=seed["event"],
         )
@@ -1363,7 +1363,7 @@ class TestCrossRoleSwapAutoPromotion:
             raid_event_id=seed["event"].id,
             user_id=seed["user1"].id,
             character_id=hunter.id,
-            chosen_role="dps", chosen_spec=None, note=None,
+            chosen_role="range_dps", chosen_spec=None, note=None,
             raid_size=seed["event"].raid_size,
             force_bench=True,
             event=seed["event"],
@@ -1375,7 +1375,7 @@ class TestCrossRoleSwapAutoPromotion:
             seed["event"].id,
             {
                 "main_tanks": [s_druid.id],
-                "dps": [s_hunter.id, s_other.id],
+                "range_dps": [s_hunter.id, s_other.id],
                 "bench_queue": [],
             },
             confirmed_by=seed["user1"].id,
@@ -1383,7 +1383,7 @@ class TestCrossRoleSwapAutoPromotion:
 
         # Collect all signup IDs from the result
         role_ids = set()
-        for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps"):
+        for key in ("main_tanks", "off_tanks", "melee_dps", "healers", "range_dps"):
             for entry in result.get(key, []):
                 role_ids.add(entry["id"])
         bench_ids = {e["id"] for e in result.get("bench_queue", [])}

@@ -62,9 +62,9 @@ def _get_role_slots(event) -> dict:
     return {
         "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
         "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
-        "tank": rd.tank_slots if rd and rd.tank_slots is not None else 0,
+        "melee_dps": rd.melee_dps_slots if rd and rd.melee_dps_slots is not None else 0,
         "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
-        "dps": rd.dps_slots if rd and rd.dps_slots is not None else 18,
+        "range_dps": rd.range_dps_slots if rd and rd.range_dps_slots is not None else 18,
     }
 
 

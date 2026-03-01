@@ -88,7 +88,7 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 const { getClassColor } = useWowIcons()
 const uiStore = useUiStore()
 
-const ROLE_LABELS = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+const ROLE_LABELS = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', range_dps: 'Range DPS' }
 function roleLabel(role) { return ROLE_LABELS[role] || role }
 
 const players = ref([])

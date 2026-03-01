@@ -73,18 +73,18 @@ from app.services import character_service, lineup_service, signup_service
 # Helper to create a raid setup with configurable slots
 # ---------------------------------------------------------------------------
 
-def _make_raid(db, guild, creator, *, dps_slots=2, healer_slots=0,
-               tank_slots=0, main_tank_slots=0, off_tank_slots=0,
+def _make_raid(db, guild, creator, *, range_dps_slots=2, healer_slots=0,
+               melee_dps_slots=0, main_tank_slots=0, off_tank_slots=0,
                raid_size=None):
     """Create a RaidDefinition + RaidEvent with the given slot configuration."""
     if raid_size is None:
-        raid_size = dps_slots + healer_slots + tank_slots + main_tank_slots + off_tank_slots
+        raid_size = range_dps_slots + healer_slots + melee_dps_slots + main_tank_slots + off_tank_slots
 
     rd = RaidDefinition(
         guild_id=guild.id, code="bench_test", name="Bench Test Raid",
         default_raid_size=raid_size,
-        dps_slots=dps_slots, healer_slots=healer_slots,
-        tank_slots=tank_slots, main_tank_slots=main_tank_slots,
+        range_dps_slots=range_dps_slots, healer_slots=healer_slots,
+        melee_dps_slots=melee_dps_slots, main_tank_slots=main_tank_slots,
         off_tank_slots=off_tank_slots,
     )
     db.session.add(rd)
@@ -127,7 +127,7 @@ def _make_user_and_char(db, guild, name, class_name="Hunter"):
     return u, c
 
 
-def _signup(event, user, char, role="dps", force_bench=False):
+def _signup(event, user, char, role="range_dps", force_bench=False):
     """Create a signup with sensible defaults."""
     return signup_service.create_signup(
         raid_event_id=event.id, user_id=user.id,
@@ -324,7 +324,7 @@ class TestSlotCountingDecoupled:
         ev = seed["event"]
         _signup(ev, seed["user1"], seed["char1"])
 
-        count = signup_service._count_assigned_slots_by_role(ev.id, "dps")
+        count = signup_service._count_assigned_slots_by_role(ev.id, "range_dps")
         assert count == 1
 
 
@@ -345,10 +345,10 @@ class TestMultiRoleBenchIsolation:
         u2, c2 = _make_user_and_char(db, guild, "mr_dps2")
         u3, c3 = _make_user_and_char(db, guild, "mr_healer", "Priest")
 
-        ev = _make_raid(db, guild, u1, dps_slots=2, healer_slots=0)
+        ev = _make_raid(db, guild, u1, range_dps_slots=2, healer_slots=0)
 
-        s1 = _signup(ev, u1, c1, "dps")
-        s2 = _signup(ev, u2, c2, "dps")
+        s1 = _signup(ev, u1, c1, "range_dps")
+        s2 = _signup(ev, u2, c2, "range_dps")
         s3 = _signup(ev, u3, c3, "healer", force_bench=True)
 
         with patch("app.utils.realtime.emit_signups_changed"), \
@@ -369,11 +369,11 @@ class TestMultiRoleBenchIsolation:
         u2, c2 = _make_user_and_char(db, guild, "mr2_dps2")
         u3, c3 = _make_user_and_char(db, guild, "mr2_dps3")
 
-        ev = _make_raid(db, guild, u1, dps_slots=2)
+        ev = _make_raid(db, guild, u1, range_dps_slots=2)
 
-        s1 = _signup(ev, u1, c1, "dps")
-        s2 = _signup(ev, u2, c2, "dps")
-        s3 = _signup(ev, u3, c3, "dps", force_bench=True)
+        s1 = _signup(ev, u1, c1, "range_dps")
+        s2 = _signup(ev, u2, c2, "range_dps")
+        s3 = _signup(ev, u3, c3, "range_dps", force_bench=True)
 
         with patch("app.utils.realtime.emit_signups_changed"), \
              patch("app.utils.realtime.emit_lineup_changed"):
@@ -397,13 +397,13 @@ class TestBenchQueueOrdering:
         db.session.flush()
 
         users_chars = [_make_user_and_char(db, guild, f"fifo_{i}") for i in range(4)]
-        ev = _make_raid(db, guild, users_chars[0][0], dps_slots=2)
+        ev = _make_raid(db, guild, users_chars[0][0], range_dps_slots=2)
 
         signups = []
-        signups.append(_signup(ev, *users_chars[0], "dps"))          # going
-        signups.append(_signup(ev, *users_chars[1], "dps"))          # going
-        signups.append(_signup(ev, *users_chars[2], "dps", True))    # bench #1
-        signups.append(_signup(ev, *users_chars[3], "dps", True))    # bench #2
+        signups.append(_signup(ev, *users_chars[0], "range_dps"))          # going
+        signups.append(_signup(ev, *users_chars[1], "range_dps"))          # going
+        signups.append(_signup(ev, *users_chars[2], "range_dps", True))    # bench #1
+        signups.append(_signup(ev, *users_chars[3], "range_dps", True))    # bench #2
 
         with patch("app.utils.realtime.emit_signups_changed"), \
              patch("app.utils.realtime.emit_lineup_changed"):
@@ -421,12 +421,12 @@ class TestBenchQueueOrdering:
         db.session.flush()
 
         users_chars = [_make_user_and_char(db, guild, f"seq_{i}") for i in range(4)]
-        ev = _make_raid(db, guild, users_chars[0][0], dps_slots=2)
+        ev = _make_raid(db, guild, users_chars[0][0], range_dps_slots=2)
 
-        s0 = _signup(ev, *users_chars[0], "dps")
-        s1 = _signup(ev, *users_chars[1], "dps")
-        s2 = _signup(ev, *users_chars[2], "dps", True)
-        s3 = _signup(ev, *users_chars[3], "dps", True)
+        s0 = _signup(ev, *users_chars[0], "range_dps")
+        s1 = _signup(ev, *users_chars[1], "range_dps")
+        s2 = _signup(ev, *users_chars[2], "range_dps", True)
+        s3 = _signup(ev, *users_chars[3], "range_dps", True)
 
         with patch("app.utils.realtime.emit_signups_changed"), \
              patch("app.utils.realtime.emit_lineup_changed"):
@@ -455,14 +455,14 @@ class TestClassRoleValidation:
 
     def test_invalid_role_on_update(self, seed, db):
         """7b: Changing role to invalid combo raises ValueError."""
-        s = _signup(seed["event"], seed["user1"], seed["char1"], "dps")
+        s = _signup(seed["event"], seed["user1"], seed["char1"], "range_dps")
         with pytest.raises(ValueError):
             signup_service.update_signup(s, {"chosen_role": "main_tank"})
 
     def test_valid_role_accepted(self, seed, db):
         """7c: Valid class-role combo works."""
-        s = _signup(seed["event"], seed["user1"], seed["char1"], "dps")
-        assert s.chosen_role == "dps"
+        s = _signup(seed["event"], seed["user1"], seed["char1"], "range_dps")
+        assert s.chosen_role == "range_dps"
         assert lineup_service.has_role_slot(s.id) is True
 
 
@@ -480,7 +480,7 @@ class TestDefaultRoleAutoPopulation:
             data={"realm_name": "Icecrown", "name": "AutoRogue",
                   "class_name": "Rogue"},
         )
-        assert char.default_role == "tank"  # Rogue → first allowed role is 'tank'
+        assert char.default_role == "melee_dps"  # Rogue → first allowed role is 'melee_dps'
 
     def test_explicit_role_preserved(self, seed, db):
         """9b: Explicit default_role is not overwritten."""
@@ -538,10 +538,10 @@ class TestMultipleSequentialPromotions:
         db.session.flush()
 
         uc = [_make_user_and_char(db, guild, f"tp_{i}") for i in range(6)]
-        ev = _make_raid(db, guild, uc[0][0], dps_slots=3)
+        ev = _make_raid(db, guild, uc[0][0], range_dps_slots=3)
 
-        going = [_signup(ev, *uc[i], "dps") for i in range(3)]
-        benched = [_signup(ev, *uc[i], "dps", True) for i in range(3, 6)]
+        going = [_signup(ev, *uc[i], "range_dps") for i in range(3)]
+        benched = [_signup(ev, *uc[i], "range_dps", True) for i in range(3, 6)]
 
         for g in going:
             assert lineup_service.has_role_slot(g.id) is True
@@ -578,13 +578,13 @@ class TestConcurrentRoleSlots:
         bench_dps_u, bench_dps_c = _make_user_and_char(db, guild, "rq_bdps")
         bench_heal_u, bench_heal_c = _make_user_and_char(db, guild, "rq_bheal", "Priest")
 
-        ev = _make_raid(db, guild, dps1_u, dps_slots=2, healer_slots=2)
+        ev = _make_raid(db, guild, dps1_u, range_dps_slots=2, healer_slots=2)
 
-        s_d1 = _signup(ev, dps1_u, dps1_c, "dps")
-        s_d2 = _signup(ev, dps2_u, dps2_c, "dps")
+        s_d1 = _signup(ev, dps1_u, dps1_c, "range_dps")
+        s_d2 = _signup(ev, dps2_u, dps2_c, "range_dps")
         s_h1 = _signup(ev, heal1_u, heal1_c, "healer")
         s_h2 = _signup(ev, heal2_u, heal2_c, "healer")
-        s_bd = _signup(ev, bench_dps_u, bench_dps_c, "dps", True)
+        s_bd = _signup(ev, bench_dps_u, bench_dps_c, "range_dps", True)
         s_bh = _signup(ev, bench_heal_u, bench_heal_c, "healer", True)
 
         # Delete a DPS player → only DPS bench should be promoted
@@ -656,7 +656,7 @@ class TestCharacterDeletion:
         db.session.flush()
 
         u, c = _make_user_and_char(db, guild, "banned_player")
-        ev = _make_raid(db, guild, u, dps_slots=2)
+        ev = _make_raid(db, guild, u, range_dps_slots=2)
 
         ban = RaidBan(
             raid_event_id=ev.id, character_id=c.id,
