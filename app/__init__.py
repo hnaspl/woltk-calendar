@@ -193,11 +193,18 @@ def _auto_migrate(app: Flask) -> None:
 
     Currently handles:
     - Dropping the legacy ``status`` column from ``signups`` if present.
+    - Adding ``duration_minutes`` column to ``raid_events`` if missing.
+    - Adding ``default_duration_minutes`` column to ``raid_definitions`` if missing.
     """
     try:
         _drop_signups_status_column()
     except Exception:
         app.logger.debug("Auto-migration: signups.status column already removed or not present.")
+
+    try:
+        _add_duration_columns()
+    except Exception:
+        app.logger.debug("Auto-migration: duration columns already present or migration skipped.")
 
 
 def _drop_signups_status_column() -> None:
@@ -212,6 +219,29 @@ def _drop_signups_status_column() -> None:
     # SQLite ≥ 3.35 supports ALTER TABLE DROP COLUMN
     with db.engine.begin() as conn:
         conn.execute(text("ALTER TABLE signups DROP COLUMN status"))
+
+
+def _add_duration_columns() -> None:
+    """Add duration columns to raid_events and raid_definitions if missing."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+
+    # Add duration_minutes to raid_events
+    re_cols = [col["name"] for col in inspector.get_columns("raid_events")]
+    if "duration_minutes" not in re_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE raid_events ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 180"
+            ))
+
+    # Add default_duration_minutes to raid_definitions
+    rd_cols = [col["name"] for col in inspector.get_columns("raid_definitions")]
+    if "default_duration_minutes" not in rd_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE raid_definitions ADD COLUMN default_duration_minutes INTEGER NOT NULL DEFAULT 180"
+            ))
 
 
 def _register_commands(app: Flask) -> None:
@@ -262,6 +292,11 @@ def _register_commands(app: Flask) -> None:
         """Run schema migrations on existing database."""
         try:
             _drop_signups_status_column()
-            click.echo("Migration complete: signups.status column dropped (if present).")
+            click.echo("Migration: signups.status column dropped (if present).")
+        except Exception as exc:
+            click.echo(f"Migration note: {exc}")
+        try:
+            _add_duration_columns()
+            click.echo("Migration: duration columns added (if missing).")
         except Exception as exc:
             click.echo(f"Migration note: {exc}")
