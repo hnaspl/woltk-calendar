@@ -215,7 +215,7 @@ const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 
-const isOfficerOrAdmin = computed(() => permissions.isOfficer.value || authStore.user?.is_admin)
+const isOfficerOrAdmin = computed(() => permissions.can('create_events') || authStore.user?.is_admin)
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 

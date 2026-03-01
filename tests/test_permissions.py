@@ -12,7 +12,7 @@ from app.models.permission import SystemRole, Permission, RolePermission, RoleGr
 from app.seeds.permissions import seed_permissions, ALL_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, GRANT_RULES
 from app.utils.permissions import (
     get_membership, has_permission, get_user_permissions,
-    can_grant_role, is_officer_or_admin,
+    can_grant_role,
 )
 
 
@@ -377,51 +377,6 @@ class TestCanGrantRole:
             from flask_login import login_user
             login_user(seeded["outsider"])
             assert can_grant_role(None, "member") is False
-
-
-# ===========================================================================
-# Test: is_officer_or_admin() backward compatibility
-# ===========================================================================
-
-class TestIsOfficerOrAdmin:
-    """Verify the legacy helper still works with dynamic permissions."""
-
-    def test_site_admin(self, seeded, app):
-        with app.test_request_context():
-            from flask_login import login_user
-            login_user(seeded["site_admin"])
-            assert is_officer_or_admin(None) is True
-
-    def test_guild_admin(self, seeded, app):
-        with app.test_request_context():
-            from flask_login import login_user
-            login_user(seeded["guild_admin_user"])
-            assert is_officer_or_admin(seeded["gm_ga"]) is True
-
-    def test_officer(self, seeded, app):
-        with app.test_request_context():
-            from flask_login import login_user
-            login_user(seeded["officer_user"])
-            assert is_officer_or_admin(seeded["gm_of"]) is True
-
-    def test_raid_leader_is_not_officer(self, seeded, app):
-        with app.test_request_context():
-            from flask_login import login_user
-            login_user(seeded["raid_leader_user"])
-            # Raid leader does NOT have create_events, so not "officer+"
-            assert is_officer_or_admin(seeded["gm_rl"]) is False
-
-    def test_member_is_not_officer(self, seeded, app):
-        with app.test_request_context():
-            from flask_login import login_user
-            login_user(seeded["member_user"])
-            assert is_officer_or_admin(seeded["gm_mb"]) is False
-
-    def test_no_membership(self, seeded, app):
-        with app.test_request_context():
-            from flask_login import login_user
-            login_user(seeded["outsider"])
-            assert is_officer_or_admin(None) is False
 
 
 # ===========================================================================

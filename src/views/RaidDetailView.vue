@@ -76,7 +76,7 @@
             </div>
 
             <!-- Officer actions -->
-            <div v-if="permissions.isOfficer.value" class="flex flex-wrap gap-2 flex-shrink-0">
+            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-2 flex-shrink-0">
               <WowButton variant="secondary" @click="openEditModal">Edit</WowButton>
               <WowButton variant="secondary" @click="toggleLock">
                 {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
@@ -95,7 +95,7 @@
           :signups="signups"
           :event-id="event.id"
           :guild-id="guildId"
-          :is-officer="permissions.isOfficer.value"
+          :is-officer="permissions.can('update_lineup')"
           :current-user-id="authStore.user?.id"
           :tank-slots="event.tank_slots ?? 0"
           :main-tank-slots="event.main_tank_slots ?? 1"
@@ -218,7 +218,7 @@
           <div class="lg:col-span-2">
             <SignupList
               :signups="signups"
-              :is-officer="permissions.isOfficer.value"
+              :is-officer="permissions.can('manage_signups')"
               :guild-id="guildId"
               :event-id="event.id"
               :available-roles="availableRoles"

@@ -1,9 +1,7 @@
 """Permission helpers for guild-scoped endpoints.
 
 This module provides dynamic permission checking based on the SystemRole /
-Permission / RolePermission models.  The legacy ``is_officer_or_admin``
-helper is preserved for backward compatibility but now delegates to the
-dynamic system.
+Permission / RolePermission models.
 """
 
 from __future__ import annotations
@@ -41,7 +39,6 @@ def has_permission(membership: GuildMembership | None, permission_code: str) -> 
     """Check if the user's role grants a specific permission.
 
     Site admins (``is_admin=True``) bypass all permission checks.
-    Falls back to legacy role check when dynamic tables are not yet seeded.
     """
     if current_user and getattr(current_user, "is_admin", False):
         return True
@@ -61,17 +58,7 @@ def has_permission(membership: GuildMembership | None, permission_code: str) -> 
         .limit(1)
     ).scalar_one_or_none()
 
-    if result is not None:
-        return True
-
-    # Fallback: if no dynamic roles are seeded yet, use legacy enum check
-    role_count = db.session.execute(
-        sa.select(sa.func.count()).select_from(SystemRole)
-    ).scalar()
-    if role_count == 0:
-        return membership.role in ("officer", "guild_admin")
-
-    return False
+    return result is not None
 
 
 def get_user_permissions(membership: GuildMembership | None) -> list[str]:
@@ -121,64 +108,8 @@ def can_grant_role(membership: GuildMembership | None, target_role_name: str) ->
 
 
 # ---------------------------------------------------------------------------
-# Backward-compatible helper
+# Decorator
 # ---------------------------------------------------------------------------
-
-def is_officer_or_admin(membership: GuildMembership | None) -> bool:
-    """Return True if the user has officer-level access.
-
-    This is a backward-compatible wrapper.  It returns True when:
-    - The current user is a site admin (``is_admin=True``), OR
-    - The membership role has the ``create_events`` permission (officer+
-      level access indicator).
-
-    For new code prefer ``has_permission(membership, 'specific_perm')``.
-    """
-    if current_user and getattr(current_user, "is_admin", False):
-        return True
-    if membership is None:
-        return False
-    # Use create_events as the indicator for "officer-level" access
-    return has_permission(membership, "create_events")
-
-
-# ---------------------------------------------------------------------------
-# Decorators
-# ---------------------------------------------------------------------------
-
-def guild_member_required(f: Callable) -> Callable:
-    """Decorator requiring active guild membership. Expects 'guild_id' in kwargs."""
-
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        guild_id = kwargs.get("guild_id")
-        if guild_id is None:
-            return jsonify({"error": "guild_id missing"}), 400
-        membership = get_membership(guild_id, current_user.id)
-        if membership is None:
-            return jsonify({"error": "Guild membership required"}), 403
-        kwargs["membership"] = membership
-        return f(*args, **kwargs)
-
-    return decorated
-
-
-def guild_officer_required(f: Callable) -> Callable:
-    """Decorator requiring officer or guild_admin role."""
-
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        guild_id = kwargs.get("guild_id")
-        if guild_id is None:
-            return jsonify({"error": "guild_id missing"}), 400
-        membership = get_membership(guild_id, current_user.id)
-        if not is_officer_or_admin(membership):
-            return jsonify({"error": "Officer or admin privileges required"}), 403
-        kwargs["membership"] = membership
-        return f(*args, **kwargs)
-
-    return decorated
-
 
 def permission_required(permission_code: str) -> Callable:
     """Decorator requiring a specific permission for the current guild.
