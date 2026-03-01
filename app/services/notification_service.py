@@ -74,3 +74,24 @@ def unread_count(user_id: int) -> int:
             Notification.read_at.is_(None),
         )
     ).scalar_one()
+
+
+def delete_notification(notification_id: int, user_id: int) -> bool:
+    """Delete a single notification belonging to the user. Returns True if deleted."""
+    result = db.session.execute(
+        sa.delete(Notification).where(
+            Notification.id == notification_id,
+            Notification.user_id == user_id,
+        )
+    )
+    db.session.commit()
+    return result.rowcount > 0
+
+
+def delete_all_notifications(user_id: int) -> int:
+    """Delete all notifications for a user. Returns count of deleted rows."""
+    result = db.session.execute(
+        sa.delete(Notification).where(Notification.user_id == user_id)
+    )
+    db.session.commit()
+    return result.rowcount

@@ -96,13 +96,23 @@ def _get_officers(guild_id: int, exclude_user_id: int | None = None) -> list[int
 # Member-facing notifications
 # ---------------------------------------------------------------------------
 
+def _char_name(signup) -> str:
+    """Return the character name from a signup, or 'your character'."""
+    try:
+        if signup.character and signup.character.name:
+            return signup.character.name
+    except Exception:
+        pass
+    return "your character"
+
+
 def notify_signup_confirmed(signup, event) -> None:
     """Notify the player that their signup is confirmed (going)."""
     _notify(
         user_id=signup.user_id,
         notification_type="signup_confirmed",
-        title=f"Signup confirmed for {event.title}",
-        body=f"You are signed up as {_role_name(signup.chosen_role)}.",
+        title=f"{_char_name(signup)} confirmed for {event.title}",
+        body=f"Your character {_char_name(signup)} is signed up as {_role_name(signup.chosen_role)}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
     )
@@ -113,8 +123,8 @@ def notify_signup_benched(signup, event) -> None:
     _notify(
         user_id=signup.user_id,
         notification_type="signup_benched",
-        title=f"You are on the bench for {event.title}",
-        body=f"The {_role_name(signup.chosen_role)} slots are full. You'll be auto-promoted if a spot opens.",
+        title=f"{_char_name(signup)} benched for {event.title}",
+        body=f"Your character {_char_name(signup)} ({_role_name(signup.chosen_role)}) is on the bench. You'll be auto-promoted if a spot opens.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
     )
@@ -125,8 +135,8 @@ def notify_signup_promoted(signup, event) -> None:
     _notify(
         user_id=signup.user_id,
         notification_type="signup_promoted",
-        title=f"Promoted from bench for {event.title}",
-        body=f"A {_role_name(signup.chosen_role)} slot opened up and you've been moved to the roster!",
+        title=f"{_char_name(signup)} promoted for {event.title}",
+        body=f"A {_role_name(signup.chosen_role)} slot opened up and {_char_name(signup)} has been moved to the roster!",
         guild_id=event.guild_id,
         raid_event_id=event.id,
     )
@@ -137,8 +147,8 @@ def notify_signup_declined_by_officer(signup, event, officer_name: str) -> None:
     _notify(
         user_id=signup.user_id,
         notification_type="signup_declined",
-        title=f"Signup declined for {event.title}",
-        body=f"Your signup was declined by {officer_name}.",
+        title=f"{_char_name(signup)} declined for {event.title}",
+        body=f"Your character {_char_name(signup)} was declined by {officer_name}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
     )
@@ -147,11 +157,12 @@ def notify_signup_declined_by_officer(signup, event, officer_name: str) -> None:
 def notify_signup_removed_by_officer(signup, event, officer_name: str) -> None:
     """Notify the player that an officer removed their signup."""
     user_id = signup.user_id if hasattr(signup, "user_id") else signup
+    char = _char_name(signup) if hasattr(signup, "character") else "your character"
     _notify(
         user_id=user_id,
         notification_type="signup_removed",
-        title=f"Removed from {event.title}",
-        body=f"Your signup was removed by {officer_name}.",
+        title=f"{char} removed from {event.title}",
+        body=f"Your character {char} was removed by {officer_name}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
     )
@@ -175,8 +186,26 @@ def notify_role_changed(signup, event, old_role: str, new_role: str) -> None:
     _notify(
         user_id=signup.user_id,
         notification_type="signup_role_changed",
-        title=f"Role changed for {event.title}",
-        body=f"Your role was changed from {_role_name(old_role)} to {_role_name(new_role)}.",
+        title=f"{_char_name(signup)} role changed for {event.title}",
+        body=f"{_char_name(signup)}'s role was changed from {_role_name(old_role)} to {_role_name(new_role)}.",
+        guild_id=event.guild_id,
+        raid_event_id=event.id,
+    )
+
+
+def notify_queue_position_changed(
+    user_id: int,
+    event,
+    character_name: str,
+    role: str,
+    new_position: int,
+) -> None:
+    """Notify the player that their position in the bench queue changed."""
+    _notify(
+        user_id=user_id,
+        notification_type="queue_position_changed",
+        title=f"{character_name} queue position changed for {event.title}",
+        body=f"{character_name} is now #{new_position} in the {_role_name(role)} bench queue.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
     )

@@ -84,3 +84,39 @@ def confirm_lineup(guild_id: int, event_id: int):
         return jsonify({"error": "Event not found"}), 404
     slots = lineup_service.confirm_lineup(event_id, current_user.id)
     return jsonify([s.to_dict() for s in slots]), 200
+
+
+@bp.put("/bench-reorder")
+@login_required
+def reorder_bench(guild_id: int, event_id: int):
+    """Reorder the bench queue. Officers/admins only."""
+    membership = get_membership(guild_id, current_user.id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+    event = event_service.get_event(event_id)
+    if event is None or event.guild_id != guild_id:
+        return jsonify({"error": "Event not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    ordered_ids = data.get("ordered_signup_ids", [])
+    if not isinstance(ordered_ids, list):
+        return jsonify({"error": "ordered_signup_ids must be a list"}), 400
+
+    result, position_changes = lineup_service.reorder_bench_queue(
+        event_id, ordered_ids
+    )
+
+    # Send notifications for position changes
+    for signup, old_pos, new_pos in position_changes:
+        char_name = signup.character.name if signup.character else "your character"
+        notify.notify_queue_position_changed(
+            user_id=signup.user_id,
+            event=event,
+            character_name=char_name,
+            role=signup.chosen_role or "dps",
+            new_position=new_pos,
+        )
+
+    emit_lineup_changed(event_id)
+    emit_signups_changed(event_id)
+    return jsonify(result), 200

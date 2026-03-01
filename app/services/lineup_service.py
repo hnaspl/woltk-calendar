@@ -450,6 +450,73 @@ def update_lineup(raid_event_id: int, slots_data: list[dict], confirmed_by: int)
     return results
 
 
+def reorder_bench_queue(
+    raid_event_id: int,
+    ordered_signup_ids: list[int],
+) -> dict:
+    """Reorder bench queue to match the provided signup ID order.
+
+    Returns the updated grouped lineup dict.  Also returns a list of
+    (signup, old_position, new_position) tuples for position changes.
+    """
+    # Fetch existing bench lineup slots for this event
+    bench_slots = list(db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group == "bench",
+        ).order_by(LineupSlot.slot_index.asc())
+    ).scalars().all())
+
+    # Build map of old positions (per-role) keyed by signup_id
+    old_positions_by_role: dict[int, tuple[str, int]] = {}
+    role_counters: dict[str, int] = {}
+    for slot in bench_slots:
+        signup = db.session.get(Signup, slot.signup_id)
+        if signup:
+            role = signup.chosen_role or "dps"
+            role_counters.setdefault(role, 0)
+            role_counters[role] += 1
+            old_positions_by_role[slot.signup_id] = (role, role_counters[role])
+
+    # Rewrite bench slot_index values to match new order
+    # Build a set of bench signup IDs for validation
+    bench_signup_ids = {s.signup_id for s in bench_slots}
+
+    # Only include IDs that are actually on the bench
+    valid_ordered = [sid for sid in ordered_signup_ids if sid in bench_signup_ids]
+    # Append any bench signups not in the provided order
+    remaining = [s.signup_id for s in bench_slots if s.signup_id not in set(valid_ordered)]
+    final_order = valid_ordered + remaining
+
+    # Map signup_id -> slot for quick lookup
+    slot_map = {s.signup_id: s for s in bench_slots}
+    for idx, signup_id in enumerate(final_order):
+        slot = slot_map.get(signup_id)
+        if slot:
+            slot.slot_index = idx
+
+    db.session.commit()
+
+    # Calculate new per-role positions and detect changes
+    new_role_counters: dict[str, int] = {}
+    position_changes: list[tuple] = []
+    for signup_id in final_order:
+        signup = db.session.get(Signup, signup_id)
+        if not signup:
+            continue
+        role = signup.chosen_role or "dps"
+        new_role_counters.setdefault(role, 0)
+        new_role_counters[role] += 1
+        new_pos = new_role_counters[role]
+        old_entry = old_positions_by_role.get(signup_id)
+        if old_entry:
+            old_role, old_pos = old_entry
+            if old_role == role and old_pos != new_pos:
+                position_changes.append((signup, old_pos, new_pos))
+
+    return get_lineup_grouped(raid_event_id), position_changes
+
+
 def confirm_lineup(raid_event_id: int, confirmed_by: int) -> list[LineupSlot]:
     """Mark all existing lineup slots as confirmed."""
     now = datetime.now(timezone.utc)

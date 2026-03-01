@@ -44,3 +44,19 @@ def mark_all_read():
 def unread_count():
     count = notification_service.unread_count(current_user.id)
     return jsonify({"count": count}), 200
+
+
+@bp.delete("/<int:notification_id>")
+@login_required
+def delete_notification(notification_id: int):
+    deleted = notification_service.delete_notification(notification_id, current_user.id)
+    if not deleted:
+        return jsonify({"error": "Notification not found"}), 404
+    return jsonify({"deleted": True}), 200
+
+
+@bp.delete("")
+@login_required
+def delete_all_notifications():
+    count = notification_service.delete_all_notifications(current_user.id)
+    return jsonify({"deleted": count}), 200
