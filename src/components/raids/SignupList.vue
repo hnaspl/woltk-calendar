@@ -9,20 +9,22 @@
       No signups yet.
     </div>
 
-    <template v-for="group in groups" :key="group.key">
-      <div v-if="group.items.length > 0" class="mb-5">
-        <div class="flex items-center gap-2 mb-2">
-          <span
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
-            :class="group.cls"
-          >
-            <span class="w-1.5 h-1.5 rounded-full" :class="group.dot" />
-            {{ group.label }}
-          </span>
-          <span class="text-xs text-text-muted">({{ group.items.length }})</span>
-        </div>
-        <div class="space-y-2">
-          <template v-for="signup in group.items" :key="signup.id">
+    <!-- Side-by-side layout for In Lineup and Bench -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <template v-for="group in groups" :key="group.key">
+        <div v-if="group.items.length > 0" :class="group.key === 'declined' ? 'xl:col-span-2' : ''">
+          <div class="flex items-center gap-2 mb-2">
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
+              :class="group.cls"
+            >
+              <span class="w-1.5 h-1.5 rounded-full" :class="group.dot" />
+              {{ group.label }}
+            </span>
+            <span class="text-xs text-text-muted">({{ group.items.length }})</span>
+          </div>
+          <div class="space-y-2">
+            <template v-for="signup in group.items" :key="signup.id">
             <!-- Inline edit form (officer only) -->
             <div v-if="editingSignupId === signup.id" class="px-3 py-3 rounded-lg bg-bg-tertiary border border-border-gold space-y-3">
               <div class="flex items-center gap-2">
@@ -178,6 +180,7 @@
         </div>
       </div>
     </template>
+    </div>
   </WowCard>
 
   <!-- Character detail modal -->
