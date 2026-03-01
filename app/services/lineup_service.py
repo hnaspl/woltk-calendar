@@ -206,11 +206,27 @@ def update_lineup_grouped(
     If *expected_version* is provided, check the current lineup version first.
     If it doesn't match, raise LineupConflictError so the caller can notify
     the officer and reload the fresh lineup.
+
+    After rebuilding the lineup, auto-promotes bench players into any role
+    slots that became free compared to the previous state, and notifies
+    players whose characters were moved to bench.
     """
     if expected_version is not None:
         current = get_lineup_grouped(raid_event_id)
         if current.get("version") != expected_version:
             raise LineupConflictError()
+
+    # Snapshot which roles had signups before the update so we can detect
+    # freed slots and trigger auto-promotion afterwards.
+    old_role_signups: dict[str, set[int]] = {}
+    old_slots = db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group != "bench",
+        )
+    ).scalars().all()
+    for slot in old_slots:
+        old_role_signups.setdefault(slot.slot_group, set()).add(slot.signup_id)
 
     # Remove all existing slots for this event
     db.session.execute(
@@ -223,6 +239,9 @@ def update_lineup_grouped(
     # one-character-per-player. Extras are pushed to bench automatically.
     users_in_lineup: set[int] = set()
     overflow_to_bench: list[int] = []  # signup IDs moved to bench
+
+    # Track new role assignments for freed-slot detection
+    new_role_signups: dict[str, set[int]] = {}
 
     for key, slot_group in role_map.items():
         signup_ids = data.get(key, [])
@@ -240,6 +259,7 @@ def update_lineup_grouped(
                 # Validate class-role constraint before changing role
                 _validate_class_role_lineup(signup, slot_group)
                 signup.chosen_role = slot_group
+            new_role_signups.setdefault(slot_group, set()).add(signup_id)
             slot = LineupSlot(
                 raid_event_id=raid_event_id,
                 slot_group=slot_group,
@@ -251,10 +271,31 @@ def update_lineup_grouped(
             )
             db.session.add(slot)
 
+    # Identify signups the admin moved from role slots to bench so they can
+    # be placed at the END of the bench queue (lower priority for auto-promote).
+    all_old_role_ids: set[int] = set()
+    for ids in old_role_signups.values():
+        all_old_role_ids.update(ids)
+    all_new_role_ids: set[int] = set()
+    for ids in new_role_signups.values():
+        all_new_role_ids.update(ids)
+    removed_from_lineup = all_old_role_ids - all_new_role_ids
+
     # Persist bench queue order (entries can be plain IDs or {id, chosen_role} dicts)
     # Prepend any overflow signups (moved from role slots due to one-char-per-player)
     bench_queue_entries = data.get("bench_queue", [])
-    all_bench = overflow_to_bench + list(bench_queue_entries)
+    all_bench_raw = overflow_to_bench + list(bench_queue_entries)
+
+    # Reorder: entries that were just removed from lineup go to the end
+    def _entry_id(e):
+        if isinstance(e, dict):
+            return e.get("id")
+        return int(e) if e is not None else None
+
+    regular_bench = [e for e in all_bench_raw if _entry_id(e) not in removed_from_lineup]
+    demoted_bench = [e for e in all_bench_raw if _entry_id(e) in removed_from_lineup]
+    all_bench = regular_bench + demoted_bench
+
     seen_bench_ids: set[int] = set()
     bench_idx = 0
     for entry in all_bench:
@@ -287,6 +328,33 @@ def update_lineup_grouped(
         bench_idx += 1
 
     db.session.commit()
+
+    # Notify players whose characters were moved to bench due to
+    # one-character-per-player enforcement.
+    if overflow_to_bench:
+        try:
+            from app.services import event_service
+            from app.utils.notify import notify_signup_benched
+            event = event_service.get_event(raid_event_id)
+            if event:
+                for sid in overflow_to_bench:
+                    s = db.session.get(Signup, sid)
+                    if s:
+                        notify_signup_benched(s, event)
+        except Exception:
+            pass
+
+    # Detect roles that lost signups and auto-promote bench players.
+    # Admin-benched signups are at the end of the queue so other waiting
+    # players get promoted first.
+    from app.services.signup_service import _auto_promote_bench
+
+    for role, old_ids in old_role_signups.items():
+        new_ids = new_role_signups.get(role, set())
+        freed_count = len(old_ids - new_ids) - len(new_ids - old_ids)
+        for _ in range(max(freed_count, 0)):
+            _auto_promote_bench(raid_event_id, role)
+
     return get_lineup_grouped(raid_event_id)
 
 

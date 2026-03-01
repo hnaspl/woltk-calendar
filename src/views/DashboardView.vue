@@ -157,7 +157,7 @@
                   </span>
                 </div>
                 <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                  Bench{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}
+                  Bench{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}{{ su.bench_info?.waiting_for ? ' · ' + benchRoleLabel(su.bench_info.waiting_for) : '' }}
                 </span>
                 <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">Declined</span>
                 <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">In Lineup</span>
@@ -259,6 +259,11 @@ function raidLabel(raidType) {
   if (!raidType) return null
   const found = RAID_TYPES.find(r => r.value === raidType)
   return found ? found.label : raidType
+}
+
+const BENCH_ROLE_LABELS = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
+function benchRoleLabel(role) {
+  return BENCH_ROLE_LABELS[role] || role
 }
 
 async function resolveReplacement(req, action) {

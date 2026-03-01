@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <!-- Bench queue: ordered list of players waiting for a slot -->
+    <!-- Bench queue: grouped by role showing per-role queue positions -->
     <div
       v-if="bench.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
@@ -81,26 +81,33 @@
       @drop.prevent="isOfficer && onDropBench()"
     >
       <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">Bench Queue ({{ bench.length }})</p>
-      <div class="flex flex-wrap gap-2">
-        <div
-          v-for="(s, i) in bench"
-          :key="s.id"
-          class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
-          :class="{
-            'cursor-grab active:cursor-grabbing': isOfficer,
-            'opacity-50': draggedId === s.id
-          }"
-          :draggable="isOfficer"
-          @dragstart="onDragStart($event, s, 'bench', -1)"
-          @dragend="onDragEnd"
-        >
-          <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ i + 1 }}</span>
-          <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
-          <span>{{ s.character?.name ?? '?' }}</span>
-          <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
-          <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
-            Lv{{ s.character.metadata.level }}
-          </span>
+      <div v-if="benchByRole.length > 0" class="space-y-3">
+        <div v-for="group in benchByRole" :key="group.role">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <img :src="getRoleIcon(group.role)" class="w-4 h-4 rounded" :alt="group.label" />
+            <span class="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{{ group.label }} ({{ group.players.length }})</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div
+              v-for="s in group.players"
+              :key="s.id"
+              class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
+              :class="{
+                'cursor-grab active:cursor-grabbing': isOfficer,
+                'opacity-50': draggedId === s.id
+              }"
+              :draggable="isOfficer"
+              @dragstart="onDragStart($event, s, 'bench', -1)"
+              @dragend="onDragEnd"
+            >
+              <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ s.roleQueuePos }}</span>
+              <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
+              <span>{{ s.character?.name ?? '?' }}</span>
+              <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+                Lv{{ s.character.metadata.level }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
       <p v-if="bench.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
@@ -509,6 +516,26 @@ const bench = computed(() => {
   }
 
   return ordered
+})
+
+/** Bench queue grouped by role with per-role queue positions. */
+const benchByRole = computed(() => {
+  const groups = {}
+  const counters = {} // per-role position counter
+  for (const s of bench.value) {
+    const role = s.chosen_role || 'dps'
+    if (!groups[role]) {
+      groups[role] = []
+      counters[role] = 0
+    }
+    counters[role]++
+    groups[role].push({ ...s, roleQueuePos: counters[role] })
+  }
+  // Return entries sorted by role label for consistent display
+  const roleOrder = ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
+  return roleOrder
+    .filter(r => groups[r])
+    .map(r => ({ role: r, label: ROLE_LABEL_MAP[r] || r, players: groups[r] }))
 })
 
 function profString(s) {

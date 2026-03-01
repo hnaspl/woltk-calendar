@@ -481,3 +481,214 @@ class TestOneCharPerPlayerInLineup:
         # if it was auto-promoted (it was first in bench queue)
         # Since user1 no longer has a role slot, the alt CAN be promoted
         assert lineup_service.has_role_slot(s1b.id)
+
+
+class TestAdminLineupUpdateAutoPromote:
+    """When an admin saves the lineup via update_lineup_grouped (drag-and-drop),
+    bench players should be auto-promoted into freed role slots."""
+
+    def test_remove_from_role_promotes_bench_player(self, seed):
+        """Removing a player from a role slot via lineup update should
+        auto-promote the first matching bench player."""
+        # Fill both DPS slots
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Third player goes to bench
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+        assert not lineup_service.has_role_slot(s3.id)
+
+        # Admin saves lineup: s1 removed from DPS to bench, s2 stays, s3 on bench.
+        # Frontend sends ALL bench players in bench_queue.
+        result = lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s2.id],
+                "bench_queue": [
+                    {"id": s1.id, "chosen_role": "dps"},
+                    {"id": s3.id, "chosen_role": "dps"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s3 should have been auto-promoted from bench to the freed DPS slot.
+        # s1 should NOT be promoted back (moved to end of queue by admin).
+        assert lineup_service.has_role_slot(s3.id), \
+            "Bench player should be auto-promoted when a role slot is freed"
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Admin-benched player should be at end of queue, not promoted"
+        # s1 should still be on bench at the last position
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None, "Admin-benched player should remain on bench"
+
+    def test_move_to_bench_promotes_bench_player(self, seed):
+        """Moving a player to bench via lineup update should auto-promote
+        the next eligible bench player into the freed slot."""
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+
+        # Admin moves s1 to bench (drag from DPS to bench area)
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s2.id],
+                "bench_queue": [
+                    {"id": s1.id, "chosen_role": "dps"},
+                    {"id": s3.id, "chosen_role": "dps"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s3 should be promoted to fill the freed DPS slot
+        assert lineup_service.has_role_slot(s3.id), \
+            "Bench player should be auto-promoted when another player is moved to bench"
+
+    def test_no_promote_when_no_slot_freed(self, seed):
+        """If no role slot is freed, no bench player should be promoted."""
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+
+        # Admin saves lineup with same players in DPS (just reorder)
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s2.id, s1.id],
+                "bench_queue": [{"id": s3.id, "chosen_role": "dps"}],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s3 should still be on bench (no slot was freed)
+        assert not lineup_service.has_role_slot(s3.id)
+        assert lineup_service.get_bench_info(s3.id) is not None
+
+    def test_admin_places_alt_benches_main(self, seed):
+        """When admin places a player's alt in a role slot, the player's
+        main character should be automatically moved to bench."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 signs up with main
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User1's alt goes to bench automatically
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 fills second slot
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s1.id)
+        assert not lineup_service.has_role_slot(s1b.id)
+
+        # Admin places user1's alt in DPS and user1's main in DPS too.
+        # The backend should enforce one-char-per-player and move the
+        # second char (s1, main) to bench.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s1b.id, s1.id, s2.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Alt should be in lineup, main should be on bench
+        assert lineup_service.has_role_slot(s1b.id), \
+            "Alt character should be in lineup"
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Main character should be moved to bench (one-char-per-player)"
+        assert lineup_service.get_bench_info(s1.id) is not None
