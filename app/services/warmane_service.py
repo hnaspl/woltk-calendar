@@ -118,11 +118,26 @@ def _parse_professions(professions) -> list[dict]:
 
 
 def _parse_equipment(equipment: list) -> list[dict]:
-    """Parse equipment from Warmane API character response."""
-    return [
-        {"name": e.get("name"), "item": e.get("item"), "transmog": e.get("transmog")}
-        for e in (equipment or [])
-    ]
+    """Parse equipment from Warmane API character response.
+
+    Preserves quality, gems, and enchant alongside name/item/transmog so the
+    frontend can render richer item tooltips.
+    """
+    result = []
+    for e in (equipment or []):
+        item: dict = {
+            "name": e.get("name"),
+            "item": e.get("item"),
+            "transmog": e.get("transmog"),
+        }
+        if e.get("quality") is not None:
+            item["quality"] = e["quality"]
+        if e.get("gems"):
+            item["gems"] = e["gems"]
+        if e.get("enchant") is not None:
+            item["enchant"] = e["enchant"]
+        result.append(item)
+    return result
 
 
 def build_character_dict(data: dict, realm: str) -> dict:

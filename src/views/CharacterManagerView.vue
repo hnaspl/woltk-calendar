@@ -295,6 +295,21 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Add another character prompt -->
+    <WowModal v-model="showAddAnother" title="Character Added!" size="sm">
+      <div class="text-center space-y-3">
+        <div class="text-3xl">✅</div>
+        <p class="text-text-primary font-medium">{{ lastAddedName }} has been added successfully.</p>
+        <p class="text-text-muted text-sm">Would you like to add another character?</p>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showAddAnother = false">I'm Done</WowButton>
+          <WowButton @click="addAnotherCharacter">Add Another Character</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -350,6 +365,8 @@ const editingChar = ref(null)
 const removeTarget = ref(null)
 const deleteTarget = ref(null)
 const manualEntry = ref(false)
+const showAddAnother = ref(false)
+const lastAddedName = ref('')
 
 const wowClasses = WOW_CLASSES
 const warmaneRealms = WARMANE_REALMS
@@ -441,6 +458,11 @@ function openAddModal() {
   lookupResult.value = null
   manualEntry.value = false
   showModal.value = true
+}
+
+function addAnotherCharacter() {
+  showAddAnother.value = false
+  openAddModal()
 }
 
 /** Reset role and specs when class changes so invalid values don't persist */
@@ -544,10 +566,16 @@ async function saveChar() {
     } else {
       const created = await charApi.createCharacter(guildStore.currentGuild.id, payload)
       characters.value.push(mapChar(created))
+      lastAddedName.value = payload.name
       uiStore.showToast('Character added', 'success')
     }
+    const wasEditing = !!editingChar.value
     warmaneData.value = null
     showModal.value = false
+    // Show "add another?" prompt only when creating new characters
+    if (!wasEditing) {
+      showAddAnother.value = true
+    }
   } catch (err) {
     formError.value = err?.response?.data?.error ?? 'Failed to save character'
   } finally {
