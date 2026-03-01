@@ -19,9 +19,6 @@ export function usePermissions() {
 
   const role = computed(() => membership.value?.role ?? null)
 
-  /** True if user is a site-wide admin (is_admin flag on user model) */
-  const isSiteAdmin = computed(() => currentUser.value?.is_admin === true)
-
   const isMember = computed(() => !!membership.value)
 
   /** Dynamic permissions fetched from the backend */
@@ -55,10 +52,10 @@ export function usePermissions() {
   /**
    * Check if current user has a specific permission.
    * Uses dynamically fetched permissions from the backend.
-   * Site admins bypass all checks.
+   * Site admins (is_admin flag) bypass all checks.
    */
   function can(permission) {
-    if (isSiteAdmin.value) return true
+    if (currentUser.value?.is_admin === true) return true
     return dynamicPermissions.value.includes(permission)
   }
 

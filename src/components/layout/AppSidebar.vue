@@ -50,7 +50,7 @@
       </div>
 
       <button
-        v-if="isOfficerOrAdmin"
+        v-if="canManageGuild"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
         @click="showCreateGuild = true"
@@ -215,7 +215,7 @@ const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 
-const isOfficerOrAdmin = computed(() => permissions.can('create_events') || authStore.user?.is_admin)
+const canManageGuild = computed(() => permissions.can('create_events'))
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
@@ -312,8 +312,8 @@ const navGroups = computed(() => {
     }
   ]
 
-  // Guild management only visible to officers/admins
-  if (isOfficerOrAdmin.value) {
+  // Guild management only visible to users with create_events permission
+  if (canManageGuild.value) {
     groups.push({
       label: 'Guild Management',
       items: [
@@ -332,7 +332,7 @@ const navGroups = computed(() => {
     ]
   })
 
-  if (authStore.user?.is_admin) {
+  if (permissions.can('list_system_users')) {
     groups.push({
       label: 'Administration',
       items: [

@@ -223,7 +223,8 @@ def update_member(guild_id: int, user_id: int):
         target_role = db.session.execute(
             sa.select(SystemRole).where(SystemRole.name == target.role)
         ).scalar_one_or_none()
-        if not has_permission(None, "manage_system_users") and caller_role and target_role and target_role.level >= caller_role.level:
+        can_bypass_level = has_permission(None, "manage_system_users")
+        if not can_bypass_level and caller_role and target_role and target_role.level >= caller_role.level:
             return jsonify({"error": "Cannot modify a member with equal or higher role level"}), 403
 
     target = guild_service.update_member(target, data)

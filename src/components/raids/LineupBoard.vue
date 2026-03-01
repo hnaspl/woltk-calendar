@@ -2,7 +2,7 @@
   <WowCard :padded="false">
     <div class="flex items-center justify-between px-5 py-3 border-b border-border-default">
       <h3 class="wow-heading text-base">Lineup Board</h3>
-      <div v-if="isOfficer" class="flex items-center gap-2">
+      <div v-if="canManage" class="flex items-center gap-2">
         <span v-if="dirty" class="text-xs text-yellow-400">Unsaved changes</span>
         <WowButton variant="secondary" @click="saveLineup" :loading="saving" class="text-xs py-1 px-3">
           Save Lineup
@@ -15,11 +15,11 @@
         v-for="col in columns"
         :key="col.key"
         class="bg-bg-secondary p-4 transition-colors"
-        :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': isOfficer && dragOverTarget === col.key }"
-        @dragover.prevent="isOfficer && handleDragOver($event, col.key)"
-        @dragenter.prevent="isOfficer && (dragOverTarget = col.key)"
-        @dragleave="isOfficer && handleDragLeave($event, col.key)"
-        @drop.prevent="isOfficer && onDropColumn($event, col.key)"
+        :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': canManage && dragOverTarget === col.key }"
+        @dragover.prevent="canManage && handleDragOver($event, col.key)"
+        @dragenter.prevent="canManage && (dragOverTarget = col.key)"
+        @dragleave="canManage && handleDragLeave($event, col.key)"
+        @drop.prevent="canManage && onDropColumn($event, col.key)"
       >
         <div class="flex items-center gap-2 mb-3">
           <img :src="getRoleIcon(col.role)" class="w-5 h-5 rounded" :alt="col.label" />
@@ -32,8 +32,8 @@
             v-for="(s, i) in lineup[col.key]"
             :key="s.id"
             class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
-            :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
-            :draggable="isOfficer"
+            :class="{ 'cursor-grab active:cursor-grabbing': canManage, 'opacity-50': draggedId === s.id }"
+            :draggable="canManage"
             @dragstart="onDragStart($event, s, col.key, i)"
             @dragend="onDragEnd"
           >
@@ -61,7 +61,7 @@
               </div>
             </div>
             <button
-              v-if="isOfficer"
+              v-if="canManage"
               type="button"
               class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
               @click="removeFromRole(col.key, i)"
@@ -74,17 +74,17 @@
 
     <!-- Bench queue: grouped by role showing per-role queue positions -->
     <div
-      v-if="bench.length > 0 || (isOfficer && draggedId)"
+      v-if="bench.length > 0 || (canManage && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
-      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': isOfficer && dragOverTarget === 'bench' }"
-      @dragover.prevent="isOfficer && handleDragOver($event, 'bench')"
-      @dragenter.prevent="isOfficer && (dragOverTarget = 'bench')"
-      @dragleave="isOfficer && handleDragLeave($event, 'bench')"
-      @drop.prevent="isOfficer && onDropBench()"
+      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': canManage && dragOverTarget === 'bench' }"
+      @dragover.prevent="canManage && handleDragOver($event, 'bench')"
+      @dragenter.prevent="canManage && (dragOverTarget = 'bench')"
+      @dragleave="canManage && handleDragLeave($event, 'bench')"
+      @drop.prevent="canManage && onDropBench()"
     >
       <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">
         Bench Queue ({{ bench.length }})
-        <span v-if="!isOfficer && currentUserId" class="text-text-muted normal-case"> — showing your characters</span>
+        <span v-if="!canManage && currentUserId" class="text-text-muted normal-case"> — showing your characters</span>
       </p>
       <div v-if="visibleBenchByRole.length > 0" class="space-y-3">
         <div v-for="group in visibleBenchByRole" :key="group.role">
@@ -98,14 +98,14 @@
               :key="s.id"
               class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
               :class="{
-                'cursor-grab active:cursor-grabbing': isOfficer,
+                'cursor-grab active:cursor-grabbing': canManage,
                 'opacity-50': draggedId === s.id
               }"
-              :draggable="isOfficer"
+              :draggable="canManage"
               @dragstart="onDragStart($event, s, 'bench', -1)"
               @dragend="onDragEnd"
-              @dragover.prevent="isOfficer && handleBenchItemDragOver($event, group.role, benchIdx)"
-              @drop.prevent.stop="isOfficer && onDropBenchItem(group.role, benchIdx)"
+              @dragover.prevent="canManage && handleBenchItemDragOver($event, group.role, benchIdx)"
+              @drop.prevent.stop="canManage && onDropBenchItem(group.role, benchIdx)"
             >
               <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ s.roleQueuePos }}</span>
               <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
@@ -168,7 +168,7 @@ const props = defineProps({
   signups:        { type: Array,          default: () => [] },
   eventId:        { type: [Number,String], required: true },
   guildId:        { type: [Number,String], required: true },
-  isOfficer:      { type: Boolean, default: false },
+  canManage:      { type: Boolean, default: false },
   currentUserId:  { type: [Number,String], default: null },
   tankSlots:      { type: Number, default: 0 },
   mainTankSlots:  { type: Number, default: 1 },
@@ -219,7 +219,7 @@ const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps:
 // ── Drag handlers (state managed by useDragDrop composable) ──
 
 function onDragStart(e, signup, sourceKey, idx) {
-  if (!props.isOfficer) {
+  if (!props.canManage) {
     e.preventDefault()
     return
   }
@@ -549,7 +549,7 @@ const benchByRole = computed(() => {
 
 /** Visible bench queue: officers see full queue, members see only their own characters. */
 const visibleBenchByRole = computed(() => {
-  if (props.isOfficer) return benchByRole.value
+  if (props.canManage) return benchByRole.value
   const uid = props.currentUserId ? Number(props.currentUserId) : null
   if (!uid) return benchByRole.value
   return benchByRole.value

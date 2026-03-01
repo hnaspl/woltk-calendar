@@ -160,7 +160,7 @@
                     @click.stop="openCharacterModal(signup.character)"
                   >🔍 View Details</button>
                   <!-- Officer action buttons -->
-                  <template v-if="isOfficer">
+                  <template v-if="canManage">
                     <button
                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
                       @click.stop="startEdit(signup)"
@@ -287,7 +287,7 @@ const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'O
 
 const props = defineProps({
   signups: { type: Array, default: () => [] },
-  isOfficer: { type: Boolean, default: false },
+  canManage: { type: Boolean, default: false },
   guildId: { type: [Number, String], default: null },
   eventId: { type: [Number, String], default: null },
   availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] }

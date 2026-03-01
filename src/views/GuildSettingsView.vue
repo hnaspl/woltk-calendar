@@ -253,11 +253,11 @@ async function fetchRoles() {
 /** Roles the current user is allowed to grant, based on the roles API can_grant list */
 const grantableRoles = computed(() => {
   const myRole = permissions.role.value
-  if (!myRole && !authStore.user?.is_admin) return []
-  // Site admins can grant any role
-  if (authStore.user?.is_admin) return allRoles.value
+  if (!myRole && !permissions.can('manage_roles')) return []
+  // Users with manage_roles permission can grant any role
+  if (permissions.can('manage_roles') && !myRole) return allRoles.value
   const myRoleDef = allRoles.value.find(r => r.name === myRole)
-  if (!myRoleDef) return []
+  if (!myRoleDef) return allRoles.value
   const grantable = new Set(myRoleDef.can_grant || [])
   return allRoles.value.filter(r => grantable.has(r.name))
 })
@@ -343,8 +343,8 @@ function canChangeRole(member) {
   const myRole = permissions.role.value
   const myRoleDef = allRoles.value.find(r => r.name === myRole)
   const memberRoleDef = allRoles.value.find(r => r.name === member.role)
-  // Site admins bypass level check
-  if (authStore.user?.is_admin) return true
+  // Users with manage_roles can bypass level check
+  if (permissions.can('manage_roles') && !myRoleDef) return true
   if (!myRoleDef || !memberRoleDef) return false
   return myRoleDef.level > memberRoleDef.level
 }
