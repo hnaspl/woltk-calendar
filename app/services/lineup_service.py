@@ -241,12 +241,22 @@ def update_lineup_grouped(
             )
             db.session.add(slot)
 
-    # Persist bench queue order
-    bench_queue_ids = data.get("bench_queue", [])
-    for idx, signup_id in enumerate(bench_queue_ids):
+    # Persist bench queue order (entries can be plain IDs or {id, chosen_role} dicts)
+    bench_queue_entries = data.get("bench_queue", [])
+    for idx, entry in enumerate(bench_queue_entries):
+        if isinstance(entry, dict):
+            signup_id = entry.get("id")
+            new_role = entry.get("chosen_role")
+        else:
+            signup_id = entry
+            new_role = None
         signup = db.session.get(Signup, signup_id)
         if signup is None:
             continue
+        # Update chosen_role if provided and different
+        if new_role and signup.chosen_role != new_role:
+            _validate_class_role_lineup(signup, new_role)
+            signup.chosen_role = new_role
         slot = LineupSlot(
             raid_event_id=raid_event_id,
             slot_group="bench",

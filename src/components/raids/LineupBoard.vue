@@ -342,6 +342,21 @@ function confirmRoleChange() {
 }
 
 function cancelRoleChange() {
+  const pending = roleChangePending.value
+  if (pending) {
+    const { signup, sourceKey, sourceIdx, targetCol } = pending
+    // Move player to bench with the target role so they wait for that slot
+    if (sourceKey !== 'bench' && sourceIdx >= 0) {
+      lineup.value[sourceKey].splice(sourceIdx, 1)
+    }
+    // Update local role to the target role
+    signup.chosen_role = targetCol.role
+    const id = Number(signup.id)
+    benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+    benchQueue.value.push(signup)
+    dirty.value = true
+    autoSave()
+  }
   showRoleChangeModal.value = false
   roleChangePending.value = null
 }
@@ -523,7 +538,7 @@ async function saveLineup(auto = false) {
       tanks:      lineup.value.tanks.map(s => s.id),
       healers:    lineup.value.healers.map(s => s.id),
       dps:        lineup.value.dps.map(s => s.id),
-      bench_queue: bench.value.map(s => s.id),
+      bench_queue: bench.value.map(s => ({ id: s.id, chosen_role: s.chosen_role })),
       version:    lineupVersion.value,
     })
     // Update local state from server response

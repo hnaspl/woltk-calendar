@@ -274,3 +274,210 @@ class TestMySignupsEndpoint:
         assert su.raid_event is not None
         assert su.raid_event.status == "open"
         assert su.raid_event.starts_at_utc is not None
+
+
+class TestRoleChangeMovesBench:
+    """When a signup's role changes, the player should move to bench, not declined."""
+
+    def test_role_change_moves_to_bench(self, seed):
+        """Changing a signup's role should place them on bench with new role."""
+        from app.models.character import Character
+        # Use a Shaman character that can take both dps and healer roles
+        shaman = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="ShamanOne",
+            class_name="Shaman", default_role="dps",
+            is_main=True, is_active=True,
+        )
+        db.session.add(shaman)
+        # Add healer slots to the raid definition
+        seed["raid_def"].healer_slots = 2
+        db.session.commit()
+
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=shaman.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+
+        # Change role from dps to healer
+        signup_service.update_signup(s1, {"chosen_role": "healer"})
+
+        # Player should be on bench, not declined
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None
+        assert bench_info["waiting_for"] == "healer"
+
+
+class TestOneCharPerPlayerInLineup:
+    """A user can only have one character in the active lineup (not bench)."""
+
+    def test_second_char_forced_to_bench(self, seed):
+        """If user already has a char in lineup, second char goes to bench."""
+        # Create a second character for user1
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 signs up with char1 (gets lineup slot)
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+
+        # User1 signs up with alt char (should go to bench)
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert not lineup_service.has_role_slot(s1b.id)
+        assert lineup_service.get_bench_info(s1b.id) is not None
+
+    def test_auto_promote_skips_user_with_char_in_lineup(self, seed):
+        """Auto-promote should skip bench players who already have another char in lineup."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # Fill both DPS slots (user1, user2)
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        # User1's alt goes to bench (forced because user1 already has a char in lineup)
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        # User3 also goes to bench (raid is full)
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        # Delete s2 (user2's signup) - should promote user3, NOT user1's alt
+        # because user1 already has char1 in lineup
+        signup_service.delete_signup(s2)
+
+        # user3 should be promoted (skip user1's alt who already has a char in lineup)
+        assert lineup_service.has_role_slot(s3.id)
+        assert not lineup_service.has_role_slot(s1b.id)
+
+    def test_alt_promoted_when_main_removed(self, seed):
+        """When a user's main char is removed, their alt CAN be promoted."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 signs up with char1 (gets lineup slot)
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 fills second slot
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User1's alt goes to bench
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+        assert not lineup_service.has_role_slot(s1b.id)
+
+        # Remove user1's main char. Now user1 has no char in lineup.
+        signup_service.delete_signup(s1)
+
+        # user1's alt should now be promotable - but we need to check
+        # if it was auto-promoted (it was first in bench queue)
+        # Since user1 no longer has a role slot, the alt CAN be promoted
+        assert lineup_service.has_role_slot(s1b.id)

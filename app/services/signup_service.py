@@ -68,6 +68,24 @@ def _get_role_slots(event) -> dict:
     }
 
 
+def _user_has_role_slot(raid_event_id: int, user_id: int, exclude_signup_id: int | None = None) -> bool:
+    """Return True if the user already has a character in a role slot (not bench)."""
+    from app.models.signup import LineupSlot
+
+    query = (
+        sa.select(sa.func.count(LineupSlot.id))
+        .join(Signup, Signup.id == LineupSlot.signup_id)
+        .where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group != "bench",
+            Signup.user_id == user_id,
+        )
+    )
+    if exclude_signup_id is not None:
+        query = query.where(Signup.id != exclude_signup_id)
+    return db.session.execute(query).scalar_one() > 0
+
+
 class RoleFullError(Exception):
     """Raised when a role's slots are all filled."""
     def __init__(self, role: str, role_slots: dict, message: str | None = None):
@@ -88,6 +106,7 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     Uses bench queue order (slot_index) when bench lineup slots exist,
     falling back to mains-first then earliest created_at.
+    Skips players who already have another character in the active lineup.
     Emits real-time events so all clients see the promotion instantly.
     """
     from app.models.character import Character
@@ -96,7 +115,7 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     from app.utils.realtime import emit_signups_changed, emit_lineup_changed
 
     # First: check bench queue (explicit queue order via LineupSlots)
-    bench_slot = db.session.execute(
+    bench_slots = db.session.execute(
         sa.select(LineupSlot)
         .join(Signup, Signup.id == LineupSlot.signup_id)
         .where(
@@ -105,11 +124,13 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
             Signup.chosen_role == role,
         )
         .order_by(LineupSlot.slot_index.asc())
-        .limit(1)
-    ).scalar_one_or_none()
+    ).scalars().all()
 
-    if bench_slot is not None:
+    for bench_slot in bench_slots:
         benched = bench_slot.signup
+        # Skip if this player already has another character in a role slot
+        if _user_has_role_slot(raid_event_id, benched.user_id, exclude_signup_id=benched.id):
+            continue
         db.session.delete(bench_slot)
         db.session.commit()
         lineup_service.auto_assign_slot(benched)
@@ -141,6 +162,9 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     for candidate in candidates:
         if candidate.id not in existing_slot_ids:
+            # Skip if this player already has another character in a role slot
+            if _user_has_role_slot(raid_event_id, candidate.user_id, exclude_signup_id=candidate.id):
+                continue
             db.session.commit()
             lineup_service.auto_assign_slot(candidate)
             # Notify the promoted player and emit real-time updates
@@ -206,6 +230,11 @@ def create_signup(
 
     should_bench = force_bench or assigned_count >= raid_size
 
+    # A player can only have one character in the active lineup at a time.
+    # If they already have another character in a role slot, force bench.
+    if not should_bench and _user_has_role_slot(raid_event_id, user_id):
+        should_bench = True
+
     signup = Signup(
         raid_event_id=raid_event_id,
         user_id=user_id,
@@ -232,7 +261,7 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 def update_signup(signup: Signup, data: dict) -> Signup:
     """Update a signup.  When the role changes the player is removed from
-    their current lineup slot so they appear on the bench."""
+    their current lineup slot and placed on the bench queue."""
     from app.services import lineup_service
 
     old_role = signup.chosen_role
@@ -250,9 +279,10 @@ def update_signup(signup: Signup, data: dict) -> Signup:
 
     new_role = signup.chosen_role
 
-    # When role changes, remove from old lineup slot
+    # When role changes, remove from old lineup slot and add to bench
     if old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
+        lineup_service.add_to_bench_queue(signup)
 
     return signup
 
@@ -486,14 +516,15 @@ def resolve_replacement(
             lineup_service.remove_slot_for_signup(conflicting.id)
             db.session.delete(conflicting)
             db.session.flush()
-        # Swap the character
-        signup.character_id = req.new_character_id
-        # Update lineup slot character too
-        slots = db.session.execute(
-            sa.select(LineupSlot).where(LineupSlot.signup_id == signup.id)
-        ).scalars().all()
-        for slot in slots:
-            slot.character_id = req.new_character_id
+        # Use no_autoflush to prevent premature flush while we update
+        # both the signup and its lineup slots atomically
+        with db.session.no_autoflush:
+            signup.character_id = req.new_character_id
+            slots = db.session.execute(
+                sa.select(LineupSlot).where(LineupSlot.signup_id == signup.id)
+            ).scalars().all()
+            for slot in slots:
+                slot.character_id = req.new_character_id
         req.status = "confirmed"
     elif action == "decline":
         req.status = "declined"
