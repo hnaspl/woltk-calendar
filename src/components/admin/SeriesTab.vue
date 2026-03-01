@@ -114,6 +114,18 @@
           </div>
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
+        <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="applyToAllGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+            <span class="text-sm text-text-primary">Also create in my other guilds</span>
+          </label>
+          <div v-if="applyToAllGuilds" class="mt-2 space-y-1 pl-6">
+            <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
+              <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <span class="text-xs text-text-muted">{{ g.name }} <span class="text-text-muted/60">({{ g.realm_name }})</span></span>
+            </label>
+          </div>
+        </div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
@@ -207,6 +219,12 @@ const form = reactive({
   default_difficulty: 'normal',
   template_id: null
 })
+const applyToAllGuilds = ref(false)
+const selectedGuildIds = ref([])
+
+const otherGuilds = computed(() =>
+  guildStore.guilds.filter(g => g.id !== guildStore.currentGuild?.id)
+)
 
 onMounted(async () => {
   loading.value = true
@@ -259,6 +277,8 @@ function openAddModal() {
     duration_minutes: 180, default_raid_size: 25, default_difficulty: 'normal',
     template_id: null
   })
+  applyToAllGuilds.value = false
+  selectedGuildIds.value = otherGuilds.value.map(g => g.id)
   formError.value = null; showModal.value = true
 }
 
@@ -296,6 +316,12 @@ async function saveSeries() {
       if (idx !== -1) seriesList.value[idx] = updated
     } else {
       seriesList.value.push(await seriesApi.createSeries(guildStore.currentGuild.id, form))
+      // Also create in other selected guilds
+      if (applyToAllGuilds.value && selectedGuildIds.value.length > 0) {
+        for (const guildId of selectedGuildIds.value) {
+          try { await seriesApi.createSeries(guildId, form) } catch { /* skip failures */ }
+        }
+      }
     }
     showModal.value = false
     uiStore.showToast(editing.value ? 'Series updated' : 'Series created', 'success')
