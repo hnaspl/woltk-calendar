@@ -299,6 +299,13 @@ const icons = {
   ])
 }
 
+const hasAdminAccess = computed(() =>
+  permissions.can('update_member_roles') ||
+  permissions.can('manage_roles') ||
+  permissions.can('update_guild_settings') ||
+  permissions.can('list_system_users')
+)
+
 const navGroups = computed(() => {
   const groups = [
     {
@@ -312,16 +319,18 @@ const navGroups = computed(() => {
     }
   ]
 
-  // Guild management only visible to users with create_events permission
-  if (canManageGuild.value) {
-    const guildItems = [
-      { label: 'Settings', to: '/guild/settings', icon: icons.settings },
-      { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
-      { label: 'Templates', to: '/guild/templates', icon: icons.templates },
-      { label: 'Recurring Raids', to: '/guild/series', icon: icons.series }
-    ]
-    if (permissions.can('manage_roles')) {
-      guildItems.push({ label: 'Roles & Permissions', to: '/admin/roles', icon: icons.admin })
+  // Guild management visible to users with relevant permissions
+  if (canManageGuild.value || hasAdminAccess.value) {
+    const guildItems = []
+    if (hasAdminAccess.value) {
+      guildItems.push({ label: 'Admin Panel', to: '/admin', icon: icons.admin })
+    }
+    if (canManageGuild.value) {
+      guildItems.push(
+        { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
+        { label: 'Templates', to: '/guild/templates', icon: icons.templates },
+        { label: 'Recurring Raids', to: '/guild/series', icon: icons.series }
+      )
     }
     groups.push({
       label: 'Guild Management',
@@ -336,14 +345,6 @@ const navGroups = computed(() => {
     ]
   })
 
-  if (permissions.can('list_system_users')) {
-    groups.push({
-      label: 'Administration',
-      items: [
-        { label: 'Admin Panel', to: '/admin', icon: icons.admin }
-      ]
-    })
-  }
   return groups
 })
 

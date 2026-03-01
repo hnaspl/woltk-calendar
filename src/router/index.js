@@ -58,15 +58,11 @@ const routes = [
   },
   {
     path: '/admin/roles',
-    name: 'roles-management',
-    component: () => import('@/views/RolesManagementView.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/admin'
   },
   {
     path: '/guild/settings',
-    name: 'guild-settings',
-    component: () => import('@/views/GuildSettingsView.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/admin'
   },
   {
     path: '/guild/raid-definitions',

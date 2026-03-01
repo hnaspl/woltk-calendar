@@ -1,242 +1,129 @@
 <template>
   <AppShell>
     <div class="p-4 md:p-6 space-y-6">
-      <h1 class="wow-heading text-2xl">Admin Panel</h1>
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="wow-heading text-2xl">Admin Panel</h1>
+          <p class="text-text-muted text-sm mt-0.5">
+            {{ guildStore.currentGuild?.name ? `Managing ${guildStore.currentGuild.name}` : 'Manage your guild and system settings' }}
+          </p>
+        </div>
+        <div v-if="permissions.role.value" class="px-3 py-1.5 rounded-lg bg-bg-tertiary border border-border-default">
+          <span class="text-xs text-text-muted">Your role: </span>
+          <span class="text-xs text-accent-gold font-medium">{{ currentRoleDisplay }}</span>
+        </div>
+      </div>
 
-      <div v-if="!permissions.can('list_system_users')" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have admin privileges.
+      <!-- No permissions message -->
+      <div v-if="!hasAnyAdminPermission" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
+        You do not have any administrative permissions.
       </div>
 
       <template v-else>
-        <!-- Users table -->
-        <WowCard>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="wow-heading text-base">All Users ({{ users.length }})</h2>
-          </div>
+        <!-- Tab navigation -->
+        <div class="border-b border-border-default">
+          <nav class="flex gap-1 -mb-px overflow-x-auto">
+            <button
+              v-for="tab in visibleTabs"
+              :key="tab.id"
+              type="button"
+              class="px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
+              :class="activeTab === tab.id
+                ? 'text-accent-gold border-accent-gold'
+                : 'text-text-muted border-transparent hover:text-text-primary hover:border-border-default'"
+              @click="activeTab = tab.id"
+            >
+              <span class="flex items-center gap-2">
+                <component :is="tab.icon" class="w-4 h-4" />
+                {{ tab.label }}
+              </span>
+            </button>
+          </nav>
+        </div>
 
-          <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-          <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
-
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">ID</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Email</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Admin</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Registered</th>
-                  <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-border-default">
-                <tr v-for="u in users" :key="u.id" class="hover:bg-bg-tertiary/50 transition-colors">
-                  <td class="px-4 py-2.5 text-text-muted">{{ u.id }}</td>
-                  <td class="px-4 py-2.5 text-text-primary font-medium">{{ u.username }}</td>
-                  <td class="px-4 py-2.5 text-text-muted">{{ u.email }}</td>
-                  <td class="px-4 py-2.5">
-                    <span
-                      class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
-                      :class="u.is_active ? 'bg-green-900/50 text-green-300 border border-green-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
-                    >
-                      {{ u.is_active ? 'Active' : 'Blocked' }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-2.5">
-                    <span v-if="u.is_admin" class="text-accent-gold text-xs font-bold">Admin</span>
-                    <span v-else class="text-text-muted text-xs">—</span>
-                  </td>
-                  <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(u.created_at) }}</td>
-                  <td class="px-4 py-2.5 text-right space-x-2">
-                    <template v-if="u.id !== authStore.user.id">
-                      <WowButton
-                        v-if="u.is_active"
-                        variant="secondary"
-                        class="text-xs py-1 px-2"
-                        @click="toggleBlock(u)"
-                      >Block</WowButton>
-                      <WowButton
-                        v-else
-                        variant="secondary"
-                        class="text-xs py-1 px-2"
-                        @click="toggleBlock(u)"
-                      >Unblock</WowButton>
-                      <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmDelete(u)">Delete</WowButton>
-                    </template>
-                    <span v-else class="text-text-muted text-xs italic">You</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </WowCard>
-
-        <!-- Auto-Sync Settings -->
-        <WowCard>
-          <h2 class="wow-heading text-base mb-4">Warmane Character Auto-Sync</h2>
-          <p class="text-text-muted text-sm mb-4">Automatically sync all active characters from the Warmane armory at a scheduled interval.</p>
-
-          <div v-if="autosyncLoading" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-          <div v-else class="space-y-4 max-w-lg">
-            <div class="flex items-center gap-4">
-              <label class="text-sm text-text-primary">Auto-Sync Enabled</label>
-              <button
-                type="button"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                :class="autosyncForm.enabled ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
-                @click="autosyncForm.enabled = !autosyncForm.enabled"
-              >
-                <span
-                  class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
-                  :class="autosyncForm.enabled ? 'translate-x-6' : 'translate-x-1'"
-                />
-              </button>
-            </div>
-
-            <div>
-              <label class="block text-xs text-text-muted mb-1">Sync Interval (minutes)</label>
-              <select v-model.number="autosyncForm.interval_minutes" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option :value="15">Every 15 minutes</option>
-                <option :value="30">Every 30 minutes</option>
-                <option :value="60">Every hour</option>
-                <option :value="120">Every 2 hours</option>
-                <option :value="360">Every 6 hours</option>
-                <option :value="720">Every 12 hours</option>
-                <option :value="1440">Every 24 hours</option>
-              </select>
-            </div>
-
-            <div class="flex gap-3">
-              <WowButton :loading="autosyncSaving" @click="saveAutosync">Save Settings</WowButton>
-              <WowButton variant="secondary" :loading="syncing" @click="triggerManualSync">Sync Now</WowButton>
-            </div>
-          </div>
-        </WowCard>
+        <!-- Tab content -->
+        <KeepAlive>
+          <MembersTab v-if="activeTab === 'members'" />
+          <RolesTab v-else-if="activeTab === 'roles'" />
+          <GuildSettingsTab v-else-if="activeTab === 'guild'" />
+          <SystemTab v-else-if="activeTab === 'system'" />
+        </KeepAlive>
       </template>
     </div>
-
-    <!-- Delete confirmation -->
-    <WowModal v-model="showDeleteConfirm" title="Delete User" size="sm">
-      <p class="text-text-muted">Permanently delete <strong class="text-text-primary">{{ deleteTarget?.username }}</strong>? This cannot be undone.</p>
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="deleting" @click="doDelete">Delete</WowButton>
-        </div>
-      </template>
-    </WowModal>
   </AppShell>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, h, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
-import WowCard from '@/components/common/WowCard.vue'
-import WowButton from '@/components/common/WowButton.vue'
-import WowModal from '@/components/common/WowModal.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import MembersTab from '@/components/admin/MembersTab.vue'
+import RolesTab from '@/components/admin/RolesTab.vue'
+import GuildSettingsTab from '@/components/admin/GuildSettingsTab.vue'
+import SystemTab from '@/components/admin/SystemTab.vue'
+import { useGuildStore } from '@/stores/guild'
 import { usePermissions } from '@/composables/usePermissions'
-import * as adminApi from '@/api/admin'
+import api from '@/api'
 
-const authStore = useAuthStore()
-const uiStore = useUiStore()
+const guildStore = useGuildStore()
 const permissions = usePermissions()
 
-const users = ref([])
-const loading = ref(true)
-const error = ref(null)
-const showDeleteConfirm = ref(false)
-const deleteTarget = ref(null)
-const deleting = ref(false)
+const allRoles = ref([])
 
-// Auto-sync state
-const autosyncLoading = ref(true)
-const autosyncSaving = ref(false)
-const syncing = ref(false)
-const autosyncForm = ref({ enabled: false, interval_minutes: 60 })
-
-onMounted(async () => {
-  if (!permissions.can('list_system_users')) return
-  loading.value = true
+// Fetch roles for display name
+async function fetchRoles() {
   try {
-    users.value = await adminApi.getUsers()
-  } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load users'
-  } finally {
-    loading.value = false
-  }
-
-  // Load auto-sync settings
-  autosyncLoading.value = true
-  try {
-    const config = await adminApi.getAutosyncSettings()
-    autosyncForm.value = { enabled: config.enabled ?? false, interval_minutes: config.interval_minutes ?? 60 }
+    allRoles.value = await api.get('/roles')
   } catch {
-    // ignore – defaults are fine
-  } finally {
-    autosyncLoading.value = false
+    allRoles.value = []
   }
+}
+fetchRoles()
+
+const currentRoleDisplay = computed(() => {
+  const roleName = permissions.role.value
+  if (!roleName) return 'Global Admin'
+  const roleDef = allRoles.value.find(r => r.name === roleName)
+  return roleDef?.display_name ?? roleName
 })
 
-async function toggleBlock(user) {
-  try {
-    const updated = await adminApi.updateUser(user.id, { is_active: !user.is_active })
-    const idx = users.value.findIndex(u => u.id === user.id)
-    if (idx !== -1) users.value[idx] = updated
-    uiStore.showToast(updated.is_active ? 'User unblocked' : 'User blocked', 'success')
-  } catch {
-    uiStore.showToast('Failed to update user', 'error')
+// Tab icons
+const icons = {
+  members: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' })
+  ]),
+  roles: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
+  ]),
+  guild: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }),
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' })
+  ]),
+  system: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' })
+  ])
+}
+
+// Tab definitions with permission requirements
+const allTabs = [
+  { id: 'members', label: 'Members', icon: icons.members, permission: 'update_member_roles' },
+  { id: 'roles', label: 'Roles & Permissions', icon: icons.roles, permission: 'manage_roles' },
+  { id: 'guild', label: 'Guild Settings', icon: icons.guild, permission: 'update_guild_settings' },
+  { id: 'system', label: 'System', icon: icons.system, permission: 'list_system_users' },
+]
+
+const visibleTabs = computed(() =>
+  allTabs.filter(tab => permissions.can(tab.permission))
+)
+
+const hasAnyAdminPermission = computed(() => visibleTabs.value.length > 0)
+
+const activeTab = ref('')
+
+// Set default active tab to first visible tab
+watch(visibleTabs, (tabs) => {
+  if (tabs.length > 0 && !tabs.find(t => t.id === activeTab.value)) {
+    activeTab.value = tabs[0].id
   }
-}
-
-function confirmDelete(user) {
-  deleteTarget.value = user
-  showDeleteConfirm.value = true
-}
-
-async function doDelete() {
-  deleting.value = true
-  try {
-    await adminApi.deleteUser(deleteTarget.value.id)
-    users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
-    showDeleteConfirm.value = false
-    uiStore.showToast('User deleted', 'success')
-  } catch {
-    uiStore.showToast('Failed to delete user', 'error')
-  } finally {
-    deleting.value = false
-  }
-}
-
-async function saveAutosync() {
-  autosyncSaving.value = true
-  try {
-    const config = await adminApi.updateAutosyncSettings(autosyncForm.value)
-    autosyncForm.value = { enabled: config.enabled, interval_minutes: config.interval_minutes }
-    uiStore.showToast('Auto-sync settings saved', 'success')
-  } catch {
-    uiStore.showToast('Failed to save auto-sync settings', 'error')
-  } finally {
-    autosyncSaving.value = false
-  }
-}
-
-async function triggerManualSync() {
-  syncing.value = true
-  try {
-    await adminApi.triggerSync()
-    uiStore.showToast('Character sync completed', 'success')
-  } catch {
-    uiStore.showToast('Sync failed', 'error')
-  } finally {
-    syncing.value = false
-  }
-}
-
-function formatDate(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+}, { immediate: true })
 </script>
