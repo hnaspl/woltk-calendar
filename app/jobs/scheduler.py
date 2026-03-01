@@ -2,22 +2,12 @@
 
 from __future__ import annotations
 
-import json
-import os
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
 
 scheduler = BackgroundScheduler(
     jobstores={"default": MemoryJobStore()},
     job_defaults={"coalesce": True, "max_instances": 1},
-)
-
-# Auto-sync configuration stored in a JSON file
-_AUTOSYNC_CONFIG_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "instance",
-    "autosync_config.json",
 )
 
 _DEFAULT_AUTOSYNC = {
@@ -29,19 +19,36 @@ _app_ref = None
 
 
 def _load_autosync_config() -> dict:
+    """Load auto-sync config from system_settings table."""
     try:
-        if os.path.isfile(_AUTOSYNC_CONFIG_PATH):
-            with open(_AUTOSYNC_CONFIG_PATH) as f:
-                return {**_DEFAULT_AUTOSYNC, **json.load(f)}
-    except (json.JSONDecodeError, OSError):
-        pass
-    return dict(_DEFAULT_AUTOSYNC)
+        from app.models.system_setting import SystemSetting
+        from app.extensions import db
+
+        enabled_row = db.session.get(SystemSetting, "autosync_enabled")
+        interval_row = db.session.get(SystemSetting, "autosync_interval_minutes")
+        return {
+            "enabled": enabled_row.value == "true" if enabled_row else False,
+            "interval_minutes": int(interval_row.value) if interval_row else 60,
+        }
+    except Exception:
+        return dict(_DEFAULT_AUTOSYNC)
 
 
 def _save_autosync_config(config: dict) -> None:
-    os.makedirs(os.path.dirname(_AUTOSYNC_CONFIG_PATH), exist_ok=True)
-    with open(_AUTOSYNC_CONFIG_PATH, "w") as f:
-        json.dump(config, f)
+    """Save auto-sync config to system_settings table."""
+    from app.models.system_setting import SystemSetting
+    from app.extensions import db
+
+    for key, val in [
+        ("autosync_enabled", "true" if config.get("enabled") else "false"),
+        ("autosync_interval_minutes", str(config.get("interval_minutes", 60))),
+    ]:
+        existing = db.session.get(SystemSetting, key)
+        if existing:
+            existing.value = val
+        else:
+            db.session.add(SystemSetting(key=key, value=val))
+    db.session.commit()
 
 
 def get_autosync_config() -> dict:

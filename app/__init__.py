@@ -203,6 +203,22 @@ def _seed_permissions_if_empty(app: Flask) -> None:
     except Exception as exc:
         app.logger.warning("Failed to seed permissions: %s", exc)
 
+    # Seed default system settings if missing
+    try:
+        from app.models.system_setting import SystemSetting
+        defaults = {
+            "wowhead_tooltips": "true",
+            "autosync_enabled": "false",
+            "autosync_interval_minutes": "60",
+        }
+        for key, default_value in defaults.items():
+            existing = db.session.get(SystemSetting, key)
+            if not existing:
+                db.session.add(SystemSetting(key=key, value=default_value))
+        db.session.commit()
+    except Exception as exc:
+        app.logger.warning("Failed to seed system settings: %s", exc)
+
 
 def _register_commands(app: Flask) -> None:
     import click
@@ -231,6 +247,22 @@ def _register_commands(app: Flask) -> None:
         from app.seeds.permissions import seed_permissions
         perm_count = seed_permissions()
         click.echo(f"Seeded {perm_count} role(s) with permissions.")
+
+        from app.models.system_setting import SystemSetting
+        defaults = {
+            "wowhead_tooltips": "true",
+            "autosync_enabled": "false",
+            "autosync_interval_minutes": "60",
+        }
+        seeded_settings = 0
+        for key, default_value in defaults.items():
+            existing = db.session.get(SystemSetting, key)
+            if not existing:
+                db.session.add(SystemSetting(key=key, value=default_value))
+                seeded_settings += 1
+        db.session.commit()
+        if seeded_settings:
+            click.echo(f"Seeded {seeded_settings} system setting(s).")
 
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")
@@ -261,3 +293,20 @@ def _register_commands(app: Flask) -> None:
             from app.seeds.permissions import seed_permissions
             created = seed_permissions()
             click.echo(f"Seeded {created} role(s) with permissions.")
+
+        # Seed default system settings if missing
+        from app.models.system_setting import SystemSetting
+        defaults = {
+            "wowhead_tooltips": "true",
+            "autosync_enabled": "false",
+            "autosync_interval_minutes": "60",
+        }
+        seeded_settings = 0
+        for key, default_value in defaults.items():
+            existing = db.session.get(SystemSetting, key)
+            if not existing:
+                db.session.add(SystemSetting(key=key, value=default_value))
+                seeded_settings += 1
+        db.session.commit()
+        if seeded_settings:
+            click.echo(f"Seeded {seeded_settings} system setting(s).")

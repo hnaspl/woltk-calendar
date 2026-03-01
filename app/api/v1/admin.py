@@ -129,12 +129,10 @@ def get_system_settings():
 
 
 def _system_settings_response():
-    """Build the system settings JSON response with defaults."""
+    """Build the system settings JSON response from the database."""
     from app.models.system_setting import SystemSetting
     rows = db.session.execute(db.select(SystemSetting)).scalars().all()
     settings = {r.key: r.value for r in rows}
-    if "wowhead_tooltips" not in settings:
-        settings["wowhead_tooltips"] = "true"
     return jsonify(settings), 200
 
 
@@ -148,10 +146,20 @@ def update_system_settings():
     from app.models.system_setting import SystemSetting
     data = request.get_json(silent=True) or {}
     # Boolean settings — validate and store as "true"/"false"
-    bool_keys = {"wowhead_tooltips"}
+    bool_keys = {"wowhead_tooltips", "autosync_enabled"}
     for key in bool_keys:
         if key in data:
             val = "true" if data[key] in (True, "true", "1", 1) else "false"
+            existing = db.session.get(SystemSetting, key)
+            if existing:
+                existing.value = val
+            else:
+                db.session.add(SystemSetting(key=key, value=val))
+    # Integer settings
+    int_keys = {"autosync_interval_minutes"}
+    for key in int_keys:
+        if key in data:
+            val = str(max(5, int(data[key])))
             existing = db.session.get(SystemSetting, key)
             if existing:
                 existing.value = val
