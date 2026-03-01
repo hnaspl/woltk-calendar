@@ -24,7 +24,7 @@
         <div class="space-y-1.5">
           <template v-for="signup in group.items" :key="signup.id">
             <!-- Inline edit form (officer only) -->
-            <div v-if="editingSignupId === signup.id" class="px-3 py-2 rounded-lg bg-bg-tertiary border border-border-gold space-y-2">
+            <div v-if="editingSignupId === signup.id" class="px-3 py-3 rounded-lg bg-bg-tertiary border border-border-gold space-y-3">
               <div class="flex items-center gap-2">
                 <img
                   v-if="signup.character?.class_name"
@@ -33,26 +33,56 @@
                   class="w-6 h-6 rounded border border-border-default flex-shrink-0"
                 />
                 <span class="text-sm font-medium text-text-primary">{{ signup.character?.name ?? 'Unknown' }}</span>
+                <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
               </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="text-[10px] text-text-muted">Role</label>
-                  <select v-model="editForm.chosen_role" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none">
-                    <option v-for="r in filteredRoleOptions" :key="r.value" :value="r.value">{{ r.label }}</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-[10px] text-text-muted">Spec</label>
-                  <input v-model="editForm.chosen_spec" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none" placeholder="Spec…" />
-                </div>
-              </div>
+
+              <!-- Role icon buttons (same as SignupForm) -->
               <div>
-                <label class="text-[10px] text-text-muted">Gear Score Note</label>
-                <input v-model="editForm.gear_score_note" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none" placeholder="e.g. 5800 GS…" />
+                <label class="text-[10px] text-text-muted mb-1 block">Role</label>
+                <div v-if="editRolesForClass(signup).length === 0" class="p-2 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-[11px]">
+                  ⚠ No available role slots for this class in this raid.
+                </div>
+                <div v-else class="flex gap-1.5">
+                  <button
+                    v-for="r in editRolesForClass(signup)"
+                    :key="r.value"
+                    type="button"
+                    class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded border text-xs transition-all"
+                    :class="editForm.chosen_role === r.value
+                      ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
+                      : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+                    @click="editForm.chosen_role = r.value"
+                  >
+                    <RoleBadge :role="r.value" />
+                  </button>
+                </div>
               </div>
-              <div class="flex justify-end gap-2">
-                <button class="text-xs text-text-muted hover:text-text-primary" @click="cancelEdit">Cancel</button>
-                <button class="text-xs text-accent-gold hover:text-amber-300" @click="saveEdit(signup)">Save</button>
+
+              <!-- Spec toggle buttons (same as SignupForm) -->
+              <div v-if="editRolesForClass(signup).length > 0">
+                <label class="text-[10px] text-text-muted mb-1 block">Spec</label>
+                <div v-if="editSpecOptions(signup).length > 0" class="flex gap-1.5 mb-1">
+                  <button
+                    v-for="sp in editSpecOptions(signup)"
+                    :key="sp"
+                    type="button"
+                    class="px-2.5 py-1 rounded border text-[11px] transition-all"
+                    :class="editSelectedSpecs.includes(sp)
+                      ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
+                      : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+                    @click="toggleEditSpec(sp)"
+                  >{{ sp }}</button>
+                </div>
+                <input
+                  v-model="editForm.chosen_spec"
+                  class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none"
+                  placeholder="e.g. Holy, Frost…"
+                />
+              </div>
+
+              <div class="flex justify-end gap-2 pt-1">
+                <button class="px-3 py-1 text-xs text-text-muted hover:text-text-primary rounded border border-border-default hover:border-border-gold transition-colors" @click="cancelEdit">Cancel</button>
+                <button class="px-3 py-1 text-xs text-accent-gold hover:text-amber-300 rounded border border-accent-gold/50 hover:border-accent-gold transition-colors font-medium" @click="saveEdit(signup)">Save</button>
               </div>
             </div>
 
@@ -123,36 +153,37 @@
                   </svg>
                 </WowTooltip>
 
-                <!-- Officer actions -->
-                <div v-if="isOfficer" class="flex items-center gap-1 flex-shrink-0" @click.stop>
-                  <button
-                    class="text-amber-400 hover:text-amber-300 transition-colors p-0.5"
-                    title="Edit role / spec"
-                    @click="startEdit(signup)"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                  </button>
-                  <button
-                    class="text-blue-400 hover:text-blue-300 transition-colors p-0.5"
-                    title="Replace character"
-                    @click="startReplaceCharacter(signup)"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                    </svg>
-                  </button>
-                  <button
-                    class="text-red-400 hover:text-red-300 transition-colors p-0.5"
-                    title="Remove signup"
-                    @click="removeSignup(signup)"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
+              </div>
+
+              <!-- Officer action buttons (below the signup row) -->
+              <div v-if="isOfficer" class="flex items-center gap-2 mt-1.5 ml-10" @click.stop>
+                <button
+                  class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
+                  @click="startEdit(signup)"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                  Edit
+                </button>
+                <button
+                  class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
+                  @click="startReplaceCharacter(signup)"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                  </svg>
+                  Replace
+                </button>
+                <button
+                  class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
+                  @click="removeSignup(signup)"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  Remove
+                </button>
               </div>
             </CharacterTooltip>
           </template>
@@ -252,7 +283,7 @@ import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS } from '@/constants'
+import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
 
 const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
@@ -267,10 +298,6 @@ const props = defineProps({
 const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])
 
 const { getClassIcon } = useWowIcons()
-
-const filteredRoleOptions = computed(() =>
-  ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
-)
 
 const LINEUP_GROUPS = [
   { key: 'going',    label: 'In Lineup', cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
@@ -287,13 +314,46 @@ const groups = computed(() =>
 
 // --- Officer inline edit ---
 const editingSignupId = ref(null)
-const editForm = reactive({ chosen_role: '', chosen_spec: '', gear_score_note: '' })
+const editForm = reactive({ chosen_role: '', chosen_spec: '' })
+
+/** Get allowed roles for a signup's character class, filtered by event available roles */
+function editRolesForClass(signup) {
+  const className = signup.character?.class_name
+  if (!className) return ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
+  const classRoles = CLASS_ROLES[className] ?? []
+  return ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value) && classRoles.includes(r.value))
+}
+
+/** Get spec options for a signup's character */
+function editSpecOptions(signup) {
+  const specs = []
+  if (signup.character?.primary_spec) specs.push(signup.character.primary_spec)
+  if (signup.character?.secondary_spec) specs.push(signup.character.secondary_spec)
+  return specs
+}
+
+/** Parse the comma-separated chosenSpec into an array for toggle button state */
+const editSelectedSpecs = computed(() => {
+  if (!editForm.chosen_spec) return []
+  return editForm.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)
+})
+
+/** Toggle a spec on/off in the edit form */
+function toggleEditSpec(sp) {
+  const current = editSelectedSpecs.value.slice()
+  const idx = current.indexOf(sp)
+  if (idx >= 0) {
+    current.splice(idx, 1)
+  } else {
+    current.push(sp)
+  }
+  editForm.chosen_spec = current.join(', ')
+}
 
 function startEdit(signup) {
   editingSignupId.value = signup.id
-  editForm.chosen_role = signup.chosen_role ?? 'dps'
+  editForm.chosen_role = signup.chosen_role ?? ''
   editForm.chosen_spec = signup.chosen_spec ?? ''
-  editForm.gear_score_note = signup.gear_score_note ?? ''
 }
 
 function cancelEdit() {
@@ -306,7 +366,6 @@ async function saveEdit(signup) {
     const updated = await signupsApi.updateSignup(props.guildId, props.eventId, signup.id, {
       chosen_role: editForm.chosen_role,
       chosen_spec: editForm.chosen_spec,
-      gear_score_note: editForm.gear_score_note || undefined
     })
     editingSignupId.value = null
     emit('signup-updated', updated)
