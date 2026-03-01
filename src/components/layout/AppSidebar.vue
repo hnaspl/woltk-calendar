@@ -100,21 +100,77 @@
       <div class="absolute inset-0 bg-black/60" @click="showCreateGuild = false" />
       <div class="relative bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md mx-4 p-6 z-10">
         <h3 class="wow-heading text-lg mb-4">Create Guild</h3>
-        <form @submit.prevent="doCreateGuild" class="space-y-4">
+
+        <!-- Step 1: Lookup guild on Warmane -->
+        <div v-if="!guildLookupDone" class="space-y-4">
+          <p class="text-sm text-text-muted">Enter your guild name to look it up on Warmane. Realm and faction will be filled automatically.</p>
           <div>
             <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
-            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" placeholder="My Guild" />
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" placeholder="My Guild" @keydown.enter.prevent="lookupGuild" />
+          </div>
+          <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
+          <div v-if="guildLookupNotFound" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
+            Guild not found on any Warmane realm. Would you like to enter details manually?
+          </div>
+          <!-- Multiple realm matches -->
+          <div v-if="guildLookupMatches.length > 1" class="space-y-2">
+            <p class="text-sm text-green-300">Found on {{ guildLookupMatches.length }} realms — select one:</p>
+            <div v-for="m in guildLookupMatches" :key="m.realm" class="flex items-center gap-3 p-3 rounded border text-sm cursor-pointer transition-colors"
+              :class="m.alreadyAdded ? 'border-border-default bg-bg-tertiary opacity-60 cursor-not-allowed' : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+              @click="!m.alreadyAdded && selectGuildMatch(m)"
+            >
+              <div class="flex-1">
+                <span class="text-text-primary font-medium">{{ m.realm }}</span>
+                <span v-if="m.faction" class="ml-2 px-2 py-0.5 rounded text-xs font-medium"
+                  :class="m.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+                >{{ m.faction }}</span>
+                <span class="text-text-muted text-xs ml-2">{{ m.member_count ?? 0 }} members</span>
+              </div>
+              <span v-if="m.alreadyAdded" class="text-xs text-yellow-400">Already added</span>
+              <span v-else class="text-xs text-accent-gold">Select →</span>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">Cancel</button>
+            <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">Enter Manually</button>
+            <button type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
+              {{ lookingUpGuild ? 'Searching…' : 'Search on Warmane' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Confirm found guild or manual form -->
+        <form v-else @submit.prevent="doCreateGuild" class="space-y-4">
+          <!-- Show Warmane match info -->
+          <div v-if="guildLookupMatch" class="p-3 rounded bg-green-900/20 border border-green-700 text-sm">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-green-300 font-medium">✓ Found on Warmane</span>
+              <span v-if="guildLookupMatch.faction" class="px-2 py-0.5 rounded text-xs font-medium"
+                :class="guildLookupMatch.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+              >{{ guildLookupMatch.faction }}</span>
+            </div>
+            <span class="text-text-muted text-xs">{{ guildLookupMatch.member_count ?? 0 }} members on {{ newGuild.realm_name }}</span>
+          </div>
+          <div v-if="guildLookupMatch?.alreadyAdded" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
+            ⚠ This guild is already added. You can join it from the available guilds list instead.
+          </div>
+          <div v-if="guildManualMode" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
+            Manual entry mode — guild not verified on Warmane.
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :readonly="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Realm *</label>
-            <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">Select realm…</option>
               <option v-for="r in WARMANE_REALMS" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">Faction</label>
-            <select v-model="newGuild.faction" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="newGuild.faction" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">Select faction…</option>
               <option value="Alliance">Alliance</option>
               <option value="Horde">Horde</option>
@@ -126,8 +182,8 @@
           </div>
           <div v-if="createGuildError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createGuildError }}</div>
           <div class="flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">Cancel</button>
-            <button type="submit" :disabled="creatingGuild" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50">
+            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="resetCreateGuild">Back</button>
+            <button type="submit" :disabled="creatingGuild || guildLookupMatch?.alreadyAdded" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50">
               {{ creatingGuild ? 'Creating…' : 'Create Guild' }}
             </button>
           </div>
@@ -138,18 +194,21 @@
 </template>
 
 <script setup>
-import { computed, h, ref, reactive, onMounted } from 'vue'
+import { computed, h, ref, reactive, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useSocket } from '@/composables/useSocket'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
+import * as warmaneApi from '@/api/warmane'
 
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
+const { on, off } = useSocket()
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
@@ -172,7 +231,23 @@ const joiningGuildId = ref(null)
 // Load all guilds on mount so available guilds are visible
 onMounted(() => {
   guildStore.fetchAllGuilds()
+  on('guilds_changed', handleGuildsChanged)
+  on('guild_changed', handleGuildChanged)
 })
+
+onUnmounted(() => {
+  off('guilds_changed', handleGuildsChanged)
+  off('guild_changed', handleGuildChanged)
+})
+
+function handleGuildsChanged() {
+  guildStore.fetchGuilds()
+  guildStore.fetchAllGuilds()
+}
+
+function handleGuildChanged() {
+  guildStore.fetchGuilds()
+}
 
 async function doJoinGuild(guild) {
   joiningGuildId.value = guild.id
@@ -280,6 +355,91 @@ const creatingGuild = ref(false)
 const createGuildError = ref(null)
 const newGuild = reactive({ name: '', realm_name: '', faction: '', allow_self_join: true })
 
+// Guild Warmane lookup state
+const lookingUpGuild = ref(false)
+const guildLookupDone = ref(false)
+const guildLookupError = ref(null)
+const guildLookupNotFound = ref(false)
+const guildLookupMatch = ref(null)
+const guildLookupMatches = ref([])  // all realm matches
+const guildManualMode = ref(false)
+
+function resetCreateGuild() {
+  guildLookupDone.value = false
+  guildLookupError.value = null
+  guildLookupNotFound.value = false
+  guildLookupMatch.value = null
+  guildLookupMatches.value = []
+  guildManualMode.value = false
+  createGuildError.value = null
+  newGuild.realm_name = ''
+  newGuild.faction = ''
+}
+
+function enterManually() {
+  guildLookupDone.value = true
+  guildLookupMatch.value = null
+  guildManualMode.value = true
+  guildLookupNotFound.value = false
+  guildLookupError.value = null
+}
+
+async function lookupGuild() {
+  const name = newGuild.name.trim()
+  if (!name) return
+
+  lookingUpGuild.value = true
+  guildLookupError.value = null
+  guildLookupNotFound.value = false
+  guildLookupMatch.value = null
+  guildLookupMatches.value = []
+
+  const matches = []
+
+  // Search ALL Warmane realms
+  for (const realm of WARMANE_REALMS) {
+    try {
+      const data = await warmaneApi.lookupGuild(realm, name)
+      if (data) {
+        // Check if this guild is already added
+        const alreadyAdded = guildStore.allGuilds.some(
+          g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === realm.toLowerCase()
+        )
+        matches.push({ ...data, realm, alreadyAdded })
+      }
+    } catch (err) {
+      // 404 = not found on this realm, try next; other errors are real failures
+      if (err?.response?.status && err.response.status !== 404) {
+        lookingUpGuild.value = false
+        guildLookupError.value = err?.response?.data?.message ?? 'Failed to search Warmane API'
+        return
+      }
+    }
+  }
+
+  lookingUpGuild.value = false
+
+  if (matches.length === 0) {
+    guildLookupNotFound.value = true
+    return
+  }
+
+  guildLookupMatches.value = matches
+
+  if (matches.length === 1) {
+    // Single match — auto-select
+    selectGuildMatch(matches[0])
+  }
+  // Multiple matches: show selection UI (handled in template)
+}
+
+function selectGuildMatch(match) {
+  guildLookupMatch.value = match
+  newGuild.realm_name = match.realm
+  newGuild.faction = match.faction || ''
+  guildLookupDone.value = true
+}
+
 async function doCreateGuild() {
   createGuildError.value = null
   creatingGuild.value = true
@@ -298,6 +458,12 @@ async function doCreateGuild() {
     newGuild.realm_name = ''
     newGuild.faction = ''
     newGuild.allow_self_join = true
+    guildLookupDone.value = false
+    guildLookupMatch.value = null
+    guildLookupMatches.value = []
+    guildManualMode.value = false
+    guildLookupError.value = null
+    guildLookupNotFound.value = false
     uiStore.showToast('Guild created!', 'success')
   } catch (err) {
     createGuildError.value = err?.response?.data?.message ?? 'Failed to create guild'

@@ -36,14 +36,6 @@ class Role(str, Enum):
     DPS = "dps"
 
 
-class SignupStatus(str, Enum):
-    GOING = "going"
-    TENTATIVE = "tentative"
-    LATE = "late"
-    DECLINED = "declined"
-    STANDBY = "standby"
-    BENCH = "bench"
-
 
 class AttendanceOutcome(str, Enum):
     ATTENDED = "attended"
@@ -86,3 +78,4 @@ class SlotGroup(str, Enum):
     OFF_TANK = "off_tank"
     HEALER = "healer"
     DPS = "dps"
+    BENCH = "bench"

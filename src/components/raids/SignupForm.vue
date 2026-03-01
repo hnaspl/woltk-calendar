@@ -31,30 +31,41 @@
         <span v-if="!existingSignup && signedUpCharacterIds.length > 0" class="text-[10px] text-text-muted">
           Already signed up characters are hidden. Select another character to add.
         </span>
+        <div v-if="bannedCharacterIds.length > 0" class="text-[10px] text-red-400 mt-1">
+          ⛔ Some characters are hidden because they have been permanently kicked from this raid.
+        </div>
       </div>
 
-      <!-- Role -->
-      <div>
+      <!-- Role (hidden until character is selected) -->
+      <div v-if="form.characterId">
         <label class="text-xs text-text-muted mb-1 block">Role *</label>
-        <div class="flex gap-2">
+        <div v-if="roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
+          ⚠ There are no available role slots for this character's class in this raid. This character cannot sign up for this event.
+        </div>
+        <div v-else class="flex gap-2">
           <button
             v-for="r in roles"
             :key="r.value"
             type="button"
-            class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded border text-sm transition-all"
+            class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded border text-sm transition-all"
             :class="form.chosenRole === r.value
               ? 'bg-accent-gold/10 border-accent-gold text-accent-gold'
               : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
-            :disabled="form.characterId === ''"
             @click="form.chosenRole = r.value"
           >
             <RoleBadge :role="r.value" />
+            <span v-if="roleSlotInfo[r.value]" class="text-[10px]" :class="isRoleFull(r.value) ? 'text-yellow-400' : 'text-text-muted'">
+              {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' Full' : '' }}
+            </span>
           </button>
         </div>
+        <p v-if="form.chosenRole && isRoleFull(form.chosenRole)" class="mt-1.5 text-xs text-yellow-400/90">
+          ⚠ All {{ ROLE_LABEL_MAP[form.chosenRole] || form.chosenRole }} slots are full. You will be placed on the <strong>bench</strong> as the next candidate when a slot opens up.
+        </p>
       </div>
 
-      <!-- Spec (multi-select, only when character selected) -->
-      <div v-if="form.characterId">
+      <!-- Spec (multi-select, only when character selected and has valid roles) -->
+      <div v-if="form.characterId && roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">Spec (select one or more)</label>
         <div v-if="specOptions.length > 0" class="flex gap-2 mb-1">
           <button
@@ -76,23 +87,8 @@
         />
       </div>
 
-      <!-- Status (only for editing existing signup) -->
-      <div v-if="existingSignup">
-        <label class="block text-xs text-text-muted mb-1">Status *</label>
-        <select
-          v-model="form.status"
-          class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-          required
-        >
-          <option value="going">Going ✓</option>
-          <option value="tentative">Tentative ?</option>
-          <option value="declined">Declined ✗</option>
-          <option value="late">Late ⧖</option>
-        </select>
-      </div>
-
-      <!-- Note -->
-      <div>
+      <!-- Note (hidden when character has no valid roles) -->
+      <div v-if="!form.characterId || roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">Note</label>
         <textarea
           v-model="form.note"
@@ -102,7 +98,7 @@
         />
       </div>
 
-      <WowButton type="submit" :loading="submitting" class="w-full">
+      <WowButton v-if="!form.characterId || roles.length > 0" type="submit" :loading="submitting" class="w-full">
         {{ existingSignup ? 'Update Signup' : 'Sign Up' }}
       </WowButton>
     </form>
@@ -152,16 +148,18 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, CLASS_SPECS } from '@/constants'
+import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
 
-const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
   guildId: { type: [Number, String], required: true },
   existingSignup: { type: Object, default: null },
   signedUpCharacterIds: { type: Array, default: () => [] },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] }
+  bannedCharacterIds: { type: Array, default: () => [] },
+  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'tank', 'healer', 'dps'] },
+  roleSlotInfo: { type: Object, default: () => ({}) }
 })
 
 const emit = defineEmits(['signed-up', 'updated'])
@@ -175,29 +173,55 @@ const success = ref(false)
 const showRoleFullModal = ref(false)
 const roleFullRole = ref('')
 const roleFullSlots = ref({})
+const roleFullCounts = ref({})
 const roleFullIsOfficer = ref(false)
 
 const roleFullLabel = computed(() => ROLE_LABEL_MAP[roleFullRole.value] || roleFullRole.value)
 
 const alternativeRoles = computed(() => {
-  // Show roles that have available slots (slots > 0) and are not the full one
+  // Show only roles that have available slots (not full) and are valid for the character's class
   return ROLE_OPTIONS.filter(r => {
     if (r.value === roleFullRole.value) return false
     if (!props.availableRoles.includes(r.value)) return false
-    return true
+    // Filter by class constraint
+    if (classAllowedRoles.value && !classAllowedRoles.value.includes(r.value)) return false
+    const maxSlots = roleFullSlots.value[r.value] ?? 0
+    const currentCount = roleFullCounts.value[r.value] ?? 0
+    return maxSlots > 0 && currentCount < maxSlots
   })
 })
 
+/** Allowed roles for the selected character's class */
+const classAllowedRoles = computed(() => {
+  if (!form.characterId) return null
+  const selected = characters.value.find(c => String(c.id) === String(form.characterId))
+  if (!selected || !selected.class_name) return null
+  return CLASS_ROLES[selected.class_name] ?? null
+})
+
 const roles = computed(() =>
-  ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
+  ROLE_OPTIONS.filter(r => {
+    if (!props.availableRoles.includes(r.value)) return false
+    // If a character is selected, only show roles valid for their class
+    if (classAllowedRoles.value && !classAllowedRoles.value.includes(r.value)) return false
+    return true
+  })
 )
 
-/** Available spec options from the selected character's class */
+function isRoleFull(role) {
+  const info = props.roleSlotInfo[role]
+  return info ? info.remaining <= 0 : false
+}
+
+/** Available spec options from the selected character's own specs (max 2) */
 const specOptions = computed(() => {
   if (!form.characterId) return []
   const selected = characters.value.find(c => String(c.id) === String(form.characterId))
   if (!selected) return []
-  return CLASS_SPECS[selected.class_name] || []
+  const specs = []
+  if (selected.primary_spec) specs.push(selected.primary_spec)
+  if (selected.secondary_spec) specs.push(selected.secondary_spec)
+  return specs
 })
 
 /** Parse the comma-separated chosenSpec into an array for toggle button state */
@@ -218,13 +242,23 @@ function toggleSpec(sp) {
   form.chosenSpec = current.join(', ')
 }
 
-/** Characters not yet signed up for this event (unless editing) */
+/** Characters not yet signed up for this event (unless editing), excluding banned.
+ *  Main character is sorted first. */
 const availableCharacters = computed(() => {
-  if (props.existingSignup) return characters.value
-  return characters.value.filter(c => !props.signedUpCharacterIds.includes(c.id))
+  const chars = props.existingSignup
+    ? characters.value
+    : characters.value.filter(c =>
+        !props.signedUpCharacterIds.includes(c.id) && !props.bannedCharacterIds.includes(c.id)
+      )
+  return chars.slice().sort((a, b) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0))
 })
 
-const INITIAL_FORM = { characterId: '', chosenRole: 'dps', chosenSpec: '', status: 'going', note: '' }
+/** Check if selected character is banned (for edge cases) */
+const isCharBanned = computed(() => {
+  return form.characterId && props.bannedCharacterIds.includes(Number(form.characterId))
+})
+
+const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '' }
 
 const form = reactive({ ...INITIAL_FORM })
 
@@ -234,6 +268,14 @@ onMounted(async () => {
   } catch {
     // ignore – user may have no characters yet
   }
+  // Auto-select main character if not editing an existing signup
+  if (!props.existingSignup && !form.characterId && availableCharacters.value.length > 0) {
+    const main = availableCharacters.value.find(c => c.is_main)
+    if (main) {
+      form.characterId = main.id
+      onCharacterChange()
+    }
+  }
 })
 
 // Auto-fill role & spec from selected character
@@ -242,7 +284,10 @@ function onCharacterChange() {
   if (!charId) return
   const selected = characters.value.find(c => String(c.id) === String(charId))
   if (selected && !props.existingSignup) {
-    form.chosenRole = selected.default_role || 'dps'
+    // Only auto-fill role if it's valid for the character's class
+    const allowed = CLASS_ROLES[selected.class_name] ?? []
+    const defaultRole = selected.default_role || ''
+    form.chosenRole = allowed.includes(defaultRole) ? defaultRole : ''
     form.chosenSpec = selected.primary_spec || ''
   }
 }
@@ -253,9 +298,8 @@ watch(
   (s) => {
     if (s) {
       form.characterId = s.character_id ?? ''
-      form.chosenRole  = s.chosen_role   ?? 'dps'
+      form.chosenRole  = s.chosen_role   ?? ''
       form.chosenSpec  = s.chosen_spec   ?? ''
-      form.status      = s.status        ?? 'going'
       form.note        = s.note          ?? ''
     } else {
       // Reset form when editing ends so spec doesn't persist from previous character
@@ -280,9 +324,9 @@ async function handleSubmit() {
     note:         form.note || undefined
   }
 
-  // Only include status when updating an existing signup
-  if (props.existingSignup) {
-    payload.status = form.status
+  // Auto-bench when player knowingly selects a full role
+  if (!props.existingSignup && isRoleFull(form.chosenRole)) {
+    payload.force_bench = true
   }
 
   try {
@@ -303,6 +347,7 @@ async function handleSubmit() {
       // Role is full — show modal with bench/change options
       roleFullRole.value = data.role
       roleFullSlots.value = data.role_slots || {}
+      roleFullCounts.value = data.role_counts || {}
       roleFullIsOfficer.value = !!data.is_officer
       showRoleFullModal.value = true
     } else {

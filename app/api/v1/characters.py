@@ -26,7 +26,7 @@ def list_characters():
 @login_required
 def create_character():
     data = request.get_json(silent=True) or {}
-    required = {"guild_id", "realm_name", "name", "class_name", "default_role"}
+    required = {"guild_id", "realm_name", "name", "class_name"}
     missing = required - data.keys()
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400

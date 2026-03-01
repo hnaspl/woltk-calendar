@@ -37,11 +37,11 @@ export const RAID_TYPES = [
 ]
 
 export const ROLE_OPTIONS = [
-  { value: 'tank', label: 'Tank' },
+  { value: 'tank', label: 'Melee DPS' },
   { value: 'main_tank', label: 'Main Tank' },
   { value: 'off_tank', label: 'Off Tank' },
-  { value: 'healer', label: 'Healer' },
-  { value: 'dps', label: 'DPS' },
+  { value: 'healer', label: 'Heal' },
+  { value: 'dps', label: 'Range DPS' },
 ]
 
 export const CLASS_SPECS = {
@@ -53,6 +53,54 @@ export const CLASS_SPECS = {
   'Shaman':        ['Elemental', 'Enhancement', 'Restoration'],
   'Mage':          ['Arcane', 'Fire', 'Frost'],
   'Warlock':       ['Affliction', 'Demonology', 'Destruction'],
-  'Druid':         ['Balance', 'Feral', 'Restoration'],
+  'Druid':         ['Balance', 'Feral Combat', 'Restoration'],
   'Death Knight':  ['Blood', 'Frost', 'Unholy'],
+}
+
+/** Class → allowed roles (backend role values) */
+export const CLASS_ROLES = {
+  'Death Knight':  ['main_tank', 'off_tank', 'tank'],
+  'Druid':         ['main_tank', 'off_tank', 'healer', 'tank', 'dps'],
+  'Hunter':        ['dps'],
+  'Mage':          ['dps'],
+  'Paladin':       ['main_tank', 'off_tank', 'healer', 'tank'],
+  'Priest':        ['healer', 'dps'],
+  'Rogue':         ['tank'],
+  'Shaman':        ['healer', 'tank', 'dps'],
+  'Warlock':       ['dps'],
+  'Warrior':       ['main_tank', 'off_tank', 'tank'],
+}
+
+/**
+ * Map a Warmane talent-tree name to the canonical CLASS_SPECS name.
+ * Handles quirks like "Feral" → "Feral Combat".
+ */
+export function normalizeSpecName(treeName, className) {
+  if (!treeName) return treeName
+  const tree = treeName.trim()
+  const specs = CLASS_SPECS[className] || []
+  // Exact match
+  const exact = specs.find(s => s.toLowerCase() === tree.toLowerCase())
+  if (exact) return exact
+  // Prefix match (e.g. "Feral" matches "Feral Combat")
+  const prefix = specs.find(s => s.toLowerCase().startsWith(tree.toLowerCase()))
+  if (prefix) return prefix
+  return tree
+}
+
+/** Format a duration in minutes to a human-readable string like "3h" or "2h 30m". */
+export function formatDuration(minutes) {
+  if (!minutes) return '?'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
+}
+
+/** Get human-readable label for a raid type code. */
+export function raidTypeLabel(raidType) {
+  if (!raidType) return raidType
+  const found = RAID_TYPES.find(r => r.value === raidType)
+  return found ? found.label : raidType
 }

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.services import notification_service
@@ -14,7 +14,11 @@ bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 @bp.get("")
 @login_required
 def list_notifications():
-    notifications = notification_service.list_notifications(current_user.id)
+    limit = min(int(request.args.get("limit", 50)), 100)
+    offset = max(int(request.args.get("offset", 0)), 0)
+    notifications = notification_service.list_notifications(
+        current_user.id, limit=limit, offset=offset
+    )
     return jsonify([n.to_dict() for n in notifications]), 200
 
 
@@ -33,3 +37,26 @@ def mark_read(notification_id: int):
 def mark_all_read():
     count = notification_service.mark_all_read(current_user.id)
     return jsonify({"marked_read": count}), 200
+
+
+@bp.get("/unread-count")
+@login_required
+def unread_count():
+    count = notification_service.unread_count(current_user.id)
+    return jsonify({"count": count}), 200
+
+
+@bp.delete("/<int:notification_id>")
+@login_required
+def delete_notification(notification_id: int):
+    deleted = notification_service.delete_notification(notification_id, current_user.id)
+    if not deleted:
+        return jsonify({"error": "Notification not found"}), 404
+    return jsonify({"deleted": True}), 200
+
+
+@bp.delete("")
+@login_required
+def delete_all_notifications():
+    count = notification_service.delete_all_notifications(current_user.id)
+    return jsonify({"deleted": count}), 200

@@ -12,6 +12,8 @@ from app.models.guild import Guild, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.realtime import emit_guild_changed, emit_guilds_changed
+from app.utils import notify
 
 bp = Blueprint("guilds", __name__, url_prefix="/guilds")
 
@@ -59,6 +61,8 @@ def join_guild(guild_id: int):
         )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_guild_changed(guild_id)
+    notify.notify_member_joined_guild(current_user.id, guild)
     return jsonify(membership.to_dict()), 201
 
 
@@ -94,14 +98,18 @@ def create_guild():
     data = request.get_json(silent=True) or {}
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": "name and realm_name are required"}), 400
-    guild = guild_service.create_guild(
-        name=data["name"],
-        realm_name=data["realm_name"],
-        created_by=current_user.id,
-        faction=data.get("faction"),
-        region=data.get("region"),
-        allow_self_join=data.get("allow_self_join", True),
-    )
+    try:
+        guild = guild_service.create_guild(
+            name=data["name"],
+            realm_name=data["realm_name"],
+            created_by=current_user.id,
+            faction=data.get("faction"),
+            region=data.get("region"),
+            allow_self_join=data.get("allow_self_join", True),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "message": str(exc)}), 409
+    emit_guilds_changed()
     return jsonify(guild.to_dict()), 201
 
 
@@ -131,6 +139,7 @@ def update_guild(guild_id: int):
         return jsonify({"error": "Officer or admin privileges required"}), 403
     data = request.get_json(silent=True) or {}
     guild = guild_service.update_guild(guild, data)
+    emit_guild_changed(guild_id)
     return jsonify(guild.to_dict()), 200
 
 
@@ -144,6 +153,7 @@ def delete_guild(guild_id: int):
     if not is_officer_or_admin(membership):
         return jsonify({"error": "Officer or admin privileges required"}), 403
     guild_service.delete_guild(guild)
+    emit_guilds_changed()
     return jsonify({"message": "Guild deleted"}), 200
 
 
@@ -211,6 +221,11 @@ def update_member(guild_id: int, user_id: int):
         return jsonify({"error": "Only guild admins can change a guild_admin's role"}), 403
 
     target = guild_service.update_member(target, data)
+    # Notify user if their role was changed
+    if new_role and user_id != current_user.id:
+        guild = guild_service.get_guild(guild_id)
+        if guild:
+            notify.notify_guild_role_changed(user_id, guild, new_role)
     return jsonify(target.to_dict()), 200
 
 
@@ -235,4 +250,26 @@ def remove_member(guild_id: int, user_id: int):
 
     db.session.delete(target)
     db.session.commit()
+    # Notify the removed user
+    guild = guild_service.get_guild(guild_id)
+    if guild:
+        notify.notify_removed_from_guild(user_id, guild)
     return jsonify({"message": "Member removed"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Member characters (officer / admin)
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:guild_id>/members/<int:user_id>/characters")
+@login_required
+def list_member_characters(guild_id: int, user_id: int):
+    """List all characters for a guild member.  Requires officer or admin."""
+    membership = get_membership(guild_id, current_user.id)
+    if not is_officer_or_admin(membership):
+        return jsonify({"error": "Officer or admin privileges required"}), 403
+
+    from app.services import character_service
+
+    chars = character_service.list_characters(user_id, guild_id, include_archived=True)
+    return jsonify([c.to_dict() for c in chars]), 200

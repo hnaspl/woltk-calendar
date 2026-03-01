@@ -7,8 +7,10 @@ from typing import Optional
 
 import sqlalchemy as sa
 
+from app.constants import CLASS_ROLES
 from app.extensions import db
 from app.models.signup import LineupSlot, Signup
+from app.utils.class_roles import validate_class_role
 
 
 def get_lineup(raid_event_id: int) -> list[LineupSlot]:
@@ -25,15 +27,31 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
     )
 
 
+def _lineup_version(grouped: dict) -> str:
+    """Compute a fingerprint from lineup signup IDs for conflict detection."""
+    parts = []
+    for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps", "bench_queue"):
+        ids = ",".join(str(s["id"]) for s in grouped.get(key, []))
+        parts.append(f"{key}:{ids}")
+    return "|".join(parts)
+
+
 def get_lineup_grouped(raid_event_id: int) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
     grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "tanks": [], "healers": [], "dps": []}
+    bench_queue: list = []
     role_map = {"main_tank": "main_tanks", "off_tank": "off_tanks", "tank": "tanks", "healer": "healers", "dps": "dps"}
     for slot in slots:
+        if slot.slot_group == "bench":
+            if slot.signup is not None:
+                bench_queue.append(slot.signup.to_dict())
+            continue
         key = role_map.get(slot.slot_group, "dps")
         if slot.signup is not None:
             grouped[key].append(slot.signup.to_dict())
+    grouped["bench_queue"] = bench_queue
+    grouped["version"] = _lineup_version(grouped)
     return grouped
 
 
@@ -69,6 +87,57 @@ def remove_slot_for_signup(signup_id: int) -> None:
         sa.delete(LineupSlot).where(LineupSlot.signup_id == signup_id)
     )
     db.session.commit()
+
+
+def has_role_slot(signup_id: int) -> bool:
+    """Return True if the signup has a role lineup slot (not bench queue)."""
+    return db.session.execute(
+        sa.select(sa.func.count(LineupSlot.id)).where(
+            LineupSlot.signup_id == signup_id,
+            LineupSlot.slot_group != "bench",
+        )
+    ).scalar_one() > 0
+
+
+def get_bench_info(signup_id: int) -> dict | None:
+    """Return bench queue info for a signup, or None if not on bench.
+
+    Returns a dict with:
+    - waiting_for: the chosen_role the player is waiting for
+    - queue_position: 1-based position in the bench queue for that role
+    """
+    bench_slot = db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.signup_id == signup_id,
+            LineupSlot.slot_group == "bench",
+        )
+    ).scalar_one_or_none()
+
+    if bench_slot is None:
+        return None
+
+    signup = bench_slot.signup
+    role = signup.chosen_role if signup else None
+
+    # Count how many bench slots for the same role have a lower slot_index
+    if role:
+        position = db.session.execute(
+            sa.select(sa.func.count(LineupSlot.id))
+            .join(Signup, Signup.id == LineupSlot.signup_id)
+            .where(
+                LineupSlot.raid_event_id == bench_slot.raid_event_id,
+                LineupSlot.slot_group == "bench",
+                Signup.chosen_role == role,
+                LineupSlot.slot_index <= bench_slot.slot_index,
+            )
+        ).scalar_one()
+    else:
+        position = 1
+
+    return {
+        "waiting_for": role,
+        "queue_position": position,
+    }
 
 
 def update_slot_group_for_signup(signup_id: int, new_slot_group: str) -> None:
@@ -116,10 +185,54 @@ def upsert_slot(
     return slot
 
 
+def _validate_class_role_lineup(signup: Signup, new_role: str) -> None:
+    """Validate class-role constraint for lineup changes."""
+    if signup.character is None:
+        return
+    validate_class_role(signup.character.class_name, new_role)
+
+
+class LineupConflictError(Exception):
+    """Raised when the lineup was modified by another officer since last load."""
+    pass
+
+
 def update_lineup_grouped(
-    raid_event_id: int, data: dict, confirmed_by: int
+    raid_event_id: int, data: dict, confirmed_by: int,
+    expected_version: str | None = None,
 ) -> dict:
-    """Bulk-update lineup from grouped format {tanks: [signupId,...], ...}."""
+    """Bulk-update lineup from grouped format {tanks: [signupId,...], ...}.
+
+    If *expected_version* is provided, check the current lineup version first.
+    If it doesn't match, raise LineupConflictError so the caller can notify
+    the officer and reload the fresh lineup.
+
+    After rebuilding the lineup, auto-promotes bench players into any role
+    slots that became free compared to the previous state, and notifies
+    players whose characters were moved to bench.
+    """
+    if expected_version is not None:
+        current = get_lineup_grouped(raid_event_id)
+        if current.get("version") != expected_version:
+            raise LineupConflictError()
+
+    # Snapshot which roles had signups before the update so we can detect
+    # freed slots and trigger auto-promotion afterwards.
+    # We also snapshot bench signups to detect orphaned signups (signups in
+    # the old lineup that are missing from the new data entirely).
+    old_role_signups: dict[str, set[int]] = {}
+    old_bench_ids: set[int] = set()
+    old_slots = db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.raid_event_id == raid_event_id,
+        )
+    ).scalars().all()
+    for slot in old_slots:
+        if slot.slot_group == "bench":
+            old_bench_ids.add(slot.signup_id)
+        else:
+            old_role_signups.setdefault(slot.slot_group, set()).add(slot.signup_id)
+
     # Remove all existing slots for this event
     db.session.execute(
         sa.delete(LineupSlot).where(LineupSlot.raid_event_id == raid_event_id)
@@ -127,30 +240,197 @@ def update_lineup_grouped(
     db.session.flush()
 
     role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "tanks": "tank", "healers": "healer", "dps": "dps"}
-    for key, slot_group in role_map.items():
-        signup_ids = data.get(key, [])
-        for idx, signup_id in enumerate(signup_ids):
-            signup = db.session.get(Signup, signup_id)
-            if signup is None:
-                continue
-            # Sync signup's chosen_role to match the lineup column
-            if signup.chosen_role != slot_group:
-                signup.chosen_role = slot_group
-            # Promote bench players to going when placed in a role column
-            if signup.status == "bench":
-                signup.status = "going"
-            slot = LineupSlot(
-                raid_event_id=raid_event_id,
-                slot_group=slot_group,
-                slot_index=idx,
-                signup_id=signup_id,
-                character_id=signup.character_id if signup else None,
-                confirmed_by=confirmed_by,
-                confirmed_at=datetime.now(timezone.utc),
-            )
-            db.session.add(slot)
+    # Track users who already have a character in a role slot to enforce
+    # one-character-per-player.  When a conflict is detected the NEW
+    # placement wins (admin explicitly put the character there) and the
+    # earlier signup is moved to bench.
+    # Maps user_id -> (signup_id, slot_group, LineupSlot)
+    user_slot_map: dict[int, tuple[int, str, LineupSlot]] = {}
+    overflow_to_bench: list[int] = []  # signup IDs moved to bench
+
+    # Enforce slot limits: truncate role arrays to the event's defined slot
+    # counts.  Excess signups are moved to bench.
+    from app.models.raid import RaidEvent
+    event = db.session.get(RaidEvent, raid_event_id)
+    if event:
+        rd = event.raid_definition
+        slot_limits = {
+            "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
+            "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
+            "tank": rd.tank_slots if rd and rd.tank_slots is not None else 0,
+            "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
+            "dps": rd.dps_slots if rd and rd.dps_slots is not None else 18,
+        }
+        for key, slot_group in role_map.items():
+            limit = slot_limits.get(slot_group)
+            if limit is not None:
+                ids = data.get(key, [])
+                if len(ids) > limit:
+                    overflow_to_bench.extend(ids[limit:])
+                    data[key] = ids[:limit]
+
+    # Track new role assignments for freed-slot detection
+    new_role_signups: dict[str, set[int]] = {}
+
+    # Determine which signups are NEW placements (not in their old role slot)
+    # so that when a same-player conflict arises we can let the new one win.
+    _old_signup_role: dict[int, str] = {}
+    for role, sids in old_role_signups.items():
+        for sid in sids:
+            _old_signup_role[sid] = role
+
+    # Use no_autoflush to prevent SQLAlchemy from auto-flushing pending
+    # LineupSlot INSERTs when db.session.get() needs to query the database.
+    # Without this, auto-flush can persist a slot before we get a chance to
+    # expunge it during one-char-per-player conflict resolution, leaving a
+    # ghost role slot in the database.
+    with db.session.no_autoflush:
+        for key, slot_group in role_map.items():
+            signup_ids = data.get(key, [])
+            for idx, signup_id in enumerate(signup_ids):
+                signup = db.session.get(Signup, signup_id)
+                if signup is None:
+                    continue
+                # Enforce one character per player in lineup
+                if signup.user_id in user_slot_map:
+                    prev_sid, prev_group, prev_slot_obj = user_slot_map[signup.user_id]
+                    # Decide which signup is the "new" placement.
+                    # A signup is new if it wasn't in the same role slot before.
+                    prev_is_old = (_old_signup_role.get(prev_sid) == prev_group)
+                    curr_is_old = (_old_signup_role.get(signup_id) == slot_group)
+                    if prev_is_old and not curr_is_old:
+                        # Current signup is the new placement — it wins.
+                        # Remove the previous signup's slot and bench it.
+                        db.session.expunge(prev_slot_obj)
+                        if prev_group in new_role_signups:
+                            new_role_signups[prev_group].discard(prev_sid)
+                        overflow_to_bench.append(prev_sid)
+                    else:
+                        # Previous signup keeps its slot; current goes to bench.
+                        overflow_to_bench.append(signup_id)
+                        continue
+                # Sync signup's chosen_role to match the lineup column
+                if signup.chosen_role != slot_group:
+                    # Validate class-role constraint before changing role
+                    _validate_class_role_lineup(signup, slot_group)
+                    signup.chosen_role = slot_group
+                new_role_signups.setdefault(slot_group, set()).add(signup_id)
+                slot = LineupSlot(
+                    raid_event_id=raid_event_id,
+                    slot_group=slot_group,
+                    slot_index=idx,
+                    signup_id=signup_id,
+                    character_id=signup.character_id if signup else None,
+                    confirmed_by=confirmed_by,
+                    confirmed_at=datetime.now(timezone.utc),
+                )
+                db.session.add(slot)
+                user_slot_map[signup.user_id] = (signup_id, slot_group, slot)
+
+    # Identify signups the admin moved from role slots to bench so they can
+    # be placed at the END of the bench queue (lower priority for auto-promote).
+    all_old_role_ids: set[int] = set()
+    for ids in old_role_signups.values():
+        all_old_role_ids.update(ids)
+    all_new_role_ids: set[int] = set()
+    for ids in new_role_signups.values():
+        all_new_role_ids.update(ids)
+    removed_from_lineup = all_old_role_ids - all_new_role_ids
+
+    # Persist bench queue order (entries can be plain IDs or {id, chosen_role} dicts)
+    # Prepend any overflow signups (moved from role slots due to one-char-per-player)
+    bench_queue_entries = data.get("bench_queue", [])
+    all_bench_raw = overflow_to_bench + list(bench_queue_entries)
+
+    # Reorder: entries that were just removed from lineup go to the end
+    def _entry_id(e):
+        if isinstance(e, dict):
+            return e.get("id")
+        return int(e) if e is not None else None
+
+    regular_bench = [e for e in all_bench_raw if _entry_id(e) not in removed_from_lineup]
+    demoted_bench = [e for e in all_bench_raw if _entry_id(e) in removed_from_lineup]
+    all_bench = regular_bench + demoted_bench
+
+    # Detect orphaned signups: signups that were in the old lineup (role or
+    # bench) but are missing from the new data entirely.  These are
+    # automatically placed at the end of the bench so they don't disappear.
+    all_old_ids = all_old_role_ids | old_bench_ids
+    explicit_bench_ids = {_entry_id(e) for e in all_bench}
+    accounted_ids = all_new_role_ids | explicit_bench_ids
+    accounted_ids.discard(None)  # ignore None entries from _entry_id
+    orphaned_ids = all_old_ids - accounted_ids
+    for oid in orphaned_ids:
+        all_bench.append(oid)
+
+    seen_bench_ids: set[int] = set()
+    bench_idx = 0
+    for entry in all_bench:
+        if isinstance(entry, dict):
+            signup_id = entry.get("id")
+            new_role = entry.get("chosen_role")
+        else:
+            signup_id = int(entry) if entry is not None else None
+            new_role = None
+        if signup_id is None or signup_id in seen_bench_ids:
+            continue
+        seen_bench_ids.add(signup_id)
+        signup = db.session.get(Signup, signup_id)
+        if signup is None:
+            continue
+        # Update chosen_role if provided and different
+        if new_role and signup.chosen_role != new_role:
+            _validate_class_role_lineup(signup, new_role)
+            signup.chosen_role = new_role
+        slot = LineupSlot(
+            raid_event_id=raid_event_id,
+            slot_group="bench",
+            slot_index=bench_idx,
+            signup_id=signup_id,
+            character_id=signup.character_id,
+            confirmed_by=confirmed_by,
+            confirmed_at=datetime.now(timezone.utc),
+        )
+        db.session.add(slot)
+        bench_idx += 1
 
     db.session.commit()
+
+    # Notify players whose characters were moved to bench due to
+    # one-character-per-player enforcement or orphaned from old lineup.
+    auto_benched = set(overflow_to_bench) | orphaned_ids
+    if auto_benched:
+        try:
+            from app.services import event_service
+            from app.utils.notify import notify_signup_benched
+            event = event_service.get_event(raid_event_id)
+            if event:
+                for sid in auto_benched:
+                    s = db.session.get(Signup, sid)
+                    if s:
+                        notify_signup_benched(s, event)
+        except Exception:
+            pass
+
+    # Auto-promote bench players into freed role slots.
+    # Admin-benched signups are at the end of the queue so other waiting
+    # players get promoted first.
+    # Exclude signups the admin explicitly moved to bench so they are not
+    # immediately re-promoted back into the lineup within the same call.
+    # Import here to avoid circular dependency (signup_service ↔ lineup_service).
+    from app.services.signup_service import _auto_promote_bench
+
+    for role, old_ids in old_role_signups.items():
+        new_ids = new_role_signups.get(role, set())
+        removed_count = len(old_ids - new_ids)
+        added_count = len(new_ids - old_ids)
+        freed_count = removed_count - added_count  # net freed slots
+        for _ in range(max(freed_count, 0)):
+            _auto_promote_bench(
+                raid_event_id, role,
+                exclude_signup_ids=removed_from_lineup,
+            )
+
     return get_lineup_grouped(raid_event_id)
 
 
@@ -170,6 +450,91 @@ def update_lineup(raid_event_id: int, slots_data: list[dict], confirmed_by: int)
     return results
 
 
+def reorder_bench_queue(
+    raid_event_id: int,
+    ordered_signup_ids: list[int],
+) -> tuple[dict, list[tuple]]:
+    """Reorder bench queue to match the provided signup ID order.
+
+    Returns a tuple of (grouped lineup dict, position changes list).
+    Position changes are (signup, old_position, new_position) tuples.
+    """
+    # Fetch existing bench lineup slots for this event
+    bench_slots = list(db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group == "bench",
+        ).order_by(LineupSlot.slot_index.asc())
+    ).scalars().all())
+
+    # Build map of old positions (per-role) keyed by signup_id
+    old_positions_by_role: dict[int, tuple[str, int]] = {}
+    role_counters: dict[str, int] = {}
+    for slot in bench_slots:
+        signup = db.session.get(Signup, slot.signup_id)
+        if signup:
+            role = signup.chosen_role or "dps"
+            role_counters.setdefault(role, 0)
+            role_counters[role] += 1
+            old_positions_by_role[slot.signup_id] = (role, role_counters[role])
+
+    # Build a set of bench signup IDs for validation
+    bench_signup_ids = {s.signup_id for s in bench_slots}
+
+    # Only include IDs that are actually on the bench
+    valid_ordered = [sid for sid in ordered_signup_ids if sid in bench_signup_ids]
+    # Append any bench signups not in the provided order
+    remaining = [s.signup_id for s in bench_slots if s.signup_id not in set(valid_ordered)]
+    final_order = valid_ordered + remaining
+
+    # Use a two-phase update to avoid UNIQUE constraint collisions.
+    # Phase 1: Set all slot_index to negative temporary values.
+    slot_map = {s.signup_id: s for s in bench_slots}
+    for idx, signup_id in enumerate(final_order):
+        slot = slot_map.get(signup_id)
+        if slot:
+            db.session.execute(
+                sa.update(LineupSlot)
+                .where(LineupSlot.id == slot.id)
+                .values(slot_index=-(idx + 1000))
+            )
+    db.session.flush()
+
+    # Phase 2: Set to final non-negative values.
+    for idx, signup_id in enumerate(final_order):
+        slot = slot_map.get(signup_id)
+        if slot:
+            db.session.execute(
+                sa.update(LineupSlot)
+                .where(LineupSlot.id == slot.id)
+                .values(slot_index=idx)
+            )
+    db.session.commit()
+
+    # Expire cached ORM objects so they re-read from DB
+    for slot in bench_slots:
+        db.session.expire(slot)
+
+    # Calculate new per-role positions and detect changes
+    new_role_counters: dict[str, int] = {}
+    position_changes: list[tuple] = []
+    for signup_id in final_order:
+        signup = db.session.get(Signup, signup_id)
+        if not signup:
+            continue
+        role = signup.chosen_role or "dps"
+        new_role_counters.setdefault(role, 0)
+        new_role_counters[role] += 1
+        new_pos = new_role_counters[role]
+        old_entry = old_positions_by_role.get(signup_id)
+        if old_entry:
+            old_role, old_pos = old_entry
+            if old_role == role and old_pos != new_pos:
+                position_changes.append((signup, old_pos, new_pos))
+
+    return get_lineup_grouped(raid_event_id), position_changes
+
+
 def confirm_lineup(raid_event_id: int, confirmed_by: int) -> list[LineupSlot]:
     """Mark all existing lineup slots as confirmed."""
     now = datetime.now(timezone.utc)
@@ -180,3 +545,17 @@ def confirm_lineup(raid_event_id: int, confirmed_by: int) -> list[LineupSlot]:
             slot.confirmed_at = now
     db.session.commit()
     return slots
+
+
+def add_to_bench_queue(signup: Signup) -> None:
+    """Add a signup to the end of the bench queue."""
+    idx = _next_slot_index(signup.raid_event_id, "bench")
+    slot = LineupSlot(
+        raid_event_id=signup.raid_event_id,
+        slot_group="bench",
+        slot_index=idx,
+        signup_id=signup.id,
+        character_id=signup.character_id,
+    )
+    db.session.add(slot)
+    db.session.commit()

@@ -9,7 +9,7 @@ from flask import Flask, jsonify, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
-from app.extensions import bcrypt, db, login_manager
+from app.extensions import bcrypt, db, login_manager, socketio
 
 # Vite build output directory (relative to project root)
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
@@ -30,6 +30,8 @@ def create_app(config_override: dict | None = None) -> Flask:
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
+    socketio.init_app(app, cors_allowed_origins=app.config["CORS_ORIGINS"],
+                      async_mode="gevent", logger=False, engineio_logger=False)
 
     # Enable WAL mode for SQLite (better concurrent read/write performance)
     if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
@@ -114,11 +116,18 @@ def create_app(config_override: dict | None = None) -> Flask:
     # ------------------------------------------------------- CLI commands
     _register_commands(app)
 
+    # ------------------------------------------------------- SocketIO events
+    _register_socketio_handlers()
+
     # --------------------------------------------------------- Scheduler
     with app.app_context():
         if app.config.get("SCHEDULER_ENABLED", True) and not app.config.get("TESTING", False):
             from app.jobs.scheduler import init_scheduler
             init_scheduler(app)
+
+        # Auto-migrate: drop legacy status column from signups table
+        if not app.config.get("TESTING", False):
+            _auto_migrate(app)
 
     return app
 
@@ -133,6 +142,106 @@ def _ensure_db_dir() -> None:
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
+
+
+def _register_socketio_handlers() -> None:
+    """Register Socket.IO event handlers for room-based real-time updates."""
+    from flask_login import current_user
+    from flask_socketio import join_room, leave_room
+
+    @socketio.on("join_event")
+    def handle_join(data):
+        if not current_user.is_authenticated:
+            return
+        event_id = data.get("event_id")
+        if event_id is not None:
+            join_room(f"event_{event_id}")
+
+    @socketio.on("leave_event")
+    def handle_leave(data):
+        if not current_user.is_authenticated:
+            return
+        event_id = data.get("event_id")
+        if event_id is not None:
+            leave_room(f"event_{event_id}")
+
+    @socketio.on("join_guild")
+    def handle_join_guild(data):
+        if not current_user.is_authenticated:
+            return
+        guild_id = data.get("guild_id")
+        if guild_id is not None:
+            join_room(f"guild_{guild_id}")
+
+    @socketio.on("leave_guild")
+    def handle_leave_guild(data):
+        if not current_user.is_authenticated:
+            return
+        guild_id = data.get("guild_id")
+        if guild_id is not None:
+            leave_room(f"guild_{guild_id}")
+
+    @socketio.on("connect")
+    def handle_connect():
+        """Auto-join the user's personal notification room on connect."""
+        if current_user.is_authenticated:
+            join_room(f"user_{current_user.id}")
+
+
+def _auto_migrate(app: Flask) -> None:
+    """Run lightweight schema migrations for existing databases.
+
+    Currently handles:
+    - Dropping the legacy ``status`` column from ``signups`` if present.
+    - Adding ``duration_minutes`` column to ``raid_events`` if missing.
+    - Adding ``default_duration_minutes`` column to ``raid_definitions`` if missing.
+    """
+    try:
+        _drop_signups_status_column()
+    except Exception:
+        app.logger.debug("Auto-migration: signups.status column already removed or not present.")
+
+    try:
+        _add_duration_columns()
+    except Exception:
+        app.logger.debug("Auto-migration: duration columns already present or migration skipped.")
+
+
+def _drop_signups_status_column() -> None:
+    """Drop the legacy ``status`` column from the signups table if it exists."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    columns = [col["name"] for col in inspector.get_columns("signups")]
+    if "status" not in columns:
+        return
+
+    # SQLite ≥ 3.35 supports ALTER TABLE DROP COLUMN
+    with db.engine.begin() as conn:
+        conn.execute(text("ALTER TABLE signups DROP COLUMN status"))
+
+
+def _add_duration_columns() -> None:
+    """Add duration columns to raid_events and raid_definitions if missing."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+
+    # Add duration_minutes to raid_events
+    re_cols = [col["name"] for col in inspector.get_columns("raid_events")]
+    if "duration_minutes" not in re_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE raid_events ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 180"
+            ))
+
+    # Add default_duration_minutes to raid_definitions
+    rd_cols = [col["name"] for col in inspector.get_columns("raid_definitions")]
+    if "default_duration_minutes" not in rd_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE raid_definitions ADD COLUMN default_duration_minutes INTEGER NOT NULL DEFAULT 180"
+            ))
 
 
 def _register_commands(app: Flask) -> None:
@@ -177,3 +286,17 @@ def _register_commands(app: Flask) -> None:
         _ensure_db_dir()
         db.create_all()
         click.echo("Database tables created.")
+
+    @app.cli.command("migrate-db")
+    def migrate_db_command() -> None:
+        """Run schema migrations on existing database."""
+        try:
+            _drop_signups_status_column()
+            click.echo("Migration: signups.status column dropped (if present).")
+        except Exception as exc:
+            click.echo(f"Migration note: {exc}")
+        try:
+            _add_duration_columns()
+            click.echo("Migration: duration columns added (if missing).")
+        except Exception as exc:
+            click.echo(f"Migration note: {exc}")

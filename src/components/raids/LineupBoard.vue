@@ -16,9 +16,9 @@
         :key="col.key"
         class="bg-bg-secondary p-4 transition-colors"
         :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': isOfficer && dragOverTarget === col.key }"
-        @dragover.prevent="isOfficer && onDragOver($event, col.key)"
+        @dragover.prevent="isOfficer && handleDragOver($event, col.key)"
         @dragenter.prevent="isOfficer && (dragOverTarget = col.key)"
-        @dragleave="isOfficer && onDragLeave($event, col.key)"
+        @dragleave="isOfficer && handleDragLeave($event, col.key)"
         @drop.prevent="isOfficer && onDropColumn($event, col.key)"
       >
         <div class="flex items-center gap-2 mb-3">
@@ -28,140 +28,148 @@
         </div>
         <div class="space-y-1.5 min-h-[2rem]">
           <!-- Assigned slots -->
-          <CharacterTooltip
+          <div
             v-for="(s, i) in lineup[col.key]"
             :key="s.id"
-            :character="s.character"
-            position="bottom"
+            class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
+            :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
+            :draggable="isOfficer"
+            @dragstart="onDragStart($event, s, col.key, i)"
+            @dragend="onDragEnd"
           >
-            <div
-              class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-primary border border-border-default group hover:border-border-gold transition-colors"
-              :class="{ 'cursor-grab active:cursor-grabbing': isOfficer, 'opacity-50': draggedId === s.id }"
-              :draggable="isOfficer"
-              @dragstart="onDragStart($event, s, col.key, i)"
-              @dragend="onDragEnd"
-            >
-              <img
-                :src="getClassIcon(s.character?.class_name)"
-                :alt="s.character?.class_name ?? ''"
-                class="w-6 h-6 rounded flex-shrink-0"
-                loading="lazy"
-              />
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1">
-                  <span
-                    class="text-xs font-medium truncate"
-                    :style="{ color: getClassColor(s.character?.class_name) ?? '#ccc' }"
-                  >{{ s.character?.name ?? '?' }}</span>
-                  <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
-                    Lv{{ s.character.metadata.level }}
-                  </span>
-                </div>
-                <div class="flex items-center gap-1 text-[10px] text-text-muted">
-                  <span v-if="s.chosen_spec" class="text-amber-300">{{ s.chosen_spec }}</span>
-                  <span v-if="profString(s)">{{ profString(s) }}</span>
-                </div>
+            <img
+              :src="getClassIcon(s.character?.class_name)"
+              :alt="s.character?.class_name ?? ''"
+              class="w-6 h-6 rounded flex-shrink-0"
+              loading="lazy"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1">
+                <span
+                  class="text-xs font-medium truncate"
+                  :style="{ color: getClassColor(s.character?.class_name) ?? '#ccc' }"
+                >{{ s.character?.name ?? '?' }}</span>
+                <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+                  Lv{{ s.character.metadata.level }}
+                </span>
               </div>
-              <button
-                v-if="isOfficer"
-                type="button"
-                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
-                @click="removeFromRole(col.key, i)"
-              >×</button>
+              <div class="flex items-center gap-1 text-[10px] text-text-muted flex-wrap">
+                <template v-if="s.chosen_spec">
+                  <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+                </template>
+                <span v-if="profString(s)">{{ profString(s) }}</span>
+              </div>
             </div>
-          </CharacterTooltip>
-          <!-- Dropdown to assign (officer only) -->
-          <select
-            v-if="isOfficer && availableFor(col.key).length > 0"
-            class="w-full bg-bg-tertiary border border-dashed border-border-default text-text-muted text-xs rounded px-2 py-1.5 mt-1 focus:border-border-gold outline-none"
-            @change="onSelectAssign($event, col.key)"
-          >
-            <option value="">+ Add player…</option>
-            <option v-for="s in availableFor(col.key)" :key="s.id" :value="s.id">
-              {{ s.character?.name ?? '?' }} ({{ s.chosen_spec || s.chosen_role }}){{ s.character?.metadata?.level ? ` Lv${s.character.metadata.level}` : '' }}
-            </option>
-          </select>
+            <button
+              v-if="isOfficer"
+              type="button"
+              class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
+              @click="removeFromRole(col.key, i)"
+            >×</button>
+          </div>
+
         </div>
       </div>
     </div>
 
-    <!-- Unassigned + Bench pool (unified rendering for identical DnD behavior) -->
+    <!-- Bench queue: grouped by role showing per-role queue positions -->
     <div
-      v-if="unassigned.length > 0 || (isOfficer && draggedId)"
+      v-if="bench.length > 0 || (isOfficer && draggedId)"
       class="px-5 py-4 border-t border-border-default transition-colors"
-      :class="{ 'bg-red-900/10 ring-1 ring-inset ring-red-500/30': isOfficer && dragOverTarget === 'unassigned' }"
-      @dragover.prevent="isOfficer && onDragOver($event, 'unassigned')"
-      @dragenter.prevent="isOfficer && (dragOverTarget = 'unassigned')"
-      @dragleave="isOfficer && onDragLeave($event, 'unassigned')"
-      @drop.prevent="isOfficer && onDropUnassigned()"
+      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': isOfficer && dragOverTarget === 'bench' }"
+      @dragover.prevent="isOfficer && handleDragOver($event, 'bench')"
+      @dragenter.prevent="isOfficer && (dragOverTarget = 'bench')"
+      @dragleave="isOfficer && handleDragLeave($event, 'bench')"
+      @drop.prevent="isOfficer && onDropBench()"
     >
-      <p class="text-xs text-text-muted mb-2 uppercase tracking-wider">Unassigned ({{ unassigned.length }})</p>
-      <div class="flex flex-wrap gap-2">
-        <CharacterTooltip
-          v-for="s in unassigned"
-          :key="s.id"
-          :character="s.character"
-          position="top"
-        >
-          <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs transition-colors"
-            :class="{
-              'border border-yellow-700/40 hover:border-yellow-500': s.status === 'bench',
-              'border border-border-default hover:border-border-gold': s.status !== 'bench',
-              'cursor-grab active:cursor-grabbing': isOfficer,
-              'opacity-50': draggedId === s.id
-            }"
-            draggable="true"
-            @dragstart="onDragStart($event, s, s.status === 'bench' ? 'bench' : 'unassigned', -1)"
-            @dragend="onDragEnd"
-          >
-            <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
-            <span>{{ s.character?.name ?? '?' }}</span>
-            <span class="text-text-muted">({{ ROLE_LABEL_MAP[s.chosen_role] ?? s.chosen_role }})</span>
-            <span v-if="s.status === 'bench'" class="text-yellow-400 text-[10px] font-medium">Bench</span>
-            <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
-              Lv{{ s.character.metadata.level }}
-            </span>
+      <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">
+        Bench Queue ({{ bench.length }})
+        <span v-if="!isOfficer && currentUserId" class="text-text-muted normal-case"> — showing your characters</span>
+      </p>
+      <div v-if="visibleBenchByRole.length > 0" class="space-y-3">
+        <div v-for="group in visibleBenchByRole" :key="group.role">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <img :src="getRoleIcon(group.role)" class="w-4 h-4 rounded" :alt="group.label" />
+            <span class="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{{ group.label }} ({{ group.players.length }})</span>
           </div>
-        </CharacterTooltip>
+          <div class="flex flex-wrap gap-2">
+            <div
+              v-for="(s, benchIdx) in group.players"
+              :key="s.id"
+              class="flex items-center gap-1.5 px-2 py-1 rounded bg-bg-tertiary text-xs border border-yellow-700/40 hover:border-yellow-500 transition-colors"
+              :class="{
+                'cursor-grab active:cursor-grabbing': isOfficer,
+                'opacity-50': draggedId === s.id
+              }"
+              :draggable="isOfficer"
+              @dragstart="onDragStart($event, s, 'bench', -1)"
+              @dragend="onDragEnd"
+              @dragover.prevent="isOfficer && handleBenchItemDragOver($event, group.role, benchIdx)"
+              @drop.prevent.stop="isOfficer && onDropBenchItem(group.role, benchIdx)"
+            >
+              <span class="text-[10px] text-yellow-400 font-bold w-4 text-center">#{{ s.roleQueuePos }}</span>
+              <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
+              <span>{{ s.character?.name ?? '?' }}</span>
+              <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
+                Lv{{ s.character.metadata.level }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
-      <p v-if="unassigned.length === 0 && draggedId" class="text-xs text-text-muted italic">
-        Drop here to unassign
+      <p v-if="bench.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
+        Drop here to move to bench
       </p>
     </div>
 
-    <!-- Bench drop zone (drop-only, shown during active drag) -->
-    <div
-      v-if="isOfficer && draggedId && dragSourceKey !== 'bench'"
-      class="px-5 py-3 border-t border-border-default transition-colors"
-      :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': dragOverTarget === 'bench' }"
-      @dragover.prevent="onDragOver($event, 'bench')"
-      @dragenter.prevent="dragOverTarget = 'bench'"
-      @dragleave="onDragLeave($event, 'bench')"
-      @drop.prevent="onDropBench()"
-    >
-      <p class="text-xs text-yellow-400/60 italic">Drop here to move to bench</p>
-    </div>
-
   </WowCard>
+
+  <!-- Role change confirmation modal -->
+  <WowModal v-model="showRoleChangeModal" title="Change Player Role?" size="sm">
+    <div v-if="roleChangePending" class="space-y-3">
+      <p class="text-text-muted text-sm">
+        <strong class="text-text-primary">{{ roleChangePending.signup.character?.name ?? 'Player' }}</strong>
+        is signed up as
+        <strong class="text-accent-gold">{{ ROLE_LABEL_MAP[roleChangePending.signup.chosen_role] ?? roleChangePending.signup.chosen_role }}</strong>.
+      </p>
+      <p class="text-text-muted text-sm">
+        Do you want to change their role to
+        <strong class="text-accent-gold">{{ roleChangePending.targetCol.label }}</strong>
+        and place them in the lineup?
+      </p>
+      <p class="text-xs text-yellow-400/80">
+        This will update their signup role and move them into the {{ roleChangePending.targetCol.label }} column.
+      </p>
+    </div>
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <WowButton variant="secondary" @click="cancelRoleChange">Leave on Bench</WowButton>
+        <WowButton variant="primary" @click="confirmRoleChange">Change Role &amp; Place</WowButton>
+      </div>
+    </template>
+  </WowModal>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
+import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
-import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
+import SpecBadge from '@/components/common/SpecBadge.vue'
 import * as lineupApi from '@/api/lineup'
-import * as signupsApi from '@/api/signups'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useDragDrop } from '@/composables/useDragDrop'
+import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
+import { CLASS_ROLES } from '@/constants'
 
 const props = defineProps({
   signups:        { type: Array,          default: () => [] },
   eventId:        { type: [Number,String], required: true },
   guildId:        { type: [Number,String], required: true },
   isOfficer:      { type: Boolean, default: false },
+  currentUserId:  { type: [Number,String], default: null },
   tankSlots:      { type: Number, default: 0 },
   mainTankSlots:  { type: Number, default: 1 },
   offTankSlots:   { type: Number, default: 1 },
@@ -169,20 +177,30 @@ const props = defineProps({
   dpsSlots:       { type: Number, default: 18 }
 })
 
-const emit = defineEmits(['saved'])
+const emit = defineEmits(['saved', 'lineup-updated'])
 const { getClassIcon, getClassColor, getRoleIcon } = useWowIcons()
+const {
+  draggedId, dragSourceKey, dragSourceIndex, dragOverTarget,
+  isDragging, startDrag, endDrag, handleDragOver, handleDragLeave,
+} = useDragDrop()
 const uiStore = useUiStore()
 const saving = ref(false)
 const dirty = ref(false)
+const lineupVersion = ref(null)
+const benchQueue = ref([]) // Ordered list of bench signup objects from API
 
-const ROLE_LABEL_MAP = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+// Role change confirmation modal state
+const showRoleChangeModal = ref(false)
+const roleChangePending = ref(null) // { signup, targetKey, targetCol }
+
+const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
 const allColumns = computed(() => [
   { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },
   { key: 'off_tanks',  role: 'off_tank',  label: 'Off Tank',   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
-  { key: 'tanks',      role: 'tank',      label: 'Tanks',      labelClass: 'text-blue-300',  slots: props.tankSlots },
-  { key: 'healers',    role: 'healer',    label: 'Healers',    labelClass: 'text-green-300', slots: props.healerSlots },
-  { key: 'dps',        role: 'dps',       label: 'DPS',        labelClass: 'text-red-300',   slots: props.dpsSlots },
+  { key: 'tanks',      role: 'tank',      label: 'Melee DPS',  labelClass: 'text-blue-300',  slots: props.tankSlots },
+  { key: 'healers',    role: 'healer',    label: 'Heal',       labelClass: 'text-green-300', slots: props.healerSlots },
+  { key: 'dps',        role: 'dps',       label: 'Range DPS',  labelClass: 'text-red-300',   slots: props.dpsSlots },
 ])
 
 /** Only show columns that have at least 1 slot configured */
@@ -198,47 +216,18 @@ const gridClass = computed(() => {
 
 const lineup = ref({ main_tanks: [], off_tanks: [], tanks: [], healers: [], dps: [] })
 
-// ── Drag state ──
-const draggedId = ref(null)
-const dragSourceKey = ref(null)
-const dragSourceIndex = ref(-1)
-const dragOverTarget = ref(null)
+// ── Drag handlers (state managed by useDragDrop composable) ──
 
 function onDragStart(e, signup, sourceKey, idx) {
   if (!props.isOfficer) {
     e.preventDefault()
     return
   }
-  // Set dataTransfer FIRST before any reactive state changes
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', String(signup.id))
-  // Prevent CharacterTooltip wrapper from intercepting drag events
-  e.stopPropagation()
-  draggedId.value = signup.id
-  dragSourceKey.value = sourceKey
-  dragSourceIndex.value = idx
+  startDrag(e, signup.id, sourceKey, idx)
 }
 
 function onDragEnd() {
-  draggedId.value = null
-  dragSourceKey.value = null
-  dragSourceIndex.value = -1
-  dragOverTarget.value = null
-}
-
-function onDragOver(e, target) {
-  e.dataTransfer.dropEffect = 'move'
-  dragOverTarget.value = target
-}
-
-function onDragLeave(e, target) {
-  if (dragOverTarget.value === target) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX; const y = e.clientY
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      dragOverTarget.value = null
-    }
-  }
+  endDrag()
 }
 
 function findSignupById(id) {
@@ -246,9 +235,18 @@ function findSignupById(id) {
     const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
-  const fromPool = unassigned.value.find(s => Number(s.id) === id)
-  if (fromPool) return { key: fromPool.status === 'bench' ? 'bench' : 'unassigned', idx: -1, signup: fromPool }
+  const fromPool = bench.value.find(s => Number(s.id) === id)
+  if (fromPool) return { key: 'bench', idx: -1, signup: fromPool }
   return null
+}
+
+/** Check if a character's class is allowed to take a given role */
+function isClassAllowedForRole(signup, role) {
+  const className = signup?.character?.class_name
+  if (!className) return true // allow if class unknown
+  const allowed = CLASS_ROLES[className]
+  if (!allowed) return true // allow if class not in map
+  return allowed.includes(role)
 }
 
 function onDropColumn(e, targetKey) {
@@ -264,10 +262,16 @@ function onDropColumn(e, targetKey) {
   const col = allColumns.value.find(c => c.key === targetKey)
   const signupRole = found.signup.chosen_role
 
-  // Strict role enforcement: roles are NOT interchangeable
+  // Role mismatch: show confirmation modal to change role
   if (col && signupRole !== col.role) {
-    const roleName = ROLE_LABEL_MAP[signupRole] ?? signupRole
-    uiStore.showToast(`${found.signup.character?.name ?? 'Player'} signed up as ${roleName}. Cannot place in ${col.label}.`, 'error')
+    // Block if class cannot take the target role
+    if (!isClassAllowedForRole(found.signup, col.role)) {
+      const className = found.signup?.character?.class_name ?? 'This class'
+      uiStore.showToast(`${className} cannot be assigned to ${col.label}.`, 'error')
+      return
+    }
+    roleChangePending.value = { signup: found.signup, sourceKey: found.key, sourceIdx: found.idx, targetKey, targetCol: col }
+    showRoleChangeModal.value = true
     return
   }
 
@@ -282,9 +286,12 @@ function onDropColumn(e, targetKey) {
   }
 
   // Remove from source column (column-to-column moves)
-  if (found.key !== 'unassigned' && found.key !== 'bench') {
+  if (found.key !== 'bench') {
     lineup.value[found.key].splice(found.idx, 1)
   }
+
+  // Remove from bench queue when moving to a role column
+  benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
 
   // Add to target (avoid duplicates)
   if (!lineup.value[targetKey].find(s => Number(s.id) === id)) {
@@ -294,57 +301,80 @@ function onDropColumn(e, targetKey) {
   autoSave()
 }
 
-async function onDropUnassigned() {
+function onDropBench() {
   dragOverTarget.value = null
   const sourceKey = dragSourceKey.value
   const sourceIdx = dragSourceIndex.value
-  const id = draggedId.value
 
-  // Moving from bench to unassigned: update status to going
-  if (sourceKey === 'bench' && id) {
-    try {
-      await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'going' })
-      emit('saved', { auto: true })
-    } catch (err) {
-      console.error('Failed to remove from bench', err)
-      uiStore.showToast('Failed to remove from bench', 'error')
-    }
-    return
-  }
-
-  if (sourceKey && sourceKey !== 'unassigned' && sourceKey !== 'bench' && sourceIdx >= 0) {
+  // Only act when dragged from a role column (remove from lineup, add to end of bench queue)
+  if (sourceKey && sourceKey !== 'bench' && sourceIdx >= 0) {
+    const removed = lineup.value[sourceKey][sourceIdx]
     lineup.value[sourceKey].splice(sourceIdx, 1)
+    // Add to end of bench queue
+    if (removed) {
+      const id = Number(removed.id)
+      benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+      benchQueue.value.push(removed)
+    }
     dirty.value = true
     autoSave()
   }
 }
 
-async function onDropBench() {
-  dragOverTarget.value = null
-  const sourceKey = dragSourceKey.value
-  const sourceIdx = dragSourceIndex.value
-  const id = draggedId.value
+// ── Role change confirmation handlers ──
+function confirmRoleChange() {
+  const pending = roleChangePending.value
+  if (!pending) return
 
-  if (!id || sourceKey === 'bench') return
+  const { signup, sourceKey, sourceIdx, targetKey, targetCol } = pending
 
-  // Update signup status to bench
-  try {
-    await signupsApi.updateSignup(props.guildId, props.eventId, id, { status: 'bench' })
-  } catch (err) {
-    console.error('Failed to move to bench', err)
-    uiStore.showToast('Failed to move to bench', 'error')
+  // Overflow check
+  const currentCount = lineup.value[targetKey].length
+  if (currentCount >= targetCol.slots) {
+    uiStore.showToast(`${targetCol.label} slots are full (${currentCount}/${targetCol.slots}). Remove someone first.`, 'error')
+    showRoleChangeModal.value = false
+    roleChangePending.value = null
     return
   }
 
-  // Remove from role column if applicable
-  if (sourceKey !== 'unassigned' && sourceIdx >= 0) {
+  // Remove from source column if coming from a role column
+  if (sourceKey !== 'bench' && sourceIdx >= 0) {
     lineup.value[sourceKey].splice(sourceIdx, 1)
+  }
+
+  // Remove from bench queue when placing in a role column
+  const id = Number(signup.id)
+  benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+
+  // Add to target (avoid duplicates)
+  if (!lineup.value[targetKey].find(s => Number(s.id) === id)) {
+    lineup.value[targetKey].push(signup)
+  }
+
+  dirty.value = true
+  autoSave()
+  showRoleChangeModal.value = false
+  roleChangePending.value = null
+}
+
+function cancelRoleChange() {
+  const pending = roleChangePending.value
+  if (pending) {
+    const { signup, sourceKey, sourceIdx, targetCol } = pending
+    // Move player to bench with the target role so they wait for that slot
+    if (sourceKey !== 'bench' && sourceIdx >= 0) {
+      lineup.value[sourceKey].splice(sourceIdx, 1)
+    }
+    // Update local role to the target role
+    signup.chosen_role = targetCol.role
+    const id = Number(signup.id)
+    benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+    benchQueue.value.push(signup)
     dirty.value = true
     autoSave()
-  } else {
-    // No lineup change needed, just trigger signups reload
-    emit('saved', { auto: true })
   }
+  showRoleChangeModal.value = false
+  roleChangePending.value = null
 }
 
 // ── Auto-save on DnD ──
@@ -352,6 +382,22 @@ let autoSaveTimer = null
 function autoSave() {
   clearTimeout(autoSaveTimer)
   autoSaveTimer = setTimeout(() => saveLineup(true), 300)
+}
+
+// ── Enforce slot limits: move excess players back to bench ──
+function enforceSlotLimits() {
+  let changed = false
+  for (const col of allColumns.value) {
+    if (col.slots > 0 && lineup.value[col.key].length > col.slots) {
+      // Trim excess from the end
+      lineup.value[col.key] = lineup.value[col.key].slice(0, col.slots)
+      changed = true
+    }
+  }
+  if (changed) {
+    dirty.value = true
+    autoSave()
+  }
 }
 
 // ── Data loading ──
@@ -365,34 +411,77 @@ async function loadLineup() {
     lineup.value.tanks      = data.tanks      ?? []
     lineup.value.healers    = data.healers    ?? []
     lineup.value.dps        = data.dps        ?? []
-    dirty.value = false
+    benchQueue.value        = data.bench_queue ?? []
+    lineupVersion.value     = data.version ?? null
+    enforceSlotLimits()
   } catch {
     autoPopulateFromSignups()
   }
 }
 
-onMounted(loadLineup)
+const { on: socketOn, off: socketOff } = useSocket()
+
+onMounted(() => {
+  loadLineup()
+  // Listen for real-time lineup changes from other clients
+  socketOn('lineup_changed', onLineupSocketUpdate)
+  // Fallback polling at a longer interval
+  startLineupPolling()
+})
+
+onUnmounted(() => {
+  socketOff('lineup_changed', onLineupSocketUpdate)
+  stopLineupPolling()
+  clearTimeout(autoSaveTimer)
+})
+
+function onLineupSocketUpdate(data) {
+  if (data?.event_id !== Number(props.eventId)) return
+  if (!dirty.value) loadLineup()
+}
+
+// ── Fallback lineup polling (longer interval, WebSocket is primary) ──
+const LINEUP_POLL_INTERVAL = 30_000
+let lineupPollTimer = null
+
+function startLineupPolling() {
+  stopLineupPolling()
+  lineupPollTimer = setInterval(() => {
+    if (!dirty.value) loadLineup()
+  }, LINEUP_POLL_INTERVAL)
+}
+
+function stopLineupPolling() {
+  if (lineupPollTimer) { clearInterval(lineupPollTimer); lineupPollTimer = null }
+}
 
 watch(
-  () => props.signups.map(s => `${s.id}:${s.status}:${s.chosen_role}`).join(','),
+  () => props.signups.map(s => `${s.id}:${s.lineup_status}:${s.chosen_role}`).join(','),
   () => {
     // Skip reload when there are unsaved DnD changes to avoid overwriting them
     if (!dirty.value) loadLineup()
   }
 )
 
+// After DnD auto-save completes, reload lineup to pick up any changes
+// that arrived via polling while dirty was true
+watch(dirty, (isDirty, wasDirty) => {
+  if (wasDirty && !isDirty) loadLineup()
+})
+
 function autoPopulateFromSignups() {
-  const going = props.signups.filter(s => s.status === 'going')
+  const going = props.signups.filter(s => s.lineup_status === 'going')
   lineup.value.main_tanks = going.filter(s => s.chosen_role === 'main_tank')
   lineup.value.off_tanks  = going.filter(s => s.chosen_role === 'off_tank')
   lineup.value.tanks      = going.filter(s => s.chosen_role === 'tank')
   lineup.value.healers    = going.filter(s => s.chosen_role === 'healer')
   lineup.value.dps        = going.filter(s => s.chosen_role === 'dps')
+  enforceSlotLimits()
 }
 
 // ── Computed helpers ──
 const activeSignups = computed(() =>
-  props.signups.filter(s => ['going', 'tentative', 'bench'].includes(s.status))
+  props.signups.filter(s => ['going', 'bench'].includes(s.lineup_status))
 )
 
 const assignedIds = computed(() => {
@@ -403,39 +492,152 @@ const assignedIds = computed(() => {
   return ids
 })
 
-const unassigned = computed(() =>
-  activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
-)
+// Emit lineup counts so CompositionSummary can reflect the Lineup Board
+const lineupCounts = computed(() => ({
+  main_tank: lineup.value.main_tanks.length,
+  off_tank:  lineup.value.off_tanks.length,
+  tank:      lineup.value.tanks.length,
+  healer:    lineup.value.healers.length,
+  dps:       lineup.value.dps.length,
+}))
 
-function availableFor(key) {
-  const col = allColumns.value.find(c => c.key === key)
-  if (!col) return unassigned.value
-  return unassigned.value.filter(s => s.chosen_role === col.role)
-}
+watch(lineupCounts, (counts) => {
+  emit('lineup-updated', counts)
+}, { deep: true, immediate: true })
+
+const bench = computed(() => {
+  const allUnassigned = activeSignups.value.filter(s => !assignedIds.value.has(Number(s.id)))
+  const unassignedMap = new Map(allUnassigned.map(s => [Number(s.id), s]))
+
+  // Start with bench queue order (use fresh signup data for display)
+  const ordered = []
+  for (const bq of benchQueue.value) {
+    const fresh = unassignedMap.get(Number(bq.id))
+    if (fresh) {
+      ordered.push(fresh)
+      unassignedMap.delete(Number(bq.id))
+    }
+  }
+
+  // Append any remaining unassigned players not yet in queue (new signups)
+  for (const s of unassignedMap.values()) {
+    ordered.push(s)
+  }
+
+  return ordered
+})
+
+/** Bench queue grouped by role with per-role queue positions. */
+const benchByRole = computed(() => {
+  const groups = {}
+  const counters = {} // per-role position counter
+  for (const s of bench.value) {
+    const role = s.chosen_role || 'dps'
+    if (!groups[role]) {
+      groups[role] = []
+      counters[role] = 0
+    }
+    counters[role]++
+    groups[role].push({ ...s, roleQueuePos: counters[role] })
+  }
+  // Return entries sorted by role label for consistent display
+  const roleOrder = ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
+  return roleOrder
+    .filter(r => groups[r])
+    .map(r => ({ role: r, label: ROLE_LABEL_MAP[r] || r, players: groups[r] }))
+})
+
+/** Visible bench queue: officers see full queue, members see only their own characters. */
+const visibleBenchByRole = computed(() => {
+  if (props.isOfficer) return benchByRole.value
+  const uid = props.currentUserId ? Number(props.currentUserId) : null
+  if (!uid) return benchByRole.value
+  return benchByRole.value
+    .map(group => ({
+      ...group,
+      players: group.players.filter(p => p.user_id === uid),
+    }))
+    .filter(group => group.players.length > 0)
+})
 
 function profString(s) {
   return (s.character?.metadata?.professions ?? []).map(p => p.name).join(', ')
 }
 
-function onSelectAssign(e, key) {
-  const found = unassigned.value.find(s => String(s.id) === e.target.value)
-  if (found) {
-    // Overflow protection: check if column is full
-    const col = allColumns.value.find(c => c.key === key)
-    if (col && lineup.value[key].length >= col.slots) {
-      uiStore.showToast(`${col.label} slots are full (${lineup.value[key].length}/${col.slots}). Remove someone first or choose a different role.`, 'error')
-      e.target.value = ''
-      return
+// ── Bench reorder drag-and-drop (officers only) ──
+
+function handleBenchItemDragOver(e, role, idx) {
+  // Allow drop between bench items for reordering
+  e.dataTransfer.dropEffect = 'move'
+}
+
+function onDropBenchItem(targetRole, targetIdx) {
+  dragOverTarget.value = null
+  const id = Number(draggedId.value)
+  if (!id) return
+
+  // Only handle reorder within bench
+  const found = findSignupById(id)
+  if (!found || found.key !== 'bench') return
+
+  const currentBench = [...bench.value]
+  const fromIdx = currentBench.findIndex(s => Number(s.id) === id)
+  if (fromIdx === -1) return
+
+  // Compute the target index in the flat bench array from the role + position
+  const flatTargetIdx = getFlatBenchIndex(targetRole, targetIdx)
+  if (flatTargetIdx === -1 || flatTargetIdx === fromIdx) return
+
+  // Move the item in the array
+  const [moved] = currentBench.splice(fromIdx, 1)
+  const insertIdx = flatTargetIdx > fromIdx ? flatTargetIdx - 1 : flatTargetIdx
+  currentBench.splice(insertIdx, 0, moved)
+
+  // Update benchQueue to match new order
+  benchQueue.value = currentBench.map(s => ({ id: s.id, chosen_role: s.chosen_role }))
+
+  // Save reorder to backend
+  saveBenchReorder(currentBench.map(s => Number(s.id)))
+}
+
+function getFlatBenchIndex(role, roleIdx) {
+  // Convert role + role-relative index to a flat bench array index
+  let flatIdx = 0
+  for (const s of bench.value) {
+    const sRole = s.chosen_role || 'dps'
+    if (sRole === role) {
+      if (roleIdx === 0) return flatIdx
+      roleIdx--
     }
-    lineup.value[key].push(found)
-    dirty.value = true
-    autoSave()
+    flatIdx++
   }
-  e.target.value = ''
+  return flatIdx
+}
+
+let benchReorderTimer = null
+async function saveBenchReorder(orderedIds) {
+  // Debounce bench reorder saves
+  clearTimeout(benchReorderTimer)
+  benchReorderTimer = setTimeout(async () => {
+    try {
+      const result = await lineupApi.reorderBench(props.guildId, props.eventId, orderedIds)
+      benchQueue.value = result.bench_queue ?? []
+      lineupVersion.value = result.version ?? null
+    } catch (err) {
+      console.error('Failed to save bench reorder', err)
+    }
+  }, 300)
 }
 
 function removeFromRole(key, index) {
+  const removed = lineup.value[key][index]
   lineup.value[key].splice(index, 1)
+  // Add to end of bench queue
+  if (removed) {
+    const id = Number(removed.id)
+    benchQueue.value = benchQueue.value.filter(s => Number(s.id) !== id)
+    benchQueue.value.push(removed)
+  }
   dirty.value = true
   autoSave()
 }
@@ -449,7 +651,9 @@ async function saveLineup(auto = false) {
       off_tanks:  lineup.value.off_tanks.map(s => s.id),
       tanks:      lineup.value.tanks.map(s => s.id),
       healers:    lineup.value.healers.map(s => s.id),
-      dps:        lineup.value.dps.map(s => s.id)
+      dps:        lineup.value.dps.map(s => s.id),
+      bench_queue: bench.value.map(s => ({ id: s.id, chosen_role: s.chosen_role })),
+      version:    lineupVersion.value,
     })
     // Update local state from server response
     lineup.value.main_tanks = result.main_tanks ?? []
@@ -457,12 +661,29 @@ async function saveLineup(auto = false) {
     lineup.value.tanks      = result.tanks      ?? []
     lineup.value.healers    = result.healers    ?? []
     lineup.value.dps        = result.dps        ?? []
+    benchQueue.value        = result.bench_queue ?? []
+    lineupVersion.value     = result.version ?? null
     dirty.value = false
     emit('saved', { auto })
   } catch (err) {
-    console.error('Failed to save lineup', err)
-    if (!auto) {
-      uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+    if (err?.response?.status === 409 && err?.response?.data?.error === 'lineup_conflict') {
+      // Another officer modified the lineup — apply their version and notify
+      const fresh = err.response.data.lineup
+      lineup.value.main_tanks = fresh.main_tanks ?? []
+      lineup.value.off_tanks  = fresh.off_tanks  ?? []
+      lineup.value.tanks      = fresh.tanks      ?? []
+      lineup.value.healers    = fresh.healers    ?? []
+      lineup.value.dps        = fresh.dps        ?? []
+      benchQueue.value        = fresh.bench_queue ?? []
+      lineupVersion.value     = fresh.version ?? null
+      dirty.value = false
+      uiStore.showToast('Lineup was updated by another officer. Your changes were reset.', 'warning')
+      emit('saved', { auto: true })
+    } else {
+      console.error('Failed to save lineup', err)
+      if (!auto) {
+        uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+      }
     }
   } finally {
     saving.value = false

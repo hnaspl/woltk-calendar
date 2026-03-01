@@ -10,6 +10,8 @@ from flask_login import current_user
 from app.services import event_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.realtime import emit_events_changed
+from app.utils import notify
 
 bp = Blueprint("events", __name__)
 
@@ -55,6 +57,8 @@ def create_event(guild_id: int):
         event = event_service.create_event(guild_id, current_user.id, data)
     except (ValueError, KeyError) as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_events_changed(guild_id)
+    notify.notify_event_created(event, guild_id)
     return jsonify(event.to_dict()), 201
 
 
@@ -83,6 +87,8 @@ def update_event(guild_id: int, event_id: int):
         event = event_service.update_event(event, data)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+    emit_events_changed(guild_id)
+    notify.notify_event_updated(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -96,6 +102,7 @@ def delete_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event_service.delete_event(event)
+    emit_events_changed(guild_id)
     return jsonify({"message": "Event deleted"}), 200
 
 
@@ -109,6 +116,8 @@ def lock_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.lock_event(event)
+    emit_events_changed(guild_id)
+    notify.notify_event_locked(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -122,6 +131,7 @@ def unlock_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.unlock_event(event)
+    emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200
 
 
@@ -135,6 +145,8 @@ def cancel_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.cancel_event(event)
+    emit_events_changed(guild_id)
+    notify.notify_event_cancelled(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -148,6 +160,8 @@ def complete_event(guild_id: int, event_id: int):
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
     event = event_service.complete_event(event)
+    emit_events_changed(guild_id)
+    notify.notify_event_completed(event)
     return jsonify(event.to_dict()), 200
 
 
@@ -165,6 +179,7 @@ def duplicate_event(guild_id: int, event_id: int):
     if data.get("starts_at_utc"):
         new_starts_at = datetime.fromisoformat(data["starts_at_utc"])
     new_event = event_service.duplicate_event(event, current_user.id, new_starts_at)
+    emit_events_changed(guild_id)
     return jsonify(new_event.to_dict()), 201
 
 
@@ -181,6 +196,7 @@ def list_all_events():
     guild_ids = guild_service.get_user_guild_ids(current_user.id)
     start = request.args.get("start")
     end = request.args.get("end")
+    include_signups = request.args.get("include_signup_count", "").lower() in ("1", "true")
     if start and end:
         try:
             start_dt = datetime.fromisoformat(start)
@@ -190,7 +206,7 @@ def list_all_events():
         events = event_service.list_events_for_guilds_by_range(guild_ids, start_dt, end_dt)
     else:
         events = event_service.list_events_for_guilds(guild_ids)
-    return jsonify([e.to_dict() for e in events]), 200
+    return jsonify([e.to_dict(include_signup_count=include_signups) for e in events]), 200
 
 
 @all_events_bp.get("/my-signups")
@@ -207,5 +223,29 @@ def list_my_signups():
             d["event_title"] = s.raid_event.title
             d["raid_type"] = s.raid_event.raid_type
             d["guild_id"] = s.raid_event.guild_id
+            d["event_status"] = s.raid_event.status
+            d["starts_at_utc"] = s.raid_event.starts_at_utc.isoformat() if s.raid_event.starts_at_utc else None
+        result.append(d)
+    return jsonify(result), 200
+
+
+@all_events_bp.get("/my-replacement-requests")
+@login_required
+def list_my_replacement_requests():
+    """Return all pending replacement requests for the current user across all guilds."""
+    from app.services import signup_service
+
+    requests = signup_service.get_pending_replacements_for_user(current_user.id)
+    result = []
+    for r in requests:
+        d = r.to_dict()
+        if r.signup and r.signup.raid_event is not None:
+            ev = r.signup.raid_event
+            d["event_title"] = ev.title
+            d["raid_type"] = ev.raid_type
+            d["guild_id"] = ev.guild_id
+            d["event_id"] = ev.id
+            d["event_status"] = ev.status
+            d["starts_at_utc"] = ev.starts_at_utc.isoformat() if ev.starts_at_utc else None
         result.append(d)
     return jsonify(result), 200

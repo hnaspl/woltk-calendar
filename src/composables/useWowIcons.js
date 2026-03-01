@@ -1,59 +1,75 @@
-// Local WoW icon imports — no external CDN dependencies
-import classicon_warrior from '@/assets/icons/wow/classicon_warrior.jpg.svg'
-import classicon_paladin from '@/assets/icons/wow/classicon_paladin.jpg.svg'
-import classicon_hunter from '@/assets/icons/wow/classicon_hunter.jpg.svg'
-import classicon_rogue from '@/assets/icons/wow/classicon_rogue.jpg.svg'
-import classicon_priest from '@/assets/icons/wow/classicon_priest.jpg.svg'
-import classicon_shaman from '@/assets/icons/wow/classicon_shaman.jpg.svg'
-import classicon_mage from '@/assets/icons/wow/classicon_mage.jpg.svg'
-import classicon_warlock from '@/assets/icons/wow/classicon_warlock.jpg.svg'
-import classicon_druid from '@/assets/icons/wow/classicon_druid.jpg.svg'
-import classicon_deathknight from '@/assets/icons/wow/classicon_deathknight.jpg.svg'
+// Real WoW icon imports — downloaded from Wowhead CDN (public game assets)
+import classicon_warrior from '@/assets/icons/wow/classicon_warrior.jpg'
+import classicon_paladin from '@/assets/icons/wow/classicon_paladin.jpg'
+import classicon_hunter from '@/assets/icons/wow/classicon_hunter.jpg'
+import classicon_rogue from '@/assets/icons/wow/classicon_rogue.jpg'
+import classicon_priest from '@/assets/icons/wow/classicon_priest.jpg'
+import classicon_shaman from '@/assets/icons/wow/classicon_shaman.jpg'
+import classicon_mage from '@/assets/icons/wow/classicon_mage.jpg'
+import classicon_warlock from '@/assets/icons/wow/classicon_warlock.jpg'
+import classicon_druid from '@/assets/icons/wow/classicon_druid.jpg'
+import classicon_deathknight from '@/assets/icons/wow/classicon_deathknight.jpg'
 
-import icon_tank from '@/assets/icons/wow/ability_warrior_defensivestance.jpg.svg'
-import icon_healer from '@/assets/icons/wow/spell_holy_flashheal.jpg.svg'
-import icon_dps from '@/assets/icons/wow/ability_dualwield.jpg.svg'
+import icon_tank from '@/assets/icons/wow/ability_warrior_defensivestance.jpg'
+import icon_healer from '@/assets/icons/wow/spell_holy_flashheal.jpg'
+import icon_dps from '@/assets/icons/wow/ability_dualwield.jpg'
 
-import raid_naxx from '@/assets/icons/wow/spell_shadow_shadesofdarkness.jpg.svg'
-import raid_os from '@/assets/icons/wow/inv_misc_head_dragon_black.jpg.svg'
-import raid_eoe from '@/assets/icons/wow/inv_misc_head_dragon_blue.jpg.svg'
-import raid_voa from '@/assets/icons/wow/achievement_bg_killxenemies_generalsroom_av.jpg.svg'
-import raid_ulduar from '@/assets/icons/wow/achievement_dungeon_ulduarraid_25man.jpg.svg'
-import raid_toc from '@/assets/icons/wow/achievement_dungeon_tocrraid_25man.jpg.svg'
-import raid_icc from '@/assets/icons/wow/achievement_dungeon_icecrown_25man.jpg.svg'
-import raid_rs from '@/assets/icons/wow/inv_misc_head_dragon_red.jpg.svg'
+import raid_naxx from '@/assets/icons/wow/spell_shadow_shadesofdarkness.jpg'
+import raid_os from '@/assets/icons/wow/inv_misc_head_dragon_black.jpg'
+import raid_eoe from '@/assets/icons/wow/inv_misc_head_dragon_blue.jpg'
+import raid_voa from '@/assets/icons/wow/achievement_bg_killxenemies_generalsroom.jpg'
+import raid_ulduar from '@/assets/icons/wow/achievement_dungeon_ulduarraid_misc_04.jpg'
+import raid_toc from '@/assets/icons/wow/achievement_reputation_argentcrusader.jpg'
+import raid_icc from '@/assets/icons/wow/achievement_dungeon_icecrown_frostmourne.jpg'
+import raid_rs from '@/assets/icons/wow/inv_misc_head_dragon_red.jpg'
 
-import icon_fallback from '@/assets/icons/wow/inv_misc_questionmark.jpg.svg'
+import icon_fallback from '@/assets/icons/wow/inv_misc_questionmark.jpg'
 
-import spec_arms from '@/assets/icons/wow/ability_warrior_savageblow.jpg.svg'
-import spec_fury from '@/assets/icons/wow/ability_warrior_innerrage.jpg.svg'
-import spec_holy_paladin from '@/assets/icons/wow/spell_holy_holybolt.jpg.svg'
-import spec_prot_paladin from '@/assets/icons/wow/ability_paladin_shieldofthetemplar.jpg.svg'
-import spec_retribution from '@/assets/icons/wow/spell_holy_auraoflight.jpg.svg'
-import spec_balance from '@/assets/icons/wow/spell_nature_starfall.jpg.svg'
-import spec_feral from '@/assets/icons/wow/ability_druid_catform.jpg.svg'
-import spec_resto_druid from '@/assets/icons/wow/spell_nature_healingtouch.jpg.svg'
-import spec_bm from '@/assets/icons/wow/ability_hunter_bestialdiscipline.jpg.svg'
-import spec_mm from '@/assets/icons/wow/ability_marksmanship.jpg.svg'
-import spec_survival from '@/assets/icons/wow/ability_hunter_camouflage.jpg.svg'
-import spec_arcane from '@/assets/icons/wow/spell_holy_magicalsentry.jpg.svg'
-import spec_fire from '@/assets/icons/wow/spell_fire_firebolt02.jpg.svg'
-import spec_frost_mage from '@/assets/icons/wow/spell_frost_frostbolt02.jpg.svg'
-import spec_affliction from '@/assets/icons/wow/spell_shadow_deathcoil.jpg.svg'
-import spec_demonology from '@/assets/icons/wow/spell_shadow_metamorphosis.jpg.svg'
-import spec_destruction from '@/assets/icons/wow/spell_shadow_rainoffire.jpg.svg'
-import spec_elemental from '@/assets/icons/wow/spell_nature_lightning.jpg.svg'
-import spec_enhancement from '@/assets/icons/wow/spell_shaman_improvedstormstrike.jpg.svg'
-import spec_resto_shaman from '@/assets/icons/wow/spell_nature_magicimmunity.jpg.svg'
-import spec_holy_priest from '@/assets/icons/wow/spell_holy_guardianspirit.jpg.svg'
-import spec_discipline from '@/assets/icons/wow/spell_holy_powerwordshield.jpg.svg'
-import spec_shadow from '@/assets/icons/wow/spell_shadow_shadowwordpain.jpg.svg'
-import spec_assassination from '@/assets/icons/wow/ability_rogue_eviscerate.jpg.svg'
-import spec_combat from '@/assets/icons/wow/ability_backstab.jpg.svg'
-import spec_subtlety from '@/assets/icons/wow/ability_stealth.jpg.svg'
-import spec_blood from '@/assets/icons/wow/spell_deathknight_bloodpresence.jpg.svg'
-import spec_frost_dk from '@/assets/icons/wow/spell_deathknight_frostpresence.jpg.svg'
-import spec_unholy from '@/assets/icons/wow/spell_deathknight_unholypresence.jpg.svg'
+// Profession icons
+import prof_alchemy from '@/assets/icons/wow/trade_alchemy.jpg'
+import prof_blacksmithing from '@/assets/icons/wow/trade_blacksmithing.jpg'
+import prof_enchanting from '@/assets/icons/wow/trade_engraving.jpg'
+import prof_engineering from '@/assets/icons/wow/trade_engineering.jpg'
+import prof_herbalism from '@/assets/icons/wow/trade_herbalism.jpg'
+import prof_jewelcrafting from '@/assets/icons/wow/inv_misc_gem_01.jpg'
+import prof_leatherworking from '@/assets/icons/wow/trade_leatherworking.jpg'
+import prof_mining from '@/assets/icons/wow/trade_mining.jpg'
+import prof_skinning from '@/assets/icons/wow/inv_misc_armorkit_17.jpg'
+import prof_tailoring from '@/assets/icons/wow/trade_tailoring.jpg'
+import prof_inscription from '@/assets/icons/wow/inv_misc_herb_07.jpg'
+import prof_cooking from '@/assets/icons/wow/inv_misc_food_15.jpg'
+import prof_first_aid from '@/assets/icons/wow/spell_holy_sealofsacrifice.jpg'
+import prof_fishing from '@/assets/icons/wow/spell_nature_thunderclap.jpg'
+
+import spec_arms from '@/assets/icons/wow/ability_warrior_savageblow.jpg'
+import spec_fury from '@/assets/icons/wow/ability_warrior_innerrage.jpg'
+import spec_holy_paladin from '@/assets/icons/wow/spell_holy_holybolt.jpg'
+import spec_prot_paladin from '@/assets/icons/wow/ability_paladin_shieldofthetemplar.jpg'
+import spec_retribution from '@/assets/icons/wow/spell_holy_auraoflight.jpg'
+import spec_balance from '@/assets/icons/wow/spell_nature_starfall.jpg'
+import spec_feral from '@/assets/icons/wow/ability_druid_catform.jpg'
+import spec_resto_druid from '@/assets/icons/wow/spell_nature_healingtouch.jpg'
+import spec_bm from '@/assets/icons/wow/ability_hunter_bestialdiscipline.jpg'
+import spec_mm from '@/assets/icons/wow/ability_marksmanship.jpg'
+import spec_survival from '@/assets/icons/wow/ability_hunter_camouflage.jpg'
+import spec_arcane from '@/assets/icons/wow/spell_holy_magicalsentry.jpg'
+import spec_fire from '@/assets/icons/wow/spell_fire_firebolt02.jpg'
+import spec_frost_mage from '@/assets/icons/wow/spell_frost_frostbolt02.jpg'
+import spec_affliction from '@/assets/icons/wow/spell_shadow_deathcoil.jpg'
+import spec_demonology from '@/assets/icons/wow/spell_shadow_metamorphosis.jpg'
+import spec_destruction from '@/assets/icons/wow/spell_shadow_rainoffire.jpg'
+import spec_elemental from '@/assets/icons/wow/spell_nature_lightning.jpg'
+import spec_enhancement from '@/assets/icons/wow/spell_shaman_improvedstormstrike.jpg'
+import spec_resto_shaman from '@/assets/icons/wow/spell_nature_magicimmunity.jpg'
+import spec_holy_priest from '@/assets/icons/wow/spell_holy_guardianspirit.jpg'
+import spec_discipline from '@/assets/icons/wow/spell_holy_powerwordshield.jpg'
+import spec_shadow from '@/assets/icons/wow/spell_shadow_shadowwordpain.jpg'
+import spec_assassination from '@/assets/icons/wow/ability_rogue_eviscerate.jpg'
+import spec_combat from '@/assets/icons/wow/ability_backstab.jpg'
+import spec_subtlety from '@/assets/icons/wow/ability_stealth.jpg'
+import spec_blood from '@/assets/icons/wow/spell_deathknight_bloodpresence.jpg'
+import spec_frost_dk from '@/assets/icons/wow/spell_deathknight_frostpresence.jpg'
+import spec_unholy from '@/assets/icons/wow/spell_deathknight_unholypresence.jpg'
 
 // WoW class icon mapping (handles both "death knight" and "death-knight" forms)
 const CLASS_ICONS = {
@@ -89,6 +105,23 @@ const RAID_ICONS = {
   toc:     raid_toc,
   icc:     raid_icc,
   rs:      raid_rs
+}
+
+const PROFESSION_ICONS = {
+  alchemy:        prof_alchemy,
+  blacksmithing:  prof_blacksmithing,
+  enchanting:     prof_enchanting,
+  engineering:    prof_engineering,
+  herbalism:      prof_herbalism,
+  jewelcrafting:  prof_jewelcrafting,
+  leatherworking: prof_leatherworking,
+  mining:         prof_mining,
+  skinning:       prof_skinning,
+  tailoring:      prof_tailoring,
+  inscription:    prof_inscription,
+  cooking:        prof_cooking,
+  'first aid':    prof_first_aid,
+  fishing:        prof_fishing,
 }
 
 // WoW class hex colors
@@ -129,42 +162,66 @@ export function useWowIcons() {
     return CLASS_COLORS[normalizeClass(className)] ?? '#8b8d91'
   }
 
-  function getSpecIcon(specName) {
+  function getSpecIcon(specName, className) {
     const specMap = {
+      // Warrior
       'arms':           spec_arms,
       'fury':           spec_fury,
-      'protection warrior': icon_tank,
-      'holy paladin':   spec_holy_paladin,
-      'protection paladin': spec_prot_paladin,
+      // Paladin
       'retribution':    spec_retribution,
+      // Druid
       'balance':        spec_balance,
       'feral':          spec_feral,
-      'restoration druid': spec_resto_druid,
+      'feral combat':   spec_feral,
+      // Hunter
       'beast mastery':  spec_bm,
       'marksmanship':   spec_mm,
       'survival':       spec_survival,
+      // Mage
       'arcane':         spec_arcane,
       'fire':           spec_fire,
-      'frost mage':     spec_frost_mage,
+      // Warlock
       'affliction':     spec_affliction,
       'demonology':     spec_demonology,
       'destruction':    spec_destruction,
+      // Shaman
       'elemental':      spec_elemental,
       'enhancement':    spec_enhancement,
-      'restoration shaman': spec_resto_shaman,
-      'holy priest':    spec_holy_priest,
+      // Priest
       'discipline':     spec_discipline,
       'shadow':         spec_shadow,
+      // Rogue
       'assassination':  spec_assassination,
       'combat':         spec_combat,
       'subtlety':       spec_subtlety,
+      // Death Knight
       'blood':          spec_blood,
-      'frost dk':       spec_frost_dk,
-      'unholy':         spec_unholy
+      'unholy':         spec_unholy,
     }
+
+    // Ambiguous specs — resolved by class context
+    const ambiguous = {
+      'frost':       { 'death knight': spec_frost_dk, _default: spec_frost_mage },
+      'holy':        { priest: spec_holy_priest, _default: spec_holy_paladin },
+      'protection':  { warrior: icon_tank, _default: spec_prot_paladin },
+      'restoration': { shaman: spec_resto_shaman, _default: spec_resto_druid },
+    }
+
     const key = specName?.toLowerCase().trim() ?? ''
-    return specMap[key] ?? icon_fallback
+    if (specMap[key]) return specMap[key]
+
+    const amb = ambiguous[key]
+    if (amb) {
+      const cls = className?.toLowerCase().trim() ?? ''
+      return amb[cls] ?? amb._default
+    }
+
+    return icon_fallback
   }
 
-  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS }
+  function getProfessionIcon(profName) {
+    return PROFESSION_ICONS[profName?.toLowerCase().trim()] ?? icon_fallback
+  }
+
+  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, getProfessionIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS, PROFESSION_ICONS }
 }

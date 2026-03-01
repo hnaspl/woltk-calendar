@@ -32,12 +32,14 @@ def create_notification(
     return notif
 
 
-def list_notifications(user_id: int) -> list[Notification]:
+def list_notifications(user_id: int, *, limit: int = 50, offset: int = 0) -> list[Notification]:
     return list(
         db.session.execute(
             sa.select(Notification)
             .where(Notification.user_id == user_id)
             .order_by(Notification.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         ).scalars().all()
     )
 
@@ -62,3 +64,34 @@ def mark_all_read(user_id: int) -> int:
 
 def get_notification(notification_id: int) -> Optional[Notification]:
     return db.session.get(Notification, notification_id)
+
+
+def unread_count(user_id: int) -> int:
+    """Return the number of unread notifications for a user."""
+    return db.session.execute(
+        sa.select(sa.func.count(Notification.id)).where(
+            Notification.user_id == user_id,
+            Notification.read_at.is_(None),
+        )
+    ).scalar_one()
+
+
+def delete_notification(notification_id: int, user_id: int) -> bool:
+    """Delete a single notification belonging to the user. Returns True if deleted."""
+    result = db.session.execute(
+        sa.delete(Notification).where(
+            Notification.id == notification_id,
+            Notification.user_id == user_id,
+        )
+    )
+    db.session.commit()
+    return result.rowcount > 0
+
+
+def delete_all_notifications(user_id: int) -> int:
+    """Delete all notifications for a user. Returns count of deleted rows."""
+    result = db.session.execute(
+        sa.delete(Notification).where(Notification.user_id == user_id)
+    )
+    db.session.commit()
+    return result.rowcount

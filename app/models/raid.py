@@ -212,9 +212,12 @@ class EventSeries(db.Model):
 
 class RaidEvent(db.Model):
     __tablename__ = "raid_events"
+    __table_args__ = (
+        sa.Index("ix_raid_events_guild_starts", "guild_id", "starts_at_utc"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
+    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
     series_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("event_series.id"), nullable=True
     )
@@ -228,6 +231,7 @@ class RaidEvent(db.Model):
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     starts_at_utc: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
     ends_at_utc: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     raid_size: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=25)
     difficulty: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="normal")
     status: Mapped[str] = mapped_column(
@@ -263,7 +267,7 @@ class RaidEvent(db.Model):
     signups = relationship("Signup", back_populates="raid_event", lazy="select", cascade="all, delete-orphan")
     lineup_slots = relationship("LineupSlot", back_populates="raid_event", lazy="select", cascade="all, delete-orphan")
 
-    def to_dict(self) -> dict:
+    def to_dict(self, include_signup_count: bool = False) -> dict:
         # Pull slot data from raid_definition if available
         rd = self.raid_definition
         tank_slots = rd.tank_slots if rd and rd.tank_slots is not None else 0
@@ -271,7 +275,7 @@ class RaidEvent(db.Model):
         off_tank_slots = rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1
         healer_slots = rd.healer_slots if rd and rd.healer_slots is not None else 5
         dps_slots = rd.dps_slots if rd and rd.dps_slots is not None else 18
-        return {
+        result = {
             "id": self.id,
             "guild_id": self.guild_id,
             "series_id": self.series_id,
@@ -281,6 +285,7 @@ class RaidEvent(db.Model):
             "realm_name": self.realm_name,
             "starts_at_utc": self.starts_at_utc.isoformat() if self.starts_at_utc else None,
             "ends_at_utc": self.ends_at_utc.isoformat() if self.ends_at_utc else None,
+            "duration_minutes": self.duration_minutes,
             "raid_size": self.raid_size,
             "difficulty": self.difficulty,
             "status": self.status,
@@ -297,6 +302,21 @@ class RaidEvent(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        if include_signup_count:
+            from app.models.signup import LineupSlot
+            signup_ids = [s.id for s in (self.signups or [])]
+            if signup_ids:
+                active_ids = set(
+                    db.session.execute(
+                        sa.select(LineupSlot.signup_id).where(
+                            LineupSlot.signup_id.in_(signup_ids)
+                        ).distinct()
+                    ).scalars().all()
+                )
+                result["signup_count"] = len(active_ids)
+            else:
+                result["signup_count"] = 0
+        return result
 
     def __repr__(self) -> str:
         return f"<RaidEvent id={self.id} title={self.title!r} status={self.status}>"

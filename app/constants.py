@@ -8,16 +8,16 @@ from app.enums import WowClass, Role
 # Class → available roles mapping
 # ---------------------------------------------------------------------------
 CLASS_ROLES: dict[WowClass, list[Role]] = {
-    WowClass.DEATH_KNIGHT: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
-    WowClass.DRUID: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
+    WowClass.DEATH_KNIGHT: [Role.MAIN_TANK, Role.OFF_TANK, Role.TANK],
+    WowClass.DRUID: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.TANK, Role.DPS],
     WowClass.HUNTER: [Role.DPS],
     WowClass.MAGE: [Role.DPS],
-    WowClass.PALADIN: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
+    WowClass.PALADIN: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.TANK],
     WowClass.PRIEST: [Role.HEALER, Role.DPS],
-    WowClass.ROGUE: [Role.DPS],
-    WowClass.SHAMAN: [Role.HEALER, Role.DPS],
+    WowClass.ROGUE: [Role.TANK],
+    WowClass.SHAMAN: [Role.HEALER, Role.TANK, Role.DPS],
     WowClass.WARLOCK: [Role.DPS],
-    WowClass.WARRIOR: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
+    WowClass.WARRIOR: [Role.MAIN_TANK, Role.OFF_TANK, Role.TANK],
 }
 
 # ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ CLASS_ROLES: dict[WowClass, list[Role]] = {
 # ---------------------------------------------------------------------------
 CLASS_SPECS: dict[WowClass, list[str]] = {
     WowClass.DEATH_KNIGHT: ["Blood", "Frost", "Unholy"],
-    WowClass.DRUID: ["Balance", "Feral", "Restoration"],
+    WowClass.DRUID: ["Balance", "Feral Combat", "Restoration"],
     WowClass.HUNTER: ["Beast Mastery", "Marksmanship", "Survival"],
     WowClass.MAGE: ["Arcane", "Fire", "Frost"],
     WowClass.PALADIN: ["Holy", "Protection", "Retribution"],
@@ -35,6 +35,35 @@ CLASS_SPECS: dict[WowClass, list[str]] = {
     WowClass.WARLOCK: ["Affliction", "Demonology", "Destruction"],
     WowClass.WARRIOR: ["Arms", "Fury", "Protection"],
 }
+
+# Build a lookup: (lower-case class name, lower-case tree name) → canonical spec name
+_SPEC_LOOKUP: dict[tuple[str, str], str] = {}
+for _cls, _specs in CLASS_SPECS.items():
+    for _sp in _specs:
+        _SPEC_LOOKUP[(_cls.value.lower(), _sp.lower())] = _sp
+
+
+def normalize_spec_name(
+    tree_name: str | None, class_name: str | None
+) -> str | None:
+    """Map a Warmane talent-tree name to the canonical CLASS_SPECS name.
+
+    Falls back to the original *tree_name* when no match is found.
+    Handles common Warmane quirks like "Feral" → "Feral Combat".
+    """
+    if not tree_name:
+        return tree_name
+    tree = tree_name.strip()
+    cls = (class_name or "").strip().lower()
+    # Exact match first
+    canonical = _SPEC_LOOKUP.get((cls, tree.lower()))
+    if canonical:
+        return canonical
+    # Prefix match (e.g. "Feral" matches "Feral Combat")
+    for (c, s), canon in _SPEC_LOOKUP.items():
+        if c == cls and canon.lower().startswith(tree.lower()):
+            return canon
+    return tree
 
 # ---------------------------------------------------------------------------
 # WotLK raid definitions (used for seed data)

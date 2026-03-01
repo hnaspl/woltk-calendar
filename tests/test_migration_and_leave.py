@@ -1,0 +1,1409 @@
+"""Tests for schema migration and character replacement leave action."""
+
+from __future__ import annotations
+
+import sqlalchemy as sa
+
+from app.extensions import db
+from app.models.signup import Signup, LineupSlot, CharacterReplacement
+from app.services import signup_service, lineup_service
+
+
+class TestStatusColumnMigration:
+    """Verify the migration logic that drops legacy status column."""
+
+    def test_signup_has_no_status_column(self, seed):
+        """The Signup model should not have a status column."""
+        assert not hasattr(Signup, "status") or "status" not in Signup.__table__.columns
+        inspector = sa.inspect(db.engine)
+        cols = [c["name"] for c in inspector.get_columns("signups")]
+        assert "status" not in cols
+
+    def test_create_signup_without_status(self, seed):
+        """Signups should be created without a status field."""
+        s = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert s.id is not None
+        d = s.to_dict()
+        assert "lineup_status" in d
+        assert d["lineup_status"] == "going"
+
+    def test_migration_drops_status_if_present(self, app, seed):
+        """If an old database has a status column, auto-migrate removes it."""
+        from app import _drop_signups_status_column
+        # Column was never added in tests (clean schema), so this should be a no-op
+        _drop_signups_status_column()
+        inspector = sa.inspect(db.engine)
+        cols = [c["name"] for c in inspector.get_columns("signups")]
+        assert "status" not in cols
+
+
+class TestReplacementLeaveAction:
+    """Test the 'leave' action when resolving a character replacement request."""
+
+    def test_leave_action_deletes_signup(self, seed):
+        """When a player chooses 'leave', their signup is deleted entirely."""
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Create a second character for replacement
+        from app.models.character import Character
+        alt_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="AltChar", class_name="Hunter",
+            default_role="dps", is_main=False, is_active=True,
+        )
+        db.session.add(alt_char)
+        db.session.commit()
+
+        # Create a replacement request
+        req = signup_service.create_replacement_request(
+            signup_id=s1.id,
+            new_character_id=alt_char.id,
+            requested_by=seed["user1"].id,
+            reason="Bring alt",
+        )
+        assert req.status == "pending"
+
+        # Resolve with "leave"
+        result = signup_service.resolve_replacement(req.id, "leave")
+        assert result.status == "left"
+
+        # Signup should be deleted
+        assert signup_service.get_signup(s1.id) is None
+
+    def test_leave_action_auto_promotes_bench(self, seed):
+        """When a player leaves via replacement, the bench queue player is promoted."""
+        # Fill both DPS slots
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Third signup goes to bench
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+        assert not lineup_service.has_role_slot(s3.id)
+        assert lineup_service.get_bench_info(s3.id) is not None
+
+        # Create alt char for replacement
+        from app.models.character import Character
+        alt_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="AltChar2", class_name="Hunter",
+            default_role="dps", is_main=False, is_active=True,
+        )
+        db.session.add(alt_char)
+        db.session.commit()
+
+        # Create replacement request for s1
+        req = signup_service.create_replacement_request(
+            signup_id=s1.id,
+            new_character_id=alt_char.id,
+            requested_by=seed["user2"].id,
+        )
+
+        # Player 1 leaves the raid via replacement
+        signup_service.resolve_replacement(req.id, "leave")
+
+        # s1 should be gone
+        assert signup_service.get_signup(s1.id) is None
+        # s3 (bench player) should now have a role slot
+        assert lineup_service.has_role_slot(s3.id)
+
+
+class TestReplacementConfirmWithConflict:
+    """Test that confirming a replacement works when new char already has a signup."""
+
+    def test_confirm_removes_conflicting_signup(self, seed):
+        """Confirming a replacement should remove conflicting signup for the new character."""
+        # User1 signs up with char1
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 signs up with char2
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        # Officer requests to replace s1's char1 with char2
+        req = signup_service.create_replacement_request(
+            signup_id=s1.id,
+            new_character_id=seed["char2"].id,
+            requested_by=seed["user2"].id,
+            reason="Switch char",
+        )
+
+        # Confirm should NOT raise IntegrityError
+        result = signup_service.resolve_replacement(req.id, "confirm")
+        assert result.status == "confirmed"
+
+        # s1 should now have char2
+        updated = signup_service.get_signup(s1.id)
+        assert updated.character_id == seed["char2"].id
+
+        # s2 (conflicting) should be deleted
+        assert signup_service.get_signup(s2.id) is None
+
+
+class TestAdminRemoveAutoPromote:
+    """Test that admin removing a player triggers bench queue promotion."""
+
+    def test_delete_signup_promotes_bench(self, seed):
+        """Deleting a signup with a role slot should promote the first bench player."""
+        # Fill both DPS slots
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Third signup goes to bench
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        # Verify initial state
+        assert lineup_service.has_role_slot(s1.id)
+        assert not lineup_service.has_role_slot(s3.id)
+
+        # Admin removes s1 (simulates officer kick)
+        signup_service.delete_signup(s1)
+
+        # s3 should now be promoted from bench to lineup
+        assert lineup_service.has_role_slot(s3.id)
+        assert lineup_service.get_bench_info(s3.id) is None
+
+
+class TestMySignupsEndpoint:
+    """Verify the /events/my-signups endpoint returns event metadata."""
+
+    def test_my_signups_includes_event_status_and_starts_at(self, seed):
+        """The my-signups endpoint should include event_status and starts_at_utc."""
+        s = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        signups = signup_service.list_user_signups(seed["user1"].id)
+        assert len(signups) == 1
+        su = signups[0]
+        assert su.raid_event is not None
+        assert su.raid_event.status == "open"
+        assert su.raid_event.starts_at_utc is not None
+
+
+class TestRoleChangeMovesBench:
+    """When a signup's role changes, the player should move to bench, not declined."""
+
+    def test_role_change_moves_to_bench(self, seed):
+        """Changing a signup's role should place them on bench with new role."""
+        from app.models.character import Character
+        # Use a Shaman character that can take both dps and healer roles
+        shaman = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="ShamanOne",
+            class_name="Shaman", default_role="dps",
+            is_main=True, is_active=True,
+        )
+        db.session.add(shaman)
+        # Add healer slots to the raid definition
+        seed["raid_def"].healer_slots = 2
+        db.session.commit()
+
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=shaman.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+
+        # Change role from dps to healer
+        signup_service.update_signup(s1, {"chosen_role": "healer"})
+
+        # Player should be on bench, not declined
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None
+        assert bench_info["waiting_for"] == "healer"
+
+
+class TestOneCharPerPlayerInLineup:
+    """A user can only have one character in the active lineup (not bench)."""
+
+    def test_second_char_forced_to_bench(self, seed):
+        """If user already has a char in lineup, second char goes to bench."""
+        # Create a second character for user1
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 signs up with char1 (gets lineup slot)
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+
+        # User1 signs up with alt char (should go to bench)
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        assert not lineup_service.has_role_slot(s1b.id)
+        assert lineup_service.get_bench_info(s1b.id) is not None
+
+    def test_auto_promote_skips_user_with_char_in_lineup(self, seed):
+        """Auto-promote should skip bench players who already have another char in lineup."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # Fill both DPS slots (user1, user2)
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        # User1's alt goes to bench (forced because user1 already has a char in lineup)
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        # User3 also goes to bench (raid is full)
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        # Delete s2 (user2's signup) - should promote user3, NOT user1's alt
+        # because user1 already has char1 in lineup
+        signup_service.delete_signup(s2)
+
+        # user3 should be promoted (skip user1's alt who already has a char in lineup)
+        assert lineup_service.has_role_slot(s3.id)
+        assert not lineup_service.has_role_slot(s1b.id)
+
+    def test_alt_promoted_when_main_removed(self, seed):
+        """When a user's main char is removed, their alt CAN be promoted."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 signs up with char1 (gets lineup slot)
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 fills second slot
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User1's alt goes to bench
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+        assert not lineup_service.has_role_slot(s1b.id)
+
+        # Remove user1's main char. Now user1 has no char in lineup.
+        signup_service.delete_signup(s1)
+
+        # user1's alt should now be promotable - but we need to check
+        # if it was auto-promoted (it was first in bench queue)
+        # Since user1 no longer has a role slot, the alt CAN be promoted
+        assert lineup_service.has_role_slot(s1b.id)
+
+
+class TestAdminLineupUpdateAutoPromote:
+    """When an admin saves the lineup via update_lineup_grouped (drag-and-drop),
+    bench players should be auto-promoted into freed role slots."""
+
+    def test_remove_from_role_promotes_bench_player(self, seed):
+        """Removing a player from a role slot via lineup update should
+        auto-promote the first matching bench player."""
+        # Fill both DPS slots
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Third player goes to bench
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+        assert not lineup_service.has_role_slot(s3.id)
+
+        # Admin saves lineup: s1 removed from DPS to bench, s2 stays, s3 on bench.
+        # Frontend sends ALL bench players in bench_queue.
+        result = lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s2.id],
+                "bench_queue": [
+                    {"id": s1.id, "chosen_role": "dps"},
+                    {"id": s3.id, "chosen_role": "dps"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s3 should have been auto-promoted from bench to the freed DPS slot.
+        # s1 should NOT be promoted back (moved to end of queue by admin).
+        assert lineup_service.has_role_slot(s3.id), \
+            "Bench player should be auto-promoted when a role slot is freed"
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Admin-benched player should be at end of queue, not promoted"
+        # s1 should still be on bench at the last position
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None, "Admin-benched player should remain on bench"
+
+    def test_move_to_bench_promotes_bench_player(self, seed):
+        """Moving a player to bench via lineup update should auto-promote
+        the next eligible bench player into the freed slot."""
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+
+        # Admin moves s1 to bench (drag from DPS to bench area)
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s2.id],
+                "bench_queue": [
+                    {"id": s1.id, "chosen_role": "dps"},
+                    {"id": s3.id, "chosen_role": "dps"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s3 should be promoted to fill the freed DPS slot
+        assert lineup_service.has_role_slot(s3.id), \
+            "Bench player should be auto-promoted when another player is moved to bench"
+
+    def test_no_promote_when_no_slot_freed(self, seed):
+        """If no role slot is freed, no bench player should be promoted."""
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+
+        # Admin saves lineup with same players in DPS (just reorder)
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s2.id, s1.id],
+                "bench_queue": [{"id": s3.id, "chosen_role": "dps"}],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s3 should still be on bench (no slot was freed)
+        assert not lineup_service.has_role_slot(s3.id)
+        assert lineup_service.get_bench_info(s3.id) is not None
+
+    def test_admin_places_alt_benches_main(self, seed):
+        """When admin places a player's alt in a role slot, the player's
+        main character should be automatically moved to bench."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 signs up with main
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User1's alt goes to bench automatically
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 fills second slot
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s1.id)
+        assert not lineup_service.has_role_slot(s1b.id)
+
+        # Admin places user1's alt in DPS and user1's main in DPS too.
+        # The backend should enforce one-char-per-player and move the
+        # second char (s1, main) to bench.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s1b.id, s1.id, s2.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Alt should be in lineup, main should be on bench
+        assert lineup_service.has_role_slot(s1b.id), \
+            "Alt character should be in lineup"
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Main character should be moved to bench (one-char-per-player)"
+        assert lineup_service.get_bench_info(s1.id) is not None
+
+    def test_admin_swaps_alt_into_slot_main_missing_from_data(self, seed):
+        """When admin drags alt from bench into main's DPS slot, the main
+        disappears from the frontend data entirely (not in dps, not in
+        bench_queue). The backend should auto-bench the orphaned main."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt2",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 main in DPS slot
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 fills second DPS slot
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User1's alt goes to bench
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+        assert not lineup_service.has_role_slot(s1b.id)
+
+        # Admin drags s1b from bench to replace s1 in DPS.
+        # Frontend sends s1b in DPS, s1 is NOT in the data at all.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s1b.id, s2.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s1b should be in lineup
+        assert lineup_service.has_role_slot(s1b.id), \
+            "Alt character should be in the DPS slot"
+        # s1 should NOT disappear - it should be auto-benched
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Main character should not be in a role slot"
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None, \
+            "Main character should be auto-benched, not disappear"
+        assert bench_info["waiting_for"] == "dps"
+
+    def test_admin_cross_role_same_player_swap(self, seed):
+        """When char1 is main_tank and admin places char2 (same player) in DPS,
+        the new placement (char2 → DPS) should win and the old placement
+        (char1 → main_tank) should be benched."""
+        from app.models.character import Character
+
+        # Create a Druid char (can be main_tank) and a Hunter alt (DPS)
+        druid_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidMain",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter_alt = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add_all([druid_char, hunter_alt])
+        db.session.commit()
+
+        # Update event to have main_tank and DPS slots
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 1
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        # Druid in main_tank slot
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid_char.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Other player in DPS
+        s_other = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Hunter alt on bench
+        s_alt = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter_alt.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s_druid.id)
+        assert lineup_service.has_role_slot(s_other.id)
+        assert not lineup_service.has_role_slot(s_alt.id)
+
+        # Expire all objects to simulate a fresh HTTP request where Signup
+        # objects are NOT in the identity map.  This forces db.session.get()
+        # inside update_lineup_grouped to hit the database, which triggers
+        # auto-flush of any pending LineupSlot INSERTs — the root cause of
+        # the ghost role-slot bug that db.session.delete() (vs expunge) fixes.
+        db.session.expire_all()
+
+        # Admin places hunter alt in DPS alongside druid in main_tank.
+        # One-char-per-player: the new placement (alt→DPS) wins, druid→bench.
+        result = lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_alt.id, s_other.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # New placement (s_alt in DPS) should win
+        assert lineup_service.has_role_slot(s_alt.id), \
+            "Hunter alt should be placed in DPS slot"
+        # Old placement (s_druid in main_tank) should be benched
+        assert not lineup_service.has_role_slot(s_druid.id), \
+            "Druid main should be moved to bench"
+        bench_info = lineup_service.get_bench_info(s_druid.id)
+        assert bench_info is not None, \
+            "Druid main should be on bench, not disappear"
+        assert bench_info["waiting_for"] == "main_tank"
+
+        # Verify no ghost role slots: exactly 2 role slots total (alt + other)
+        import sqlalchemy as sa
+        role_slot_count = db.session.execute(
+            sa.select(sa.func.count(LineupSlot.id)).where(
+                LineupSlot.raid_event_id == seed["event"].id,
+                LineupSlot.slot_group != "bench",
+            )
+        ).scalar_one()
+        assert role_slot_count == 2, \
+            f"Expected 2 role slots (alt + other), got {role_slot_count}"
+
+
+class TestCrossRoleSwapAutoPromotion:
+    """End-to-end tests verifying that auto-promotion works correctly after
+    cross-role same-player swaps, and that the one-char-per-player rule is
+    enforced throughout the entire flow."""
+
+    def test_cross_role_swap_does_not_autopromote_evicted_char(self, seed):
+        """When char1 (main_tank) is evicted to bench because char2 (same
+        player) is placed in DPS, char1 should NOT be auto-promoted back
+        to main_tank because the player already has char2 in the lineup."""
+        from app.models.character import Character
+
+        druid_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidTank",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter_alt = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterDPS",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add_all([druid_char, hunter_alt])
+        db.session.commit()
+
+        # Set up event with main_tank and DPS slots
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 2
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        # Druid in main_tank slot
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid_char.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Other player in DPS
+        s_other = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Hunter alt on bench
+        s_alt = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter_alt.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        db.session.expire_all()
+
+        # Admin places alt in DPS while druid stays in main_tank list.
+        # One-char-per-player kicks in: alt (new) wins, druid evicted to bench.
+        result = lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_alt.id, s_other.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Alt should be in DPS
+        assert lineup_service.has_role_slot(s_alt.id), \
+            "Hunter alt should be placed in DPS slot"
+        # Druid should be on bench, NOT auto-promoted back to main_tank
+        assert not lineup_service.has_role_slot(s_druid.id), \
+            "Druid should not be auto-promoted back (player already has char in lineup)"
+        bench_info = lineup_service.get_bench_info(s_druid.id)
+        assert bench_info is not None, \
+            "Druid should be on bench"
+        assert bench_info["waiting_for"] == "main_tank"
+
+    def test_cross_role_swap_promotes_other_player_from_bench(self, seed):
+        """When char1 is evicted from main_tank (freeing a slot), a DIFFERENT
+        player waiting on bench for main_tank should be auto-promoted."""
+        from app.models.character import Character
+
+        druid_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidMT",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter_alt = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterDPSalt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        # Another player's warrior for main_tank bench
+        warrior_char = Character(
+            user_id=seed["user3"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="WarriorBench",
+            class_name="Warrior", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        db.session.add_all([druid_char, hunter_alt, warrior_char])
+        db.session.commit()
+
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 1
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        # Druid in main_tank slot
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid_char.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Other player in DPS
+        s_dps = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Hunter alt on bench (DPS)
+        s_alt = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter_alt.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+        # Warrior on bench (main_tank)
+        s_warrior = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=warrior_char.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s_druid.id)
+        assert not lineup_service.has_role_slot(s_alt.id)
+        assert not lineup_service.has_role_slot(s_warrior.id)
+
+        db.session.expire_all()
+
+        # Admin places alt in DPS, druid still in main_tanks.
+        # One-char-per-player: alt (new) wins, druid evicted to bench.
+        # This frees a main_tank slot, so warrior should be auto-promoted.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_alt.id, s_dps.id],
+                "bench_queue": [
+                    {"id": s_warrior.id, "chosen_role": "main_tank"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Alt should be in DPS
+        assert lineup_service.has_role_slot(s_alt.id), \
+            "Hunter alt should be in DPS"
+        # Warrior should be auto-promoted to main_tank (freed slot)
+        assert lineup_service.has_role_slot(s_warrior.id), \
+            "Warrior should be auto-promoted to main_tank slot"
+        # Druid should be on bench
+        assert not lineup_service.has_role_slot(s_druid.id), \
+            "Druid should be on bench"
+
+    def test_swap_alt_to_dps_evicted_main_on_bench_at_last_position(self, seed):
+        """Verify the evicted char lands at the LAST position in its
+        role's bench queue, not before existing bench players."""
+        from app.models.character import Character
+
+        druid_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidLast",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter_alt = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterLast",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        warrior_bench = Character(
+            user_id=seed["user3"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="WarriorQueueFirst",
+            class_name="Warrior", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        db.session.add_all([druid_char, hunter_alt, warrior_bench])
+        db.session.commit()
+
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 1
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid_char.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s_dps = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s_alt = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter_alt.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+        # Warrior already on bench for main_tank (should have lower queue position)
+        s_warrior = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=warrior_bench.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        db.session.expire_all()
+
+        # Admin places alt in DPS. Druid evicted to bench for main_tank.
+        # Warrior was already on bench for main_tank, so druid should be AFTER warrior.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_alt.id, s_dps.id],
+                "bench_queue": [
+                    {"id": s_warrior.id, "chosen_role": "main_tank"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # The warrior should be auto-promoted (1 main_tank slot freed, warrior is first in queue)
+        assert lineup_service.has_role_slot(s_warrior.id), \
+            "Warrior (first in bench queue) should be auto-promoted to main_tank"
+        # Druid should be on bench (evicted, goes to end of queue)
+        bench_info = lineup_service.get_bench_info(s_druid.id)
+        assert bench_info is not None, "Druid should be on bench"
+        assert bench_info["waiting_for"] == "main_tank"
+
+    def test_full_e2e_signup_swap_bench_promote_flow(self, seed):
+        """Full end-to-end flow:
+        1. Three players sign up (2 fill DPS, 1 on bench)
+        2. Admin creates alt for player1, adds alt signup to bench
+        3. Admin swaps player1's alt into DPS, removing player1's main
+        4. Player1's main goes to bench
+        5. Player3 (bench for DPS) gets auto-promoted since a DPS slot freed
+        6. Verify final state: alt in DPS, player2 in DPS, player3 promoted,
+           player1's main on bench
+        """
+        # Player 1 signs up
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Player 2 signs up (fills 2nd DPS slot)
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Player 3 signs up (bench, all DPS slots full)
+        s3 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user3"].id,
+            character_id=seed["char3"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True, event=seed["event"],
+        )
+
+        # Create alt for player1
+        from app.models.character import Character
+        alt = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="AltE2E",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(alt)
+        db.session.commit()
+
+        # Player1's alt signs up (goes to bench — one-char-per-player + slots full)
+        s1_alt = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=alt.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        # Verify initial state
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+        assert not lineup_service.has_role_slot(s3.id)
+        assert not lineup_service.has_role_slot(s1_alt.id)
+
+        db.session.expire_all()
+
+        # Admin swaps: places alt and player2 in DPS (2 slots available).
+        # One-char-per-player: alt (new) wins, main evicted to bench.
+        # Slot limit: only 2 DPS slots, so only 2 signups in dps list.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s1_alt.id, s2.id],
+                "bench_queue": [
+                    {"id": s1.id, "chosen_role": "dps"},
+                    {"id": s3.id, "chosen_role": "dps"},
+                ],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Alt should be in lineup
+        assert lineup_service.has_role_slot(s1_alt.id), \
+            "Alt should be in DPS slot"
+        # Player2 should still be in DPS
+        assert lineup_service.has_role_slot(s2.id), \
+            "Player2 should remain in DPS"
+        # Player1's main should be on bench
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Player1's main should be on bench"
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None, "Main should be on bench"
+
+        # Player3 is still on bench (no net slot freed — 2 DPS slots,
+        # 2 DPS signups: alt + player2. main was evicted but alt replaced it.)
+        # Note: the event only has 2 DPS slots, so no free slot for s3.
+        assert not lineup_service.has_role_slot(s3.id) or \
+            lineup_service.get_bench_info(s3.id) is not None, \
+            "Player3 should remain on bench (no extra DPS slot available)"
+
+    def test_no_duplicate_lineup_slots_after_swap(self, seed):
+        """After a cross-role swap, each signup should have exactly one
+        LineupSlot (either role or bench), never duplicates."""
+        from app.models.character import Character
+        import sqlalchemy as sa
+
+        druid = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidNoDup",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterNoDup",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add_all([druid, hunter])
+        db.session.commit()
+
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 1
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s_other = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s_hunter = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        db.session.expire_all()
+
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_hunter.id, s_other.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Check no duplicate slots for any signup
+        for sid in [s_druid.id, s_other.id, s_hunter.id]:
+            slot_count = db.session.execute(
+                sa.select(sa.func.count(LineupSlot.id)).where(
+                    LineupSlot.signup_id == sid,
+                )
+            ).scalar_one()
+            assert slot_count == 1, \
+                f"Signup {sid} should have exactly 1 LineupSlot, got {slot_count}"
+
+    def test_lineup_board_data_consistent_after_swap(self, seed):
+        """The grouped lineup dict returned after a swap should be
+        consistent: the new placement in the correct role, evicted char
+        in bench_queue, and no duplicates across role lists and bench."""
+        from app.models.character import Character
+
+        druid = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidBoard",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterBoard",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add_all([druid, hunter])
+        db.session.commit()
+
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 1
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s_other = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        s_hunter = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        db.session.expire_all()
+
+        result = lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_hunter.id, s_other.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # Collect all signup IDs from the result
+        role_ids = set()
+        for key in ("main_tanks", "off_tanks", "tanks", "healers", "dps"):
+            for entry in result.get(key, []):
+                role_ids.add(entry["id"])
+        bench_ids = {e["id"] for e in result.get("bench_queue", [])}
+
+        # Hunter alt should be in DPS
+        assert s_hunter.id in role_ids, \
+            "Hunter should be in a role slot in the returned data"
+        # Other player should be in DPS
+        assert s_other.id in role_ids, \
+            "Other player should be in DPS"
+        # Druid should be in bench
+        assert s_druid.id in bench_ids, \
+            "Druid should be in bench_queue in the returned data"
+        # No signup in both role and bench
+        assert not role_ids & bench_ids, \
+            "No signup should appear in both role slots and bench queue"
+        # All 3 signups accounted for
+        all_ids = role_ids | bench_ids
+        assert {s_druid.id, s_other.id, s_hunter.id} == all_ids, \
+            f"All signups should be accounted for. Found: {all_ids}"

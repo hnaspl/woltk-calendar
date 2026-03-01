@@ -148,7 +148,7 @@ def generate_events_from_series(series: EventSeries, count: int = 4) -> list[Rai
             ends_at_utc=ends_at,
             raid_size=series.default_raid_size,
             difficulty=series.default_difficulty,
-            status="draft",
+            status="open",
             created_by=series.created_by,
         )
         db.session.add(event)
@@ -175,9 +175,9 @@ def _ensure_utc(dt):
 
 def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
     starts_at = _ensure_utc(data["starts_at_utc"])
+    duration = data.get("duration_minutes", 180)
     ends_at = data.get("ends_at_utc")
     if ends_at is None:
-        duration = data.get("duration_minutes", 180)
         ends_at = starts_at + timedelta(minutes=duration)
     elif isinstance(ends_at, str):
         ends_at = _ensure_utc(ends_at)
@@ -192,9 +192,10 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         realm_name=data["realm_name"],
         starts_at_utc=starts_at,
         ends_at_utc=ends_at,
+        duration_minutes=duration,
         raid_size=data.get("raid_size", 25),
         difficulty=data.get("difficulty", "normal"),
-        status=data.get("status", "draft"),
+        status=data.get("status", "open"),
         raid_type=data.get("raid_type"),
         instructions=data.get("instructions"),
     )
@@ -217,13 +218,17 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
     allowed = {
         "title", "realm_name", "starts_at_utc", "ends_at_utc", "raid_size",
         "difficulty", "status", "instructions", "raid_type", "close_signups_at",
-        "raid_definition_id",
+        "raid_definition_id", "duration_minutes",
     }
     for key, value in data.items():
         if key in allowed:
             if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
                 value = _ensure_utc(value)
             setattr(event, key, value)
+    # Recompute ends_at_utc from duration if duration was provided
+    if "duration_minutes" in data and event.starts_at_utc:
+        start_time = _ensure_utc(data["starts_at_utc"]) if "starts_at_utc" in data else _ensure_utc(event.starts_at_utc)
+        event.ends_at_utc = start_time + timedelta(minutes=event.duration_minutes)
     # Validate close_signups_at against starts_at_utc
     close_at = _ensure_utc(event.close_signups_at) if event.close_signups_at else None
     start_at = _ensure_utc(event.starts_at_utc) if event.starts_at_utc else None
@@ -267,8 +272,11 @@ def complete_event(event: RaidEvent) -> RaidEvent:
 def list_events(guild_id: int) -> list[RaidEvent]:
     return list(
         db.session.execute(
-            sa.select(RaidEvent).where(RaidEvent.guild_id == guild_id).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            sa.select(RaidEvent)
+            .where(RaidEvent.guild_id == guild_id)
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -280,8 +288,10 @@ def list_events_for_guilds(guild_ids: list[int]) -> list[RaidEvent]:
         db.session.execute(
             sa.select(RaidEvent).where(
                 RaidEvent.guild_id.in_(guild_ids)
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -297,8 +307,10 @@ def list_events_for_guilds_by_range(
                 RaidEvent.guild_id.in_(guild_ids),
                 RaidEvent.starts_at_utc >= start,
                 RaidEvent.starts_at_utc <= end,
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -310,8 +322,10 @@ def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[
                 RaidEvent.guild_id == guild_id,
                 RaidEvent.starts_at_utc >= start,
                 RaidEvent.starts_at_utc <= end,
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -330,7 +344,7 @@ def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[d
         ends_at_utc=starts_at + duration,
         raid_size=event.raid_size,
         difficulty=event.difficulty,
-        status="draft",
+        status="open",
         raid_type=event.raid_type,
         instructions=event.instructions,
         created_by=created_by,

@@ -8,7 +8,9 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.extensions import db
+from app.constants import normalize_spec_name
 from app.services import character_service, warmane_service
+from app.services.character_service import _default_role_for_class
 from app.utils.auth import login_required
 
 bp = Blueprint("warmane", __name__, url_prefix="/warmane")
@@ -86,14 +88,20 @@ def sync_character():
     updates = {"armory_url": char_data["armory_url"]}
     if char_data.get("class_name"):
         updates["class_name"] = char_data["class_name"]
+        # Auto-populate default_role from CLASS_ROLES if not already set
+        if not char.default_role:
+            default_role = _default_role_for_class(char_data["class_name"])
+            if default_role:
+                updates["default_role"] = default_role
     char = character_service.update_character(char, updates)
 
     # Update primary_spec from talents if available
     talents = char_data.get("talents", [])
+    cls_name = char.class_name
     if talents:
-        char.primary_spec = talents[0].get("tree")
+        char.primary_spec = normalize_spec_name(talents[0].get("tree"), cls_name)
         if len(talents) > 1:
-            char.secondary_spec = talents[1].get("tree")
+            char.secondary_spec = normalize_spec_name(talents[1].get("tree"), cls_name)
 
     # Store detailed data in metadata
     meta = char.char_metadata or {}

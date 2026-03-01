@@ -14,9 +14,13 @@ from app.extensions import db
 
 class Notification(db.Model):
     __tablename__ = "notifications"
+    __table_args__ = (
+        sa.Index("ix_notifications_user_read", "user_id", "read_at"),
+        sa.Index("ix_notifications_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     guild_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
     )
@@ -57,6 +61,9 @@ class Notification(db.Model):
 
 class JobQueue(db.Model):
     __tablename__ = "job_queue"
+    __table_args__ = (
+        sa.Index("ix_job_queue_status_available", "status", "available_at"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
     type: Mapped[str] = mapped_column(sa.String(80), nullable=False)
@@ -65,6 +72,7 @@ class JobQueue(db.Model):
         sa.Enum(JobStatus, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=JobStatus.QUEUED.value,
+        index=True,
     )
     available_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),

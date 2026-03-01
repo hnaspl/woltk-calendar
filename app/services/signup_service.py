@@ -6,30 +6,54 @@ from typing import Optional
 
 import sqlalchemy as sa
 
-from app.enums import SignupStatus
+from app.constants import CLASS_ROLES
 from app.extensions import db
-from app.models.signup import Signup
+from app.models.signup import Signup, RaidBan, CharacterReplacement
+from app.utils.class_roles import validate_class_role
 
 
-def _count_going(raid_event_id: int) -> int:
-    """Return the number of going signups for an event."""
+def _validate_class_role(character_id: int, chosen_role: str) -> None:
+    """Validate that the character's class is allowed to take the chosen role.
+
+    Raises ValueError if the role is not valid for the character's class.
+    """
+    from app.models.character import Character
+
+    character = db.session.get(Character, character_id)
+    if character is None or not character.class_name:
+        return  # Let other validation handle missing character
+    validate_class_role(character.class_name, chosen_role)
+
+
+def _count_assigned_slots(raid_event_id: int) -> int:
+    """Return the number of role lineup slots (excluding bench) for an event."""
+    from app.models.signup import LineupSlot
+
     return db.session.execute(
-        sa.select(sa.func.count(Signup.id)).where(
-            Signup.raid_event_id == raid_event_id,
-            Signup.status == SignupStatus.GOING.value,
+        sa.select(sa.func.count(LineupSlot.id)).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group != "bench",
         )
     ).scalar_one()
 
 
-def _count_going_by_role(raid_event_id: int, role: str) -> int:
-    """Return the number of going signups for a specific role in an event."""
-    return db.session.execute(
-        sa.select(sa.func.count(Signup.id)).where(
-            Signup.raid_event_id == raid_event_id,
-            Signup.status == SignupStatus.GOING.value,
-            Signup.chosen_role == role,
-        )
-    ).scalar_one()
+def _count_assigned_slots_by_role(
+    raid_event_id: int, role: str, *, lock: bool = False
+) -> int:
+    """Return the number of lineup slots assigned to a specific role.
+
+    When *lock* is True the matching rows are locked with SELECT … FOR UPDATE
+    so that concurrent transactions block until the current one commits.
+    """
+    from app.models.signup import LineupSlot
+
+    query = sa.select(sa.func.count(LineupSlot.id)).where(
+        LineupSlot.raid_event_id == raid_event_id,
+        LineupSlot.slot_group == role,
+    )
+    if lock:
+        query = query.with_for_update()
+    return db.session.execute(query).scalar_one()
 
 
 def _get_role_slots(event) -> dict:
@@ -44,6 +68,24 @@ def _get_role_slots(event) -> dict:
     }
 
 
+def _user_has_role_slot(raid_event_id: int, user_id: int, exclude_signup_id: int | None = None) -> bool:
+    """Return True if the user already has a character in a role slot (not bench)."""
+    from app.models.signup import LineupSlot
+
+    query = (
+        sa.select(sa.func.count(LineupSlot.id))
+        .join(Signup, Signup.id == LineupSlot.signup_id)
+        .where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group != "bench",
+            Signup.user_id == user_id,
+        )
+    )
+    if exclude_signup_id is not None:
+        query = query.where(Signup.id != exclude_signup_id)
+    return db.session.execute(query).scalar_one() > 0
+
+
 class RoleFullError(Exception):
     """Raised when a role's slots are all filled."""
     def __init__(self, role: str, role_slots: dict, message: str | None = None):
@@ -52,32 +94,109 @@ class RoleFullError(Exception):
         super().__init__(message or f"All {role} slots are full")
 
 
-def _auto_promote_bench(raid_event_id: int, role: str) -> None:
-    """Promote the first matching benched signup to 'going'.
+def get_role_counts(raid_event_id: int, roles: dict) -> dict:
+    """Return the current assigned slot counts for each role in *roles*."""
+    return {
+        role: _count_assigned_slots_by_role(raid_event_id, role) for role in roles
+    }
 
-    Preference order: mains before alts, then earliest created_at.
-    Also auto-assigns the promoted player to the lineup board.
+
+def _auto_promote_bench(
+    raid_event_id: int,
+    role: str,
+    exclude_signup_ids: set[int] | None = None,
+) -> None:
+    """Promote the first matching bench queue player to a role slot.
+
+    Uses bench queue order (slot_index) when bench lineup slots exist,
+    falling back to mains-first then earliest created_at.
+    Skips players who already have another character in the active lineup.
+    Skips signups whose IDs are in *exclude_signup_ids* (e.g. just-declined
+    or admin-benched signups that should not be re-promoted).
+    Emits real-time events so all clients see the promotion instantly.
     """
     from app.models.character import Character
+    from app.models.signup import LineupSlot
     from app.services import lineup_service
+    from app.utils.realtime import emit_signups_changed, emit_lineup_changed
 
-    # Find benched signups for this role, prefer mains, then oldest
-    benched = db.session.execute(
+    if exclude_signup_ids is None:
+        exclude_signup_ids = set()
+
+    # First: check bench queue (explicit queue order via LineupSlots)
+    bench_slots = db.session.execute(
+        sa.select(LineupSlot)
+        .join(Signup, Signup.id == LineupSlot.signup_id)
+        .where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.slot_group == "bench",
+            Signup.chosen_role == role,
+        )
+        .order_by(LineupSlot.slot_index.asc())
+    ).scalars().all()
+
+    for bench_slot in bench_slots:
+        benched = bench_slot.signup
+        if benched.id in exclude_signup_ids:
+            continue
+        # Skip if this player already has another character in a role slot
+        if _user_has_role_slot(raid_event_id, benched.user_id, exclude_signup_id=benched.id):
+            continue
+        db.session.delete(bench_slot)
+        db.session.commit()
+        lineup_service.auto_assign_slot(benched)
+        # Notify the promoted player and emit real-time updates
+        _notify_bench_promotion(benched)
+        emit_signups_changed(raid_event_id)
+        emit_lineup_changed(raid_event_id)
+        return
+
+    # Fallback: no bench queue slots, use created_at ordering
+    # (only consider signups not already in a lineup slot)
+    existing_slot_ids = set(
+        db.session.execute(
+            sa.select(LineupSlot.signup_id).where(
+                LineupSlot.raid_event_id == raid_event_id,
+            )
+        ).scalars().all()
+    )
+
+    candidates = db.session.execute(
         sa.select(Signup)
         .join(Character, Character.id == Signup.character_id)
         .where(
             Signup.raid_event_id == raid_event_id,
             Signup.chosen_role == role,
-            Signup.status == SignupStatus.BENCH.value,
         )
         .order_by(Character.is_main.desc(), Signup.created_at.asc())
-        .limit(1)
-    ).scalar_one_or_none()
+    ).scalars().all()
 
-    if benched is not None:
-        benched.status = SignupStatus.GOING.value
-        db.session.commit()
-        lineup_service.auto_assign_slot(benched)
+    for candidate in candidates:
+        if candidate.id in exclude_signup_ids:
+            continue
+        if candidate.id not in existing_slot_ids:
+            # Skip if this player already has another character in a role slot
+            if _user_has_role_slot(raid_event_id, candidate.user_id, exclude_signup_id=candidate.id):
+                continue
+            db.session.commit()
+            lineup_service.auto_assign_slot(candidate)
+            # Notify the promoted player and emit real-time updates
+            _notify_bench_promotion(candidate)
+            emit_signups_changed(raid_event_id)
+            emit_lineup_changed(raid_event_id)
+            return
+
+
+def _notify_bench_promotion(signup) -> None:
+    """Send a bench-promotion notification (best-effort, never raises)."""
+    try:
+        from app.utils.notify import notify_signup_promoted
+        from app.services import event_service
+        event = event_service.get_event(signup.raid_event_id)
+        if event:
+            notify_signup_promoted(signup, event)
+    except Exception:
+        pass
 
 
 def create_signup(
@@ -98,26 +217,36 @@ def create_signup(
     """
     from app.services import lineup_service
 
-    # Check role-specific slot limits
+    # Check if character is permanently banned from this event
+    ban = get_ban(raid_event_id, character_id)
+    if ban is not None:
+        raise ValueError("This character has been permanently kicked from this raid. Contact a raid officer to appeal.")
+
+    # Validate class-role constraint
+    _validate_class_role(character_id, chosen_role)
+
+    # Check role-specific slot limits (with row-level locking to prevent race
+    # conditions when two players sign up for the last slot simultaneously).
     if event is not None:
         role_slots = _get_role_slots(event)
         max_for_role = role_slots.get(chosen_role, 0)
-        current_for_role = _count_going_by_role(raid_event_id, chosen_role)
+        current_for_role = _count_assigned_slots_by_role(
+            raid_event_id, chosen_role, lock=True
+        )
         if max_for_role == 0 and not force_bench:
             raise RoleFullError(chosen_role, role_slots,
                                 f"No {chosen_role} slots are defined for this raid")
         if current_for_role >= max_for_role and not force_bench:
             raise RoleFullError(chosen_role, role_slots)
 
-    going_count = _count_going(raid_event_id)
+    assigned_count = _count_assigned_slots(raid_event_id)
 
-    if force_bench:
-        # User explicitly chose to go to bench for a full role
-        status = SignupStatus.BENCH.value
-    else:
-        status = (
-            SignupStatus.BENCH.value if going_count >= raid_size else SignupStatus.GOING.value
-        )
+    should_bench = force_bench or assigned_count >= raid_size
+
+    # A player can only have one character in the active lineup at a time.
+    # If they already have another character in a role slot, force bench.
+    if not should_bench and _user_has_role_slot(raid_event_id, user_id):
+        should_bench = True
 
     signup = Signup(
         raid_event_id=raid_event_id,
@@ -125,15 +254,16 @@ def create_signup(
         character_id=character_id,
         chosen_role=chosen_role,
         chosen_spec=chosen_spec,
-        status=status,
         note=note,
     )
     db.session.add(signup)
     db.session.commit()
 
-    # Auto-assign to lineup board if going
-    if status == SignupStatus.GOING.value:
+    # Auto-assign to lineup board if going, or add to bench queue if benched
+    if not should_bench:
         lineup_service.auto_assign_slot(signup)
+    else:
+        lineup_service.add_to_bench_queue(signup)
 
     return signup
 
@@ -143,25 +273,29 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 
 def update_signup(signup: Signup, data: dict) -> Signup:
-    """Update a signup.  When a going player changes to a non-going status,
-    their lineup slot is removed and the first matching bench player is
-    auto-promoted to fill the vacancy."""
+    """Update a signup.  When the role changes the player is removed from
+    their current lineup slot and placed on the bench queue."""
     from app.services import lineup_service
 
-    old_status = signup.status
     old_role = signup.chosen_role
 
-    allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
+    # Validate class-role constraint when role is changing
+    new_role_val = data.get("chosen_role")
+    if new_role_val and new_role_val != old_role:
+        _validate_class_role(signup.character_id, new_role_val)
+
+    allowed = {"chosen_spec", "chosen_role", "note", "gear_score_note"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)
     db.session.commit()
 
-    # Auto-promote from bench when a going player leaves
-    new_status = signup.status
-    if old_status == SignupStatus.GOING.value and new_status != SignupStatus.GOING.value:
+    new_role = signup.chosen_role
+
+    # When role changes, remove from old lineup slot and add to bench
+    if old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
-        _auto_promote_bench(signup.raid_event_id, old_role)
+        lineup_service.add_to_bench_queue(signup)
 
     return signup
 
@@ -172,7 +306,8 @@ def delete_signup(signup: Signup) -> None:
 
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
-    was_going = signup.status == SignupStatus.GOING.value
+    # Check if the player had a role lineup slot (not bench queue)
+    had_role_slot = lineup_service.has_role_slot(signup.id)
 
     # Remove lineup slot first (before deleting signup)
     lineup_service.remove_slot_for_signup(signup.id)
@@ -180,24 +315,26 @@ def delete_signup(signup: Signup) -> None:
     db.session.delete(signup)
     db.session.commit()
 
-    if was_going:
+    if had_role_slot:
         _auto_promote_bench(raid_event_id, role)
 
 
 def decline_signup(signup: Signup) -> Signup:
-    """Decline a signup and auto-promote a benched player if applicable."""
+    """Decline a signup and clean up lineup/bench slots."""
     from app.services import lineup_service
 
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
-    was_going = signup.status == SignupStatus.GOING.value
+    had_role_slot = lineup_service.has_role_slot(signup.id)
 
-    signup.status = SignupStatus.DECLINED.value
-    db.session.commit()
+    # Always remove lineup/bench queue slots
+    lineup_service.remove_slot_for_signup(signup.id)
 
-    if was_going:
-        lineup_service.remove_slot_for_signup(signup.id)
-        _auto_promote_bench(raid_event_id, role)
+    # Auto-promote only when a role slot is freed.
+    # Exclude the just-declined signup so it doesn't get re-promoted
+    # by the fallback path (which picks up signups without a LineupSlot).
+    if had_role_slot:
+        _auto_promote_bench(raid_event_id, role, exclude_signup_ids={signup.id})
 
     return signup
 
@@ -223,3 +360,230 @@ def list_user_signups(user_id: int, event_ids: list[int] | None = None) -> list[
     if event_ids is not None:
         query = query.where(Signup.raid_event_id.in_(event_ids))
     return list(db.session.execute(query).scalars().unique().all())
+
+
+# ---------------------------------------------------------------------------
+# Raid bans
+# ---------------------------------------------------------------------------
+
+def get_ban(raid_event_id: int, character_id: int) -> RaidBan | None:
+    """Check if a character is permanently banned from an event."""
+    return db.session.execute(
+        sa.select(RaidBan).where(
+            RaidBan.raid_event_id == raid_event_id,
+            RaidBan.character_id == character_id,
+        )
+    ).scalar_one_or_none()
+
+
+def list_bans(raid_event_id: int) -> list[RaidBan]:
+    """List all bans for a raid event."""
+    return list(
+        db.session.execute(
+            sa.select(RaidBan)
+            .where(RaidBan.raid_event_id == raid_event_id)
+            .options(sa.orm.joinedload(RaidBan.character))
+        ).scalars().unique().all()
+    )
+
+
+def create_ban(
+    raid_event_id: int,
+    character_id: int,
+    banned_by: int,
+    reason: str | None = None,
+) -> RaidBan:
+    """Create a permanent ban for a character on a raid event."""
+    ban = RaidBan(
+        raid_event_id=raid_event_id,
+        character_id=character_id,
+        banned_by=banned_by,
+        reason=reason,
+    )
+    db.session.add(ban)
+    db.session.commit()
+    return ban
+
+
+def remove_ban(raid_event_id: int, character_id: int) -> bool:
+    """Remove a ban. Returns True if a ban was removed."""
+    ban = get_ban(raid_event_id, character_id)
+    if ban is None:
+        return False
+    db.session.delete(ban)
+    db.session.commit()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Character replacement requests
+# ---------------------------------------------------------------------------
+
+def create_replacement_request(
+    signup_id: int,
+    new_character_id: int,
+    requested_by: int,
+    reason: str | None = None,
+) -> CharacterReplacement:
+    """Create a pending character replacement request."""
+    from datetime import datetime, timezone
+
+    signup = get_signup(signup_id)
+    if signup is None:
+        raise ValueError("Signup not found")
+
+    # Cancel any existing pending requests for this signup
+    existing = db.session.execute(
+        sa.select(CharacterReplacement).where(
+            CharacterReplacement.signup_id == signup_id,
+            CharacterReplacement.status == "pending",
+        )
+    ).scalars().all()
+    for old_req in existing:
+        old_req.status = "cancelled"
+        old_req.resolved_at = datetime.now(timezone.utc)
+
+    req = CharacterReplacement(
+        signup_id=signup_id,
+        old_character_id=signup.character_id,
+        new_character_id=new_character_id,
+        requested_by=requested_by,
+        reason=reason,
+        status="pending",
+    )
+    db.session.add(req)
+    db.session.commit()
+    return req
+
+
+def get_pending_replacement(signup_id: int) -> CharacterReplacement | None:
+    """Get the pending replacement request for a signup, if any."""
+    return db.session.execute(
+        sa.select(CharacterReplacement)
+        .where(
+            CharacterReplacement.signup_id == signup_id,
+            CharacterReplacement.status == "pending",
+        )
+        .options(
+            sa.orm.joinedload(CharacterReplacement.old_character),
+            sa.orm.joinedload(CharacterReplacement.new_character),
+            sa.orm.joinedload(CharacterReplacement.requester),
+        )
+    ).scalar_one_or_none()
+
+
+def get_pending_replacements_for_user(user_id: int) -> list[CharacterReplacement]:
+    """Get all pending replacement requests for signups owned by a user."""
+    return list(
+        db.session.execute(
+            sa.select(CharacterReplacement)
+            .join(Signup, Signup.id == CharacterReplacement.signup_id)
+            .where(
+                Signup.user_id == user_id,
+                CharacterReplacement.status == "pending",
+            )
+            .options(
+                sa.orm.joinedload(CharacterReplacement.old_character),
+                sa.orm.joinedload(CharacterReplacement.new_character),
+                sa.orm.joinedload(CharacterReplacement.requester),
+                sa.orm.joinedload(CharacterReplacement.signup)
+                    .joinedload(Signup.raid_event),
+            )
+        ).scalars().unique().all()
+    )
+
+
+def resolve_replacement(
+    replacement_id: int,
+    action: str,
+) -> CharacterReplacement:
+    """Resolve a character replacement request.
+
+    action: 'confirm', 'decline', or 'leave'
+    - confirm: swap the character on the signup and lineup slots
+    - decline: reject the replacement request, keep current character
+    - leave: player leaves the raid entirely; auto-promotes from bench
+    """
+    from datetime import datetime, timezone
+
+    req = db.session.get(CharacterReplacement, replacement_id)
+    if req is None:
+        raise ValueError("Replacement request not found")
+    if req.status != "pending":
+        raise ValueError("This replacement request is no longer pending")
+
+    if action == "confirm":
+        signup = get_signup(req.signup_id)
+        if signup is None:
+            raise ValueError("Signup no longer exists")
+        # Check if the new character already has a signup for this event
+        from app.models.signup import LineupSlot
+        from app.services import lineup_service
+        conflicting = db.session.execute(
+            sa.select(Signup).where(
+                Signup.raid_event_id == signup.raid_event_id,
+                Signup.character_id == req.new_character_id,
+                Signup.id != signup.id,
+            )
+        ).scalars().first()
+        if conflicting is not None:
+            # Remove the conflicting signup's lineup slots and delete it
+            lineup_service.remove_slot_for_signup(conflicting.id)
+            db.session.delete(conflicting)
+            db.session.flush()
+        # Use no_autoflush to prevent premature flush while we update
+        # both the signup and its lineup slots atomically
+        with db.session.no_autoflush:
+            signup.character_id = req.new_character_id
+            slots = db.session.execute(
+                sa.select(LineupSlot).where(LineupSlot.signup_id == signup.id)
+            ).scalars().all()
+            for slot in slots:
+                slot.character_id = req.new_character_id
+        req.status = "confirmed"
+    elif action == "decline":
+        req.status = "declined"
+    elif action == "leave":
+        req.status = "left"
+        signup = get_signup(req.signup_id)
+        if signup is not None:
+            req.resolved_at = datetime.now(timezone.utc)
+            # Clean up all replacement requests for this signup before deletion
+            all_reqs = db.session.execute(
+                sa.select(CharacterReplacement).where(
+                    CharacterReplacement.signup_id == signup.id,
+                )
+            ).scalars().all()
+            for r in all_reqs:
+                if r.status == "pending":
+                    r.status = "cancelled"
+                    r.resolved_at = datetime.now(timezone.utc)
+                db.session.delete(r)
+            db.session.flush()
+            # Delete the signup (triggers auto-promote from bench)
+            delete_signup(signup)
+            return req
+    else:
+        raise ValueError(f"Invalid action: {action}")
+
+    req.resolved_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return req
+
+
+def list_user_characters_for_event(user_id: int, guild_id: int) -> list:
+    """Return all active characters for a user within a guild.
+
+    Used by officers to see which characters a player has available
+    for character replacement.
+    """
+    from app.models.character import Character
+    return list(
+        db.session.execute(
+            sa.select(Character).where(
+                Character.user_id == user_id,
+                Character.guild_id == guild_id,
+                Character.is_active.is_(True),
+            )
+        ).scalars().all()
+    )

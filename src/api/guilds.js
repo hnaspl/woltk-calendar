@@ -25,3 +25,6 @@ export const updateMemberRole = (guildId, userId, role) =>
 
 export const removeMember = (guildId, userId) =>
   api.delete(`/guilds/${guildId}/members/${userId}`)
+
+export const getMemberCharacters = (guildId, userId) =>
+  api.get(`/guilds/${guildId}/members/${userId}/characters`)
