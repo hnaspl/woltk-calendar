@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h, watch } from 'vue'
+import { ref, computed, h, watch, onMounted } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import MembersTab from '@/components/admin/MembersTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
@@ -78,7 +78,8 @@ async function fetchRoles() {
     allRoles.value = []
   }
 }
-fetchRoles()
+
+onMounted(fetchRoles)
 
 const currentRoleDisplay = computed(() => {
   const roleName = permissions.role.value
