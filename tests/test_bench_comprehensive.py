@@ -8,20 +8,26 @@ Test Matrix
    c. RoleFullError raised when slot full and force_bench=False
    d. Bench player has correct status + LineupSlot in bench group
 
-2. Auto-promote on delete
+2. Auto-promote on delete (officer or player removes a signup)
    a. Delete going player → bench player promoted to going
    b. Promoted player gets LineupSlot in correct role group
    c. Promoted player's bench LineupSlot is removed
    d. No promotion when bench is empty
    e. No promotion when deleted player was on bench (no role slot freed)
 
-3. Auto-promote on decline (dedicated endpoint)
-   a. Decline going player → bench player promoted
-   b. Declined player's status is 'declined'
-   c. Declined player has no LineupSlot
+3. Auto-promote on player opt-out (player voluntarily declines attendance)
+   - "Decline" = a player (or officer) marks a signup as "I won't attend"
+     via the dedicated POST /signups/<id>/decline endpoint.
+     This is the graceful opt-out that keeps the lineup full by
+     auto-promoting the first matching bench player.
+   a. Player opts out of going slot → bench player auto-promoted
+   b. Opted-out player's status becomes 'declined'
+   c. Opted-out player has no LineupSlot (fully removed from lineup)
 
-4. Auto-promote on update_signup(status='declined')
-   a. Same behavior as dedicated decline endpoint
+4. Auto-promote when signup status is changed to 'declined' via update
+   - Same behavior as the dedicated opt-out endpoint (section 3),
+     but triggered through update_signup(status='declined').
+   a. Same auto-promote behavior as dedicated opt-out endpoint
 
 5. Slot counting is decoupled from status
    a. Manually changing status does NOT affect slot counts
@@ -40,9 +46,11 @@ Test Matrix
    b. Invalid class-role combo rejected on update
    c. Valid class-role combo accepted
 
-9. Default role auto-population
-   a. Character created without default_role gets one from CLASS_ROLES
-   b. Explicit default_role is preserved
+9. Default role auto-population (from CLASS_ROLES constraints)
+   - Every character must have a default_role auto-populated from its
+     class constraints (CLASS_ROLES) so there are no unselected roles.
+   a. Character created without default_role gets first role from CLASS_ROLES
+   b. Explicit default_role is preserved (not overwritten)
 
 10. Real-time emit verification
     a. emit_signups_changed called after auto-promote
@@ -108,7 +116,13 @@ def _make_raid(db, guild, creator, *, dps_slots=2, healer_slots=0,
 
 
 def _make_user_and_char(db, guild, name, class_name="Hunter"):
-    """Create a user + character for testing."""
+    """Create a user + character for testing.
+
+    default_role is auto-populated from CLASS_ROLES so every character
+    always has a valid role assigned (matches production behavior).
+    """
+    from app.services.character_service import _default_role_for_class
+
     u = User(username=name, email=f"{name}@test.com",
              password_hash="x", is_active=True)
     db.session.add(u)
@@ -116,6 +130,7 @@ def _make_user_and_char(db, guild, name, class_name="Hunter"):
     c = Character(
         user_id=u.id, guild_id=guild.id, realm_name="Icecrown",
         name=f"Char_{name}", class_name=class_name,
+        default_role=_default_role_for_class(class_name),
         is_main=True, is_active=True,
     )
     db.session.add(c)
@@ -260,14 +275,26 @@ class TestAutoPromoteOnDelete:
 
 
 # ===========================================================================
-# 3. Auto-promote on decline (dedicated endpoint)
+# 3. Auto-promote on player opt-out (POST /signups/<id>/decline)
+#    "Decline" means: a player voluntarily opts out of a raid signup.
+#    This can also be triggered by an officer on behalf of a player.
+#    When the opted-out player had a role slot, the first matching
+#    bench player is auto-promoted to fill the freed slot.
 # ===========================================================================
 
 class TestAutoPromoteOnDecline:
-    """Verify bench promotion when decline_signup() is used."""
+    """Verify bench promotion when a player opts out via decline_signup().
+
+    The decline flow:
+    1. Player (or officer) calls POST /signups/<id>/decline
+    2. The signup status is set to 'declined' (player won't attend)
+    3. All LineupSlots (role + bench) for that signup are removed
+    4. If the player had a role slot, the first bench player for that
+       role is automatically promoted to 'going'
+    """
 
     def test_decline_promotes_bench(self, seed, db):
-        """3a: Decline going player → bench player promoted."""
+        """3a: Player opts out of going slot → bench player auto-promoted."""
         ev = seed["event"]
         s1 = _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
@@ -282,7 +309,7 @@ class TestAutoPromoteOnDecline:
         assert lineup_service.has_role_slot(s3.id) is True
 
     def test_declined_player_status(self, seed, db):
-        """3b: Declined player has status='declined'."""
+        """3b: Opted-out player's status becomes 'declined'."""
         ev = seed["event"]
         s1 = _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
@@ -295,7 +322,7 @@ class TestAutoPromoteOnDecline:
         assert s1.status == SignupStatus.DECLINED.value
 
     def test_declined_player_no_lineup_slot(self, seed, db):
-        """3c: Declined player has no LineupSlot at all."""
+        """3c: Opted-out player has no LineupSlot at all (fully removed)."""
         ev = seed["event"]
         s1 = _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
@@ -312,11 +339,14 @@ class TestAutoPromoteOnDecline:
 
 
 # ===========================================================================
-# 4. Auto-promote on update_signup(status='declined')
+# 4. Auto-promote when signup status changed to 'declined' via update
+#    Same as section 3 but triggered through update_signup(status='declined')
+#    instead of the dedicated opt-out endpoint.
 # ===========================================================================
 
 class TestAutoPromoteOnUpdateDeclined:
-    """Verify that update_signup with status='declined' also triggers promote."""
+    """Verify that update_signup(status='declined') triggers the same
+    auto-promote behavior as the dedicated opt-out endpoint (section 3)."""
 
     def test_update_declined_promotes_bench(self, seed, db):
         """4a: update_signup(status='declined') triggers auto-promote."""
@@ -504,14 +534,22 @@ class TestClassRoleValidation:
 
 
 # ===========================================================================
-# 9. Default role auto-population
+# 9. Default role auto-population (from CLASS_ROLES constraints)
+#    Every character must have a default_role auto-populated from its
+#    class constraints so there are no unselected roles in the UI.
+#    This is enforced both in character_service.create_character() and
+#    in the frontend CharacterManagerView (CLASS_ROLES filtering).
 # ===========================================================================
 
 class TestDefaultRoleAutoPopulation:
-    """Character creation auto-populates default_role."""
+    """Character creation auto-populates default_role from CLASS_ROLES.
+
+    This ensures every character always has a valid role assigned,
+    preventing broken signups and empty role selectors in the UI.
+    """
 
     def test_auto_default_role(self, seed, db):
-        """9a: Character without explicit role gets one from CLASS_ROLES."""
+        """9a: Character without explicit role gets first role from CLASS_ROLES."""
         char = character_service.create_character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             data={"realm_name": "Icecrown", "name": "AutoRogue",

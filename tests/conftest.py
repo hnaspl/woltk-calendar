@@ -62,17 +62,22 @@ def seed(db, ctx):
     db.session.flush()
 
     # Characters: all Hunters (allowed role: dps only)
+    # default_role is auto-populated from CLASS_ROLES so every character
+    # always has a valid role assigned (matches production behavior).
     char1 = Character(
         user_id=user1.id, guild_id=guild.id, realm_name="Icecrown",
-        name="HunterOne", class_name="Hunter", is_main=True, is_active=True,
+        name="HunterOne", class_name="Hunter", default_role="dps",
+        is_main=True, is_active=True,
     )
     char2 = Character(
         user_id=user2.id, guild_id=guild.id, realm_name="Icecrown",
-        name="HunterTwo", class_name="Hunter", is_main=True, is_active=True,
+        name="HunterTwo", class_name="Hunter", default_role="dps",
+        is_main=True, is_active=True,
     )
     char3 = Character(
         user_id=user3.id, guild_id=guild.id, realm_name="Icecrown",
-        name="HunterThree", class_name="Hunter", is_main=False, is_active=True,
+        name="HunterThree", class_name="Hunter", default_role="dps",
+        is_main=False, is_active=True,
     )
     db.session.add_all([char1, char2, char3])
     db.session.flush()
