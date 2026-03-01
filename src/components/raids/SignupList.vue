@@ -89,21 +89,21 @@
             <!-- Normal display -->
             <div
               v-else
-              class="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
+              class="flex items-start gap-3 px-4 py-3 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
             >
               <!-- Class icon -->
               <img
                 v-if="signup.character?.class_name"
                 :src="getClassIcon(signup.character.class_name)"
                 :alt="signup.character.class_name"
-                class="w-7 h-7 rounded border border-border-default flex-shrink-0 mt-0.5"
+                class="w-8 h-8 rounded border border-border-default flex-shrink-0 mt-0.5"
               />
-              <div class="w-7 h-7 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
+              <div class="w-8 h-8 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
-                <!-- Row 1: Name + Level + Achievements + View Details -->
-                <div class="flex items-center gap-1.5 flex-wrap">
+                <!-- Row 1: Name + Level + Achievements -->
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-sm font-semibold text-text-primary truncate">
                     {{ signup.character?.name ?? 'Unknown' }}
                   </span>
@@ -115,14 +115,9 @@
                     class="text-[10px] text-amber-400"
                     title="Achievement Points"
                   >🏆 {{ charAchievements(signup) }}</span>
-                  <button
-                    class="text-[10px] text-text-muted hover:text-accent-gold transition-colors ml-auto flex-shrink-0"
-                    :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
-                    @click.stop="openCharacterModal(signup.character)"
-                  >View Details</button>
                 </div>
                 <!-- Row 2: Class / Role / Spec badges -->
-                <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
                   <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
                   <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
                   <template v-if="signup.chosen_spec">
@@ -130,7 +125,7 @@
                   </template>
                 </div>
                 <!-- Row 3: Professions with icons -->
-                <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
+                <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   <span
                     v-for="prof in charProfessions(signup)"
                     :key="prof.name"
@@ -141,33 +136,41 @@
                   </span>
                 </div>
                 <!-- Gear score note -->
-                <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-1">
+                <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-1.5">
                   ⚔️ GS: {{ signup.gear_score_note }}
                 </div>
                 <!-- Note -->
-                <div v-if="signup.note" class="text-[10px] text-text-muted mt-1 italic truncate" :title="signup.note">
+                <div v-if="signup.note" class="text-[10px] text-text-muted mt-1.5 italic truncate" :title="signup.note">
                   📝 {{ signup.note }}
                 </div>
                 <!-- Bench queue position -->
-                <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-1 flex items-center gap-1">
+                <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-1.5 flex items-center gap-1">
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
                     ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
                   </span>
                 </div>
-                <!-- Officer action buttons -->
-                <div v-if="isOfficer" class="flex items-center gap-1.5 mt-1.5" @click.stop>
+                <!-- Action row: View Details button + Officer actions -->
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
                   <button
-                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
-                    @click="startEdit(signup)"
-                  >Edit</button>
-                  <button
-                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
-                    @click="startReplaceCharacter(signup)"
-                  >Replace</button>
-                  <button
-                    class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
-                    @click="removeSignup(signup)"
-                  >Remove</button>
+                    class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded border border-border-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold transition-colors"
+                    :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
+                    @click.stop="openCharacterModal(signup.character)"
+                  >🔍 View Details</button>
+                  <!-- Officer action buttons -->
+                  <template v-if="isOfficer">
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
+                      @click.stop="startEdit(signup)"
+                    >Edit</button>
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
+                      @click.stop="startReplaceCharacter(signup)"
+                    >Replace</button>
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
+                      @click.stop="removeSignup(signup)"
+                    >Remove</button>
+                  </template>
                 </div>
               </div>
             </div>

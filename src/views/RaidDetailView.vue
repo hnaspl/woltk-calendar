@@ -46,7 +46,7 @@
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📝</span>
                   <span>
-                    <strong class="text-text-primary">Signups:</strong>
+                    <strong class="text-text-primary">Signups:</strong>{{ ' ' }}
                     <template v-if="event.status === 'locked' || event.is_locked">
                       <span class="text-red-400 font-medium">Closed</span>
                     </template>
@@ -59,7 +59,7 @@
                     <template v-else>
                       <span class="text-green-400 font-medium">Open</span>
                     </template>
-                    <span class="ml-1 text-text-muted">({{ signups.length }} signed up)</span>
+                    <span class="ml-1 text-text-muted"> ({{ signups.length }} signed up)</span>
                   </span>
                 </div>
                 <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
@@ -92,9 +92,9 @@
           </div>
         </WowCard>
 
-        <!-- Main content grid -->
+        <!-- Signup form + My Signups + Composition row -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Left column: signup form + composition -->
+          <!-- Left column: signup form + my signups -->
           <div class="space-y-6">
             <SignupForm
               v-if="event.status === 'open' || event.status === 'draft'"
@@ -189,6 +189,10 @@
                 + Add another character
               </button>
             </WowCard>
+          </div>
+
+          <!-- Right columns: composition summary -->
+          <div class="lg:col-span-2">
             <CompositionSummary
               :lineup-counts="lineupCounts"
               :max-size="event.raid_size ?? event.size"
@@ -199,35 +203,35 @@
               :dps-slots="event.dps_slots ?? 18"
             />
           </div>
+        </div>
 
-          <!-- Right columns: signup list + lineup -->
-          <div class="lg:col-span-2 space-y-6">
-            <SignupList
-              :signups="signups"
-              :is-officer="permissions.isOfficer.value"
-              :guild-id="guildId"
-              :event-id="event.id"
-              :available-roles="availableRoles"
-              @signup-updated="onSignupUpdated"
-              @signup-removed="onSignupRemoved"
-              @signup-error="msg => uiStore.showToast(msg, 'error')"
-            />
+        <!-- Lineup Board + Signups side by side (full width) -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <LineupBoard
+            :signups="signups"
+            :event-id="event.id"
+            :guild-id="guildId"
+            :is-officer="permissions.isOfficer.value"
+            :current-user-id="authStore.user?.id"
+            :tank-slots="event.tank_slots ?? 0"
+            :main-tank-slots="event.main_tank_slots ?? 1"
+            :off-tank-slots="event.off_tank_slots ?? 1"
+            :healer-slots="event.healer_slots ?? 5"
+            :dps-slots="event.dps_slots ?? 18"
+            @saved="onLineupSaved"
+            @lineup-updated="onLineupUpdated"
+          />
 
-            <LineupBoard
-              :signups="signups"
-              :event-id="event.id"
-              :guild-id="guildId"
-              :is-officer="permissions.isOfficer.value"
-              :current-user-id="authStore.user?.id"
-              :tank-slots="event.tank_slots ?? 0"
-              :main-tank-slots="event.main_tank_slots ?? 1"
-              :off-tank-slots="event.off_tank_slots ?? 1"
-              :healer-slots="event.healer_slots ?? 5"
-              :dps-slots="event.dps_slots ?? 18"
-              @saved="onLineupSaved"
-              @lineup-updated="onLineupUpdated"
-            />
-          </div>
+          <SignupList
+            :signups="signups"
+            :is-officer="permissions.isOfficer.value"
+            :guild-id="guildId"
+            :event-id="event.id"
+            :available-roles="availableRoles"
+            @signup-updated="onSignupUpdated"
+            @signup-removed="onSignupRemoved"
+            @signup-error="msg => uiStore.showToast(msg, 'error')"
+          />
         </div>
       </template>
     </div>

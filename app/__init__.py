@@ -198,13 +198,13 @@ def _auto_migrate(app: Flask) -> None:
     """
     try:
         _drop_signups_status_column()
-    except Exception:
-        app.logger.debug("Auto-migration: signups.status column already removed or not present.")
+    except Exception as exc:
+        app.logger.debug("Auto-migration: signups.status column already removed or not present: %s", exc)
 
     try:
         _add_duration_columns()
-    except Exception:
-        app.logger.debug("Auto-migration: duration columns already present or migration skipped.")
+    except Exception as exc:
+        app.logger.warning("Auto-migration: failed to add duration columns: %s", exc)
 
 
 def _drop_signups_status_column() -> None:
