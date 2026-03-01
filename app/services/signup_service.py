@@ -497,12 +497,9 @@ def resolve_replacement(
                 if r.status == "pending":
                     r.status = "cancelled"
                     r.resolved_at = datetime.now(timezone.utc)
-            db.session.commit()
-            # Now delete the signup (triggers auto-promote from bench)
-            # First delete all replacement records referencing this signup
-            for r in all_reqs:
                 db.session.delete(r)
             db.session.flush()
+            # Delete the signup (triggers auto-promote from bench)
             delete_signup(signup)
             return req
     else:
