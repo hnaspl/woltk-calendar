@@ -31,6 +31,19 @@
           </select>
           <p class="text-[10px] text-text-muted mt-1">All raid times will be displayed in this timezone by default.</p>
         </div>
+        <div>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              v-model="form.wowhead_tooltips"
+              class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold accent-amber-500"
+            />
+            <div>
+              <span class="text-sm text-text-primary">Enable Wowhead Tooltips</span>
+              <p class="text-[10px] text-text-muted mt-0.5">When enabled, hovering equipment items shows rich tooltips with full item statistics from Wowhead. When disabled, basic item info is shown inline.</p>
+            </div>
+          </label>
+        </div>
         <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
         <WowButton type="submit" :loading="saving">Save Changes</WowButton>
       </form>
@@ -108,7 +121,7 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const saveError = ref(null)
-const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
+const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw', wowhead_tooltips: true })
 const warmaneRealms = WARMANE_REALMS
 const isWarmaneSource = ref(false)
 
@@ -134,7 +147,7 @@ async function loadGuildData() {
   try {
     const g = guildStore.currentGuild
     if (g) {
-      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
+      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw', wowhead_tooltips: g.wowhead_tooltips !== false })
       isWarmaneSource.value = !!g.warmane_source
     }
   } catch {
@@ -161,6 +174,7 @@ async function saveGuild() {
       name: form.name,
       realm_name: form.realm,
       timezone: form.timezone,
+      wowhead_tooltips: form.wowhead_tooltips,
     })
     guildStore.currentGuild = updated
     uiStore.showToast('Guild settings saved', 'success')

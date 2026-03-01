@@ -61,7 +61,7 @@ def get_guild(guild_id: int) -> Optional[Guild]:
 
 
 def update_guild(guild: Guild, data: dict) -> Guild:
-    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "timezone"}
+    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "timezone", "wowhead_tooltips"}
     for key, value in data.items():
         if key in allowed:
             # Prevent changing realm on Warmane-sourced guilds

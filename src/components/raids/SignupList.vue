@@ -188,6 +188,7 @@
   <CharacterDetailModal
     v-model="showCharacterModal"
     :character="characterModalTarget"
+    :use-wowhead="guildWowheadEnabled"
   />
 
   <!-- Remove confirmation modal (officer only) -->
@@ -280,10 +281,14 @@ import SpecBadge from '@/components/common/SpecBadge.vue'
 import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useGuildStore } from '@/stores/guild'
 import * as signupsApi from '@/api/signups'
 import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
 
 const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
+
+const guildStore = useGuildStore()
+const guildWowheadEnabled = computed(() => guildStore.currentGuild?.wowhead_tooltips !== false)
 
 const props = defineProps({
   signups: { type: Array, default: () => [] },

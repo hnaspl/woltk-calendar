@@ -215,6 +215,7 @@
     <CharacterDetailModal
       v-model="showCharDetailModal"
       :character="charDetailTarget"
+      :use-wowhead="guildStore.currentGuild?.wowhead_tooltips !== false"
     />
   </div>
 </template>

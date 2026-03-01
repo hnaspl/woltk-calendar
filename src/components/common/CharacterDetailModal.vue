@@ -168,43 +168,71 @@
                 Equipment ({{ equipment.length }} items)
               </div>
               <div class="space-y-0.5" ref="equipmentContainer">
-                <div
-                  v-for="(item, i) in equipment"
-                  :key="i"
-                  class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors"
-                >
-                  <!-- WoW-themed slot icon -->
-                  <div
-                    class="w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
-                    :class="slotIconClasses(item)"
+                <!-- Wowhead mode: entire row is a link for tooltip on hover -->
+                <template v-if="useWowhead">
+                  <a
+                    v-for="(item, i) in equipment"
+                    :key="i"
+                    :href="item.item ? `https://www.wowhead.com/wotlk/item=${item.item}` : undefined"
+                    :data-wowhead="item.item ? `item=${item.item}&domain=wotlk` : undefined"
+                    target="_blank"
+                    class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
+                    @click.stop
                   >
-                    <svg v-if="EQUIP_SLOTS[i]?.svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path :d="EQUIP_SLOTS[i].svg" />
-                    </svg>
-                    <span v-else>{{ EQUIP_SLOTS[i]?.abbr ?? '?' }}</span>
-                  </div>
-                  <!-- Item link with Wowhead tooltip -->
-                  <div class="flex-1 min-w-0">
-                    <a
-                      v-if="item.item"
-                      :href="`https://www.wowhead.com/wotlk/item=${item.item}`"
-                      target="_blank"
-                      class="text-[12px] font-medium truncate block wowhead-item-link"
-                      :class="itemQualityText(item)"
-                      :data-wowhead="`item=${item.item}&domain=wotlk`"
-                      @click.stop
-                    >{{ item.name }}</a>
-                    <span v-else class="text-[12px] font-medium truncate block text-text-primary">{{ item.name }}</span>
-                    <div class="text-[10px] text-text-muted flex items-center gap-1.5">
-                      <span>{{ equipSlotLabel(i) }}</span>
-                      <span v-if="item.enchant" class="text-green-400">✦ Enchanted</span>
-                      <span v-if="item.gems?.length" class="text-blue-400">◆ {{ item.gems.length }} gem{{ item.gems.length > 1 ? 's' : '' }}</span>
+                    <!-- WoW-themed slot icon -->
+                    <div
+                      class="w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
+                      :class="slotIconClasses(item)"
+                    >
+                      <svg v-if="EQUIP_SLOTS[i]?.svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path :d="EQUIP_SLOTS[i].svg" />
+                      </svg>
+                      <span v-else>{{ EQUIP_SLOTS[i]?.abbr ?? '?' }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <span
+                        class="text-[12px] font-medium truncate block"
+                        :class="itemQualityText(item)"
+                      >{{ item.name }}</span>
+                      <div class="text-[10px] text-text-muted flex items-center gap-1.5">
+                        <span>{{ equipSlotLabel(i) }}</span>
+                        <span v-if="item.enchant" class="text-green-400">✦ Enchanted</span>
+                        <span v-if="item.gems?.length" class="text-blue-400">◆ {{ item.gems.length }} gem{{ item.gems.length > 1 ? 's' : '' }}</span>
+                      </div>
+                    </div>
+                  </a>
+                </template>
+                <!-- Basic mode: show inline stats without Wowhead -->
+                <template v-else>
+                  <div
+                    v-for="(item, i) in equipment"
+                    :key="i"
+                    class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors"
+                  >
+                    <!-- WoW-themed slot icon -->
+                    <div
+                      class="w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
+                      :class="slotIconClasses(item)"
+                    >
+                      <svg v-if="EQUIP_SLOTS[i]?.svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path :d="EQUIP_SLOTS[i].svg" />
+                      </svg>
+                      <span v-else>{{ EQUIP_SLOTS[i]?.abbr ?? '?' }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <span
+                        class="text-[12px] font-medium truncate block"
+                        :class="itemQualityText(item)"
+                      >{{ item.name }}</span>
+                      <div class="text-[10px] text-text-muted flex items-center gap-1.5">
+                        <span>{{ equipSlotLabel(i) }}</span>
+                        <span v-if="item.quality != null" class="capitalize" :class="itemQualityText(item)">{{ qualityLabel(item.quality) }}</span>
+                        <span v-if="item.enchant" class="text-green-400">✦ {{ item.enchant }}</span>
+                        <span v-if="item.gems?.length" class="text-blue-400">◆ {{ item.gems.map(g => g.name || g).join(', ') }}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              <div class="mt-3 text-[10px] text-text-muted/50 border-t border-[#2a3450] pt-2">
-                Hover items for detailed stats • Powered by Wowhead tooltips
+                </template>
               </div>
             </div>
           </div>
@@ -223,6 +251,7 @@ import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   character: { type: Object, default: null },
+  useWowhead: { type: Boolean, default: true },
 })
 
 defineEmits(['update:modelValue'])
@@ -248,15 +277,15 @@ const hasStats = computed(() =>
   meta.value.gear_score || meta.value.honorable_kills || meta.value.faction || meta.value.guild
 )
 
-// Refresh Wowhead tooltips when modal opens or equipment changes
+// Refresh Wowhead tooltips when modal opens or equipment changes (only if enabled)
 watch(() => props.modelValue, (visible) => {
-  if (visible && equipment.value.length > 0) refreshWowheadTooltips()
+  if (visible && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips()
 })
 watch(equipment, (items) => {
-  if (props.modelValue && items.length > 0) refreshWowheadTooltips()
+  if (props.modelValue && items.length > 0 && props.useWowhead) refreshWowheadTooltips()
 })
 onMounted(() => {
-  if (props.modelValue && equipment.value.length > 0) refreshWowheadTooltips()
+  if (props.modelValue && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips()
 })
 
 // Equipment slot definitions with WoW-themed SVG paths and abbreviations
@@ -311,6 +340,12 @@ function slotIconClasses(item) {
 
 function itemQualityText(item) {
   return getQuality(item).text
+}
+
+const QUALITY_LABELS = { 0: 'Poor', 1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary', 6: 'Artifact' }
+
+function qualityLabel(q) {
+  return QUALITY_LABELS[q] ?? ''
 }
 
 function formatPoints(points) {
