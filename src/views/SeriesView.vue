@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -300,11 +300,12 @@ function toggleAllCopyGuilds(e) {
   copyGuildIds.value = e.target.checked ? otherGuilds.value.map(g => g.id) : []
 }
 
-onMounted(async () => {
+async function loadData() {
   loading.value = true
+  error.value = null
+  noGuild.value = false
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (!guildStore.currentGuild) {
-    error.value = null
     noGuild.value = true
     loading.value = false
     return
@@ -318,6 +319,13 @@ onMounted(async () => {
     templates.value = templatesData
   } catch { error.value = 'Failed to load recurring raids' }
   finally { loading.value = false }
+}
+
+onMounted(loadData)
+
+// Reload when guild changes in sidebar
+watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
+  if (newId && newId !== oldId) loadData()
 })
 
 function formatRecurrence(rule) {
@@ -441,6 +449,10 @@ async function doSave() {
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
     uiStore.showToast(editing.value ? 'Series updated' : `Series created in ${guildLabel}`, 'success')
+    // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
+    if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
+      guildStore.setCurrentGuild(targetGuild)
+    }
   } catch (err) {
     formError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to save'
   } finally { saving.value = false }
