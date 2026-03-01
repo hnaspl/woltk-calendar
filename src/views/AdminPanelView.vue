@@ -3,7 +3,7 @@
     <div class="p-4 md:p-6 space-y-6">
       <h1 class="wow-heading text-2xl">Admin Panel</h1>
 
-      <div v-if="!authStore.user?.is_admin" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
+      <div v-if="!permissions.can('list_system_users')" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
         You do not have admin privileges.
       </div>
 
@@ -137,10 +137,12 @@ import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import { usePermissions } from '@/composables/usePermissions'
 import * as adminApi from '@/api/admin'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const permissions = usePermissions()
 
 const users = ref([])
 const loading = ref(true)
@@ -156,7 +158,7 @@ const syncing = ref(false)
 const autosyncForm = ref({ enabled: false, interval_minutes: 60 })
 
 onMounted(async () => {
-  if (!authStore.user?.is_admin) return
+  if (!permissions.can('list_system_users')) return
   loading.value = true
   try {
     users.value = await adminApi.getUsers()

@@ -1,0 +1,141 @@
+<template>
+  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" title="Record Attendance" size="lg">
+    <div class="space-y-4">
+      <p class="text-text-muted text-sm">
+        Set attendance outcome for each player. Lineup players default to <strong class="text-green-400">Attended</strong>,
+        bench players to <strong class="text-yellow-400">Benched</strong>.
+      </p>
+
+      <div v-if="players.length === 0" class="py-8 text-center text-text-muted">
+        No signups found for this event.
+      </div>
+
+      <div v-else class="overflow-x-auto max-h-[55vh] overflow-y-auto">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 z-10">
+            <tr class="bg-bg-tertiary border-b border-border-default">
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Character</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Class</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Role</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Outcome</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Note</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border-default">
+            <tr v-for="p in players" :key="p.signup.id" class="hover:bg-bg-tertiary/50">
+              <td class="px-3 py-2 font-medium" :style="{ color: getClassColor(p.signup.character?.class_name) }">
+                {{ p.signup.character?.name ?? '?' }}
+              </td>
+              <td class="px-3 py-2 text-text-muted text-xs">{{ p.signup.character?.class_name ?? '—' }}</td>
+              <td class="px-3 py-2 text-text-muted text-xs">{{ roleLabel(p.signup.chosen_role) }}</td>
+              <td class="px-3 py-2">
+                <select
+                  v-model="p.outcome"
+                  class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
+                >
+                  <option value="attended">Attended</option>
+                  <option value="late">Late</option>
+                  <option value="no_show">No Show</option>
+                  <option value="benched">Benched</option>
+                  <option value="backup">Backup</option>
+                </select>
+              </td>
+              <td class="px-3 py-2">
+                <input
+                  v-model="p.note"
+                  placeholder="Optional note…"
+                  class="w-full bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
+    </div>
+
+    <template #footer>
+      <div class="flex items-center justify-between">
+        <span v-if="saveProgress" class="text-xs text-text-muted">{{ saveProgress }}</span>
+        <span v-else />
+        <div class="flex gap-3">
+          <WowButton variant="secondary" @click="emit('update:modelValue', false)">Cancel</WowButton>
+          <WowButton :loading="saving" :disabled="players.length === 0" @click="saveAttendance">Save Attendance</WowButton>
+        </div>
+      </div>
+    </template>
+  </WowModal>
+</template>
+
+<script setup>
+import { ref, computed, watch } from 'vue'
+import WowModal from '@/components/common/WowModal.vue'
+import WowButton from '@/components/common/WowButton.vue'
+import { useWowIcons } from '@/composables/useWowIcons'
+import { useUiStore } from '@/stores/ui'
+import * as attendanceApi from '@/api/attendance'
+
+const props = defineProps({
+  modelValue: { type: Boolean, required: true },
+  signups: { type: Array, default: () => [] },
+  guildId: { type: [Number, String], required: true },
+  eventId: { type: [Number, String], required: true }
+})
+
+const emit = defineEmits(['update:modelValue', 'saved'])
+
+const { getClassColor } = useWowIcons()
+const uiStore = useUiStore()
+
+const ROLE_LABELS = { tank: 'Tank', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Healer', dps: 'DPS' }
+function roleLabel(role) { return ROLE_LABELS[role] || role }
+
+const players = ref([])
+const saving = ref(false)
+const saveError = ref(null)
+const saveProgress = ref('')
+
+// Build player list when modal opens or signups change
+watch(
+  () => [props.modelValue, props.signups],
+  () => {
+    if (!props.modelValue) return
+    players.value = props.signups.map(s => ({
+      signup: s,
+      outcome: s.lineup_status === 'bench' ? 'benched' : 'attended',
+      note: ''
+    }))
+  },
+  { immediate: true }
+)
+
+async function saveAttendance() {
+  saving.value = true
+  saveError.value = null
+  saveProgress.value = ''
+  let saved = 0
+  const total = players.value.length
+
+  try {
+    for (const p of players.value) {
+      await attendanceApi.recordAttendance(props.guildId, props.eventId, {
+        user_id: p.signup.user_id,
+        character_id: p.signup.character_id,
+        outcome: p.outcome,
+        note: p.note || undefined
+      })
+      saved++
+      saveProgress.value = `${saved} / ${total} saved…`
+    }
+    uiStore.showToast('Attendance recorded successfully!', 'success')
+    emit('saved')
+    emit('update:modelValue', false)
+  } catch (err) {
+    saveError.value = err?.response?.data?.message ?? `Failed to save attendance (${saved}/${total} completed)`
+  } finally {
+    saving.value = false
+    saveProgress.value = ''
+  }
+}
+</script>

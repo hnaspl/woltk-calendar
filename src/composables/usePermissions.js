@@ -63,7 +63,7 @@ export function usePermissions() {
   }
 
   return {
-    membership, role, isSiteAdmin, isMember,
+    membership, role, isMember,
     can, dynamicPermissions, permissionsLoaded, fetchPermissions,
   }
 }

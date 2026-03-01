@@ -95,8 +95,7 @@ def _get_officers(guild_id: int, exclude_user_id: int | None = None) -> list[int
     ).scalars().all()
 
     if not role_names:
-        # Fallback: if permission tables aren't seeded yet, use legacy names
-        role_names = ["officer", "guild_admin"]
+        return []
 
     rows = db.session.execute(
         sa.select(GuildMembership.user_id).where(

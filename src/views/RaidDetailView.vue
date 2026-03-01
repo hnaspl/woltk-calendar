@@ -85,6 +85,13 @@
               <WowButton v-if="event.status !== 'completed'" variant="primary" @click="markComplete">
                 Mark Done
               </WowButton>
+              <WowButton
+                v-if="event.status === 'completed' && permissions.can('record_attendance')"
+                variant="primary"
+                @click="showAttendanceModal = true"
+              >
+                Record Attendance
+              </WowButton>
               <WowButton variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
             </div>
           </div>
@@ -95,7 +102,7 @@
           :signups="signups"
           :event-id="event.id"
           :guild-id="guildId"
-          :is-officer="permissions.can('update_lineup')"
+          :can-manage="permissions.can('update_lineup')"
           :current-user-id="authStore.user?.id"
           :tank-slots="event.tank_slots ?? 0"
           :main-tank-slots="event.main_tank_slots ?? 1"
@@ -218,7 +225,7 @@
           <div class="lg:col-span-2">
             <SignupList
               :signups="signups"
-              :is-officer="permissions.can('manage_signups')"
+              :can-manage="permissions.can('manage_signups')"
               :guild-id="guildId"
               :event-id="event.id"
               :available-roles="availableRoles"
@@ -329,6 +336,15 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Attendance modal -->
+    <AttendanceModal
+      v-model="showAttendanceModal"
+      :signups="signups"
+      :guild-id="guildId"
+      :event-id="event?.id"
+      @saved="onAttendanceSaved"
+    />
   </AppShell>
 </template>
 
@@ -344,6 +360,7 @@ import SignupForm from '@/components/raids/SignupForm.vue'
 import SignupList from '@/components/raids/SignupList.vue'
 import CompositionSummary from '@/components/raids/CompositionSummary.vue'
 import LineupBoard from '@/components/raids/LineupBoard.vue'
+import AttendanceModal from '@/components/raids/AttendanceModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
@@ -374,6 +391,7 @@ const actionLoading = ref(false)
 const confirmCancel = ref(false)
 const showEditModal = ref(false)
 const showLeaveModal = ref(false)
+const showAttendanceModal = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
@@ -781,6 +799,10 @@ async function onLineupSaved(payload) {
 
 function onLineupUpdated(counts) {
   lineupCounts.value = counts
+}
+
+function onAttendanceSaved() {
+  uiStore.showToast('Attendance recorded!', 'success')
 }
 
 // --- Character replacement requests ---

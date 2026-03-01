@@ -111,9 +111,7 @@
                       class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none disabled:opacity-50"
                       @change="updateRole(m, $event.target.value)"
                     >
-                      <option value="member">Member</option>
-                      <option value="officer">Officer</option>
-                      <option v-if="canSetGuildAdmin" value="guild_admin">Guild Admin</option>
+                      <option v-for="r in roleOptionsForMember(m)" :key="r.name" :value="r.name">{{ r.display_name }}</option>
                     </select>
                   </td>
                   <td class="px-4 py-2.5 text-right space-x-2">
@@ -225,6 +223,7 @@ import { useAuthStore } from '@/stores/auth'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
+import api from '@/api'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
@@ -238,9 +237,41 @@ const saveError = ref(null)
 const members = ref([])
 const showKickConfirm = ref(false)
 const kickTarget = ref(null)
+const allRoles = ref([])
 
 const form = reactive({ name: '', realm: '', description: '' })
 const warmaneRealms = WARMANE_REALMS
+
+async function fetchRoles() {
+  try {
+    allRoles.value = await api.get('/roles')
+  } catch {
+    allRoles.value = []
+  }
+}
+
+/** Roles the current user is allowed to grant, based on the roles API can_grant list */
+const grantableRoles = computed(() => {
+  const myRole = permissions.role.value
+  if (!myRole && !authStore.user?.is_admin) return []
+  // Site admins can grant any role
+  if (authStore.user?.is_admin) return allRoles.value
+  const myRoleDef = allRoles.value.find(r => r.name === myRole)
+  if (!myRoleDef) return []
+  const grantable = new Set(myRoleDef.can_grant || [])
+  return allRoles.value.filter(r => grantable.has(r.name))
+})
+
+/** Role options to show in the dropdown for a member */
+function roleOptionsForMember(member) {
+  // Always include the member's current role so the dropdown shows the current value
+  const options = [...grantableRoles.value]
+  if (member.role && !options.find(r => r.name === member.role)) {
+    const currentRoleDef = allRoles.value.find(r => r.name === member.role)
+    if (currentRoleDef) options.push(currentRoleDef)
+  }
+  return options.sort((a, b) => a.level - b.level)
+}
 
 async function loadGuildData() {
   loading.value = true
@@ -249,7 +280,10 @@ async function loadGuildData() {
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
-      await guildStore.fetchMembers(g.id)
+      await Promise.all([
+        guildStore.fetchMembers(g.id),
+        fetchRoles()
+      ])
       members.value = guildStore.members
     }
   } catch {
@@ -301,20 +335,18 @@ async function updateRole(member, role) {
   }
 }
 
-/** Only site admins and guild admins can promote to guild_admin */
-const canSetGuildAdmin = computed(() =>
-  authStore.user?.is_admin || permissions.can('manage_roles')
-)
-
 /** Can the current user change this member's role? */
 function canChangeRole(member) {
-  // Can't change own role
   if (member.user_id === authStore.user?.id) return false
-  // Only site admin or guild_admin can modify a guild_admin
-  if (member.role === 'guild_admin') {
-    return authStore.user?.is_admin || permissions.can('manage_roles')
-  }
-  return true
+  if (!permissions.can('manage_roles')) return false
+  // Can't modify someone with equal or higher role level
+  const myRole = permissions.role.value
+  const myRoleDef = allRoles.value.find(r => r.name === myRole)
+  const memberRoleDef = allRoles.value.find(r => r.name === member.role)
+  // Site admins bypass level check
+  if (authStore.user?.is_admin) return true
+  if (!myRoleDef || !memberRoleDef) return false
+  return myRoleDef.level > memberRoleDef.level
 }
 
 function confirmKick(member) {
