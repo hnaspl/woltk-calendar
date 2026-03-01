@@ -470,10 +470,24 @@ def resolve_replacement(
         signup = get_signup(req.signup_id)
         if signup is None:
             raise ValueError("Signup no longer exists")
+        # Check if the new character already has a signup for this event
+        from app.models.signup import LineupSlot
+        from app.services import lineup_service
+        conflicting = db.session.execute(
+            sa.select(Signup).where(
+                Signup.raid_event_id == signup.raid_event_id,
+                Signup.character_id == req.new_character_id,
+                Signup.id != signup.id,
+            )
+        ).scalars().first()
+        if conflicting is not None:
+            # Remove the conflicting signup's lineup slots and delete it
+            lineup_service.remove_slot_for_signup(conflicting.id)
+            db.session.delete(conflicting)
+            db.session.flush()
         # Swap the character
         signup.character_id = req.new_character_id
         # Update lineup slot character too
-        from app.models.signup import LineupSlot
         slots = db.session.execute(
             sa.select(LineupSlot).where(LineupSlot.signup_id == signup.id)
         ).scalars().all()

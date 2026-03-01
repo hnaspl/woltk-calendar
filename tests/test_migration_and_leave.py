@@ -153,6 +153,54 @@ class TestReplacementLeaveAction:
         assert lineup_service.has_role_slot(s3.id)
 
 
+class TestReplacementConfirmWithConflict:
+    """Test that confirming a replacement works when new char already has a signup."""
+
+    def test_confirm_removes_conflicting_signup(self, seed):
+        """Confirming a replacement should remove conflicting signup for the new character."""
+        # User1 signs up with char1
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 signs up with char2
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps",
+            chosen_spec=None,
+            note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+
+        # Officer requests to replace s1's char1 with char2
+        req = signup_service.create_replacement_request(
+            signup_id=s1.id,
+            new_character_id=seed["char2"].id,
+            requested_by=seed["user2"].id,
+            reason="Switch char",
+        )
+
+        # Confirm should NOT raise IntegrityError
+        result = signup_service.resolve_replacement(req.id, "confirm")
+        assert result.status == "confirmed"
+
+        # s1 should now have char2
+        updated = signup_service.get_signup(s1.id)
+        assert updated.character_id == seed["char2"].id
+
+        # s2 (conflicting) should be deleted
+        assert signup_service.get_signup(s2.id) is None
+
+
 class TestAdminRemoveAutoPromote:
     """Test that admin removing a player triggers bench queue promotion."""
 
