@@ -238,9 +238,11 @@ async function saveTemplate() {
       templates.value.push(await templatesApi.createTemplate(guildStore.currentGuild.id, payload))
       // Also create in other selected guilds
       if (applyToAllGuilds.value && selectedGuildIds.value.length > 0) {
+        let failed = 0
         for (const guildId of selectedGuildIds.value) {
-          try { await templatesApi.createTemplate(guildId, payload) } catch { /* skip failures */ }
+          try { await templatesApi.createTemplate(guildId, payload) } catch { failed++ }
         }
+        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
       }
     }
     showModal.value = false

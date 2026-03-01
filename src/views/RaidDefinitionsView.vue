@@ -260,9 +260,11 @@ async function saveDef() {
       definitions.value.push(await raidDefsApi.createRaidDefinition(guildStore.currentGuild.id, form))
       // Also create in other selected guilds
       if (applyToAllGuilds.value && selectedGuildIds.value.length > 0) {
+        let failed = 0
         for (const guildId of selectedGuildIds.value) {
-          try { await raidDefsApi.createRaidDefinition(guildId, form) } catch { /* skip failures */ }
+          try { await raidDefsApi.createRaidDefinition(guildId, form) } catch { failed++ }
         }
+        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
       }
     }
     showModal.value = false
