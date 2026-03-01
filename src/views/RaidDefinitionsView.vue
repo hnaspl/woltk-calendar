@@ -203,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -281,23 +281,36 @@ function toggleAllCopyGuilds(e) {
   copyGuildIds.value = e.target.checked ? otherGuilds.value.map(g => g.id) : []
 }
 
+let isActive = true
+let loadVersion = 0
+
+onUnmounted(() => { isActive = false })
+
 async function loadDefinitions() {
+  if (!guildStore.currentGuild || !isActive) return
+  const version = ++loadVersion
   loading.value = true
   error.value = null
   noGuild.value = false
+  try {
+    const data = await raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
+    if (version === loadVersion && isActive) definitions.value = data
+  } catch {
+    if (version === loadVersion && isActive) error.value = 'Failed to load raid definitions'
+  } finally {
+    if (version === loadVersion && isActive) loading.value = false
+  }
+}
+
+onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (!guildStore.currentGuild) {
     noGuild.value = true
     loading.value = false
     return
   }
-  try {
-    definitions.value = await raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
-  } catch { error.value = 'Failed to load raid definitions' }
-  finally { loading.value = false }
-}
-
-onMounted(loadDefinitions)
+  loadDefinitions()
+})
 
 // Reload when guild changes in sidebar
 watch(() => guildStore.currentGuild?.id, (newId, oldId) => {

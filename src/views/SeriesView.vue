@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -300,28 +300,42 @@ function toggleAllCopyGuilds(e) {
   copyGuildIds.value = e.target.checked ? otherGuilds.value.map(g => g.id) : []
 }
 
+let isActive = true
+let loadVersion = 0
+
+onUnmounted(() => { isActive = false })
+
 async function loadData() {
+  if (!guildStore.currentGuild || !isActive) return
+  const version = ++loadVersion
   loading.value = true
   error.value = null
   noGuild.value = false
+  try {
+    const [seriesData, templatesData] = await Promise.all([
+      seriesApi.getSeries(guildStore.currentGuild.id),
+      templatesApi.getTemplates(guildStore.currentGuild.id)
+    ])
+    if (version === loadVersion && isActive) {
+      seriesList.value = seriesData
+      templates.value = templatesData
+    }
+  } catch {
+    if (version === loadVersion && isActive) error.value = 'Failed to load recurring raids'
+  } finally {
+    if (version === loadVersion && isActive) loading.value = false
+  }
+}
+
+onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (!guildStore.currentGuild) {
     noGuild.value = true
     loading.value = false
     return
   }
-  try {
-    const [seriesData, templatesData] = await Promise.all([
-      seriesApi.getSeries(guildStore.currentGuild.id),
-      templatesApi.getTemplates(guildStore.currentGuild.id)
-    ])
-    seriesList.value = seriesData
-    templates.value = templatesData
-  } catch { error.value = 'Failed to load recurring raids' }
-  finally { loading.value = false }
-}
-
-onMounted(loadData)
+  loadData()
+})
 
 // Reload when guild changes in sidebar
 watch(() => guildStore.currentGuild?.id, (newId, oldId) => {

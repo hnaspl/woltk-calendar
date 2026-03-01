@@ -178,7 +178,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -242,28 +242,42 @@ function toggleAllCopyGuilds(e) {
   copyGuildIds.value = e.target.checked ? otherGuilds.value.map(g => g.id) : []
 }
 
+let isActive = true
+let loadVersion = 0
+
+onUnmounted(() => { isActive = false })
+
 async function loadData() {
+  if (!guildStore.currentGuild || !isActive) return
+  const version = ++loadVersion
   loading.value = true
   error.value = null
   noGuild.value = false
+  try {
+    const [tpls, defs] = await Promise.all([
+      templatesApi.getTemplates(guildStore.currentGuild.id),
+      raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
+    ])
+    if (version === loadVersion && isActive) {
+      templates.value = tpls
+      raidDefinitions.value = defs
+    }
+  } catch {
+    if (version === loadVersion && isActive) error.value = 'Failed to load templates'
+  } finally {
+    if (version === loadVersion && isActive) loading.value = false
+  }
+}
+
+onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (!guildStore.currentGuild) {
     noGuild.value = true
     loading.value = false
     return
   }
-  try {
-    const [tpls, defs] = await Promise.all([
-      templatesApi.getTemplates(guildStore.currentGuild.id),
-      raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
-    ])
-    templates.value = tpls
-    raidDefinitions.value = defs
-  } catch { error.value = 'Failed to load templates' }
-  finally { loading.value = false }
-}
-
-onMounted(loadData)
+  loadData()
+})
 
 // Reload when guild changes in sidebar
 watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
