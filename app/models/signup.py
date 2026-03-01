@@ -51,7 +51,7 @@ class Signup(db.Model):
     user = relationship("User", foreign_keys=[user_id], lazy="select")
     character = relationship("Character", foreign_keys=[character_id], lazy="select")
 
-    def to_dict(self) -> dict:
+    def to_dict(self, guild_role_map: dict | None = None) -> dict:
         from app.services import lineup_service
 
         # Determine lineup status from LineupSlots (no stored status field)
@@ -80,6 +80,11 @@ class Signup(db.Model):
         }
         if self.character is not None:
             result["character"] = self.character.to_dict()
+        # Inject guild role info if a pre-loaded map is provided
+        if guild_role_map and self.user_id in guild_role_map:
+            role_info = guild_role_map[self.user_id]
+            result["guild_role"] = role_info.get("role")
+            result["guild_role_display"] = role_info.get("display_name")
         return result
 
     def __repr__(self) -> str:

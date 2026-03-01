@@ -14,6 +14,49 @@ from app.utils import notify
 bp = Blueprint("lineup", __name__)
 
 
+def _build_guild_role_map_for_event(guild_id: int, event_id: int) -> dict:
+    """Build a guild role map for all users who have signups in this event."""
+    import sqlalchemy as sa
+    from app.extensions import db
+    from app.models.guild import GuildMembership
+    from app.models.permission import SystemRole
+    from app.models.signup import Signup
+
+    user_ids = list(db.session.execute(
+        sa.select(Signup.user_id).where(
+            Signup.raid_event_id == event_id
+        ).distinct()
+    ).scalars().all())
+
+    if not user_ids:
+        return {}
+
+    memberships = db.session.execute(
+        sa.select(GuildMembership.user_id, GuildMembership.role).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id.in_(user_ids),
+        )
+    ).all()
+
+    role_names = list({m.role for m in memberships})
+    display_map = {}
+    if role_names:
+        roles = db.session.execute(
+            sa.select(SystemRole.name, SystemRole.display_name).where(
+                SystemRole.name.in_(role_names)
+            )
+        ).all()
+        display_map = {r.name: r.display_name for r in roles}
+
+    return {
+        m.user_id: {
+            "role": m.role,
+            "display_name": display_map.get(m.role, m.role.replace("_", " ").title()),
+        }
+        for m in memberships
+    }
+
+
 @bp.get("")
 @login_required
 def get_lineup(guild_id: int, event_id: int):
@@ -22,7 +65,8 @@ def get_lineup(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
-    grouped = lineup_service.get_lineup_grouped(event_id)
+    role_map = _build_guild_role_map_for_event(guild_id, event_id)
+    grouped = lineup_service.get_lineup_grouped(event_id, guild_role_map=role_map)
     return jsonify(grouped), 200
 
 

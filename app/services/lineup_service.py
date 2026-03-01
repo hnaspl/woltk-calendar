@@ -36,7 +36,7 @@ def _lineup_version(grouped: dict) -> str:
     return "|".join(parts)
 
 
-def get_lineup_grouped(raid_event_id: int) -> dict:
+def get_lineup_grouped(raid_event_id: int, guild_role_map: dict | None = None) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
     grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "melee_dps": [], "healers": [], "range_dps": []}
@@ -45,11 +45,11 @@ def get_lineup_grouped(raid_event_id: int) -> dict:
     for slot in slots:
         if slot.slot_group == "bench":
             if slot.signup is not None:
-                bench_queue.append(slot.signup.to_dict())
+                bench_queue.append(slot.signup.to_dict(guild_role_map=guild_role_map))
             continue
         key = role_map.get(slot.slot_group, "range_dps")
         if slot.signup is not None:
-            grouped[key].append(slot.signup.to_dict())
+            grouped[key].append(slot.signup.to_dict(guild_role_map=guild_role_map))
     grouped["bench_queue"] = bench_queue
     grouped["version"] = _lineup_version(grouped)
     return grouped

@@ -52,6 +52,10 @@
                 <span v-if="s.character?.metadata?.level" class="text-[10px] text-text-muted">
                   Lv{{ s.character.metadata.level }}
                 </span>
+                <span
+                  v-if="s.guild_role_display && s.guild_role !== 'member'"
+                  class="text-[9px] px-1 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/30 leading-none"
+                >{{ s.guild_role_display }}</span>
               </div>
               <div class="flex items-center gap-1 text-[10px] text-text-muted flex-wrap">
                 <template v-if="s.chosen_spec">

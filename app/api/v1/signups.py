@@ -14,6 +14,47 @@ from app.utils import notify
 bp = Blueprint("signups", __name__)
 
 
+def _build_guild_role_map(guild_id: int, user_ids: list[int]) -> dict:
+    """Build a map of user_id -> {role, display_name} for guild members.
+
+    Batch-loads guild memberships and system role display names to avoid N+1.
+    """
+    import sqlalchemy as sa
+    from app.extensions import db
+    from app.models.guild import GuildMembership
+    from app.models.permission import SystemRole
+
+    if not user_ids:
+        return {}
+
+    # Batch-load memberships for all user_ids in the guild
+    memberships = db.session.execute(
+        sa.select(GuildMembership.user_id, GuildMembership.role).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id.in_(user_ids),
+        )
+    ).all()
+
+    # Build role name -> display_name lookup
+    role_names = list({m.role for m in memberships})
+    display_map = {}
+    if role_names:
+        roles = db.session.execute(
+            sa.select(SystemRole.name, SystemRole.display_name).where(
+                SystemRole.name.in_(role_names)
+            )
+        ).all()
+        display_map = {r.name: r.display_name for r in roles}
+
+    return {
+        m.user_id: {
+            "role": m.role,
+            "display_name": display_map.get(m.role, m.role.replace("_", " ").title()),
+        }
+        for m in memberships
+    }
+
+
 def _get_event_or_404(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
@@ -30,7 +71,8 @@ def list_signups(guild_id: int, event_id: int):
     if err:
         return err
     signups = signup_service.list_signups(event_id)
-    return jsonify([s.to_dict() for s in signups]), 200
+    role_map = _build_guild_role_map(guild_id, [s.user_id for s in signups])
+    return jsonify([s.to_dict(guild_role_map=role_map) for s in signups]), 200
 
 
 @bp.post("")
