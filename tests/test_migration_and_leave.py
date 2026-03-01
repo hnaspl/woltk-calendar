@@ -761,3 +761,87 @@ class TestAdminLineupUpdateAutoPromote:
         assert bench_info is not None, \
             "Main character should be auto-benched, not disappear"
         assert bench_info["waiting_for"] == "dps"
+
+    def test_admin_cross_role_same_player_swap(self, seed):
+        """When char1 is main_tank and admin places char2 (same player) in DPS,
+        the new placement (char2 → DPS) should win and the old placement
+        (char1 → main_tank) should be benched."""
+        from app.models.character import Character
+
+        # Create a Druid char (can be main_tank) and a Hunter alt (DPS)
+        druid_char = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="DruidMain",
+            class_name="Druid", default_role="main_tank",
+            is_main=True, is_active=True,
+        )
+        hunter_alt = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterAlt",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add_all([druid_char, hunter_alt])
+        db.session.commit()
+
+        # Update event to have main_tank and DPS slots
+        seed["event"].raid_size = 10
+        seed["raid_def"].main_tank_slots = 1
+        seed["raid_def"].dps_slots = 2
+        db.session.commit()
+
+        # Druid in main_tank slot
+        s_druid = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=druid_char.id,
+            chosen_role="main_tank", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Other player in DPS
+        s_other = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # Hunter alt on bench
+        s_alt = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=hunter_alt.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s_druid.id)
+        assert lineup_service.has_role_slot(s_other.id)
+        assert not lineup_service.has_role_slot(s_alt.id)
+
+        # Admin places hunter alt in DPS, keeps druid in main_tank.
+        # Frontend sends both in their role slots.
+        result = lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "main_tanks": [s_druid.id],
+                "dps": [s_alt.id, s_other.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # New placement (s_alt in DPS) should win
+        assert lineup_service.has_role_slot(s_alt.id), \
+            "Hunter alt should be placed in DPS slot"
+        # Old placement (s_druid in main_tank) should be benched
+        assert not lineup_service.has_role_slot(s_druid.id), \
+            "Druid main should be moved to bench"
+        bench_info = lineup_service.get_bench_info(s_druid.id)
+        assert bench_info is not None, \
+            "Druid main should be on bench, not disappear"
+        assert bench_info["waiting_for"] == "main_tank"

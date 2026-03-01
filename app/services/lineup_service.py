@@ -241,12 +241,22 @@ def update_lineup_grouped(
 
     role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "tanks": "tank", "healers": "healer", "dps": "dps"}
     # Track users who already have a character in a role slot to enforce
-    # one-character-per-player. Extras are pushed to bench automatically.
-    users_in_lineup: set[int] = set()
+    # one-character-per-player.  When a conflict is detected the NEW
+    # placement wins (admin explicitly put the character there) and the
+    # earlier signup is moved to bench.
+    # Maps user_id -> (signup_id, slot_group, LineupSlot)
+    user_slot_map: dict[int, tuple[int, str, LineupSlot]] = {}
     overflow_to_bench: list[int] = []  # signup IDs moved to bench
 
     # Track new role assignments for freed-slot detection
     new_role_signups: dict[str, set[int]] = {}
+
+    # Determine which signups are NEW placements (not in their old role slot)
+    # so that when a same-player conflict arises we can let the new one win.
+    _old_signup_role: dict[int, str] = {}
+    for role, sids in old_role_signups.items():
+        for sid in sids:
+            _old_signup_role[sid] = role
 
     for key, slot_group in role_map.items():
         signup_ids = data.get(key, [])
@@ -255,10 +265,22 @@ def update_lineup_grouped(
             if signup is None:
                 continue
             # Enforce one character per player in lineup
-            if signup.user_id in users_in_lineup:
-                overflow_to_bench.append(signup_id)
-                continue
-            users_in_lineup.add(signup.user_id)
+            if signup.user_id in user_slot_map:
+                prev_sid, prev_group, prev_slot_obj = user_slot_map[signup.user_id]
+                # Decide which signup is the "new" placement.
+                # A signup is new if it wasn't in the same role slot before.
+                prev_is_old = (_old_signup_role.get(prev_sid) == prev_group)
+                curr_is_old = (_old_signup_role.get(signup_id) == slot_group)
+                if prev_is_old and not curr_is_old:
+                    # Current signup is the new placement — it wins.
+                    # Remove the previous signup's slot and bench it.
+                    db.session.expunge(prev_slot_obj)
+                    new_role_signups.get(prev_group, set()).discard(prev_sid)
+                    overflow_to_bench.append(prev_sid)
+                else:
+                    # Previous signup keeps its slot; current goes to bench.
+                    overflow_to_bench.append(signup_id)
+                    continue
             # Sync signup's chosen_role to match the lineup column
             if signup.chosen_role != slot_group:
                 # Validate class-role constraint before changing role
@@ -275,6 +297,7 @@ def update_lineup_grouped(
                 confirmed_at=datetime.now(timezone.utc),
             )
             db.session.add(slot)
+            user_slot_map[signup.user_id] = (signup_id, slot_group, slot)
 
     # Identify signups the admin moved from role slots to bench so they can
     # be placed at the END of the bench queue (lower priority for auto-promote).
