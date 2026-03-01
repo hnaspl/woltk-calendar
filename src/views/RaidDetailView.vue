@@ -25,8 +25,6 @@
               <div class="flex items-center gap-2 flex-wrap mb-2">
                 <h1 class="wow-heading text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
-                <StatusBadge :status="event.status ?? 'open'" />
-                <LockBadge :locked="event.status === 'locked' || event.is_locked" />
               </div>
 
               <!-- Informative details grid -->
@@ -341,10 +339,7 @@ import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
-// RealmBadge removed - realm info shown inline in header
-import LockBadge from '@/components/common/LockBadge.vue'
 import SignupForm from '@/components/raids/SignupForm.vue'
 import SignupList from '@/components/raids/SignupList.vue'
 import CompositionSummary from '@/components/raids/CompositionSummary.vue'

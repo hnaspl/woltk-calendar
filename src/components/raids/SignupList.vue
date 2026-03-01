@@ -23,7 +23,7 @@
             </span>
             <span class="text-xs text-text-muted">({{ group.items.length }})</span>
           </div>
-          <div class="space-y-2">
+          <div class="space-y-3">
             <template v-for="signup in group.items" :key="signup.id">
             <!-- Inline edit form (officer only) -->
             <div v-if="editingSignupId === signup.id" class="px-3 py-3 rounded-lg bg-bg-tertiary border border-border-gold space-y-3">
@@ -91,85 +91,86 @@
             <!-- Normal display -->
             <div
               v-else
-              class="flex items-start gap-3 px-4 py-3 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
+              class="flex items-start gap-3 px-4 py-4 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
             >
               <!-- Class icon -->
               <img
                 v-if="signup.character?.class_name"
                 :src="getClassIcon(signup.character.class_name)"
                 :alt="signup.character.class_name"
-                class="w-8 h-8 rounded border border-border-default flex-shrink-0 mt-0.5"
+                class="w-10 h-10 rounded border border-border-default flex-shrink-0 mt-0.5"
               />
-              <div class="w-8 h-8 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
+              <div class="w-10 h-10 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
                 <!-- Row 1: Name + Level + Achievements -->
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-sm font-semibold text-text-primary truncate">
+                  <span class="text-base font-semibold text-text-primary truncate">
                     {{ signup.character?.name ?? 'Unknown' }}
                   </span>
-                  <span v-if="charLevel(signup)" class="inline-flex items-center gap-0.5 text-[10px] font-medium text-accent-gold bg-accent-gold/10 px-1.5 py-0.5 rounded-full border border-accent-gold/20">
+                  <span v-if="charLevel(signup)" class="inline-flex items-center gap-0.5 text-xs font-medium text-accent-gold bg-accent-gold/10 px-2 py-0.5 rounded-full border border-accent-gold/20">
                     {{ charLevel(signup) }}
                   </span>
                   <span
                     v-if="charAchievements(signup)"
-                    class="text-[10px] text-amber-400"
+                    class="text-xs text-amber-400"
                     title="Achievement Points"
                   >🏆 {{ charAchievements(signup) }}</span>
                 </div>
-                <!-- Row 2: Class / Role / Spec badges -->
-                <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                <!-- Row 2: Class + Role -->
+                <div class="flex items-center gap-1.5 flex-wrap mt-2">
                   <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
                   <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
-                  <template v-if="signup.chosen_spec">
-                    <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
-                  </template>
                 </div>
-                <!-- Row 3: Professions with icons -->
-                <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <!-- Row 3: Specializations -->
+                <div v-if="signup.chosen_spec" class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                  <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
+                </div>
+                <!-- Row 4: Professions with icons -->
+                <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-2 mt-2 flex-wrap">
                   <span
                     v-for="prof in charProfessions(signup)"
                     :key="prof.name"
-                    class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
+                    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
                   >
-                    <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
+                    <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
                     {{ prof.name }} {{ prof.skill }}
                   </span>
                 </div>
                 <!-- Gear score note -->
-                <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-1.5">
+                <div v-if="signup.gear_score_note" class="text-xs text-amber-300 mt-2">
                   ⚔️ GS: {{ signup.gear_score_note }}
                 </div>
                 <!-- Note -->
-                <div v-if="signup.note" class="text-[10px] text-text-muted mt-1.5 italic truncate" :title="signup.note">
+                <div v-if="signup.note" class="text-xs text-text-muted mt-1.5 italic truncate" :title="signup.note">
                   📝 {{ signup.note }}
                 </div>
                 <!-- Bench queue position -->
-                <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-1.5 flex items-center gap-1">
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
+                <div v-if="signup.bench_info" class="text-xs text-yellow-400 mt-2 flex items-center gap-1">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
                     ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
                   </span>
                 </div>
                 <!-- Action row: View Details button + Officer actions -->
-                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                <div class="flex items-center gap-2 mt-3 flex-wrap">
                   <button
-                    class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded border border-border-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold transition-colors"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-border-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold transition-colors"
                     :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
                     @click.stop="openCharacterModal(signup.character)"
                   >🔍 View Details</button>
                   <!-- Officer action buttons -->
                   <template v-if="isOfficer">
                     <button
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
                       @click.stop="startEdit(signup)"
                     >Edit</button>
                     <button
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
                       @click.stop="startReplaceCharacter(signup)"
                     >Replace</button>
                     <button
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
                       @click.stop="removeSignup(signup)"
                     >Remove</button>
                   </template>
