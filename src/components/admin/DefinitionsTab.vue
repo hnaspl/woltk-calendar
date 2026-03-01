@@ -1,72 +1,70 @@
 <template>
-  <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
-      <div class="flex items-center justify-between">
-        <h1 class="wow-heading text-2xl">Raid Definitions</h1>
-        <WowButton @click="openAddModal">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          New Definition
-        </WowButton>
-      </div>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="wow-heading text-2xl">Raid Definitions</h1>
+      <WowButton @click="openAddModal">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Definition
+      </WowButton>
+    </div>
 
-      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      </div>
-      <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
-        You need to create or join a guild first before managing raid definitions. Use the sidebar to create a guild.
-      </div>
-      <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
-      <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
-        No raid definitions yet. Create one to start scheduling raids.
-      </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <WowCard v-for="def in definitions" :key="def.id">
-          <div class="flex items-start gap-3 mb-3">
-            <img :src="getRaidIcon(def.raid_type)" :alt="def.raid_type" class="w-12 h-12 rounded border border-border-default flex-shrink-0" />
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-text-primary truncate">{{ def.name }}</span>
-                <span v-if="def.is_builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40">Default</span>
-              </div>
-              <div class="flex items-center gap-1.5 mt-1">
-                <RaidSizeBadge v-if="def.size" :size="def.size" />
-                <RealmBadge v-if="def.realm" :realm="def.realm" />
-              </div>
+    <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+    </div>
+    <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
+      You need to create or join a guild first before managing raid definitions. Use the sidebar to create a guild.
+    </div>
+    <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
+    <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
+      No raid definitions yet. Create one to start scheduling raids.
+    </div>
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <WowCard v-for="def in definitions" :key="def.id">
+        <div class="flex items-start gap-3 mb-3">
+          <img :src="getRaidIcon(def.raid_type)" :alt="def.raid_type" class="w-12 h-12 rounded border border-border-default flex-shrink-0" />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-text-primary truncate">{{ def.name }}</span>
+              <span v-if="def.is_builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40">Default</span>
+            </div>
+            <div class="flex items-center gap-1.5 mt-1">
+              <RaidSizeBadge v-if="def.size" :size="def.size" />
+              <RealmBadge v-if="def.realm" :realm="def.realm" />
             </div>
           </div>
-          <div class="grid grid-cols-5 gap-2 text-center text-xs mb-4">
-            <div class="bg-blue-600/10 rounded p-1.5">
-              <div class="text-blue-200 font-bold">{{ def.main_tank_slots ?? 1 }}</div>
-              <div class="text-text-muted">Main Tank</div>
-            </div>
-            <div class="bg-cyan-500/10 rounded p-1.5">
-              <div class="text-cyan-300 font-bold">{{ def.off_tank_slots ?? 1 }}</div>
-              <div class="text-text-muted">Off Tank</div>
-            </div>
-            <div class="bg-blue-500/10 rounded p-1.5">
-              <div class="text-blue-300 font-bold">{{ def.melee_dps_slots ?? 0 }}</div>
-              <div class="text-text-muted">Melee DPS</div>
-            </div>
-            <div class="bg-green-500/10 rounded p-1.5">
-              <div class="text-green-300 font-bold">{{ def.healer_slots ?? 5 }}</div>
-              <div class="text-text-muted">Heal</div>
-            </div>
-            <div class="bg-red-500/10 rounded p-1.5">
-              <div class="text-red-300 font-bold">{{ def.range_dps_slots ?? 18 }}</div>
-              <div class="text-text-muted">Range DPS</div>
-            </div>
+        </div>
+        <div class="grid grid-cols-5 gap-2 text-center text-xs mb-4">
+          <div class="bg-blue-600/10 rounded p-1.5">
+            <div class="text-blue-200 font-bold">{{ def.main_tank_slots ?? 1 }}</div>
+            <div class="text-text-muted">Main Tank</div>
           </div>
-          <div class="flex gap-2">
-            <WowButton v-if="def.is_builtin" variant="secondary" class="flex-1 text-xs py-1.5" @click="copyToGuild(def)">
-              📋 Copy to Guild
-            </WowButton>
-            <WowButton variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">Edit</WowButton>
-            <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="confirmDelete(def)">✕</WowButton>
+          <div class="bg-cyan-500/10 rounded p-1.5">
+            <div class="text-cyan-300 font-bold">{{ def.off_tank_slots ?? 1 }}</div>
+            <div class="text-text-muted">Off Tank</div>
           </div>
-        </WowCard>
-      </div>
+          <div class="bg-blue-500/10 rounded p-1.5">
+            <div class="text-blue-300 font-bold">{{ def.melee_dps_slots ?? 0 }}</div>
+            <div class="text-text-muted">Melee DPS</div>
+          </div>
+          <div class="bg-green-500/10 rounded p-1.5">
+            <div class="text-green-300 font-bold">{{ def.healer_slots ?? 5 }}</div>
+            <div class="text-text-muted">Heal</div>
+          </div>
+          <div class="bg-red-500/10 rounded p-1.5">
+            <div class="text-red-300 font-bold">{{ def.range_dps_slots ?? 18 }}</div>
+            <div class="text-text-muted">Range DPS</div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <WowButton v-if="def.is_builtin" variant="secondary" class="flex-1 text-xs py-1.5" @click="copyToGuild(def)">
+            📋 Copy to Guild
+          </WowButton>
+          <WowButton variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">Edit</WowButton>
+          <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="confirmDelete(def)">✕</WowButton>
+        </div>
+      </WowCard>
     </div>
 
     <!-- Add/Edit modal -->
@@ -151,12 +149,11 @@
         </div>
       </template>
     </WowModal>
-  </AppShell>
+  </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -184,7 +181,6 @@ const editing = ref(null)
 const deleteTarget = ref(null)
 
 const raidTypes = RAID_TYPES
-// Show realms from joined guilds instead of all Warmane realms
 const guildRealms = computed(() => {
   const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
   return [...realms].sort()

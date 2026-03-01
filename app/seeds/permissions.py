@@ -58,6 +58,7 @@ ALL_PERMISSIONS = [
 
     # Raid definitions & templates
     ("manage_raid_definitions", "Manage Raid Definitions", "Create/edit raid definitions", "definitions"),
+    ("manage_default_definitions", "Manage Default Definitions", "Edit/delete built-in (seeded) raid definitions", "definitions"),
     ("manage_templates", "Manage Templates", "Create/edit event templates", "definitions"),
     ("manage_series", "Manage Series", "Create/edit event series", "definitions"),
 
@@ -148,7 +149,8 @@ ROLE_PERMISSIONS = {
         "create_events", "edit_events", "delete_events",
         "lock_signups", "cancel_events", "duplicate_events",
         "record_attendance",
-        "manage_raid_definitions", "manage_templates", "manage_series",
+        "manage_raid_definitions", "manage_default_definitions",
+        "manage_templates", "manage_series",
         "add_members", "remove_members", "update_member_roles",
         "update_guild_settings", "delete_guild",
         "manage_roles",

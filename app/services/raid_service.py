@@ -92,3 +92,35 @@ def list_raid_definitions(guild_id: int) -> list[RaidDefinition]:
         (RaidDefinition.guild_id == guild_id) | (RaidDefinition.guild_id.is_(None))
     ).where(RaidDefinition.is_active.is_(True))
     return list(db.session.execute(stmt).scalars().all())
+
+
+def copy_raid_definition_to_guild(
+    source: RaidDefinition, guild_id: int, created_by: int
+) -> RaidDefinition:
+    """Copy a raid definition into a specific guild as a non-builtin copy."""
+    copy = RaidDefinition(
+        guild_id=guild_id,
+        created_by=created_by,
+        code=f"{source.code}_copy",
+        name=f"{source.name} (Copy)",
+        expansion=source.expansion,
+        category=source.category,
+        default_raid_size=source.default_raid_size,
+        supports_10=source.supports_10,
+        supports_25=source.supports_25,
+        supports_heroic=source.supports_heroic,
+        is_builtin=False,
+        is_active=True,
+        default_duration_minutes=source.default_duration_minutes,
+        raid_type=source.raid_type,
+        realm=source.realm,
+        melee_dps_slots=source.melee_dps_slots,
+        main_tank_slots=source.main_tank_slots,
+        off_tank_slots=source.off_tank_slots,
+        healer_slots=source.healer_slots,
+        range_dps_slots=source.range_dps_slots,
+        notes=source.notes,
+    )
+    db.session.add(copy)
+    db.session.commit()
+    return copy

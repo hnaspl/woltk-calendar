@@ -44,6 +44,23 @@ def create_raid_definition(guild_id: int):
     return jsonify(rd.to_dict()), 201
 
 
+@bp.post("/<int:rd_id>/copy")
+@login_required
+def copy_raid_definition(guild_id: int, rd_id: int):
+    """Copy a built-in (global) raid definition into the guild's own definitions."""
+    membership = _check_membership(guild_id)
+    if not has_permission(membership, "manage_raid_definitions"):
+        return jsonify({"error": "Permission 'manage_raid_definitions' required"}), 403
+    rd = raid_service.get_raid_definition(rd_id)
+    if rd is None:
+        return jsonify({"error": "Raid definition not found"}), 404
+    try:
+        copy = raid_service.copy_raid_definition_to_guild(rd, guild_id, current_user.id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(copy.to_dict()), 201
+
+
 @bp.get("/<int:rd_id>")
 @login_required
 def get_raid_definition(guild_id: int, rd_id: int):
@@ -64,8 +81,8 @@ def update_raid_definition(guild_id: int, rd_id: int):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
-    if rd.is_builtin and not has_permission(membership, "manage_system_users"):
-        return jsonify({"error": "Built-in raid definitions cannot be modified"}), 403
+    if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
+        return jsonify({"error": "Permission 'manage_default_definitions' required to edit built-in definitions"}), 403
     data = request.get_json(silent=True) or {}
     try:
         rd = raid_service.update_raid_definition(rd, data)
@@ -83,7 +100,7 @@ def delete_raid_definition(guild_id: int, rd_id: int):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
-    if rd.is_builtin and not has_permission(membership, "manage_system_users"):
-        return jsonify({"error": "Built-in raid definitions cannot be deleted"}), 403
+    if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
+        return jsonify({"error": "Permission 'manage_default_definitions' required to delete built-in definitions"}), 403
     raid_service.delete_raid_definition(rd)
     return jsonify({"message": "Raid definition deleted"}), 200
