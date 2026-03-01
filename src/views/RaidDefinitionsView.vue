@@ -59,7 +59,7 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <WowButton v-if="def.is_builtin" variant="secondary" class="flex-1 text-xs py-1.5" @click="copyToGuild(def)">
+            <WowButton v-if="def.is_builtin && hasMultipleGuilds" variant="secondary" class="flex-1 text-xs py-1.5" @click="openCopyModal(def)">
               📋 Copy to Guild
             </WowButton>
             <WowButton v-if="!def.is_builtin || canManageDefaults" variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">Edit</WowButton>
@@ -95,10 +95,9 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Realm</label>
-            <select v-model="form.realm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select realm…</option>
-              <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
+            <label class="block text-xs text-text-muted mb-1">Guild (Realm)</label>
+            <select v-model.number="selectedGuildId" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
             </select>
           </div>
           <div>
@@ -132,13 +131,18 @@
           </div>
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
+        <!-- Multi-guild creation -->
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
           <label class="flex items-center gap-2 cursor-pointer">
-            <input v-model="applyToAllGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+            <input v-model="applyToOtherGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
             <span class="text-sm text-text-primary">Also create in my other guilds</span>
           </label>
-          <div v-if="applyToAllGuilds" class="mt-2 space-y-1 pl-6">
-            <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
+          <div v-if="applyToOtherGuilds" class="mt-2 space-y-1 pl-6">
+            <label class="flex items-center gap-2 cursor-pointer mb-1">
+              <input type="checkbox" :checked="allOtherGuildsSelected" @change="toggleAllOtherGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+            </label>
+            <label v-for="g in copyTargetGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
               <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
               <span class="text-xs text-text-muted">{{ g.name }} <span class="text-text-muted/60">({{ g.realm_name }})</span></span>
             </label>
@@ -149,6 +153,38 @@
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
           <WowButton :loading="saving" @click="saveDef">{{ editing ? 'Save' : 'Create' }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Copy to Guild modal -->
+    <WowModal v-model="showCopyModal" title="Copy Definition to Guilds" size="sm">
+      <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.name }}</strong> to selected guilds:</p>
+      <div class="space-y-1">
+        <label class="flex items-center gap-2 cursor-pointer mb-1">
+          <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+          <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+        </label>
+        <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
+          <input v-model="copyGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+          <span class="text-xs text-text-muted">{{ g.name }} <span class="text-text-muted/60">({{ g.realm_name }})</span></span>
+        </label>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showCopyModal = false">Cancel</WowButton>
+          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">Copy</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Confirmation modal for no guilds selected -->
+    <WowModal v-model="showNoGuildConfirm" title="No additional guilds selected" size="sm">
+      <p class="text-text-muted text-sm">This definition will only be created in <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="goBackToForm">Go Back</WowButton>
+          <WowButton @click="confirmSaveCurrentOnly">Continue</WowButton>
         </div>
       </template>
     </WowModal>
@@ -178,7 +214,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, RAID_TYPES } from '@/constants'
+import { RAID_TYPES } from '@/constants'
 import * as raidDefsApi from '@/api/raidDefinitions'
 
 const guildStore = useGuildStore()
@@ -187,6 +223,7 @@ const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
 
 const canManageDefaults = computed(() => permissions.can('manage_default_definitions'))
+const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
 
 const definitions = ref([])
 const loading = ref(true)
@@ -196,23 +233,53 @@ const noGuild = ref(false)
 const formError = ref(null)
 const showModal = ref(false)
 const showDeleteConfirm = ref(false)
+const showCopyModal = ref(false)
+const showNoGuildConfirm = ref(false)
 const editing = ref(null)
 const deleteTarget = ref(null)
+const copySource = ref(null)
 
 const raidTypes = RAID_TYPES
-// Show realms from joined guilds instead of all Warmane realms
-const guildRealms = computed(() => {
-  const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
-  return [...realms].sort()
-})
 
-const form = reactive({ name: '', raid_type: '', size: '', realm: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
-const applyToAllGuilds = ref(false)
+const form = reactive({ name: '', raid_type: '', size: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
+const selectedGuildId = ref(null)
+const applyToOtherGuilds = ref(false)
 const selectedGuildIds = ref([])
+const copyGuildIds = ref([])
 
 const otherGuilds = computed(() =>
   guildStore.guilds.filter(g => g.id !== guildStore.currentGuild?.id)
 )
+
+// For multi-guild creation, exclude the guild already selected as target
+const copyTargetGuilds = computed(() =>
+  guildStore.guilds.filter(g => g.id !== selectedGuildId.value)
+)
+
+const selectedGuildObj = computed(() =>
+  guildStore.guilds.find(g => g.id === selectedGuildId.value)
+)
+
+const selectedGuildLabel = computed(() => {
+  const g = selectedGuildObj.value
+  return g ? `${g.name} (${g.realm_name})` : ''
+})
+
+const allOtherGuildsSelected = computed(() =>
+  copyTargetGuilds.value.length > 0 && copyTargetGuilds.value.every(g => selectedGuildIds.value.includes(g.id))
+)
+
+const allCopyGuildsSelected = computed(() =>
+  otherGuilds.value.length > 0 && otherGuilds.value.every(g => copyGuildIds.value.includes(g.id))
+)
+
+function toggleAllOtherGuilds(e) {
+  selectedGuildIds.value = e.target.checked ? copyTargetGuilds.value.map(g => g.id) : []
+}
+
+function toggleAllCopyGuilds(e) {
+  copyGuildIds.value = e.target.checked ? otherGuilds.value.map(g => g.id) : []
+}
 
 onMounted(async () => {
   loading.value = true
@@ -231,46 +298,88 @@ onMounted(async () => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_type: '', size: '', realm: guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
-  applyToAllGuilds.value = false
-  selectedGuildIds.value = otherGuilds.value.map(g => g.id)
+  selectedGuildId.value = guildStore.currentGuild?.id ?? null
+  Object.assign(form, { name: '', raid_type: '', size: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
+  applyToOtherGuilds.value = false
+  selectedGuildIds.value = []
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(def) {
   editing.value = def
-  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, realm: def.realm ?? guildStore.currentGuild?.realm_name ?? '', default_duration_minutes: def.default_duration_minutes ?? 180, main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, melee_dps_slots: def.melee_dps_slots ?? 0, healer_slots: def.healer_slots ?? 5, range_dps_slots: def.range_dps_slots ?? 18 })
+  selectedGuildId.value = def.guild_id ?? guildStore.currentGuild?.id ?? null
+  Object.assign(form, { name: def.name, raid_type: def.raid_type || def.code || '', size: def.size, default_duration_minutes: def.default_duration_minutes ?? 180, main_tank_slots: def.main_tank_slots ?? 1, off_tank_slots: def.off_tank_slots ?? 1, melee_dps_slots: def.melee_dps_slots ?? 0, healer_slots: def.healer_slots ?? 5, range_dps_slots: def.range_dps_slots ?? 18 })
   formError.value = null; showModal.value = true
 }
 
 function confirmDelete(def) { deleteTarget.value = def; showDeleteConfirm.value = true }
+
+function openCopyModal(def) {
+  copySource.value = def
+  copyGuildIds.value = []
+  showCopyModal.value = true
+}
+
+let pendingSave = null
 
 async function saveDef() {
   formError.value = null
   if (!form.name || !form.raid_type || !form.size) { formError.value = 'Name, type and size are required'; return }
   const totalSlots = (form.main_tank_slots || 0) + (form.off_tank_slots || 0) + (form.melee_dps_slots || 0) + (form.healer_slots || 0) + (form.range_dps_slots || 0)
   if (totalSlots > form.size) { formError.value = `Total slots (${totalSlots}) cannot exceed raid size (${form.size})`; return }
+
+  // Check if multi-guild is checked but no guilds selected
+  if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
+    pendingSave = true
+    showNoGuildConfirm.value = true
+    return
+  }
+
+  await doSave()
+}
+
+function goBackToForm() {
+  showNoGuildConfirm.value = false
+  pendingSave = null
+}
+
+async function confirmSaveCurrentOnly() {
+  showNoGuildConfirm.value = false
+  applyToOtherGuilds.value = false
+  await doSave()
+}
+
+async function doSave() {
   saving.value = true
+  const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
+  const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
+  // Set realm from selected guild
+  const payload = { ...form, realm: targetGuild?.realm_name ?? '' }
   try {
     if (editing.value) {
-      const updated = await raidDefsApi.updateRaidDefinition(guildStore.currentGuild.id, editing.value.id, form)
+      const updated = await raidDefsApi.updateRaidDefinition(targetGuildId, editing.value.id, payload)
       const idx = definitions.value.findIndex(d => d.id === editing.value.id)
       if (idx !== -1) definitions.value[idx] = updated
     } else {
-      definitions.value.push(await raidDefsApi.createRaidDefinition(guildStore.currentGuild.id, form))
+      const created = await raidDefsApi.createRaidDefinition(targetGuildId, payload)
+      // Only add to local list if it belongs to current guild view
+      if (targetGuildId === guildStore.currentGuild?.id) {
+        definitions.value.push(created)
+      }
       // Also create in other selected guilds
-      if (applyToAllGuilds.value && selectedGuildIds.value.length > 0) {
+      if (applyToOtherGuilds.value && selectedGuildIds.value.length > 0) {
         let failed = 0
         for (const guildId of selectedGuildIds.value) {
-          try { await raidDefsApi.createRaidDefinition(guildId, form) } catch { failed++ }
+          try { await raidDefsApi.createRaidDefinition(guildId, payload) } catch { failed++ }
         }
         if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
       }
     }
     showModal.value = false
-    uiStore.showToast(editing.value ? 'Definition updated' : 'Definition created', 'success')
+    const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
+    uiStore.showToast(editing.value ? 'Definition updated' : `Definition created in ${guildLabel}`, 'success')
   } catch (err) {
-    formError.value = err?.response?.data?.message ?? 'Failed to save'
+    formError.value = err?.response?.data?.message ?? err?.response?.data?.error ?? 'Failed to save'
   } finally { saving.value = false }
 }
 
@@ -285,14 +394,22 @@ async function doDelete() {
   finally { saving.value = false }
 }
 
-async function copyToGuild(def) {
+async function doCopy() {
+  if (copyGuildIds.value.length === 0) return
   saving.value = true
-  try {
-    const copy = await raidDefsApi.copyRaidDefinition(guildStore.currentGuild.id, def.id)
-    definitions.value.push(copy)
-    uiStore.showToast(`"${def.name}" copied to guild`, 'success')
-  } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to copy definition', 'error')
-  } finally { saving.value = false }
+  let succeeded = 0, failed = 0
+  for (const guildId of copyGuildIds.value) {
+    try {
+      await raidDefsApi.copyRaidDefinition(guildId, copySource.value.id)
+      succeeded++
+    } catch { failed++ }
+  }
+  showCopyModal.value = false
+  if (failed > 0) {
+    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+  } else {
+    uiStore.showToast(`"${copySource.value.name}" copied to ${succeeded} guild(s)`, 'success')
+  }
+  saving.value = false
 }
 </script>

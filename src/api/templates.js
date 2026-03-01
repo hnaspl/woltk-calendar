@@ -16,3 +16,6 @@ export const deleteTemplate = (guildId, tplId) =>
 
 export const applyTemplate = (guildId, tplId, payload) =>
   api.post(`/guilds/${guildId}/templates/${tplId}/apply`, payload)
+
+export const copyTemplate = (guildId, tplId) =>
+  api.post(`/guilds/${guildId}/templates/${tplId}/copy`)

@@ -76,6 +76,23 @@ def delete_series(guild_id: int, series_id: int):
     return jsonify({"message": "Series deleted"}), 200
 
 
+@bp.post("/<int:series_id>/copy")
+@login_required
+def copy_series(guild_id: int, series_id: int):
+    """Copy a recurring raid series into another guild."""
+    membership = _check_membership(guild_id)
+    if not has_permission(membership, "manage_series"):
+        return jsonify({"error": "Permission 'manage_series' required"}), 403
+    series = event_service.get_series(series_id)
+    if series is None:
+        return jsonify({"error": "Series not found"}), 404
+    try:
+        copy = event_service.copy_series_to_guild(series, guild_id, current_user.id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(copy.to_dict()), 201
+
+
 @bp.post("/<int:series_id>/generate")
 @login_required
 def generate_events(guild_id: int, series_id: int):

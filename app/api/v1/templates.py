@@ -76,6 +76,23 @@ def delete_template(guild_id: int, tmpl_id: int):
     return jsonify({"message": "Template deleted"}), 200
 
 
+@bp.post("/<int:tmpl_id>/copy")
+@login_required
+def copy_template(guild_id: int, tmpl_id: int):
+    """Copy a template into another guild."""
+    membership = _check_membership(guild_id)
+    if not has_permission(membership, "manage_templates"):
+        return jsonify({"error": "Permission 'manage_templates' required"}), 403
+    tmpl = event_service.get_template(tmpl_id)
+    if tmpl is None:
+        return jsonify({"error": "Template not found"}), 404
+    try:
+        copy = event_service.copy_template_to_guild(tmpl, guild_id, current_user.id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(copy.to_dict()), 201
+
+
 @bp.post("/<int:tmpl_id>/apply")
 @login_required
 def apply_template(guild_id: int, tmpl_id: int):

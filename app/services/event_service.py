@@ -8,6 +8,7 @@ from typing import Optional
 import sqlalchemy as sa
 
 from app.extensions import db
+from app.models.guild import Guild
 from app.models.raid import EventSeries, RaidEvent, RaidTemplate
 
 
@@ -67,6 +68,40 @@ def list_templates(guild_id: int) -> list[RaidTemplate]:
     )
 
 
+def copy_template_to_guild(
+    source: RaidTemplate, guild_id: int, created_by: int
+) -> RaidTemplate:
+    """Copy a template into a specific guild."""
+    base_name = source.name
+    suffix = 1
+    while True:
+        name = f"{base_name} (Copy {suffix})" if suffix > 1 else f"{base_name} (Copy)"
+        existing = db.session.execute(
+            sa.select(RaidTemplate).where(
+                RaidTemplate.guild_id == guild_id,
+                RaidTemplate.name == name,
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            break
+        suffix += 1
+    copy = RaidTemplate(
+        guild_id=guild_id,
+        created_by=created_by,
+        raid_definition_id=source.raid_definition_id,
+        name=name,
+        raid_size=source.raid_size,
+        difficulty=source.difficulty,
+        expected_duration_minutes=source.expected_duration_minutes,
+        target_roles_json=source.target_roles_json,
+        default_instructions=source.default_instructions,
+        is_active=True,
+    )
+    db.session.add(copy)
+    db.session.commit()
+    return copy
+
+
 # ---------------------------------------------------------------------------
 # EventSeries
 # ---------------------------------------------------------------------------
@@ -118,6 +153,44 @@ def list_series(guild_id: int) -> list[EventSeries]:
             sa.select(EventSeries).where(EventSeries.guild_id == guild_id)
         ).scalars().all()
     )
+
+
+def copy_series_to_guild(
+    source: EventSeries, guild_id: int, created_by: int
+) -> EventSeries:
+    """Copy a recurring raid series into a specific guild."""
+    guild = db.session.get(Guild, guild_id)
+    realm_name = guild.realm_name if guild else source.realm_name
+    base_title = source.title
+    suffix = 1
+    while True:
+        title = f"{base_title} (Copy {suffix})" if suffix > 1 else f"{base_title} (Copy)"
+        existing = db.session.execute(
+            sa.select(EventSeries).where(
+                EventSeries.guild_id == guild_id,
+                EventSeries.title == title,
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            break
+        suffix += 1
+    copy = EventSeries(
+        guild_id=guild_id,
+        created_by=created_by,
+        template_id=source.template_id,
+        title=title,
+        realm_name=realm_name,
+        timezone=source.timezone,
+        recurrence_rule=source.recurrence_rule,
+        start_time_local=source.start_time_local,
+        duration_minutes=source.duration_minutes,
+        default_raid_size=source.default_raid_size,
+        default_difficulty=source.default_difficulty,
+        active=True,
+    )
+    db.session.add(copy)
+    db.session.commit()
+    return copy
 
 
 def generate_events_from_series(series: EventSeries, count: int = 4) -> list[RaidEvent]:

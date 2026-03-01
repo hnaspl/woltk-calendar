@@ -13,3 +13,6 @@ export const deleteSeries = (guildId, seriesId) =>
 
 export const generateEvents = (guildId, seriesId, payload = {}) =>
   api.post(`/guilds/${guildId}/series/${seriesId}/generate`, payload)
+
+export const copySeries = (guildId, seriesId) =>
+  api.post(`/guilds/${guildId}/series/${seriesId}/copy`)

@@ -46,6 +46,9 @@
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
+              <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(s)">
+                📋 Copy
+              </WowButton>
               <WowButton variant="primary" class="text-xs py-1.5" @click="openGenerate(s)">
                 Generate Events
               </WowButton>
@@ -75,10 +78,9 @@
           <span class="text-[10px] text-text-muted">Selecting a template auto-fills size, difficulty &amp; duration</span>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Realm *</label>
-          <select v-model="form.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select realm…</option>
-            <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
+          <label class="block text-xs text-text-muted mb-1">Guild (Realm) *</label>
+          <select v-model.number="selectedGuildId" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
           </select>
         </div>
         <div class="grid grid-cols-2 gap-4">
@@ -116,13 +118,18 @@
           </div>
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
+        <!-- Multi-guild creation -->
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
           <label class="flex items-center gap-2 cursor-pointer">
-            <input v-model="applyToAllGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+            <input v-model="applyToOtherGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
             <span class="text-sm text-text-primary">Also create in my other guilds</span>
           </label>
-          <div v-if="applyToAllGuilds" class="mt-2 space-y-1 pl-6">
-            <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
+          <div v-if="applyToOtherGuilds" class="mt-2 space-y-1 pl-6">
+            <label class="flex items-center gap-2 cursor-pointer mb-1">
+              <input type="checkbox" :checked="allOtherGuildsSelected" @change="toggleAllOtherGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+            </label>
+            <label v-for="g in copyTargetGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
               <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
               <span class="text-xs text-text-muted">{{ g.name }} <span class="text-text-muted/60">({{ g.realm_name }})</span></span>
             </label>
@@ -133,6 +140,38 @@
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
           <WowButton :loading="saving" @click="saveSeries">{{ editing ? 'Save' : 'Create' }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Copy to Guild modal -->
+    <WowModal v-model="showCopyModal" title="Copy Series to Guilds" size="sm">
+      <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.title }}</strong> to selected guilds:</p>
+      <div class="space-y-1">
+        <label class="flex items-center gap-2 cursor-pointer mb-1">
+          <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+          <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+        </label>
+        <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
+          <input v-model="copyGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+          <span class="text-xs text-text-muted">{{ g.name }} <span class="text-text-muted/60">({{ g.realm_name }})</span></span>
+        </label>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showCopyModal = false">Cancel</WowButton>
+          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">Copy</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Confirmation modal for no guilds selected -->
+    <WowModal v-model="showNoGuildConfirm" title="No additional guilds selected" size="sm">
+      <p class="text-text-muted text-sm">This series will only be created in <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="goBackToForm">Go Back</WowButton>
+          <WowButton @click="confirmSaveCurrentOnly">Continue</WowButton>
         </div>
       </template>
     </WowModal>
@@ -191,6 +230,8 @@ import * as templatesApi from '@/api/templates'
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 
+const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
+
 const seriesList = ref([])
 const templates = ref([])
 const loading = ref(true)
@@ -201,20 +242,19 @@ const formError = ref(null)
 const showModal = ref(false)
 const showGenerate = ref(false)
 const showDeleteConfirm = ref(false)
+const showCopyModal = ref(false)
+const showNoGuildConfirm = ref(false)
 const editing = ref(null)
 const generateTarget = ref(null)
 const generateCount = ref(4)
 const generateResult = ref(null)
 const deleteTarget = ref(null)
+const copySource = ref(null)
 
-const guildRealms = computed(() => {
-  const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
-  return [...realms].sort()
-})
+const selectedGuildId = ref(null)
 
 const form = reactive({
   title: '',
-  realm_name: '',
   recurrence_rule: 'weekly',
   start_time_local: '19:00',
   duration_minutes: 180,
@@ -222,12 +262,43 @@ const form = reactive({
   default_difficulty: 'normal',
   template_id: null
 })
-const applyToAllGuilds = ref(false)
+const applyToOtherGuilds = ref(false)
 const selectedGuildIds = ref([])
+const copyGuildIds = ref([])
 
 const otherGuilds = computed(() =>
   guildStore.guilds.filter(g => g.id !== guildStore.currentGuild?.id)
 )
+
+// For multi-guild creation, exclude the guild already selected as target
+const copyTargetGuilds = computed(() =>
+  guildStore.guilds.filter(g => g.id !== selectedGuildId.value)
+)
+
+const selectedGuildObj = computed(() =>
+  guildStore.guilds.find(g => g.id === selectedGuildId.value)
+)
+
+const selectedGuildLabel = computed(() => {
+  const g = selectedGuildObj.value
+  return g ? `${g.name} (${g.realm_name})` : ''
+})
+
+const allOtherGuildsSelected = computed(() =>
+  copyTargetGuilds.value.length > 0 && copyTargetGuilds.value.every(g => selectedGuildIds.value.includes(g.id))
+)
+
+const allCopyGuildsSelected = computed(() =>
+  otherGuilds.value.length > 0 && otherGuilds.value.every(g => copyGuildIds.value.includes(g.id))
+)
+
+function toggleAllOtherGuilds(e) {
+  selectedGuildIds.value = e.target.checked ? copyTargetGuilds.value.map(g => g.id) : []
+}
+
+function toggleAllCopyGuilds(e) {
+  copyGuildIds.value = e.target.checked ? otherGuilds.value.map(g => g.id) : []
+}
 
 onMounted(async () => {
   loading.value = true
@@ -274,21 +345,23 @@ function templateName(tplId) {
 
 function openAddModal() {
   editing.value = null
+  selectedGuildId.value = guildStore.currentGuild?.id ?? null
   Object.assign(form, {
-    title: '', realm_name: guildStore.currentGuild?.realm_name ?? '',
+    title: '',
     recurrence_rule: 'weekly', start_time_local: '19:00',
     duration_minutes: 180, default_raid_size: 25, default_difficulty: 'normal',
     template_id: null
   })
-  applyToAllGuilds.value = false
-  selectedGuildIds.value = otherGuilds.value.map(g => g.id)
+  applyToOtherGuilds.value = false
+  selectedGuildIds.value = []
   formError.value = null; showModal.value = true
 }
 
 function openEditModal(s) {
   editing.value = s
+  selectedGuildId.value = s.guild_id ?? guildStore.currentGuild?.id ?? null
   Object.assign(form, {
-    title: s.title, realm_name: s.realm_name ?? '',
+    title: s.title,
     recurrence_rule: s.recurrence_rule ?? 'weekly',
     start_time_local: s.start_time_local ?? '19:00',
     duration_minutes: s.duration_minutes ?? 180,
@@ -308,28 +381,65 @@ function openGenerate(s) {
 
 function confirmDelete(s) { deleteTarget.value = s; showDeleteConfirm.value = true }
 
+function openCopyModal(s) {
+  copySource.value = s
+  copyGuildIds.value = []
+  showCopyModal.value = true
+}
+
 async function saveSeries() {
   formError.value = null
-  if (!form.title || !form.realm_name) { formError.value = 'Title and realm are required'; return }
+  if (!form.title) { formError.value = 'Title is required'; return }
+
+  // Check if multi-guild is checked but no guilds selected
+  if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
+    showNoGuildConfirm.value = true
+    return
+  }
+
+  await doSave()
+}
+
+function goBackToForm() {
+  showNoGuildConfirm.value = false
+}
+
+async function confirmSaveCurrentOnly() {
+  showNoGuildConfirm.value = false
+  applyToOtherGuilds.value = false
+  await doSave()
+}
+
+async function doSave() {
   saving.value = true
+  const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
+  const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
+  // Derive realm_name from selected guild
+  const payload = { ...form, realm_name: targetGuild?.realm_name ?? '' }
   try {
     if (editing.value) {
-      const updated = await seriesApi.updateSeries(guildStore.currentGuild.id, editing.value.id, form)
+      const updated = await seriesApi.updateSeries(targetGuildId, editing.value.id, payload)
       const idx = seriesList.value.findIndex(s => s.id === editing.value.id)
       if (idx !== -1) seriesList.value[idx] = updated
     } else {
-      seriesList.value.push(await seriesApi.createSeries(guildStore.currentGuild.id, form))
+      const created = await seriesApi.createSeries(targetGuildId, payload)
+      if (targetGuildId === guildStore.currentGuild?.id) {
+        seriesList.value.push(created)
+      }
       // Also create in other selected guilds
-      if (applyToAllGuilds.value && selectedGuildIds.value.length > 0) {
+      if (applyToOtherGuilds.value && selectedGuildIds.value.length > 0) {
         let failed = 0
         for (const guildId of selectedGuildIds.value) {
-          try { await seriesApi.createSeries(guildId, form) } catch { failed++ }
+          const otherGuild = guildStore.guilds.find(g => g.id === guildId)
+          const otherPayload = { ...form, realm_name: otherGuild?.realm_name ?? '' }
+          try { await seriesApi.createSeries(guildId, otherPayload) } catch { failed++ }
         }
         if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
       }
     }
     showModal.value = false
-    uiStore.showToast(editing.value ? 'Series updated' : 'Series created', 'success')
+    const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
+    uiStore.showToast(editing.value ? 'Series updated' : `Series created in ${guildLabel}`, 'success')
   } catch (err) {
     formError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to save'
   } finally { saving.value = false }
@@ -357,5 +467,24 @@ async function doDelete() {
     uiStore.showToast('Series deleted', 'success')
   } catch { uiStore.showToast('Failed to delete', 'error') }
   finally { saving.value = false }
+}
+
+async function doCopy() {
+  if (copyGuildIds.value.length === 0) return
+  saving.value = true
+  let succeeded = 0, failed = 0
+  for (const guildId of copyGuildIds.value) {
+    try {
+      await seriesApi.copySeries(guildId, copySource.value.id)
+      succeeded++
+    } catch { failed++ }
+  }
+  showCopyModal.value = false
+  if (failed > 0) {
+    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+  } else {
+    uiStore.showToast(`"${copySource.value.title}" copied to ${succeeded} guild(s)`, 'success')
+  }
+  saving.value = false
 }
 </script>
