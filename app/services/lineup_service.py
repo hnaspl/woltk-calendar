@@ -248,6 +248,27 @@ def update_lineup_grouped(
     user_slot_map: dict[int, tuple[int, str, LineupSlot]] = {}
     overflow_to_bench: list[int] = []  # signup IDs moved to bench
 
+    # Enforce slot limits: truncate role arrays to the event's defined slot
+    # counts.  Excess signups are moved to bench.
+    from app.models.raid import RaidEvent
+    event = db.session.get(RaidEvent, raid_event_id)
+    if event:
+        rd = event.raid_definition
+        slot_limits = {
+            "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
+            "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
+            "tank": rd.tank_slots if rd and rd.tank_slots is not None else 0,
+            "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
+            "dps": rd.dps_slots if rd and rd.dps_slots is not None else 18,
+        }
+        for key, slot_group in role_map.items():
+            limit = slot_limits.get(slot_group)
+            if limit is not None:
+                ids = data.get(key, [])
+                if len(ids) > limit:
+                    overflow_to_bench.extend(ids[limit:])
+                    data[key] = ids[:limit]
+
     # Track new role assignments for freed-slot detection
     new_role_signups: dict[str, set[int]] = {}
 
@@ -394,6 +415,8 @@ def update_lineup_grouped(
     # Auto-promote bench players into freed role slots.
     # Admin-benched signups are at the end of the queue so other waiting
     # players get promoted first.
+    # Exclude signups the admin explicitly moved to bench so they are not
+    # immediately re-promoted back into the lineup within the same call.
     # Import here to avoid circular dependency (signup_service ↔ lineup_service).
     from app.services.signup_service import _auto_promote_bench
 
@@ -403,7 +426,10 @@ def update_lineup_grouped(
         added_count = len(new_ids - old_ids)
         freed_count = removed_count - added_count  # net freed slots
         for _ in range(max(freed_count, 0)):
-            _auto_promote_bench(raid_event_id, role)
+            _auto_promote_bench(
+                raid_event_id, role,
+                exclude_signup_ids=removed_from_lineup,
+            )
 
     return get_lineup_grouped(raid_event_id)
 

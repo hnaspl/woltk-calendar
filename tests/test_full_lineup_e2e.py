@@ -1691,3 +1691,307 @@ class TestCompleteLifecycleWithAllFlows:
         all_ids = list(_all_role_ids(final)) + _bench_ids(final)
         assert len(all_ids) == len(set(all_ids)), \
             "No signup should appear in multiple groups"
+
+
+# ---------------------------------------------------------------------------
+# Bug fix verification tests
+# ---------------------------------------------------------------------------
+
+class TestDeclineDoesNotRePromote:
+    """Bug #1: decline_signup() should NOT re-promote the declined player.
+
+    Before fix: When a player in a role slot is declined and there are
+    no bench players waiting for that role, the fallback auto-promote
+    path picks up the just-declined signup (still in DB without a
+    LineupSlot) and re-promotes it.
+
+    After fix: _auto_promote_bench() accepts exclude_signup_ids and
+    decline_signup() passes the declined signup's ID.
+    """
+
+    def test_decline_player_no_bench_stays_declined(self, raid_seed):
+        """Decline a role player when NO bench players exist.
+        The slot should remain empty — the declined player must NOT
+        be re-promoted."""
+        s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
+        s2 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        # No bench players for main_tank
+
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+
+        # Decline player 1
+        signup_service.decline_signup(s1)
+
+        # Player 1 should be declined: no role slot, no bench slot
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Declined player must NOT be re-promoted to main_tank"
+        assert lineup_service.get_bench_info(s1.id) is None, \
+            "Declined player must NOT be on bench"
+        # Player 2 unaffected
+        assert lineup_service.has_role_slot(s2.id)
+
+    def test_decline_player_with_bench_promotes_bench_not_declined(self, raid_seed):
+        """Decline a role player when a bench player exists.
+        The bench player should be promoted, not the declined one."""
+        s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
+        s2 = _signup(raid_seed, "u2", "p2_warrior", "main_tank", force_bench=True)
+        # s2 goes to bench (main_tank slot=1, only 1 fits)
+
+        assert lineup_service.has_role_slot(s1.id)
+        bench2 = lineup_service.get_bench_info(s2.id)
+        assert bench2 is not None, "P2 should be on bench"
+
+        # Decline player 1
+        signup_service.decline_signup(s1)
+
+        # Player 2 should be promoted from bench
+        assert lineup_service.has_role_slot(s2.id), \
+            "Bench player should be promoted when role slot freed"
+        # Player 1 should stay declined
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Declined player must NOT be re-promoted"
+        assert lineup_service.get_bench_info(s1.id) is None
+
+    def test_decline_dps_with_multiple_bench_promotes_first(self, raid_seed):
+        """Decline a DPS player with multiple bench players.
+        First bench player should be promoted, declined player excluded."""
+        # Fill DPS slots (6 available)
+        dps_signups = []
+        for ukey, ckey in [("u8", "p8_hunter"), ("u9", "p9_mage"),
+                           ("u10", "p10_warlock"), ("u11", "p11_hunter"),
+                           ("u5", "p5_priest"), ("u6", "p6_shaman")]:
+            s = _signup(raid_seed, ukey, ckey, "dps")
+            dps_signups.append(s)
+
+        # P12 signs up for DPS (bench — slots full)
+        s_bench = _signup(raid_seed, "u12", "p12_mage", "dps", force_bench=True)
+
+        assert lineup_service.has_role_slot(dps_signups[0].id)
+        assert lineup_service.get_bench_info(s_bench.id) is not None
+
+        # Decline first DPS player
+        signup_service.decline_signup(dps_signups[0])
+
+        # Bench player should be promoted
+        assert lineup_service.has_role_slot(s_bench.id), \
+            "Bench player should be promoted to freed DPS slot"
+        # Declined player should NOT be re-promoted
+        assert not lineup_service.has_role_slot(dps_signups[0].id), \
+            "Declined player must not be re-promoted"
+
+
+class TestAdminBenchNotOverridden:
+    """Bug #2: Admin's explicit bench action should NOT be overridden
+    by auto-promote within the same update_lineup_grouped() call.
+
+    Before fix: When an admin moves a player from a role slot to bench
+    and there are more slot positions available than players in role slots,
+    auto-promote fires and re-promotes the just-benched player.
+
+    After fix: removed_from_lineup signups are excluded from auto-promote
+    via the exclude_signup_ids parameter.
+    """
+
+    def test_admin_bench_player_with_free_slots_stays_benched(self, raid_seed):
+        """Admin explicitly benches a DPS player when other DPS slots are
+        still free. The player should stay on bench, not be re-promoted."""
+        # Only 2 of 6 DPS slots filled
+        s1 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+        s2 = _signup(raid_seed, "u9", "p9_mage", "dps")
+
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+
+        db.session.expire_all()
+
+        # Admin moves P8 to bench (only P9 remains in DPS)
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {
+                "dps": [s2.id],
+                "bench_queue": [{"id": s1.id, "chosen_role": "dps"}],
+            },
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        # P8 should be on bench, NOT re-promoted
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Admin-benched player must NOT be auto-promoted back"
+        assert lineup_service.get_bench_info(s1.id) is not None, \
+            "Admin-benched player should be on bench"
+        # P9 should remain in DPS
+        assert lineup_service.has_role_slot(s2.id)
+
+    def test_admin_bench_only_player_in_role(self, raid_seed):
+        """Admin benches the ONLY player in a role. The slot should be
+        empty and the player should stay on bench."""
+        s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
+
+        assert lineup_service.has_role_slot(s1.id)
+
+        db.session.expire_all()
+
+        # Admin moves P1 to bench
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {
+                "main_tanks": [],
+                "bench_queue": [{"id": s1.id, "chosen_role": "main_tank"}],
+            },
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        # P1 should be on bench, not auto-promoted back
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Admin-benched player must stay on bench"
+        assert lineup_service.get_bench_info(s1.id) is not None
+
+    def test_admin_bench_promotes_different_player(self, raid_seed):
+        """Admin benches Player A but Player B is on bench for same role.
+        Player B should be promoted (if slot freed), but Player A stays benched."""
+        s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
+        s2 = _signup(raid_seed, "u2", "p2_warrior", "main_tank", force_bench=True)
+
+        assert lineup_service.has_role_slot(s1.id)
+        bench2 = lineup_service.get_bench_info(s2.id)
+        assert bench2 is not None
+
+        db.session.expire_all()
+
+        # Admin swaps: remove P1, put P2 in main_tank
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {
+                "main_tanks": [s2.id],
+                "bench_queue": [{"id": s1.id, "chosen_role": "main_tank"}],
+            },
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        # P2 should be in main_tank now
+        assert lineup_service.has_role_slot(s2.id), \
+            "P2 should be promoted to main_tank"
+        # P1 should be on bench
+        assert not lineup_service.has_role_slot(s1.id), \
+            "P1 should be on bench"
+        assert lineup_service.get_bench_info(s1.id) is not None
+
+
+class TestSlotLimitEnforcement:
+    """Bug #3: update_lineup_grouped() should enforce slot limits.
+
+    Before fix: Admin could send more signups in a role array than the
+    raid definition allows, and all would get role slots.
+
+    After fix: Excess signups beyond the slot limit are automatically
+    moved to bench.
+    """
+
+    def test_exceed_main_tank_limit(self, raid_seed):
+        """Send 2 signups for main_tank when limit is 1.
+        Second signup should be moved to bench."""
+        s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
+        s2 = _signup(raid_seed, "u2", "p2_warrior", "main_tank", force_bench=True)
+        # One goes to bench since limit=1
+
+        db.session.expire_all()
+
+        # Admin sends both in main_tanks
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {
+                "main_tanks": [s1.id, s2.id],
+            },
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        # Only first should be in role slot
+        mt_ids = _role_ids(result, "main_tanks")
+        assert len(mt_ids) <= 1, \
+            f"Main tank slots should be capped at 1, got {len(mt_ids)}"
+        assert s1.id in mt_ids, "First signup should be in main_tank"
+
+        # Second should be on bench
+        bench = _bench_ids(result)
+        assert s2.id in bench, "Excess signup should be moved to bench"
+
+    def test_exceed_dps_limit(self, raid_seed):
+        """Send 8 signups for DPS when limit is 6.
+        Last 2 should be moved to bench."""
+        signups = []
+        pairs = [("u8", "p8_hunter"), ("u9", "p9_mage"),
+                 ("u10", "p10_warlock"), ("u11", "p11_hunter"),
+                 ("u5", "p5_priest"), ("u6", "p6_shaman"),
+                 ("u1", "p1_hunter"), ("u12", "p12_mage")]
+        for i, (ukey, ckey) in enumerate(pairs):
+            # First 6 fill the slots, last 2 need force_bench
+            s = _signup(raid_seed, ukey, ckey, "dps",
+                        force_bench=(i >= 6))
+            signups.append(s)
+
+        db.session.expire_all()
+
+        all_ids = [s.id for s in signups]
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {"dps": all_ids},
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        dps_ids = _role_ids(result, "dps")
+        assert len(dps_ids) <= 6, \
+            f"DPS slots should be capped at 6, got {len(dps_ids)}"
+        # First 6 should be in DPS
+        for s in signups[:6]:
+            assert s.id in dps_ids
+        # Last 2 should be on bench
+        bench = _bench_ids(result)
+        for s in signups[6:]:
+            assert s.id in bench, \
+                f"Signup {s.id} should be on bench (exceeds limit)"
+
+    def test_within_limit_no_truncation(self, raid_seed):
+        """When signups fit within slot limits, nothing is truncated."""
+        s1 = _signup(raid_seed, "u1", "p1_druid", "main_tank")
+        s2 = _signup(raid_seed, "u8", "p8_hunter", "dps")
+
+        db.session.expire_all()
+
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {
+                "main_tanks": [s1.id],
+                "dps": [s2.id],
+            },
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        mt_ids = _role_ids(result, "main_tanks")
+        assert s1.id in mt_ids
+        dps_ids = _role_ids(result, "dps")
+        assert s2.id in dps_ids
+        bench = _bench_ids(result)
+        assert s1.id not in bench
+        assert s2.id not in bench
+
+    def test_exceed_off_tank_limit(self, raid_seed):
+        """Send 3 signups for off_tank when limit is 2.
+        Third signup should be moved to bench."""
+        s1 = _signup(raid_seed, "u3", "p3_paladin", "off_tank")
+        s2 = _signup(raid_seed, "u4", "p4_dk", "off_tank")
+        s3 = _signup(raid_seed, "u2", "p2_warrior", "off_tank", force_bench=True)
+
+        db.session.expire_all()
+
+        result = lineup_service.update_lineup_grouped(
+            raid_seed["event"].id,
+            {"off_tanks": [s1.id, s2.id, s3.id]},
+            confirmed_by=raid_seed["users"]["u1"].id,
+        )
+
+        ot_ids = _role_ids(result, "off_tanks")
+        assert len(ot_ids) <= 2, \
+            f"Off tank slots should be capped at 2, got {len(ot_ids)}"
+        bench = _bench_ids(result)
+        assert s3.id in bench, "Third off_tank should overflow to bench"

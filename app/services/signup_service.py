@@ -101,18 +101,27 @@ def get_role_counts(raid_event_id: int, roles: dict) -> dict:
     }
 
 
-def _auto_promote_bench(raid_event_id: int, role: str) -> None:
+def _auto_promote_bench(
+    raid_event_id: int,
+    role: str,
+    exclude_signup_ids: set[int] | None = None,
+) -> None:
     """Promote the first matching bench queue player to a role slot.
 
     Uses bench queue order (slot_index) when bench lineup slots exist,
     falling back to mains-first then earliest created_at.
     Skips players who already have another character in the active lineup.
+    Skips signups whose IDs are in *exclude_signup_ids* (e.g. just-declined
+    or admin-benched signups that should not be re-promoted).
     Emits real-time events so all clients see the promotion instantly.
     """
     from app.models.character import Character
     from app.models.signup import LineupSlot
     from app.services import lineup_service
     from app.utils.realtime import emit_signups_changed, emit_lineup_changed
+
+    if exclude_signup_ids is None:
+        exclude_signup_ids = set()
 
     # First: check bench queue (explicit queue order via LineupSlots)
     bench_slots = db.session.execute(
@@ -128,6 +137,8 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     for bench_slot in bench_slots:
         benched = bench_slot.signup
+        if benched.id in exclude_signup_ids:
+            continue
         # Skip if this player already has another character in a role slot
         if _user_has_role_slot(raid_event_id, benched.user_id, exclude_signup_id=benched.id):
             continue
@@ -161,6 +172,8 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
     ).scalars().all()
 
     for candidate in candidates:
+        if candidate.id in exclude_signup_ids:
+            continue
         if candidate.id not in existing_slot_ids:
             # Skip if this player already has another character in a role slot
             if _user_has_role_slot(raid_event_id, candidate.user_id, exclude_signup_id=candidate.id):
@@ -317,9 +330,11 @@ def decline_signup(signup: Signup) -> Signup:
     # Always remove lineup/bench queue slots
     lineup_service.remove_slot_for_signup(signup.id)
 
-    # Auto-promote only when a role slot is freed
+    # Auto-promote only when a role slot is freed.
+    # Exclude the just-declined signup so it doesn't get re-promoted
+    # by the fallback path (which picks up signups without a LineupSlot).
     if had_role_slot:
-        _auto_promote_bench(raid_event_id, role)
+        _auto_promote_bench(raid_event_id, role, exclude_signup_ids={signup.id})
 
     return signup
 

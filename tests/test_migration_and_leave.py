@@ -1212,15 +1212,15 @@ class TestCrossRoleSwapAutoPromotion:
 
         db.session.expire_all()
 
-        # Admin swaps: places alt in DPS, both main and alt in DPS list.
-        # One-char-per-player: alt (new) wins, main evicted.
-        # A DPS slot is freed (main replaced by alt is 1:1, but main
-        # was explicitly listed so it's evicted and alt takes its spot).
+        # Admin swaps: places alt and player2 in DPS (2 slots available).
+        # One-char-per-player: alt (new) wins, main evicted to bench.
+        # Slot limit: only 2 DPS slots, so only 2 signups in dps list.
         lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
-                "dps": [s1_alt.id, s1.id, s2.id],
+                "dps": [s1_alt.id, s2.id],
                 "bench_queue": [
+                    {"id": s1.id, "chosen_role": "dps"},
                     {"id": s3.id, "chosen_role": "dps"},
                 ],
             },
