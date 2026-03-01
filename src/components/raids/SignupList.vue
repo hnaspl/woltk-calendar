@@ -135,6 +135,36 @@
                   <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-0.5">
                     ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
                   </div>
+                  <!-- Officer action buttons (under queue info) -->
+                  <div v-if="isOfficer" class="flex items-center gap-1.5 mt-1" @click.stop>
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
+                      @click="startEdit(signup)"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
+                      @click="startReplaceCharacter(signup)"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                      </svg>
+                      Replace
+                    </button>
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
+                      @click="removeSignup(signup)"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                      Remove
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Achievement points -->
@@ -153,37 +183,6 @@
                   </svg>
                 </WowTooltip>
 
-              </div>
-
-              <!-- Officer action buttons (below the signup row) -->
-              <div v-if="isOfficer" class="flex items-center gap-2 mt-1.5 ml-10" @click.stop>
-                <button
-                  class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
-                  @click="startEdit(signup)"
-                >
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                  Edit
-                </button>
-                <button
-                  class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
-                  @click="startReplaceCharacter(signup)"
-                >
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                  </svg>
-                  Replace
-                </button>
-                <button
-                  class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
-                  @click="removeSignup(signup)"
-                >
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                  Remove
-                </button>
               </div>
             </CharacterTooltip>
           </template>

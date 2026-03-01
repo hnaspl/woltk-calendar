@@ -166,80 +166,103 @@
     <!-- Add / Edit modal -->
     <WowModal v-model="showModal" :title="editingChar ? 'Edit Character' : 'Add Character'" size="md">
       <form @submit.prevent="saveChar" class="space-y-4">
-        <!-- Warmane import section (only when adding, not editing) -->
-        <div v-if="!editingChar" class="p-3 rounded bg-bg-tertiary border border-border-default space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-accent-gold font-bold uppercase">Import from Warmane</span>
-            <span class="text-xs text-text-muted">(optional — fill name & realm, then click Lookup)</span>
+
+        <!-- Armory lock banner (editing an armory-imported character) -->
+        <div v-if="isArmoryLocked" class="p-3 rounded bg-blue-900/20 border border-blue-600/40 text-blue-300 text-xs flex items-center gap-2">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          This character is synced from Warmane armory. Fields are locked. Use <strong class="mx-1">Sync</strong> to update from armory.
+        </div>
+
+        <!-- STEP 1: Armory import (only when adding, not editing) -->
+        <div v-if="!editingChar && !manualEntry" class="space-y-4">
+          <div class="p-4 rounded bg-accent-gold/5 border border-accent-gold/30 space-y-3">
+            <div class="text-sm font-semibold text-accent-gold">Import from Warmane Armory</div>
+            <p class="text-xs text-text-muted">Enter your character name and realm to auto-fill all details from the Warmane armory.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <input v-model="form.name" placeholder="Character name" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              <div>
+                <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
+                <select v-else v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                  <option value="">Select realm…</option>
+                  <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+                </select>
+                <span v-if="guildStore.currentGuild?.realm_name" class="text-[10px] text-text-muted">Realm from current guild</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
+                Lookup on Warmane
+              </WowButton>
+              <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ Found — fields populated from armory</span>
+              <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">Not found — try again or fill manually</span>
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <input v-model="form.name" placeholder="Character name" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            <select v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select realm…</option>
-              <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-3">
-            <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
-              Lookup on Warmane
-            </WowButton>
-            <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ Found — fields populated from armory</span>
-            <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">Not found on Warmane — fill in manually below</span>
+          <div class="text-center">
+            <button type="button" class="text-xs text-text-muted hover:text-accent-gold transition-colors underline" @click="manualEntry = true">
+              or fill in manually without armory
+            </button>
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Character Name *</label>
-          <input v-model="form.name" required placeholder="Arthas" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Class *</label>
-          <select v-model="form.class" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onClassChange">
-            <option value="">Select class…</option>
-            <option v-for="c in wowClasses" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Realm *</label>
-          <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select realm…</option>
-            <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
-          </select>
-          <span v-if="guildRealms.length" class="text-[10px] text-text-muted">Only realms from your guilds</span>
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Role</label>
-          <select v-model="form.role" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select role…</option>
-            <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Spec</label>
-          <select v-if="filteredSpecs.length > 0" v-model="form.spec" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select spec…</option>
-            <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
-          </select>
-          <input v-else v-model="form.spec" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Secondary Spec</label>
-          <select v-if="filteredSpecs.length > 0" v-model="form.secondary_spec" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select secondary spec…</option>
-            <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
-          </select>
-          <input v-else v-model="form.secondary_spec" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">Warmane Armory URL</label>
-          <input v-model="form.armory_url" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-        </div>
+        <!-- STEP 2: Manual form fields (shown after lookup or manual choice) -->
+        <template v-if="editingChar || manualEntry || lookupResult === 'found'">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Character Name *</label>
+            <input v-model="form.name" required placeholder="Arthas" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Class *</label>
+            <select v-model="form.class" required :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" @change="onClassChange">
+              <option value="">Select class…</option>
+              <option v-for="c in wowClasses" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Realm *</label>
+            <select v-model="form.realm" required :disabled="isArmoryLocked || isRealmLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">Select realm…</option>
+              <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
+            </select>
+            <span v-if="isRealmLocked" class="text-[10px] text-text-muted">Realm from current guild</span>
+            <span v-else-if="guildRealms.length" class="text-[10px] text-text-muted">Only realms from your guilds</span>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Role</label>
+            <select v-model="form.role" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">Select role…</option>
+              <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Spec</label>
+            <select v-if="filteredSpecs.length > 0" v-model="form.spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">Select spec…</option>
+              <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
+            </select>
+            <input v-else v-model="form.spec" :disabled="isArmoryLocked" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Secondary Spec</label>
+            <select v-if="filteredSpecs.length > 0" v-model="form.secondary_spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">Select secondary spec…</option>
+              <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
+            </select>
+            <input v-else v-model="form.secondary_spec" :disabled="isArmoryLocked" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Warmane Armory URL</label>
+            <input v-model="form.armory_url" :disabled="isArmoryLocked" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+          </div>
+        </template>
+
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="saveChar">
+          <WowButton v-if="editingChar || manualEntry || lookupResult === 'found'" :loading="saving" @click="saveChar">
             {{ editingChar ? 'Save Changes' : 'Add Character' }}
           </WowButton>
         </div>
@@ -326,9 +349,16 @@ const showDeleteConfirm = ref(false)
 const editingChar = ref(null)
 const removeTarget = ref(null)
 const deleteTarget = ref(null)
+const manualEntry = ref(false)
 
 const wowClasses = WOW_CLASSES
 const warmaneRealms = WARMANE_REALMS
+
+/** Lock all fields when editing a character imported from armory */
+const isArmoryLocked = computed(() => !!editingChar.value && !!form.armory_url)
+
+/** Lock realm when adding a new character and guild has a realm */
+const isRealmLocked = computed(() => !editingChar.value && !!guildStore.currentGuild?.realm_name)
 
 /** Realms from guilds the user belongs to (for character realm selector) */
 const guildRealms = computed(() => {
@@ -401,10 +431,12 @@ async function switchToArchived() {
 
 function openAddModal() {
   editingChar.value = null
-  Object.assign(form, { name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
+  const guildRealm = guildStore.currentGuild?.realm_name ?? ''
+  Object.assign(form, { name: '', class: '', realm: guildRealm, role: '', spec: '', secondary_spec: '', armory_url: '' })
   formError.value = null
   lookingUp.value = false
   lookupResult.value = null
+  manualEntry.value = false
   showModal.value = true
 }
 
