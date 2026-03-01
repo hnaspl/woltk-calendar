@@ -219,6 +219,13 @@ def update_member(guild_id: int, user_id: int):
     if new_role:
         if not can_grant_role(membership, new_role):
             return jsonify({"error": f"You do not have permission to assign the '{new_role}' role"}), 403
+        # guild_admin can only be granted by guild creator or global admin
+        if new_role == "guild_admin":
+            guild = guild_service.get_guild(guild_id)
+            is_creator = guild and guild.created_by == current_user.id
+            is_global_admin = getattr(current_user, "is_admin", False)
+            if not is_creator and not is_global_admin:
+                return jsonify({"error": "Only the guild creator or a global admin can promote to Guild Admin"}), 403
         # Cannot change role of someone with a higher-level role
         from app.models.permission import SystemRole
         role_names = [membership.role, target.role] if membership else [target.role]
@@ -230,7 +237,10 @@ def update_member(guild_id: int, user_id: int):
         caller_role = roles_by_name.get(membership.role) if membership else None
         target_role = roles_by_name.get(target.role)
         can_bypass_level = has_permission(None, "manage_system_users")
-        if not can_bypass_level and caller_role and target_role and target_role.level >= caller_role.level:
+        # Guild creator can always modify members at their level
+        guild_for_check = guild_service.get_guild(guild_id) if not can_bypass_level else None
+        is_guild_creator = guild_for_check and guild_for_check.created_by == current_user.id
+        if not can_bypass_level and not is_guild_creator and caller_role and target_role and target_role.level >= caller_role.level:
             return jsonify({"error": "Cannot modify a member with equal or higher role level"}), 403
 
     target = guild_service.update_member(target, data)

@@ -52,11 +52,7 @@ def seeded(db, ctx):
     """Seed default roles, permissions, and grant rules."""
     seed_permissions()
 
-    guild = Guild(name="Test Guild", realm_name="Icecrown")
-    _db.session.add(guild)
-    _db.session.flush()
-
-    # Create users
+    # Create users first so we can reference guild_admin_user as creator
     site_admin = User(username="siteadmin", email="sa@test.com", password_hash="x",
                       is_active=True, is_admin=True)
     guild_admin_user = User(username="gadmin", email="ga@test.com", password_hash="x",
@@ -71,6 +67,10 @@ def seeded(db, ctx):
                     is_active=True)
     _db.session.add_all([site_admin, guild_admin_user, officer_user,
                          raid_leader_user, member_user, outsider])
+    _db.session.flush()
+
+    guild = Guild(name="Test Guild", realm_name="Icecrown", created_by=guild_admin_user.id)
+    _db.session.add(guild)
     _db.session.flush()
 
     # Create memberships
@@ -773,3 +773,86 @@ class TestRolesAPI:
                 "name": "officer", "display_name": "Another Officer",
             })
             assert resp.status_code == 409
+
+
+# ===========================================================================
+# Test: Guild Admin promotion restriction
+# ===========================================================================
+
+class TestGuildAdminPromotion:
+    """guild_admin role can only be granted by guild creator or global admin."""
+
+    @staticmethod
+    def _login(app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+            from flask import session as flask_session
+            sess_data = dict(flask_session)
+        with client.session_transaction() as s:
+            s.update(sess_data)
+
+    def test_guild_creator_can_promote_to_guild_admin(self, seeded, app):
+        """The guild creator (guild_admin_user) can promote others to guild_admin."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                json={"role": "guild_admin"},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["role"] == "guild_admin"
+            # Restore original role
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                json={"role": "officer"},
+            )
+            assert resp.status_code == 200
+
+    def test_global_admin_can_promote_to_guild_admin(self, seeded, app):
+        """A global admin (site_admin) can promote others to guild_admin."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                json={"role": "guild_admin"},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["role"] == "guild_admin"
+            # Restore original role
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                json={"role": "officer"},
+            )
+            assert resp.status_code == 200
+
+    def test_non_creator_guild_admin_cannot_promote_to_guild_admin(self, seeded, app):
+        """A guild_admin who is NOT the creator cannot promote to guild_admin."""
+        with app.test_client() as client:
+            # site_admin has guild_admin role but is NOT the guild creator
+            # and is_admin is True so they CAN — use a different approach:
+            # Create a second guild_admin user who is not the creator
+            with app.app_context():
+                extra_ga = User(username="extra_ga", email="ega@test.com",
+                                password_hash="x", is_active=True)
+                _db.session.add(extra_ga)
+                _db.session.flush()
+                gm_extra = GuildMembership(
+                    guild_id=seeded["guild"].id, user_id=extra_ga.id,
+                    role="guild_admin", status="active",
+                )
+                _db.session.add(gm_extra)
+                _db.session.commit()
+
+                self._login(app, client, extra_ga)
+                resp = client.put(
+                    f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['raid_leader_user'].id}",
+                    json={"role": "guild_admin"},
+                )
+                assert resp.status_code == 403
+                assert "creator" in resp.get_json()["error"].lower() or "global admin" in resp.get_json()["error"].lower()
+
+                # Clean up
+                _db.session.delete(gm_extra)
+                _db.session.delete(extra_ga)
+                _db.session.commit()
