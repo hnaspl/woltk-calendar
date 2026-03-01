@@ -1,20 +1,18 @@
 """Comprehensive end-to-end tests for the bench auto-promote system.
 
 Tests verify that:
-1. Status is purely informational — counting uses LineupSlots, not status.
-2. Auto-promotion fires when a going player is removed/declined.
-3. Bench queue ordering (slot_index) is respected.
-4. Fallback promotion uses mains-first, earliest-created ordering.
-5. Real-time emit calls are triggered after promotion.
-6. Class-role validation prevents invalid role assignments.
-7. Default role is auto-populated on character creation.
+1. Auto-promotion fires when a going player is removed/declined.
+2. Bench queue ordering (slot_index) is respected.
+3. Fallback promotion uses mains-first, earliest-created ordering.
+4. Real-time emit calls are triggered after promotion.
+5. Class-role validation prevents invalid role assignments.
+6. Default role is auto-populated on character creation.
 """
 
 from __future__ import annotations
 
 from unittest.mock import patch
 
-from app.enums import SignupStatus
 from app.models.signup import LineupSlot
 from app.services import signup_service, lineup_service, character_service
 
@@ -38,7 +36,6 @@ class TestBenchAutoPromote:
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
-        assert s1.status == SignupStatus.GOING.value
         # Verify a lineup slot was created
         assert lineup_service.has_role_slot(s1.id) is True
 
@@ -49,7 +46,6 @@ class TestBenchAutoPromote:
             chosen_spec=None, note=None, raid_size=event.raid_size,
             event=event,
         )
-        assert s2.status == SignupStatus.GOING.value
         assert lineup_service.has_role_slot(s2.id) is True
 
         # Player 3 tries to sign up → role full → force bench
@@ -71,7 +67,6 @@ class TestBenchAutoPromote:
             chosen_spec=None, note=None, raid_size=event.raid_size,
             force_bench=True, event=event,
         )
-        assert s3.status == SignupStatus.BENCH.value
         # Should be in bench queue, not a role slot
         assert lineup_service.has_role_slot(s3.id) is False
         bench_slots = db.session.query(LineupSlot).filter_by(
@@ -86,7 +81,6 @@ class TestBenchAutoPromote:
 
         # Player 3 should now be promoted
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
         assert lineup_service.has_role_slot(s3.id) is True
         # Bench slot should be gone
         bench_after = db.session.query(LineupSlot).filter_by(
@@ -120,50 +114,17 @@ class TestBenchAutoPromote:
             chosen_spec=None, note=None, raid_size=event.raid_size,
             force_bench=True, event=event,
         )
-        assert s3.status == SignupStatus.BENCH.value
+        assert lineup_service.has_role_slot(s3.id) is False
 
         # Decline Player 1 using decline_signup()
         with patch("app.utils.realtime.emit_signups_changed"), \
              patch("app.utils.realtime.emit_lineup_changed"):
             signup_service.decline_signup(s1)
 
-        assert s1.status == SignupStatus.DECLINED.value
+        # s1 should have no lineup slot
+        assert lineup_service.has_role_slot(s1.id) is False
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
         assert lineup_service.has_role_slot(s3.id) is True
-
-    def test_promote_on_update_status_declined(self, seed, db):
-        """When status is changed to declined via update_signup(), bench
-        player should be auto-promoted."""
-        event = seed["event"]
-
-        s1 = signup_service.create_signup(
-            raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
-            chosen_spec=None, note=None, raid_size=event.raid_size,
-            event=event,
-        )
-        s2 = signup_service.create_signup(
-            raid_event_id=event.id, user_id=seed["user2"].id,
-            character_id=seed["char2"].id, chosen_role="dps",
-            chosen_spec=None, note=None, raid_size=event.raid_size,
-            event=event,
-        )
-        s3 = signup_service.create_signup(
-            raid_event_id=event.id, user_id=seed["user3"].id,
-            character_id=seed["char3"].id, chosen_role="dps",
-            chosen_spec=None, note=None, raid_size=event.raid_size,
-            force_bench=True, event=event,
-        )
-
-        # Update Player 1 status to declined
-        with patch("app.utils.realtime.emit_signups_changed"), \
-             patch("app.utils.realtime.emit_lineup_changed"):
-            signup_service.update_signup(s1, {"status": "declined"})
-
-        assert s1.status == SignupStatus.DECLINED.value
-        db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
 
     def test_no_promote_when_bench_player_declined(self, seed, db):
         """Declining a bench player should NOT trigger auto-promote
@@ -192,40 +153,21 @@ class TestBenchAutoPromote:
         with patch("app.utils.realtime.emit_signups_changed") as mock_emit:
             signup_service.decline_signup(s3)
 
-        assert s3.status == SignupStatus.DECLINED.value
-        # s1 and s2 should still be going (no promotion triggered)
+        # s1 and s2 should still have role slots (no promotion triggered)
         db.session.refresh(s1)
         db.session.refresh(s2)
-        assert s1.status == SignupStatus.GOING.value
-        assert s2.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s1.id) is True
+        assert lineup_service.has_role_slot(s2.id) is True
         # emit should NOT have been called from _auto_promote_bench
         mock_emit.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
-# Scenario 2: Slot counting is based on LineupSlots, NOT on status
+# Scenario 2: Slot counting is based on LineupSlots
 # ---------------------------------------------------------------------------
 
 class TestSlotCountingDecoupled:
-    """Verify that bench/queue mechanics use LineupSlots, not status."""
-
-    def test_slot_count_matches_lineup_not_status(self, seed, db):
-        """Even if status is manually changed, slot counts use LineupSlots."""
-        event = seed["event"]
-
-        s1 = signup_service.create_signup(
-            raid_event_id=event.id, user_id=seed["user1"].id,
-            character_id=seed["char1"].id, chosen_role="dps",
-            chosen_spec=None, note=None, raid_size=event.raid_size,
-            event=event,
-        )
-        # Manually change status to something else (status is informational)
-        s1.status = "tentative"
-        db.session.commit()
-
-        # The slot count should still be 1 (based on LineupSlot)
-        count = signup_service._count_assigned_slots_by_role(event.id, "dps")
-        assert count == 1
+    """Verify that bench/queue mechanics use LineupSlots."""
 
     def test_assigned_slots_count(self, seed, db):
         """Total assigned slots count excludes bench."""
@@ -412,8 +354,8 @@ class TestBenchQueueOrder:
             force_bench=True, event=ev
         )
 
-        assert s2.status == SignupStatus.BENCH.value
-        assert s3.status == SignupStatus.BENCH.value
+        assert lineup_service.has_role_slot(s2.id) is False  # on bench
+        assert lineup_service.has_role_slot(s3.id) is False  # on bench
 
         # Delete s0 → s2 should be promoted (first in bench queue)
         with patch("app.utils.realtime.emit_signups_changed"), \
@@ -422,8 +364,8 @@ class TestBenchQueueOrder:
 
         db.session.refresh(s2)
         db.session.refresh(s3)
-        assert s2.status == SignupStatus.GOING.value  # promoted
-        assert s3.status == SignupStatus.BENCH.value   # still benched
+        assert lineup_service.has_role_slot(s2.id) is True   # promoted
+        assert lineup_service.has_role_slot(s3.id) is False   # still benched
 
         # Delete s1 → s3 should be promoted
         with patch("app.utils.realtime.emit_signups_changed"), \
@@ -431,4 +373,4 @@ class TestBenchQueueOrder:
             signup_service.delete_signup(s1)
 
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value  # now promoted
+        assert lineup_service.has_role_slot(s3.id) is True  # now promoted

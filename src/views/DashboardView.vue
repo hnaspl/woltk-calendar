@@ -30,11 +30,11 @@
         </WowCard>
         <WowCard class="text-center">
           <div class="text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
-          <div class="text-xs text-text-muted mt-1">Confirmed</div>
+          <div class="text-xs text-text-muted mt-1">In Lineup</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-yellow-400">{{ myTentativeCount }}</div>
-          <div class="text-xs text-text-muted mt-1">Tentative</div>
+          <div class="text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
+          <div class="text-xs text-text-muted mt-1">On Bench</div>
         </WowCard>
         <WowCard class="text-center">
           <div class="text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
@@ -110,8 +110,11 @@
                   <span v-if="raidLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidLabel(su.raid_type) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">{{ su.character.name }}</span>
                 </div>
-                <span v-if="su.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">Bench</span>
-                <StatusBadge v-else :status="su.status" />
+                <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                  Bench{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}
+                </span>
+                <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">Declined</span>
+                <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">In Lineup</span>
               </div>
             </WowCard>
           </RouterLink>
@@ -172,8 +175,8 @@ const upcomingEvents = computed(() =>
     .slice(0, 8)
 )
 
-const myGoingCount = computed(() => mySignups.value.filter(s => s.status === 'going').length)
-const myTentativeCount = computed(() => mySignups.value.filter(s => s.status === 'tentative').length)
+const myGoingCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'going' || (!s.lineup_status && !s.bench_info)).length)
+const myBenchCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'bench' || s.bench_info).length)
 const missingResponseCount = computed(() => {
   const signedUpEventIds = new Set(mySignups.value.map(s => s.raid_event_id))
   return upcomingEvents.value.filter(ev => !signedUpEventIds.has(ev.id)).length

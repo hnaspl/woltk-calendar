@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import Role, SignupStatus, SlotGroup
+from app.enums import Role, SlotGroup
 from app.extensions import db
 
 
@@ -32,11 +32,6 @@ class Signup(db.Model):
         sa.Enum(Role, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
     )
-    status: Mapped[str] = mapped_column(
-        sa.Enum(SignupStatus, values_callable=lambda e: [x.value for x in e]),
-        nullable=False,
-        default=SignupStatus.GOING.value,
-    )
     note: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     gear_score_note: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -57,6 +52,18 @@ class Signup(db.Model):
     character = relationship("Character", foreign_keys=[character_id], lazy="select")
 
     def to_dict(self) -> dict:
+        from app.services import lineup_service
+
+        # Determine lineup status from LineupSlots (no stored status field)
+        has_role = lineup_service.has_role_slot(self.id)
+        bench_info = lineup_service.get_bench_info(self.id)
+        if has_role:
+            lineup_status = "going"
+        elif bench_info is not None:
+            lineup_status = "bench"
+        else:
+            lineup_status = "declined"
+
         result = {
             "id": self.id,
             "raid_event_id": self.raid_event_id,
@@ -64,7 +71,8 @@ class Signup(db.Model):
             "character_id": self.character_id,
             "chosen_spec": self.chosen_spec,
             "chosen_role": self.chosen_role,
-            "status": self.status,
+            "lineup_status": lineup_status,
+            "bench_info": bench_info,
             "note": self.note,
             "gear_score_note": self.gear_score_note,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -75,7 +83,7 @@ class Signup(db.Model):
         return result
 
     def __repr__(self) -> str:
-        return f"<Signup id={self.id} event={self.raid_event_id} user={self.user_id} status={self.status}>"
+        return f"<Signup id={self.id} event={self.raid_event_id} user={self.user_id}>"
 
 
 class LineupSlot(db.Model):
@@ -131,7 +139,6 @@ class LineupSlot(db.Model):
                 "id": self.signup.id,
                 "chosen_spec": self.signup.chosen_spec,
                 "chosen_role": self.signup.chosen_role,
-                "status": self.signup.status,
                 "note": self.signup.note,
                 "gear_score_note": self.signup.gear_score_note,
             }

@@ -3,64 +3,54 @@
 Test Matrix
 ===========
 1. Basic bench mechanics
-   a. Sign up → going (slot available)
-   b. Sign up → bench (slot full, force_bench=True)
+   a. Sign up → role slot assigned (slot available)
+   b. Sign up → bench slot assigned (slot full, force_bench=True)
    c. RoleFullError raised when slot full and force_bench=False
-   d. Bench player has correct status + LineupSlot in bench group
+   d. Bench player has LineupSlot in bench group
 
 2. Auto-promote on delete (officer or player removes a signup)
-   a. Delete going player → bench player promoted to going
+   a. Delete going player → bench player promoted to lineup
    b. Promoted player gets LineupSlot in correct role group
    c. Promoted player's bench LineupSlot is removed
    d. No promotion when bench is empty
    e. No promotion when deleted player was on bench (no role slot freed)
 
 3. Auto-promote on player opt-out (player voluntarily declines attendance)
-   - "Decline" = a player (or officer) marks a signup as "I won't attend"
-     via the dedicated POST /signups/<id>/decline endpoint.
-     This is the graceful opt-out that keeps the lineup full by
-     auto-promoting the first matching bench player.
+   - "Decline" = a player (or officer) opts out via POST /signups/<id>/decline.
+     This removes all LineupSlots and auto-promotes bench if a role slot was freed.
    a. Player opts out of going slot → bench player auto-promoted
-   b. Opted-out player's status becomes 'declined'
-   c. Opted-out player has no LineupSlot (fully removed from lineup)
+   b. Opted-out player has no LineupSlot (fully removed from lineup)
 
-4. Auto-promote when signup status is changed to 'declined' via update
-   - Same behavior as the dedicated opt-out endpoint (section 3),
-     but triggered through update_signup(status='declined').
-   a. Same auto-promote behavior as dedicated opt-out endpoint
+4. Slot counting uses LineupSlots
+   a. Total assigned slots exclude bench
+   b. Role slot counts match LineupSlots
 
-5. Slot counting is decoupled from status
-   a. Manually changing status does NOT affect slot counts
-   b. Slot counts come from LineupSlots, not signup.status
-
-6. Multi-role bench isolation
+5. Multi-role bench isolation
    a. Bench promotion only fires for the SAME role that was freed
    b. Benched healer is NOT promoted when a DPS slot opens
 
-7. Bench queue ordering
+6. Bench queue ordering
    a. First bench player (lower slot_index) promoted first
    b. After first promoted, second bench player promoted next
 
-8. Class-role validation
+7. Class-role validation
    a. Invalid class-role combo rejected on create
    b. Invalid class-role combo rejected on update
    c. Valid class-role combo accepted
 
-9. Default role auto-population (from CLASS_ROLES constraints)
-   - Every character must have a default_role auto-populated from its
-     class constraints (CLASS_ROLES) so there are no unselected roles.
+8. Default role auto-population (from CLASS_ROLES constraints)
    a. Character created without default_role gets first role from CLASS_ROLES
    b. Explicit default_role is preserved (not overwritten)
 
-10. Real-time emit verification
-    a. emit_signups_changed called after auto-promote
-    b. emit_lineup_changed called after auto-promote
-    c. No emit when no promotion happens
+9. Real-time emit verification
+   a. emit_signups_changed called after auto-promote
+   b. emit_lineup_changed called after auto-promote
+   c. No emit when no promotion happens
 
-11. Multiple bench players with sequential promotions
+10. Multiple bench players with sequential promotions
     a. 3 benched → delete 3 going → all 3 bench promoted in order
 
-12. Concurrent role slots (healer + DPS in same raid)
+11. Concurrent role slots (healer + DPS in same raid)
     a. Healer bench and DPS bench are independent queues
 """
 
@@ -71,7 +61,6 @@ from unittest.mock import patch
 
 import pytest
 
-from app.enums import SignupStatus
 from app.models.character import Character
 from app.models.guild import Guild
 from app.models.raid import RaidDefinition, RaidEvent
@@ -153,23 +142,21 @@ def _signup(event, user, char, role="dps", force_bench=False):
 # ===========================================================================
 
 class TestBasicBenchMechanics:
-    """Verify core signup/bench status and LineupSlot creation."""
+    """Verify core signup bench and LineupSlot creation."""
 
     def test_going_when_slot_available(self, seed, db):
-        """1a: Sign up when slot is available → status=going, role slot created."""
+        """1a: Sign up when slot is available → role slot created."""
         ev = seed["event"]
         s = _signup(ev, seed["user1"], seed["char1"])
-        assert s.status == SignupStatus.GOING.value
         assert lineup_service.has_role_slot(s.id) is True
 
     def test_bench_when_slot_full(self, seed, db):
-        """1b: Force bench when slots full → status=bench, bench slot created."""
+        """1b: Force bench when slots full → bench slot created."""
         ev = seed["event"]
         _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
         s3 = _signup(ev, seed["user3"], seed["char3"], force_bench=True)
 
-        assert s3.status == SignupStatus.BENCH.value
         assert lineup_service.has_role_slot(s3.id) is False
         bench = db.session.query(LineupSlot).filter_by(
             signup_id=s3.id, slot_group="bench"
@@ -205,7 +192,7 @@ class TestAutoPromoteOnDelete:
     """Verify bench promotion triggers when a going player is deleted."""
 
     def test_bench_promoted_on_delete(self, seed, db):
-        """2a: Delete going → bench player becomes going."""
+        """2a: Delete going → bench player gets promoted to role slot."""
         ev = seed["event"]
         s1 = _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
@@ -216,7 +203,7 @@ class TestAutoPromoteOnDelete:
             signup_service.delete_signup(s1)
 
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s3.id) is True
 
     def test_promoted_gets_role_slot(self, seed, db):
         """2b: Promoted player gets a role LineupSlot."""
@@ -276,22 +263,13 @@ class TestAutoPromoteOnDelete:
 
 # ===========================================================================
 # 3. Auto-promote on player opt-out (POST /signups/<id>/decline)
-#    "Decline" means: a player voluntarily opts out of a raid signup.
-#    This can also be triggered by an officer on behalf of a player.
-#    When the opted-out player had a role slot, the first matching
-#    bench player is auto-promoted to fill the freed slot.
+#    "Decline" means: a player (or officer) opts out of a raid signup.
+#    This removes all LineupSlots and auto-promotes bench if a role slot
+#    was freed.
 # ===========================================================================
 
 class TestAutoPromoteOnDecline:
-    """Verify bench promotion when a player opts out via decline_signup().
-
-    The decline flow:
-    1. Player (or officer) calls POST /signups/<id>/decline
-    2. The signup status is set to 'declined' (player won't attend)
-    3. All LineupSlots (role + bench) for that signup are removed
-    4. If the player had a role slot, the first bench player for that
-       role is automatically promoted to 'going'
-    """
+    """Verify bench promotion when a player opts out via decline_signup()."""
 
     def test_decline_promotes_bench(self, seed, db):
         """3a: Player opts out of going slot → bench player auto-promoted."""
@@ -305,24 +283,10 @@ class TestAutoPromoteOnDecline:
             signup_service.decline_signup(s1)
 
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
         assert lineup_service.has_role_slot(s3.id) is True
 
-    def test_declined_player_status(self, seed, db):
-        """3b: Opted-out player's status becomes 'declined'."""
-        ev = seed["event"]
-        s1 = _signup(ev, seed["user1"], seed["char1"])
-        _signup(ev, seed["user2"], seed["char2"])
-        _signup(ev, seed["user3"], seed["char3"], force_bench=True)
-
-        with patch("app.utils.realtime.emit_signups_changed"), \
-             patch("app.utils.realtime.emit_lineup_changed"):
-            signup_service.decline_signup(s1)
-
-        assert s1.status == SignupStatus.DECLINED.value
-
     def test_declined_player_no_lineup_slot(self, seed, db):
-        """3c: Opted-out player has no LineupSlot at all (fully removed)."""
+        """3b: Opted-out player has no LineupSlot at all (fully removed)."""
         ev = seed["event"]
         s1 = _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
@@ -339,53 +303,14 @@ class TestAutoPromoteOnDecline:
 
 
 # ===========================================================================
-# 4. Auto-promote when signup status changed to 'declined' via update
-#    Same as section 3 but triggered through update_signup(status='declined')
-#    instead of the dedicated opt-out endpoint.
-# ===========================================================================
-
-class TestAutoPromoteOnUpdateDeclined:
-    """Verify that update_signup(status='declined') triggers the same
-    auto-promote behavior as the dedicated opt-out endpoint (section 3)."""
-
-    def test_update_declined_promotes_bench(self, seed, db):
-        """4a: update_signup(status='declined') triggers auto-promote."""
-        ev = seed["event"]
-        s1 = _signup(ev, seed["user1"], seed["char1"])
-        _signup(ev, seed["user2"], seed["char2"])
-        s3 = _signup(ev, seed["user3"], seed["char3"], force_bench=True)
-
-        with patch("app.utils.realtime.emit_signups_changed"), \
-             patch("app.utils.realtime.emit_lineup_changed"):
-            signup_service.update_signup(s1, {"status": "declined"})
-
-        db.session.refresh(s3)
-        assert s1.status == SignupStatus.DECLINED.value
-        assert s3.status == SignupStatus.GOING.value
-        assert lineup_service.has_role_slot(s3.id) is True
-
-
-# ===========================================================================
-# 5. Slot counting decoupled from status
+# 4. Slot counting uses LineupSlots
 # ===========================================================================
 
 class TestSlotCountingDecoupled:
-    """Verify counting uses LineupSlots, not signup.status."""
-
-    def test_manual_status_change_doesnt_affect_count(self, seed, db):
-        """5a: Changing status manually doesn't change slot counts."""
-        ev = seed["event"]
-        s1 = _signup(ev, seed["user1"], seed["char1"])
-
-        # Change status to something else — slot count unchanged
-        s1.status = "tentative"
-        db.session.commit()
-
-        count = signup_service._count_assigned_slots_by_role(ev.id, "dps")
-        assert count == 1  # Still 1 because LineupSlot exists
+    """Verify counting uses LineupSlots."""
 
     def test_total_assigned_excludes_bench(self, seed, db):
-        """5b: Total assigned slots exclude bench."""
+        """4a: Total assigned slots exclude bench."""
         ev = seed["event"]
         _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
@@ -394,16 +319,24 @@ class TestSlotCountingDecoupled:
         total = signup_service._count_assigned_slots(ev.id)
         assert total == 2  # Only role slots, not bench
 
+    def test_role_count_matches_lineup(self, seed, db):
+        """4b: Role slot counts come from LineupSlots."""
+        ev = seed["event"]
+        _signup(ev, seed["user1"], seed["char1"])
+
+        count = signup_service._count_assigned_slots_by_role(ev.id, "dps")
+        assert count == 1
+
 
 # ===========================================================================
-# 6. Multi-role bench isolation
+# 5. Multi-role bench isolation
 # ===========================================================================
 
 class TestMultiRoleBenchIsolation:
     """Verify bench promotion only fires for the freed role."""
 
     def test_healer_not_promoted_for_dps_slot(self, db, ctx):
-        """6a: Benched healer stays benched when a DPS slot opens."""
+        """5a: Benched healer stays benched when a DPS slot opens."""
         guild = Guild(name="MultiRole Guild", realm_name="Icecrown")
         db.session.add(guild)
         db.session.flush()
@@ -424,10 +357,10 @@ class TestMultiRoleBenchIsolation:
 
         db.session.refresh(s3)
         # Healer should NOT be promoted for a DPS slot
-        assert s3.status == SignupStatus.BENCH.value
+        assert lineup_service.has_role_slot(s3.id) is False
 
     def test_dps_promoted_for_dps_slot(self, db, ctx):
-        """6b: Benched DPS player IS promoted when a DPS slot opens."""
+        """5b: Benched DPS player IS promoted when a DPS slot opens."""
         guild = Guild(name="MultiRole2 Guild", realm_name="Icecrown")
         db.session.add(guild)
         db.session.flush()
@@ -447,18 +380,18 @@ class TestMultiRoleBenchIsolation:
             signup_service.delete_signup(s1)
 
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s3.id) is True
 
 
 # ===========================================================================
-# 7. Bench queue ordering
+# 6. Bench queue ordering
 # ===========================================================================
 
 class TestBenchQueueOrdering:
     """Verify bench queue respects slot_index ordering."""
 
     def test_fifo_ordering(self, db, ctx):
-        """7a: First benched player is promoted first (FIFO)."""
+        """6a: First benched player is promoted first (FIFO)."""
         guild = Guild(name="FIFO Guild", realm_name="Icecrown")
         db.session.add(guild)
         db.session.flush()
@@ -478,11 +411,11 @@ class TestBenchQueueOrdering:
 
         db.session.refresh(signups[2])
         db.session.refresh(signups[3])
-        assert signups[2].status == SignupStatus.GOING.value   # promoted
-        assert signups[3].status == SignupStatus.BENCH.value   # still waiting
+        assert lineup_service.has_role_slot(signups[2].id) is True    # promoted
+        assert lineup_service.has_role_slot(signups[3].id) is False   # still waiting
 
     def test_sequential_promotions(self, db, ctx):
-        """7b: After first promoted, second bench player promoted next."""
+        """6b: After first promoted, second bench player promoted next."""
         guild = Guild(name="SeqPromo Guild", realm_name="Icecrown")
         db.session.add(guild)
         db.session.flush()
@@ -499,57 +432,49 @@ class TestBenchQueueOrdering:
              patch("app.utils.realtime.emit_lineup_changed"):
             signup_service.delete_signup(s0)
         db.session.refresh(s2)
-        assert s2.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s2.id) is True
 
         with patch("app.utils.realtime.emit_signups_changed"), \
              patch("app.utils.realtime.emit_lineup_changed"):
             signup_service.delete_signup(s1)
         db.session.refresh(s3)
-        assert s3.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s3.id) is True
 
 
 # ===========================================================================
-# 8. Class-role validation
+# 7. Class-role validation
 # ===========================================================================
 
 class TestClassRoleValidation:
     """Verify class-role constraints are enforced."""
 
     def test_invalid_role_on_create(self, seed, db):
-        """8a: Hunter cannot sign up as healer."""
+        """7a: Hunter cannot sign up as healer."""
         with pytest.raises(ValueError, match="Hunter.*healer"):
             _signup(seed["event"], seed["user1"], seed["char1"], "healer")
 
     def test_invalid_role_on_update(self, seed, db):
-        """8b: Changing role to invalid combo raises ValueError."""
+        """7b: Changing role to invalid combo raises ValueError."""
         s = _signup(seed["event"], seed["user1"], seed["char1"], "dps")
         with pytest.raises(ValueError):
             signup_service.update_signup(s, {"chosen_role": "main_tank"})
 
     def test_valid_role_accepted(self, seed, db):
-        """8c: Valid class-role combo works."""
+        """7c: Valid class-role combo works."""
         s = _signup(seed["event"], seed["user1"], seed["char1"], "dps")
         assert s.chosen_role == "dps"
-        assert s.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s.id) is True
 
 
 # ===========================================================================
-# 9. Default role auto-population (from CLASS_ROLES constraints)
-#    Every character must have a default_role auto-populated from its
-#    class constraints so there are no unselected roles in the UI.
-#    This is enforced both in character_service.create_character() and
-#    in the frontend CharacterManagerView (CLASS_ROLES filtering).
+# 8. Default role auto-population (from CLASS_ROLES constraints)
 # ===========================================================================
 
 class TestDefaultRoleAutoPopulation:
-    """Character creation auto-populates default_role from CLASS_ROLES.
-
-    This ensures every character always has a valid role assigned,
-    preventing broken signups and empty role selectors in the UI.
-    """
+    """Character creation auto-populates default_role from CLASS_ROLES."""
 
     def test_auto_default_role(self, seed, db):
-        """9a: Character without explicit role gets first role from CLASS_ROLES."""
+        """8a: Character without explicit role gets first role from CLASS_ROLES."""
         char = character_service.create_character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             data={"realm_name": "Icecrown", "name": "AutoRogue",
@@ -568,7 +493,7 @@ class TestDefaultRoleAutoPopulation:
 
 
 # ===========================================================================
-# 10. Real-time emit verification
+# 9. Real-time emit verification
 # ===========================================================================
 
 class TestRealtimeEmits:
@@ -600,14 +525,14 @@ class TestRealtimeEmits:
 
 
 # ===========================================================================
-# 11. Multiple sequential promotions
+# 10. Multiple sequential promotions
 # ===========================================================================
 
 class TestMultipleSequentialPromotions:
     """Verify all benched players get promoted as slots free up."""
 
     def test_three_bench_all_promoted(self, db, ctx):
-        """11a: 3 benched + 3 going → delete all 3 going → all 3 promoted."""
+        """10a: 3 benched + 3 going → delete all 3 going → all 3 promoted."""
         guild = Guild(name="TriplePromo Guild", realm_name="Icecrown")
         db.session.add(guild)
         db.session.flush()
@@ -619,9 +544,9 @@ class TestMultipleSequentialPromotions:
         benched = [_signup(ev, *uc[i], "dps", True) for i in range(3, 6)]
 
         for g in going:
-            assert g.status == SignupStatus.GOING.value
+            assert lineup_service.has_role_slot(g.id) is True
         for b in benched:
-            assert b.status == SignupStatus.BENCH.value
+            assert lineup_service.has_role_slot(b.id) is False
 
         # Delete going players one by one
         for i, g in enumerate(going):
@@ -629,19 +554,19 @@ class TestMultipleSequentialPromotions:
                  patch("app.utils.realtime.emit_lineup_changed"):
                 signup_service.delete_signup(g)
             db.session.refresh(benched[i])
-            assert benched[i].status == SignupStatus.GOING.value, \
+            assert lineup_service.has_role_slot(benched[i].id) is True, \
                 f"Bench player {i} should have been promoted"
 
 
 # ===========================================================================
-# 12. Concurrent role slots (healer + DPS)
+# 11. Concurrent role slots (healer + DPS)
 # ===========================================================================
 
 class TestConcurrentRoleSlots:
     """Verify healer and DPS bench queues are independent."""
 
     def test_independent_role_queues(self, db, ctx):
-        """12a: Each role has its own bench queue."""
+        """11a: Each role has its own bench queue."""
         guild = Guild(name="RoleQueue Guild", realm_name="Icecrown")
         db.session.add(guild)
         db.session.flush()
@@ -669,8 +594,8 @@ class TestConcurrentRoleSlots:
 
         db.session.refresh(s_bd)
         db.session.refresh(s_bh)
-        assert s_bd.status == SignupStatus.GOING.value   # DPS bench promoted
-        assert s_bh.status == SignupStatus.BENCH.value   # Healer bench unchanged
+        assert lineup_service.has_role_slot(s_bd.id) is True    # DPS bench promoted
+        assert lineup_service.has_role_slot(s_bh.id) is False   # Healer bench unchanged
 
         # Delete a healer → healer bench should be promoted
         with patch("app.utils.realtime.emit_signups_changed"), \
@@ -678,21 +603,21 @@ class TestConcurrentRoleSlots:
             signup_service.delete_signup(s_h1)
 
         db.session.refresh(s_bh)
-        assert s_bh.status == SignupStatus.GOING.value   # Now promoted
+        assert lineup_service.has_role_slot(s_bh.id) is True    # Now promoted
 
 
 # ===========================================================================
-# 13. Character deletion with related records
+# 12. Character deletion with related records
 # ===========================================================================
 
 class TestCharacterDeletion:
     """Verify character deletion cleans up all related records."""
 
     def test_delete_char_with_signup(self, seed, db):
-        """13a: Deleting a character with an active signup succeeds."""
+        """12a: Deleting a character with an active signup succeeds."""
         ev = seed["event"]
         s1 = _signup(ev, seed["user1"], seed["char1"])
-        assert s1.status == SignupStatus.GOING.value
+        assert lineup_service.has_role_slot(s1.id) is True
 
         # Should not raise
         character_service.delete_character(seed["char1"])
@@ -704,12 +629,12 @@ class TestCharacterDeletion:
         assert len(remaining) == 0
 
     def test_delete_char_with_bench_signup(self, seed, db):
-        """13b: Deleting a benched character's signup is cleaned up."""
+        """12b: Deleting a benched character's signup is cleaned up."""
         ev = seed["event"]
         _signup(ev, seed["user1"], seed["char1"])
         _signup(ev, seed["user2"], seed["char2"])
         s3 = _signup(ev, seed["user3"], seed["char3"], force_bench=True)
-        assert s3.status == SignupStatus.BENCH.value
+        assert lineup_service.has_role_slot(s3.id) is False
 
         character_service.delete_character(seed["char3"])
 
@@ -723,7 +648,7 @@ class TestCharacterDeletion:
         assert len(bench_slots) == 0
 
     def test_delete_char_with_ban(self, db, ctx):
-        """13c: Deleting a banned character also removes the ban."""
+        """12c: Deleting a banned character also removes the ban."""
         from app.models.signup import RaidBan
 
         guild = Guild(name="BanDel Guild", realm_name="Icecrown")
@@ -748,7 +673,7 @@ class TestCharacterDeletion:
         assert len(remaining_bans) == 0
 
     def test_delete_char_no_related_records(self, seed, db):
-        """13d: Deleting a character with no related records works fine."""
+        """12d: Deleting a character with no related records works fine."""
         # char3 has no signups yet
         character_service.delete_character(seed["char3"])
 

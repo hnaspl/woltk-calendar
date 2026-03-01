@@ -9,10 +9,16 @@
       No signups yet.
     </div>
 
-    <template v-for="group in groups" :key="group.status">
+    <template v-for="group in groups" :key="group.key">
       <div v-if="group.items.length > 0" class="mb-5">
         <div class="flex items-center gap-2 mb-2">
-          <StatusBadge :status="group.status" />
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
+            :class="group.cls"
+          >
+            <span class="w-1.5 h-1.5 rounded-full" :class="group.dot" />
+            {{ group.label }}
+          </span>
           <span class="text-xs text-text-muted">({{ group.items.length }})</span>
         </div>
         <div class="space-y-1.5">
@@ -94,6 +100,10 @@
                   <!-- Gear score note -->
                   <div v-if="signup.gear_score_note" class="text-[10px] text-amber-300 mt-0.5">
                     GS: {{ signup.gear_score_note }}
+                  </div>
+                  <!-- Bench queue position -->
+                  <div v-if="signup.bench_info" class="text-[10px] text-yellow-400 mt-0.5">
+                    ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
                   </div>
                 </div>
 
@@ -238,12 +248,13 @@ import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import * as signupsApi from '@/api/signups'
 import { ROLE_OPTIONS } from '@/constants'
+
+const ROLE_LABEL_MAP = { tank: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', dps: 'Range DPS' }
 
 const props = defineProps({
   signups: { type: Array, default: () => [] },
@@ -261,12 +272,16 @@ const filteredRoleOptions = computed(() =>
   ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value))
 )
 
-const STATUS_ORDER = ['going', 'tentative', 'late', 'bench', 'declined']
+const LINEUP_GROUPS = [
+  { key: 'going',    label: 'In Lineup', cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
+  { key: 'bench',    label: 'Bench',     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
+  { key: 'declined', label: 'Declined',  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
+]
 
 const groups = computed(() =>
-  STATUS_ORDER.map(status => ({
-    status,
-    items: props.signups.filter(s => s.status === status)
+  LINEUP_GROUPS.map(g => ({
+    ...g,
+    items: props.signups.filter(s => (s.lineup_status || 'going') === g.key)
   }))
 )
 

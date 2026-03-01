@@ -219,12 +219,11 @@ def notify_event_created(event, guild_id: int) -> None:
 
 
 def _get_signed_up_users(event_id: int) -> list[int]:
-    """Return distinct user IDs of all non-declined signups for an event."""
+    """Return distinct user IDs of all signups for an event."""
     from app.models.signup import Signup
     return list(db.session.execute(
         sa.select(Signup.user_id).where(
             Signup.raid_event_id == event_id,
-            Signup.status != "declined",
         ).distinct()
     ).scalars().all())
 
@@ -330,7 +329,7 @@ def notify_officers_new_signup(signup, event, character_name: str) -> None:
             user_id=officer_id,
             notification_type="officer_signup_new",
             title=f"{character_name} signed up for {event.title}",
-            body=f"Role: {_role_name(signup.chosen_role)}, Status: {signup.status}",
+            body=f"Role: {_role_name(signup.chosen_role)}",
             guild_id=event.guild_id,
             raid_event_id=event.id,
         )

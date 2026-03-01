@@ -91,12 +91,11 @@
                     </span>
                     <span class="text-text-muted text-xs">{{ ROLE_LABEL_MAP[s.chosen_role] || s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
                     <span v-if="s.note" class="text-text-muted text-[10px] italic truncate max-w-[120px]" :title="s.note">📝 {{ s.note }}</span>
-                    <span v-if="s.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">Bench</span>
-                    <span v-else class="text-xs" :class="{
-                      'text-green-400': s.status === 'going',
-                      'text-yellow-400': s.status === 'tentative',
-                      'text-red-400': s.status === 'declined'
-                    }">{{ s.status }}</span>
+                    <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+                      Bench{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
+                    </span>
+                    <span v-else-if="s.lineup_status === 'declined'" class="text-xs text-red-400">declined</span>
+                    <span v-else class="text-xs text-green-400">in lineup</span>
                     <div class="ml-auto flex gap-1">
                       <button
                         v-if="event.status === 'open' || event.status === 'draft'"
@@ -406,7 +405,7 @@ const roleSlotInfo = computed(() => {
   const info = {}
   for (const [role, max] of Object.entries(slotMap)) {
     if (max <= 0) continue
-    const current = signups.value.filter(s => s.chosen_role === role && s.status !== 'declined').length
+    const current = signups.value.filter(s => s.chosen_role === role && s.lineup_status !== 'declined').length
     info[role] = { max, current, remaining: Math.max(0, max - current) }
   }
   return info

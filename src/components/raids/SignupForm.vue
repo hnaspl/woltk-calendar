@@ -88,21 +88,6 @@
         />
       </div>
 
-      <!-- Status (only for editing existing signup) -->
-      <div v-if="existingSignup">
-        <label class="block text-xs text-text-muted mb-1">Status *</label>
-        <select
-          v-model="form.status"
-          class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-          required
-        >
-          <option value="going">Going ✓</option>
-          <option value="tentative">Tentative ?</option>
-          <option value="declined">Declined ✗</option>
-          <option value="late">Late ⧖</option>
-        </select>
-      </div>
-
       <!-- Note -->
       <div>
         <label class="block text-xs text-text-muted mb-1">Note</label>
@@ -271,7 +256,7 @@ const isCharBanned = computed(() => {
   return form.characterId && props.bannedCharacterIds.includes(Number(form.characterId))
 })
 
-const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', status: 'going', note: '' }
+const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '' }
 
 const form = reactive({ ...INITIAL_FORM })
 
@@ -305,7 +290,6 @@ watch(
       form.characterId = s.character_id ?? ''
       form.chosenRole  = s.chosen_role   ?? ''
       form.chosenSpec  = s.chosen_spec   ?? ''
-      form.status      = s.status        ?? 'going'
       form.note        = s.note          ?? ''
     } else {
       // Reset form when editing ends so spec doesn't persist from previous character
@@ -333,11 +317,6 @@ async function handleSubmit() {
   // Auto-bench when player knowingly selects a full role
   if (!props.existingSignup && isRoleFull(form.chosenRole)) {
     payload.force_bench = true
-  }
-
-  // Only include status when updating an existing signup
-  if (props.existingSignup) {
-    payload.status = form.status
   }
 
   try {

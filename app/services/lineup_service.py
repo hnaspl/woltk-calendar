@@ -99,6 +99,47 @@ def has_role_slot(signup_id: int) -> bool:
     ).scalar_one() > 0
 
 
+def get_bench_info(signup_id: int) -> dict | None:
+    """Return bench queue info for a signup, or None if not on bench.
+
+    Returns a dict with:
+    - waiting_for: the chosen_role the player is waiting for
+    - queue_position: 1-based position in the bench queue for that role
+    """
+    bench_slot = db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.signup_id == signup_id,
+            LineupSlot.slot_group == "bench",
+        )
+    ).scalar_one_or_none()
+
+    if bench_slot is None:
+        return None
+
+    signup = bench_slot.signup
+    role = signup.chosen_role if signup else None
+
+    # Count how many bench slots for the same role have a lower slot_index
+    if role:
+        position = db.session.execute(
+            sa.select(sa.func.count(LineupSlot.id))
+            .join(Signup, Signup.id == LineupSlot.signup_id)
+            .where(
+                LineupSlot.raid_event_id == bench_slot.raid_event_id,
+                LineupSlot.slot_group == "bench",
+                Signup.chosen_role == role,
+                LineupSlot.slot_index <= bench_slot.slot_index,
+            )
+        ).scalar_one()
+    else:
+        position = 1
+
+    return {
+        "waiting_for": role,
+        "queue_position": position,
+    }
+
+
 def update_slot_group_for_signup(signup_id: int, new_slot_group: str) -> None:
     """Update the slot_group for all LineupSlots associated with a signup."""
     slots = list(

@@ -7,7 +7,6 @@ from typing import Optional
 import sqlalchemy as sa
 
 from app.constants import CLASS_ROLES
-from app.enums import SignupStatus
 from app.extensions import db
 from app.models.signup import Signup, RaidBan, CharacterReplacement
 from app.utils.class_roles import validate_class_role
@@ -27,10 +26,7 @@ def _validate_class_role(character_id: int, chosen_role: str) -> None:
 
 
 def _count_assigned_slots(raid_event_id: int) -> int:
-    """Return the number of role lineup slots (excluding bench) for an event.
-
-    Status is purely informational — counting is based on LineupSlots only.
-    """
+    """Return the number of role lineup slots (excluding bench) for an event."""
     from app.models.signup import LineupSlot
 
     return db.session.execute(
@@ -46,7 +42,6 @@ def _count_assigned_slots_by_role(
 ) -> int:
     """Return the number of lineup slots assigned to a specific role.
 
-    Status is purely informational — counting is based on LineupSlots only.
     When *lock* is True the matching rows are locked with SELECT … FOR UPDATE
     so that concurrent transactions block until the current one commits.
     """
@@ -93,7 +88,6 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     Uses bench queue order (slot_index) when bench lineup slots exist,
     falling back to mains-first then earliest created_at.
-    Status is NOT used as a filter — it is purely informational.
     Emits real-time events so all clients see the promotion instantly.
     """
     from app.models.character import Character
@@ -116,8 +110,6 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     if bench_slot is not None:
         benched = bench_slot.signup
-        # Update status from bench to going
-        benched.status = SignupStatus.GOING.value
         db.session.delete(bench_slot)
         db.session.commit()
         lineup_service.auto_assign_slot(benched)
@@ -149,8 +141,6 @@ def _auto_promote_bench(raid_event_id: int, role: str) -> None:
 
     for candidate in candidates:
         if candidate.id not in existing_slot_ids:
-            # Update status from bench to going
-            candidate.status = SignupStatus.GOING.value
             db.session.commit()
             lineup_service.auto_assign_slot(candidate)
             # Notify the promoted player and emit real-time updates
@@ -200,7 +190,6 @@ def create_signup(
 
     # Check role-specific slot limits (with row-level locking to prevent race
     # conditions when two players sign up for the last slot simultaneously).
-    # Counting is based on LineupSlots, NOT signup status.
     if event is not None:
         role_slots = _get_role_slots(event)
         max_for_role = role_slots.get(chosen_role, 0)
@@ -215,13 +204,7 @@ def create_signup(
 
     assigned_count = _count_assigned_slots(raid_event_id)
 
-    if force_bench:
-        # User explicitly chose to go to bench for a full role
-        status = SignupStatus.BENCH.value
-    else:
-        status = (
-            SignupStatus.BENCH.value if assigned_count >= raid_size else SignupStatus.GOING.value
-        )
+    should_bench = force_bench or assigned_count >= raid_size
 
     signup = Signup(
         raid_event_id=raid_event_id,
@@ -229,16 +212,15 @@ def create_signup(
         character_id=character_id,
         chosen_role=chosen_role,
         chosen_spec=chosen_spec,
-        status=status,
         note=note,
     )
     db.session.add(signup)
     db.session.commit()
 
     # Auto-assign to lineup board if going, or add to bench queue if benched
-    if status == SignupStatus.GOING.value:
+    if not should_bench:
         lineup_service.auto_assign_slot(signup)
-    elif status == SignupStatus.BENCH.value:
+    else:
         lineup_service.add_to_bench_queue(signup)
 
     return signup
@@ -250,38 +232,26 @@ def get_signup(signup_id: int) -> Optional[Signup]:
 
 def update_signup(signup: Signup, data: dict) -> Signup:
     """Update a signup.  When the role changes the player is removed from
-    their current lineup slot so they appear on the bench.  When the status
-    changes to 'declined' the player is removed from the lineup/bench and
-    auto-promotion is triggered if they had a role slot."""
+    their current lineup slot so they appear on the bench."""
     from app.services import lineup_service
 
     old_role = signup.chosen_role
-    old_status = signup.status
 
     # Validate class-role constraint when role is changing
     new_role_val = data.get("chosen_role")
     if new_role_val and new_role_val != old_role:
         _validate_class_role(signup.character_id, new_role_val)
 
-    allowed = {"chosen_spec", "chosen_role", "status", "note", "gear_score_note"}
+    allowed = {"chosen_spec", "chosen_role", "note", "gear_score_note"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)
     db.session.commit()
 
     new_role = signup.chosen_role
-    new_status = signup.status
 
-    # Handle status → declined: remove slots and auto-promote
-    if new_status == SignupStatus.DECLINED.value and old_status != SignupStatus.DECLINED.value:
-        role = old_role or new_role
-        raid_event_id = signup.raid_event_id
-        had_role_slot = lineup_service.has_role_slot(signup.id)
-        lineup_service.remove_slot_for_signup(signup.id)
-        if had_role_slot:
-            _auto_promote_bench(raid_event_id, role)
-    # When role changes (but not declining), remove from old lineup slot
-    elif old_role and new_role and old_role != new_role:
+    # When role changes, remove from old lineup slot
+    if old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
 
     return signup
@@ -293,7 +263,7 @@ def delete_signup(signup: Signup) -> None:
 
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
-    # Check if the player had a role lineup slot (not bench queue) — status is informational
+    # Check if the player had a role lineup slot (not bench queue)
     had_role_slot = lineup_service.has_role_slot(signup.id)
 
     # Remove lineup slot first (before deleting signup)
@@ -312,11 +282,7 @@ def decline_signup(signup: Signup) -> Signup:
 
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
-    # Check if the player had a role lineup slot (not bench queue) — status is informational
     had_role_slot = lineup_service.has_role_slot(signup.id)
-
-    signup.status = SignupStatus.DECLINED.value
-    db.session.commit()
 
     # Always remove lineup/bench queue slots
     lineup_service.remove_slot_for_signup(signup.id)

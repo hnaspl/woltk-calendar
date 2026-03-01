@@ -436,7 +436,7 @@ function stopLineupPolling() {
 }
 
 watch(
-  () => props.signups.map(s => `${s.id}:${s.status}:${s.chosen_role}`).join(','),
+  () => props.signups.map(s => `${s.id}:${s.lineup_status}:${s.chosen_role}`).join(','),
   () => {
     // Skip reload when there are unsaved DnD changes to avoid overwriting them
     if (!dirty.value) loadLineup()
@@ -450,7 +450,7 @@ watch(dirty, (isDirty, wasDirty) => {
 })
 
 function autoPopulateFromSignups() {
-  const going = props.signups.filter(s => s.status === 'going')
+  const going = props.signups.filter(s => s.lineup_status === 'going')
   lineup.value.main_tanks = going.filter(s => s.chosen_role === 'main_tank')
   lineup.value.off_tanks  = going.filter(s => s.chosen_role === 'off_tank')
   lineup.value.tanks      = going.filter(s => s.chosen_role === 'tank')
@@ -461,7 +461,7 @@ function autoPopulateFromSignups() {
 
 // ── Computed helpers ──
 const activeSignups = computed(() =>
-  props.signups.filter(s => ['going', 'tentative', 'bench'].includes(s.status))
+  props.signups.filter(s => ['going', 'bench'].includes(s.lineup_status))
 )
 
 const assignedIds = computed(() => {

@@ -301,9 +301,7 @@ class RaidEvent(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_signup_count:
-            result["signup_count"] = len([
-                s for s in self.signups if s.status != "declined"
-            ]) if self.signups else 0
+            result["signup_count"] = len(self.signups) if self.signups else 0
         return result
 
     def __repr__(self) -> str:

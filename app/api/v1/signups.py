@@ -85,10 +85,12 @@ def create_signup(guild_id: int, event_id: int):
 
     # Notify the signing-up player
     char_name = signup.character.name if signup.character else "Unknown"
-    if signup.status == "bench":
-        notify.notify_signup_benched(signup, event)
-    else:
+    # Determine if the signup went to bench by checking LineupSlots
+    from app.services import lineup_service
+    if lineup_service.has_role_slot(signup.id):
         notify.notify_signup_confirmed(signup, event)
+    else:
+        notify.notify_signup_benched(signup, event)
     # Notify officers about the new signup
     notify.notify_officers_new_signup(signup, event, char_name)
 
@@ -115,20 +117,15 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
 
     data = request.get_json(silent=True) or {}
     old_role = signup.chosen_role
-    old_status = signup.status
     signup = signup_service.update_signup(signup, data)
     emit_signups_changed(event_id)
     emit_lineup_changed(event_id)
 
-    # Notify player if an officer changed their role or declined them
+    # Notify player if an officer changed their role
     event = event_service.get_event(event_id)
     if signup.user_id != current_user.id and event:
         if data.get("chosen_role") and data["chosen_role"] != old_role:
             notify.notify_role_changed(signup, event, old_role, signup.chosen_role)
-        if data.get("status") == "declined" and old_status != "declined":
-            notify.notify_signup_declined_by_officer(
-                signup, event, current_user.username
-            )
 
     return jsonify(signup.to_dict()), 200
 
@@ -210,14 +207,13 @@ def decline_signup(guild_id: int, event_id: int, signup_id: int):
         return jsonify({"error": "Forbidden"}), 403
 
     event = event_service.get_event(event_id)
-    old_status = signup.status
 
     signup = signup_service.decline_signup(signup)
     emit_signups_changed(event_id)
     emit_lineup_changed(event_id)
 
     # Notify player if an officer declined them
-    if signup.user_id != current_user.id and event and old_status != "declined":
+    if signup.user_id != current_user.id and event:
         notify.notify_signup_declined_by_officer(
             signup, event, current_user.username
         )
