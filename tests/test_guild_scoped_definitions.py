@@ -1,0 +1,437 @@
+"""Tests for guild-scoped raid definitions, permission-gated builtin editing,
+copy-to-guild, and multi-guild creation."""
+
+from __future__ import annotations
+
+import pytest
+
+from app import create_app
+from app.extensions import db as _db
+from app.models.user import User
+from app.models.guild import Guild, GuildMembership
+from app.models.raid import RaidDefinition
+from app.models.permission import SystemRole, Permission, RolePermission
+from app.seeds.permissions import seed_permissions
+from app.seeds.raid_definitions import seed_raid_definitions
+from app.services import raid_service
+from app.utils.permissions import get_membership, has_permission
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session")
+def app():
+    application = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        "SECRET_KEY": "test-secret",
+        "CORS_ORIGINS": ["*"],
+        "SCHEDULER_ENABLED": False,
+    })
+    yield application
+
+
+@pytest.fixture(autouse=True)
+def db(app):
+    with app.app_context():
+        _db.create_all()
+        yield _db
+        _db.session.rollback()
+        _db.drop_all()
+
+
+@pytest.fixture
+def ctx(app):
+    with app.app_context():
+        yield
+
+
+@pytest.fixture
+def seeded(db, ctx):
+    """Seed permissions, create two guilds, users with various roles."""
+    seed_permissions()
+
+    guild_a = Guild(name="Guild Alpha", realm_name="Icecrown")
+    guild_b = Guild(name="Guild Beta", realm_name="Lordaeron")
+    _db.session.add_all([guild_a, guild_b])
+    _db.session.flush()
+
+    # Global admin — has is_admin=True
+    admin_user = User(username="globaladmin", email="ga@test.com",
+                      password_hash="x", is_active=True, is_admin=True)
+    # Guild admin of Guild A only
+    gadmin_user = User(username="guildadmin", email="gad@test.com",
+                       password_hash="x", is_active=True)
+    # Officer of Guild A
+    officer_user = User(username="officer", email="of@test.com",
+                        password_hash="x", is_active=True)
+    # Member of Guild A
+    member_user = User(username="member", email="mb@test.com",
+                       password_hash="x", is_active=True)
+    # Guild admin of Guild B only
+    gadmin_b_user = User(username="gadminb", email="gb@test.com",
+                         password_hash="x", is_active=True)
+
+    _db.session.add_all([admin_user, gadmin_user, officer_user,
+                         member_user, gadmin_b_user])
+    _db.session.flush()
+
+    # Memberships
+    _db.session.add_all([
+        GuildMembership(guild_id=guild_a.id, user_id=admin_user.id,
+                        role="guild_admin", status="active"),
+        GuildMembership(guild_id=guild_a.id, user_id=gadmin_user.id,
+                        role="guild_admin", status="active"),
+        GuildMembership(guild_id=guild_a.id, user_id=officer_user.id,
+                        role="officer", status="active"),
+        GuildMembership(guild_id=guild_a.id, user_id=member_user.id,
+                        role="member", status="active"),
+        GuildMembership(guild_id=guild_b.id, user_id=admin_user.id,
+                        role="guild_admin", status="active"),
+        GuildMembership(guild_id=guild_b.id, user_id=gadmin_b_user.id,
+                        role="guild_admin", status="active"),
+    ])
+    _db.session.commit()
+
+    return {
+        "guild_a": guild_a,
+        "guild_b": guild_b,
+        "admin_user": admin_user,
+        "gadmin_user": gadmin_user,
+        "officer_user": officer_user,
+        "member_user": member_user,
+        "gadmin_b_user": gadmin_b_user,
+    }
+
+
+# ===========================================================================
+# Test: Guild-scoped definitions
+# ===========================================================================
+
+class TestGuildScopedDefinitions:
+    """Verify each guild has its own definitions, separate from other guilds."""
+
+    def test_create_guild_definition(self, seeded):
+        """Creating a definition in Guild A does not appear in Guild B."""
+        rd = raid_service.create_raid_definition(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"code": "icc25", "name": "ICC 25", "size": 25}
+        )
+        assert rd.guild_id == seeded["guild_a"].id
+
+        defs_a = raid_service.list_raid_definitions(seeded["guild_a"].id)
+        defs_b = raid_service.list_raid_definitions(seeded["guild_b"].id)
+        assert any(d.id == rd.id for d in defs_a)
+        assert not any(d.id == rd.id for d in defs_b)
+
+    def test_builtin_visible_to_all_guilds(self, seeded):
+        """Built-in (global) definitions are visible from both guilds."""
+        count = seed_raid_definitions()
+        assert count > 0
+
+        defs_a = raid_service.list_raid_definitions(seeded["guild_a"].id)
+        defs_b = raid_service.list_raid_definitions(seeded["guild_b"].id)
+
+        builtins_a = [d for d in defs_a if d.is_builtin]
+        builtins_b = [d for d in defs_b if d.is_builtin]
+        assert len(builtins_a) == len(builtins_b)
+        assert len(builtins_a) == count
+
+    def test_guild_definition_not_cross_guild(self, seeded):
+        """Guild A definitions don't leak to Guild B and vice versa."""
+        rd_a = raid_service.create_raid_definition(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"code": "toc10a", "name": "ToC 10 Alpha", "size": 10}
+        )
+        rd_b = raid_service.create_raid_definition(
+            seeded["guild_b"].id, seeded["gadmin_b_user"].id,
+            {"code": "toc10b", "name": "ToC 10 Beta", "size": 10}
+        )
+
+        defs_a = raid_service.list_raid_definitions(seeded["guild_a"].id)
+        defs_b = raid_service.list_raid_definitions(seeded["guild_b"].id)
+
+        guild_a_ids = {d.id for d in defs_a if d.guild_id == seeded["guild_a"].id}
+        guild_b_ids = {d.id for d in defs_b if d.guild_id == seeded["guild_b"].id}
+
+        assert rd_a.id in guild_a_ids
+        assert rd_b.id not in guild_a_ids
+        assert rd_b.id in guild_b_ids
+        assert rd_a.id not in guild_b_ids
+
+
+# ===========================================================================
+# Test: Copy-to-guild
+# ===========================================================================
+
+class TestCopyToGuild:
+    """Verify copying a builtin definition into a guild."""
+
+    def test_copy_creates_guild_definition(self, seeded):
+        """Copying a builtin creates a non-builtin guild-scoped copy."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        assert len(builtins) > 0
+        source = builtins[0]
+
+        copy = raid_service.copy_raid_definition_to_guild(
+            source, seeded["guild_a"].id, seeded["officer_user"].id
+        )
+        assert copy.guild_id == seeded["guild_a"].id
+        assert copy.is_builtin is False
+        assert source.name in copy.name
+        assert "Copy" in copy.name
+
+    def test_copy_preserves_slots(self, seeded):
+        """Copied definition preserves slot allocation from source."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        copy = raid_service.copy_raid_definition_to_guild(
+            source, seeded["guild_a"].id, seeded["officer_user"].id
+        )
+        assert copy.main_tank_slots == source.main_tank_slots
+        assert copy.off_tank_slots == source.off_tank_slots
+        assert copy.healer_slots == source.healer_slots
+        assert copy.melee_dps_slots == source.melee_dps_slots
+        assert copy.range_dps_slots == source.range_dps_slots
+        assert copy.default_raid_size == source.default_raid_size
+
+    def test_copy_unique_naming(self, seeded):
+        """Multiple copies get unique suffixed names."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        copy1 = raid_service.copy_raid_definition_to_guild(
+            source, seeded["guild_a"].id, seeded["officer_user"].id
+        )
+        copy2 = raid_service.copy_raid_definition_to_guild(
+            source, seeded["guild_a"].id, seeded["officer_user"].id
+        )
+        assert copy1.name != copy2.name
+        assert copy1.code != copy2.code
+
+    def test_copy_to_different_guild(self, seeded):
+        """Copying same builtin to two different guilds works independently."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        copy_a = raid_service.copy_raid_definition_to_guild(
+            source, seeded["guild_a"].id, seeded["officer_user"].id
+        )
+        copy_b = raid_service.copy_raid_definition_to_guild(
+            source, seeded["guild_b"].id, seeded["gadmin_b_user"].id
+        )
+        assert copy_a.guild_id == seeded["guild_a"].id
+        assert copy_b.guild_id == seeded["guild_b"].id
+        # Both copies have same base name pattern
+        assert source.name in copy_a.name
+        assert source.name in copy_b.name
+
+
+# ===========================================================================
+# Test: Permission-gated builtin editing
+# ===========================================================================
+
+class TestBuiltinPermissions:
+    """Verify manage_default_definitions permission gates builtin edit/delete."""
+
+    def test_global_admin_bypasses_permission_check_via_api(self, seeded, app):
+        """Global admin (is_admin=True) can edit builtins because has_permission bypasses for admins."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                json={"name": "Admin Edited"},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["name"] == "Admin Edited"
+
+    def test_guild_admin_lacks_manage_default_definitions(self, seeded):
+        """Guild admin without is_admin does NOT have manage_default_definitions."""
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert not has_permission(membership, "manage_default_definitions")
+
+    def test_officer_lacks_manage_default_definitions(self, seeded):
+        """Officer does NOT have manage_default_definitions."""
+        membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
+        assert not has_permission(membership, "manage_default_definitions")
+
+    def test_member_lacks_manage_default_definitions(self, seeded):
+        """Member does NOT have manage_default_definitions."""
+        membership = get_membership(seeded["guild_a"].id, seeded["member_user"].id)
+        assert not has_permission(membership, "manage_default_definitions")
+
+    def test_officer_has_manage_raid_definitions(self, seeded):
+        """Officer CAN manage (non-builtin) raid definitions."""
+        membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
+        assert has_permission(membership, "manage_raid_definitions")
+
+    def test_member_lacks_manage_raid_definitions(self, seeded):
+        """Member cannot manage raid definitions."""
+        membership = get_membership(seeded["guild_a"].id, seeded["member_user"].id)
+        assert not has_permission(membership, "manage_raid_definitions")
+
+
+# ===========================================================================
+# Test: API-level permission enforcement for builtin definitions
+# ===========================================================================
+
+class TestBuiltinDefinitionAPI:
+    """Verify API endpoints enforce manage_default_definitions for builtins."""
+
+    def test_api_update_builtin_as_global_admin(self, seeded, app):
+        """Global admin can update a builtin definition via API."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                json={"name": "Updated Name"},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["name"] == "Updated Name"
+
+    def test_api_update_builtin_as_officer_rejected(self, seeded, app):
+        """Officer cannot update a builtin definition (no manage_default_definitions)."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["officer_user"].id)
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                json={"name": "Hacked Name"},
+            )
+            assert resp.status_code == 403
+
+    def test_api_delete_builtin_as_officer_rejected(self, seeded, app):
+        """Officer cannot delete a builtin definition."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["officer_user"].id)
+            resp = client.delete(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+            )
+            assert resp.status_code == 403
+
+    def test_api_update_custom_as_officer_allowed(self, seeded, app):
+        """Officer can update a guild-scoped (non-builtin) definition."""
+        rd = raid_service.create_raid_definition(
+            seeded["guild_a"].id, seeded["officer_user"].id,
+            {"code": "custom_icc", "name": "Custom ICC", "size": 25}
+        )
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["officer_user"].id)
+            resp = client.put(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{rd.id}",
+                json={"name": "Updated Custom ICC"},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["name"] == "Updated Custom ICC"
+
+    def test_api_copy_builtin_as_officer_allowed(self, seeded, app):
+        """Officer can copy a builtin to guild (requires manage_raid_definitions, not manage_default_definitions)."""
+        seed_raid_definitions()
+        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        source = builtins[0]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["officer_user"].id)
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}/copy",
+            )
+            assert resp.status_code == 201
+            data = resp.get_json()
+            assert data["is_builtin"] is False
+            assert data["guild_id"] == seeded["guild_a"].id
+
+    def test_api_member_cannot_create_definition(self, seeded, app):
+        """Member cannot create raid definitions (no manage_raid_definitions)."""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["member_user"].id)
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions",
+                json={"name": "Hacked Def", "code": "hack", "size": 25},
+            )
+            assert resp.status_code == 403
+
+
+# ===========================================================================
+# Test: Multi-guild definition creation
+# ===========================================================================
+
+class TestMultiGuildDefinitions:
+    """Verify definitions can be created independently in multiple guilds."""
+
+    def test_create_same_definition_in_two_guilds(self, seeded):
+        """Same definition data can be created in two separate guilds."""
+        data = {"code": "icc25h", "name": "ICC 25 Heroic", "size": 25,
+                "main_tank_slots": 2, "off_tank_slots": 1,
+                "healer_slots": 6, "melee_dps_slots": 4, "range_dps_slots": 12}
+        rd_a = raid_service.create_raid_definition(
+            seeded["guild_a"].id, seeded["admin_user"].id, data
+        )
+        rd_b = raid_service.create_raid_definition(
+            seeded["guild_b"].id, seeded["admin_user"].id, data
+        )
+
+        assert rd_a.guild_id == seeded["guild_a"].id
+        assert rd_b.guild_id == seeded["guild_b"].id
+        assert rd_a.id != rd_b.id
+        assert rd_a.name == rd_b.name
+
+    def test_delete_in_one_guild_does_not_affect_other(self, seeded):
+        """Deleting a definition in Guild A does not affect Guild B."""
+        data = {"code": "ulduar25", "name": "Ulduar 25", "size": 25}
+        rd_a = raid_service.create_raid_definition(
+            seeded["guild_a"].id, seeded["admin_user"].id, data
+        )
+        rd_b = raid_service.create_raid_definition(
+            seeded["guild_b"].id, seeded["admin_user"].id, data
+        )
+
+        raid_service.delete_raid_definition(rd_a)
+
+        defs_b = raid_service.list_raid_definitions(seeded["guild_b"].id)
+        assert any(d.id == rd_b.id for d in defs_b)
+
+    def test_update_in_one_guild_does_not_affect_other(self, seeded):
+        """Updating a definition in Guild A does not change Guild B's copy."""
+        data = {"code": "naxx25", "name": "Naxxramas 25", "size": 25}
+        rd_a = raid_service.create_raid_definition(
+            seeded["guild_a"].id, seeded["admin_user"].id, data
+        )
+        rd_b = raid_service.create_raid_definition(
+            seeded["guild_b"].id, seeded["admin_user"].id, data
+        )
+
+        raid_service.update_raid_definition(rd_a, {"name": "Naxx 25 Modified"})
+
+        refreshed_b = raid_service.get_raid_definition(rd_b.id)
+        assert refreshed_b.name == "Naxxramas 25"
+        assert rd_a.name == "Naxx 25 Modified"
