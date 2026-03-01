@@ -288,7 +288,7 @@ function equipSlotLabel(index) {
 
 // Quality colors matching WoW item quality system
 const QUALITY_COLORS = {
-  0: { text: 'text-gray-500',   border: 'border-gray-600/40',   bg: 'bg-gray-800/30' },   // Poor
+  0: { text: 'text-gray-500',   border: 'border-gray-600/40',   bg: 'bg-gray-900/40' },   // Poor
   1: { text: 'text-gray-300',   border: 'border-gray-500/40',   bg: 'bg-gray-800/30' },   // Common
   2: { text: 'text-green-400',  border: 'border-green-500/40',  bg: 'bg-green-900/20' },   // Uncommon
   3: { text: 'text-blue-400',   border: 'border-blue-500/40',   bg: 'bg-blue-900/20' },    // Rare
@@ -299,8 +299,8 @@ const QUALITY_COLORS = {
 
 function getQuality(item) {
   if (item.quality != null) return QUALITY_COLORS[item.quality] ?? QUALITY_COLORS[4]
-  // Fallback: if we have an item ID assume epic (most raid gear)
-  if (item.item) return QUALITY_COLORS[4]
+  // Fallback: items with an ID but no quality field default to Rare (blue)
+  if (item.item) return QUALITY_COLORS[3]
   return QUALITY_COLORS[1]
 }
 

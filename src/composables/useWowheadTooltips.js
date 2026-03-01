@@ -16,7 +16,7 @@ function ensureLoaded() {
   if (loaded || loading) return
   loading = true
 
-  // Configure Wowhead tooltip behaviour before loading the script
+  // Configure Wowhead tooltip behavior before loading the script
   window.whTooltips = {
     colorLinks: true,
     iconizeLinks: true,
