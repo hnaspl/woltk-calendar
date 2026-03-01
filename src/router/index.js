@@ -57,6 +57,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/admin/roles',
+    name: 'roles-management',
+    component: () => import('@/views/RolesManagementView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/guild/settings',
     name: 'guild-settings',
     component: () => import('@/views/GuildSettingsView.vue'),

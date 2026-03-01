@@ -314,14 +314,18 @@ const navGroups = computed(() => {
 
   // Guild management only visible to users with create_events permission
   if (canManageGuild.value) {
+    const guildItems = [
+      { label: 'Settings', to: '/guild/settings', icon: icons.settings },
+      { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
+      { label: 'Templates', to: '/guild/templates', icon: icons.templates },
+      { label: 'Recurring Raids', to: '/guild/series', icon: icons.series }
+    ]
+    if (permissions.can('manage_roles')) {
+      guildItems.push({ label: 'Roles & Permissions', to: '/admin/roles', icon: icons.admin })
+    }
     groups.push({
       label: 'Guild Management',
-      items: [
-        { label: 'Settings', to: '/guild/settings', icon: icons.settings },
-        { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
-        { label: 'Templates', to: '/guild/templates', icon: icons.templates },
-        { label: 'Recurring Raids', to: '/guild/series', icon: icons.series }
-      ]
+      items: guildItems
     })
   }
 
