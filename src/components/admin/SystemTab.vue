@@ -41,7 +41,7 @@
               </td>
               <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(u.created_at) }}</td>
               <td class="px-4 py-2.5 text-right space-x-2">
-                <template v-if="u.id !== authStore.user.id">
+                <template v-if="u.id !== authStore.user.id && u.id !== 1">
                   <WowButton
                     v-if="!u.is_admin"
                     variant="secondary"
@@ -68,7 +68,8 @@
                   >Unblock</WowButton>
                   <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmDelete(u)">Delete</WowButton>
                 </template>
-                <span v-else class="text-text-muted text-xs italic">You</span>
+                <span v-else-if="u.id === authStore.user.id" class="text-text-muted text-xs italic">You</span>
+                <span v-else class="text-text-muted text-xs italic">Primary Admin</span>
               </td>
             </tr>
           </tbody>
@@ -194,7 +195,10 @@ async function toggleAdmin(user) {
     const updated = await adminApi.updateUser(user.id, { is_admin: !user.is_admin })
     const idx = users.value.findIndex(u => u.id === user.id)
     if (idx !== -1) users.value[idx] = updated
-    uiStore.showToast(updated.is_admin ? `${updated.username} promoted to Global Admin` : `${updated.username} admin revoked`, 'success')
+    const msg = updated.is_admin
+      ? `${updated.username} promoted to Global Admin`
+      : `${updated.username} admin status revoked`
+    uiStore.showToast(msg, 'success')
   } catch {
     uiStore.showToast('Failed to update admin status', 'error')
   }
