@@ -10,7 +10,8 @@
       <form v-else @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
         <div>
           <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
-          <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <input v-model="form.name" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
+          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">Name is locked for Warmane-sourced guilds.</p>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Realm *</label>

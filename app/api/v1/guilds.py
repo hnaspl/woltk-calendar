@@ -286,3 +286,40 @@ def list_member_characters(guild_id: int, user_id: int):
 
     chars = character_service.list_characters(user_id, guild_id, include_archived=True)
     return jsonify([c.to_dict() for c in chars]), 200
+
+
+# ---------------------------------------------------------------------------
+# Warmane roster
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:guild_id>/warmane-roster")
+@login_required
+def get_warmane_roster(guild_id: int):
+    """Fetch the Warmane guild roster for a Warmane-sourced guild."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": "Guild not found"}), 404
+    membership = get_membership(guild_id, current_user.id)
+    if not has_permission(membership, "add_members"):
+        return jsonify({"error": "Permission 'add_members' required"}), 403
+    if not guild.warmane_source:
+        return jsonify({"error": "Guild is not sourced from Warmane"}), 400
+
+    from app.services import warmane_service
+
+    data = warmane_service.fetch_guild(guild.realm_name, guild.name)
+    if data is None:
+        return jsonify({"error": "Could not fetch roster from Warmane API"}), 502
+
+    roster = [
+        warmane_service.build_character_dict(m, guild.realm_name)
+        for m in data.get("roster", [])
+    ]
+
+    return jsonify({
+        "name": data.get("name", guild.name),
+        "realm": guild.realm_name,
+        "faction": data.get("faction"),
+        "member_count": data.get("membercount"),
+        "roster": roster,
+    }), 200

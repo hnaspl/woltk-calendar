@@ -94,9 +94,10 @@
                 class="w-full flex items-center justify-between px-3 py-2 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors text-sm"
                 @click="doAddMemberByName(ch.name)"
               >
-                <div>
-                  <span class="text-text-primary">{{ ch.name }}</span>
-                  <span class="text-text-muted text-xs ml-2">{{ ch.class_name }} · Lv{{ ch.level }}</span>
+                <div class="flex items-center gap-2">
+                  <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-5 h-5 rounded flex-shrink-0" />
+                  <span class="font-medium" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
+                  <span class="text-text-muted text-xs">{{ ch.class_name }} · Lv{{ ch.level }}</span>
                 </div>
                 <span class="text-xs text-accent-gold">Add</span>
               </button>
@@ -233,7 +234,6 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as guildsApi from '@/api/guilds'
-import * as warmaneApi from '@/api/warmane'
 import api from '@/api'
 
 const guildStore = useGuildStore()
@@ -445,14 +445,21 @@ async function fetchWarmaneRoster() {
   fetchingRoster.value = true
   warmaneRosterError.value = null
   try {
-    const data = await warmaneApi.lookupGuild(g.realm_name, g.name)
+    const data = await guildsApi.getWarmaneRoster(g.id)
     warmaneRoster.value = data.roster || []
   } catch (err) {
-    warmaneRosterError.value = err?.response?.data?.message ?? 'Failed to fetch guild roster from Warmane'
+    warmaneRosterError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to fetch guild roster from Warmane'
   } finally {
     fetchingRoster.value = false
   }
 }
+
+// Auto-fetch roster for Warmane-sourced guilds on mount
+onMounted(() => {
+  if (isWarmaneSource.value) {
+    fetchWarmaneRoster()
+  }
+})
 
 async function doAddMemberByName(characterName) {
   try {

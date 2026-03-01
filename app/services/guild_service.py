@@ -64,8 +64,8 @@ def update_guild(guild: Guild, data: dict) -> Guild:
     allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "timezone"}
     for key, value in data.items():
         if key in allowed:
-            # Prevent changing realm on Warmane-sourced guilds
-            if key == "realm_name" and guild.warmane_source:
+            # Prevent changing name or realm on Warmane-sourced guilds
+            if key in ("realm_name", "name") and guild.warmane_source:
                 continue
             setattr(guild, key, value)
     db.session.commit()

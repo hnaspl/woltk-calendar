@@ -28,3 +28,6 @@ export const removeMember = (guildId, userId) =>
 
 export const getMemberCharacters = (guildId, userId) =>
   api.get(`/guilds/${guildId}/members/${userId}/characters`)
+
+export const getWarmaneRoster = (guildId) =>
+  api.get(`/guilds/${guildId}/warmane-roster`)

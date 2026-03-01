@@ -44,7 +44,7 @@
         <Transition name="fade">
           <div
             v-if="notifOpen"
-            class="absolute right-0 top-full mt-1 w-80 bg-[#141926] border border-[#2a3450] rounded-lg shadow-xl z-30 overflow-hidden"
+            class="absolute right-0 top-full mt-1 w-96 bg-[#141926] border border-[#2a3450] rounded-lg shadow-xl z-30 overflow-hidden"
             v-click-outside="() => notifOpen = false"
           >
             <div class="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3450]">
@@ -64,7 +64,7 @@
                 >Clear all</button>
               </div>
             </div>
-            <div class="max-h-72 overflow-y-auto">
+            <div class="max-h-96 overflow-y-auto">
               <div v-if="notifications.length === 0" class="px-4 py-6 text-center text-sm text-text-muted">
                 No notifications yet
               </div>
@@ -81,8 +81,8 @@
                     class="mt-1.5 w-2 h-2 rounded-full bg-accent-gold flex-shrink-0"
                   />
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm text-text-primary truncate">{{ n.title }}</p>
-                    <p v-if="n.body" class="text-xs text-text-muted mt-0.5 line-clamp-2">{{ n.body }}</p>
+                    <p class="text-sm text-text-primary font-medium">{{ n.title }}</p>
+                    <p v-if="n.body" class="text-xs text-text-muted mt-0.5 whitespace-pre-line">{{ n.body }}</p>
                     <p class="text-[10px] text-text-muted mt-1">{{ formatTime(n.created_at) }}</p>
                   </div>
                   <button

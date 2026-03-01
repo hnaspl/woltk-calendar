@@ -118,7 +118,6 @@ ROLE_PERMISSIONS = {
         "record_attendance",
         "manage_raid_definitions", "manage_templates", "manage_series",
         "add_members", "remove_members", "update_member_roles",
-        "update_guild_settings",
     ],
     "guild_admin": [
         # All officer permissions +
@@ -167,7 +166,7 @@ ROLE_PERMISSIONS = {
 # ---------------------------------------------------------------------------
 GRANT_RULES = {
     "global_admin": ["guild_admin", "officer", "raid_leader", "member"],
-    "guild_admin": ["officer", "raid_leader", "member"],
+    "guild_admin": ["guild_admin", "officer", "raid_leader", "member"],
     "officer": ["raid_leader", "member"],
 }
 
