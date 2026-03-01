@@ -275,7 +275,8 @@ def update_lineup_grouped(
                     # Current signup is the new placement — it wins.
                     # Remove the previous signup's slot and bench it.
                     db.session.expunge(prev_slot_obj)
-                    new_role_signups.get(prev_group, set()).discard(prev_sid)
+                    if prev_group in new_role_signups:
+                        new_role_signups[prev_group].discard(prev_sid)
                     overflow_to_bench.append(prev_sid)
                 else:
                     # Previous signup keeps its slot; current goes to bench.

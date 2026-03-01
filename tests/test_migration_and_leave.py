@@ -823,8 +823,8 @@ class TestAdminLineupUpdateAutoPromote:
         assert lineup_service.has_role_slot(s_other.id)
         assert not lineup_service.has_role_slot(s_alt.id)
 
-        # Admin places hunter alt in DPS, keeps druid in main_tank.
-        # Frontend sends both in their role slots.
+        # Admin places hunter alt in DPS alongside druid in main_tank.
+        # One-char-per-player: the new placement (alt→DPS) wins, druid→bench.
         result = lineup_service.update_lineup_grouped(
             seed["event"].id,
             {
