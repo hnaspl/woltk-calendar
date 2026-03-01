@@ -1,0 +1,248 @@
+"""Seed default system roles, permissions, and grant rules."""
+
+from __future__ import annotations
+
+import logging
+
+from app.extensions import db
+from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Default roles (name, display_name, description, level)
+# ---------------------------------------------------------------------------
+DEFAULT_ROLES = [
+    ("global_admin", "Global Admin", "System-wide administrator with full access", 100),
+    ("guild_admin", "Guild Admin", "Full guild control including role management", 80),
+    ("officer", "Officer", "Can manage events, lineup, members, and attendance", 60),
+    ("raid_leader", "Raid Leader", "Can manage lineup and signups for events", 40),
+    ("member", "Member", "Basic guild member with signup access", 20),
+]
+
+# ---------------------------------------------------------------------------
+# All permissions (code, display_name, description, category)
+# ---------------------------------------------------------------------------
+ALL_PERMISSIONS = [
+    # Events
+    ("view_events", "View Events", "View raid events and schedules", "events"),
+    ("create_events", "Create Events", "Create new raid events", "events"),
+    ("edit_events", "Edit Events", "Edit existing raid events", "events"),
+    ("delete_events", "Delete Events", "Delete raid events", "events"),
+    ("lock_signups", "Lock Signups", "Lock/unlock event signups", "events"),
+    ("cancel_events", "Cancel Events", "Cancel or complete events", "events"),
+    ("duplicate_events", "Duplicate Events", "Duplicate existing events", "events"),
+
+    # Signups
+    ("sign_up", "Sign Up", "Sign up for raid events", "signups"),
+    ("delete_own_signup", "Delete Own Signup", "Remove own signup from events", "signups"),
+    ("decline_own_signup", "Decline Own Signup", "Decline own lineup placement", "signups"),
+    ("manage_signups", "Manage Signups", "Decline/delete other players' signups", "signups"),
+    ("ban_characters", "Ban Characters", "Ban characters from events", "signups"),
+    ("unban_characters", "Unban Characters", "Remove character bans", "signups"),
+    ("request_replacement", "Request Replacement", "Request character replacement for signups", "signups"),
+
+    # Lineup
+    ("update_lineup", "Update Lineup", "Manage raid lineup and bench", "lineup"),
+    ("confirm_lineup", "Confirm Lineup", "Confirm final raid lineup", "lineup"),
+    ("reorder_bench", "Reorder Bench", "Reorder bench queue positions", "lineup"),
+
+    # Characters
+    ("manage_own_characters", "Manage Own Characters", "Add/edit/remove own characters", "characters"),
+    ("view_member_characters", "View Member Characters", "View other members' characters", "characters"),
+
+    # Attendance
+    ("view_attendance", "View Attendance", "View attendance records", "attendance"),
+    ("record_attendance", "Record Attendance", "Record raid attendance", "attendance"),
+
+    # Raid definitions & templates
+    ("manage_raid_definitions", "Manage Raid Definitions", "Create/edit raid definitions", "definitions"),
+    ("manage_templates", "Manage Templates", "Create/edit event templates", "definitions"),
+    ("manage_series", "Manage Series", "Create/edit event series", "definitions"),
+
+    # Guild management
+    ("view_guild", "View Guild", "View guild information", "guild"),
+    ("update_guild_settings", "Update Guild Settings", "Modify guild settings", "guild"),
+    ("delete_guild", "Delete Guild", "Delete the guild", "guild"),
+    ("add_members", "Add Members", "Add new members to guild", "guild"),
+    ("remove_members", "Remove Members", "Remove members from guild", "guild"),
+    ("update_member_roles", "Update Member Roles", "Change member roles", "guild"),
+
+    # Notifications
+    ("view_notifications", "View Notifications", "View own notifications", "notifications"),
+
+    # Admin
+    ("list_system_users", "List System Users", "View all system users", "admin"),
+    ("manage_system_users", "Manage System Users", "Activate/deactivate/delete users", "admin"),
+    ("trigger_sync", "Trigger Sync", "Trigger character synchronization", "admin"),
+    ("manage_autosync", "Manage Auto-Sync", "Configure auto-sync settings", "admin"),
+    ("manage_roles", "Manage Roles", "Create/edit/delete roles and permissions", "admin"),
+]
+
+# ---------------------------------------------------------------------------
+# Role → Permission assignments
+# ---------------------------------------------------------------------------
+ROLE_PERMISSIONS = {
+    "member": [
+        "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
+        "manage_own_characters", "view_attendance", "view_guild",
+        "view_notifications",
+    ],
+    "raid_leader": [
+        # Inherits member permissions +
+        "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
+        "manage_own_characters", "view_attendance", "view_guild",
+        "view_notifications",
+        # Raid leader specifics
+        "update_lineup", "confirm_lineup", "reorder_bench",
+        "manage_signups", "ban_characters", "unban_characters",
+        "request_replacement", "view_member_characters",
+    ],
+    "officer": [
+        # Inherits raid_leader permissions +
+        "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
+        "manage_own_characters", "view_attendance", "view_guild",
+        "view_notifications",
+        "update_lineup", "confirm_lineup", "reorder_bench",
+        "manage_signups", "ban_characters", "unban_characters",
+        "request_replacement", "view_member_characters",
+        # Officer specifics
+        "create_events", "edit_events", "delete_events",
+        "lock_signups", "cancel_events", "duplicate_events",
+        "record_attendance",
+        "manage_raid_definitions", "manage_templates", "manage_series",
+        "add_members", "remove_members", "update_member_roles",
+        "update_guild_settings", "delete_guild",
+    ],
+    "guild_admin": [
+        # All officer permissions +
+        "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
+        "manage_own_characters", "view_attendance", "view_guild",
+        "view_notifications",
+        "update_lineup", "confirm_lineup", "reorder_bench",
+        "manage_signups", "ban_characters", "unban_characters",
+        "request_replacement", "view_member_characters",
+        "create_events", "edit_events", "delete_events",
+        "lock_signups", "cancel_events", "duplicate_events",
+        "record_attendance",
+        "manage_raid_definitions", "manage_templates", "manage_series",
+        "add_members", "remove_members", "update_member_roles",
+        "update_guild_settings", "delete_guild",
+        # Guild admin specifics
+        "manage_roles",
+    ],
+    "global_admin": [
+        # All permissions
+        "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
+        "manage_own_characters", "view_attendance", "view_guild",
+        "view_notifications",
+        "update_lineup", "confirm_lineup", "reorder_bench",
+        "manage_signups", "ban_characters", "unban_characters",
+        "request_replacement", "view_member_characters",
+        "create_events", "edit_events", "delete_events",
+        "lock_signups", "cancel_events", "duplicate_events",
+        "record_attendance",
+        "manage_raid_definitions", "manage_templates", "manage_series",
+        "add_members", "remove_members", "update_member_roles",
+        "update_guild_settings", "delete_guild",
+        "manage_roles",
+        # Admin-only
+        "list_system_users", "manage_system_users",
+        "trigger_sync", "manage_autosync",
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Grant rules: which role can assign which role
+# ---------------------------------------------------------------------------
+GRANT_RULES = {
+    "global_admin": ["guild_admin", "officer", "raid_leader", "member"],
+    "guild_admin": ["officer", "raid_leader", "member"],
+    "officer": ["raid_leader", "member"],
+}
+
+
+def seed_permissions() -> int:
+    """Seed default roles, permissions, and grant rules. Returns count of roles created."""
+    created = 0
+
+    # 1. Create permissions
+    perm_map: dict[str, Permission] = {}
+    for code, display_name, description, category in ALL_PERMISSIONS:
+        existing = db.session.execute(
+            db.select(Permission).where(Permission.code == code)
+        ).scalar_one_or_none()
+        if existing:
+            perm_map[code] = existing
+        else:
+            p = Permission(
+                code=code,
+                display_name=display_name,
+                description=description,
+                category=category,
+            )
+            db.session.add(p)
+            db.session.flush()
+            perm_map[code] = p
+
+    # 2. Create roles
+    role_map: dict[str, SystemRole] = {}
+    for name, display_name, description, level in DEFAULT_ROLES:
+        existing = db.session.execute(
+            db.select(SystemRole).where(SystemRole.name == name)
+        ).scalar_one_or_none()
+        if existing:
+            role_map[name] = existing
+        else:
+            r = SystemRole(
+                name=name,
+                display_name=display_name,
+                description=description,
+                level=level,
+                is_system=True,
+            )
+            db.session.add(r)
+            db.session.flush()
+            role_map[name] = r
+            created += 1
+
+    # 3. Assign permissions to roles
+    for role_name, perm_codes in ROLE_PERMISSIONS.items():
+        role = role_map.get(role_name)
+        if role is None:
+            continue
+        for code in perm_codes:
+            perm = perm_map.get(code)
+            if perm is None:
+                continue
+            existing = db.session.execute(
+                db.select(RolePermission).where(
+                    RolePermission.role_id == role.id,
+                    RolePermission.permission_id == perm.id,
+                )
+            ).scalar_one_or_none()
+            if not existing:
+                db.session.add(RolePermission(role_id=role.id, permission_id=perm.id))
+
+    # 4. Create grant rules
+    for granter_name, grantee_names in GRANT_RULES.items():
+        granter = role_map.get(granter_name)
+        if granter is None:
+            continue
+        for grantee_name in grantee_names:
+            grantee = role_map.get(grantee_name)
+            if grantee is None:
+                continue
+            existing = db.session.execute(
+                db.select(RoleGrantRule).where(
+                    RoleGrantRule.granter_role_id == granter.id,
+                    RoleGrantRule.grantee_role_id == grantee.id,
+                )
+            ).scalar_one_or_none()
+            if not existing:
+                db.session.add(
+                    RoleGrantRule(granter_role_id=granter.id, grantee_role_id=grantee.id)
+                )
+
+    db.session.commit()
+    return created

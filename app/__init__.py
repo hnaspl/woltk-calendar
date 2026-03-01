@@ -195,6 +195,7 @@ def _auto_migrate(app: Flask) -> None:
     - Dropping the legacy ``status`` column from ``signups`` if present.
     - Adding ``duration_minutes`` column to ``raid_events`` if missing.
     - Adding ``default_duration_minutes`` column to ``raid_definitions`` if missing.
+    - Creating permission system tables and seeding defaults if missing.
     """
     try:
         _drop_signups_status_column()
@@ -205,6 +206,11 @@ def _auto_migrate(app: Flask) -> None:
         _add_duration_columns()
     except Exception as exc:
         app.logger.warning("Auto-migration: failed to add duration columns: %s", exc)
+
+    try:
+        _ensure_permission_tables(app)
+    except Exception as exc:
+        app.logger.warning("Auto-migration: failed to create permission tables: %s", exc)
 
 
 def _drop_signups_status_column() -> None:
@@ -244,6 +250,31 @@ def _add_duration_columns() -> None:
             ))
 
 
+def _ensure_permission_tables(app: Flask) -> None:
+    """Create permission system tables and seed defaults if not present."""
+    from sqlalchemy import inspect
+
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+
+    if "system_roles" not in tables:
+        # Create only the permission-related tables
+        from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
+        for model in [SystemRole, Permission, RolePermission, RoleGrantRule]:
+            model.__table__.create(db.engine, checkfirst=True)
+        app.logger.info("Auto-migration: created permission system tables.")
+
+    # Seed default roles/permissions if empty
+    from app.models.permission import SystemRole as SR
+    count = db.session.execute(
+        __import__("sqlalchemy").select(__import__("sqlalchemy").func.count()).select_from(SR)
+    ).scalar()
+    if count == 0:
+        from app.seeds.permissions import seed_permissions
+        created = seed_permissions()
+        app.logger.info("Auto-migration: seeded %d default roles with permissions.", created)
+
+
 def _register_commands(app: Flask) -> None:
     import click
 
@@ -267,6 +298,10 @@ def _register_commands(app: Flask) -> None:
             click.echo("Created default admin user.")
         else:
             click.echo("Admin user already exists, skipped.")
+
+        from app.seeds.permissions import seed_permissions
+        perm_count = seed_permissions()
+        click.echo(f"Seeded {perm_count} role(s) with permissions.")
 
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")
@@ -298,5 +333,10 @@ def _register_commands(app: Flask) -> None:
         try:
             _add_duration_columns()
             click.echo("Migration: duration columns added (if missing).")
+        except Exception as exc:
+            click.echo(f"Migration note: {exc}")
+        try:
+            _ensure_permission_tables(app)
+            click.echo("Migration: permission tables ensured.")
         except Exception as exc:
             click.echo(f"Migration note: {exc}")

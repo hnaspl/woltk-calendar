@@ -7,21 +7,22 @@ from flask_login import current_user
 
 from app.services import auth_service
 from app.utils.auth import login_required
+from app.utils.permissions import has_permission
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
-def _require_admin():
-    """Return an error tuple if the current user is not an admin, else None."""
-    if not current_user.is_admin:
-        return jsonify({"error": "Admin privileges required"}), 403
+def _require_permission(perm_code: str):
+    """Return an error tuple if the current user lacks the permission, else None."""
+    if not has_permission(None, perm_code):
+        return jsonify({"error": f"Permission '{perm_code}' required"}), 403
     return None
 
 
 @bp.get("/users")
 @login_required
 def list_users():
-    err = _require_admin()
+    err = _require_permission("list_system_users")
     if err:
         return err
     users = auth_service.list_all_users()
@@ -31,7 +32,7 @@ def list_users():
 @bp.put("/users/<int:user_id>")
 @login_required
 def update_user(user_id: int):
-    err = _require_admin()
+    err = _require_permission("manage_system_users")
     if err:
         return err
     user = auth_service.get_user_by_id(user_id)
@@ -55,7 +56,7 @@ def update_user(user_id: int):
 @bp.delete("/users/<int:user_id>")
 @login_required
 def delete_user(user_id: int):
-    err = _require_admin()
+    err = _require_permission("manage_system_users")
     if err:
         return err
     user = auth_service.get_user_by_id(user_id)
@@ -80,7 +81,7 @@ def delete_user(user_id: int):
 @login_required
 def get_autosync_settings():
     """Return current auto-sync settings."""
-    err = _require_admin()
+    err = _require_permission("manage_autosync")
     if err:
         return err
     from app.jobs.scheduler import get_autosync_config
@@ -91,7 +92,7 @@ def get_autosync_settings():
 @login_required
 def update_autosync_settings():
     """Update auto-sync settings and reschedule the job."""
-    err = _require_admin()
+    err = _require_permission("manage_autosync")
     if err:
         return err
     data = request.get_json(silent=True) or {}
@@ -104,7 +105,7 @@ def update_autosync_settings():
 @login_required
 def trigger_sync():
     """Manually trigger a sync of all characters."""
-    err = _require_admin()
+    err = _require_permission("trigger_sync")
     if err:
         return err
     from app.jobs.handlers import handle_sync_all_characters

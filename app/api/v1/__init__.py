@@ -20,6 +20,7 @@ def register_blueprints(app: Flask) -> None:
         attendance,
         notifications,
         warmane,
+        roles,
     )
 
     prefix = "/api/v1"
@@ -39,3 +40,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(attendance.bp, url_prefix=f"{prefix}")
     app.register_blueprint(notifications.bp, url_prefix=f"{prefix}/notifications")
     app.register_blueprint(warmane.bp, url_prefix=f"{prefix}/warmane")
+    app.register_blueprint(roles.bp, url_prefix=f"{prefix}/roles")

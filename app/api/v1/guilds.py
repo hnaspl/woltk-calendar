@@ -11,7 +11,7 @@ from app.extensions import db
 from app.models.guild import Guild, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.permissions import get_membership, has_permission, can_grant_role
 from app.utils.realtime import emit_guild_changed, emit_guilds_changed
 from app.utils import notify
 
@@ -71,8 +71,8 @@ def join_guild(guild_id: int):
 def available_users(guild_id: int):
     """List users not already in this guild (officer-only, for adding members)."""
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "add_members"):
+        return jsonify({"error": "Permission 'add_members' required"}), 403
 
     from app.models.user import User
 
@@ -135,8 +135,8 @@ def update_guild(guild_id: int):
     if guild is None:
         return jsonify({"error": "Guild not found"}), 404
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "update_guild_settings"):
+        return jsonify({"error": "Permission 'update_guild_settings' required"}), 403
     data = request.get_json(silent=True) or {}
     guild = guild_service.update_guild(guild, data)
     emit_guild_changed(guild_id)
@@ -150,8 +150,8 @@ def delete_guild(guild_id: int):
     if guild is None:
         return jsonify({"error": "Guild not found"}), 404
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "delete_guild"):
+        return jsonify({"error": "Permission 'delete_guild' required"}), 403
     guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": "Guild deleted"}), 200
@@ -174,8 +174,8 @@ def list_members(guild_id: int):
 @login_required
 def add_member(guild_id: int):
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "add_members"):
+        return jsonify({"error": "Permission 'add_members' required"}), 403
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
     if not user_id:
@@ -196,8 +196,8 @@ def add_member(guild_id: int):
 @login_required
 def update_member(guild_id: int, user_id: int):
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "update_member_roles"):
+        return jsonify({"error": "Permission 'update_member_roles' required"}), 403
 
     target = db.session.execute(
         sa.select(GuildMembership).where(
@@ -210,15 +210,21 @@ def update_member(guild_id: int, user_id: int):
 
     data = request.get_json(silent=True) or {}
 
-    # Validate role changes: only guild_admin (or site admin) can promote/demote guild_admin
+    # Validate role changes using dynamic grant rules
     new_role = data.get("role")
-    is_site_admin = getattr(current_user, "is_admin", False)
-    caller_is_guild_admin = membership and membership.role == "guild_admin"
-
-    if new_role == "guild_admin" and not (is_site_admin or caller_is_guild_admin):
-        return jsonify({"error": "Only guild admins can promote to guild_admin"}), 403
-    if target.role == "guild_admin" and not (is_site_admin or caller_is_guild_admin):
-        return jsonify({"error": "Only guild admins can change a guild_admin's role"}), 403
+    if new_role:
+        if not can_grant_role(membership, new_role):
+            return jsonify({"error": f"You do not have permission to assign the '{new_role}' role"}), 403
+        # Cannot change role of someone with a higher-level role
+        from app.models.permission import SystemRole
+        caller_role = db.session.execute(
+            sa.select(SystemRole).where(SystemRole.name == membership.role)
+        ).scalar_one_or_none() if membership else None
+        target_role = db.session.execute(
+            sa.select(SystemRole).where(SystemRole.name == target.role)
+        ).scalar_one_or_none()
+        if not has_permission(None, "manage_system_users") and caller_role and target_role and target_role.level >= caller_role.level:
+            return jsonify({"error": "Cannot modify a member with equal or higher role level"}), 403
 
     target = guild_service.update_member(target, data)
     # Notify user if their role was changed
@@ -233,8 +239,8 @@ def update_member(guild_id: int, user_id: int):
 @login_required
 def remove_member(guild_id: int, user_id: int):
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "remove_members"):
+        return jsonify({"error": "Permission 'remove_members' required"}), 403
 
     if user_id == current_user.id:
         return jsonify({"error": "Cannot remove yourself"}), 400
@@ -264,10 +270,10 @@ def remove_member(guild_id: int, user_id: int):
 @bp.get("/<int:guild_id>/members/<int:user_id>/characters")
 @login_required
 def list_member_characters(guild_id: int, user_id: int):
-    """List all characters for a guild member.  Requires officer or admin."""
+    """List all characters for a guild member.  Requires view_member_characters permission."""
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "view_member_characters"):
+        return jsonify({"error": "Permission 'view_member_characters' required"}), 403
 
     from app.services import character_service
 

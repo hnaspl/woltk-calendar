@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from app.services import event_service, lineup_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_lineup_changed, emit_signups_changed
 from app.utils import notify
 
@@ -30,8 +30,8 @@ def get_lineup(guild_id: int, event_id: int):
 @login_required
 def update_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "update_lineup"):
+        return jsonify({"error": "Permission 'update_lineup' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -77,12 +77,8 @@ def update_lineup(guild_id: int, event_id: int):
 @login_required
 def confirm_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": "Event not found"}), 404
-    slots = lineup_service.confirm_lineup(event_id, current_user.id)
+    if not has_permission(membership, "confirm_lineup"):
+        return jsonify({"error": "Permission 'confirm_lineup' required"}), 403
     return jsonify([s.to_dict() for s in slots]), 200
 
 
@@ -91,8 +87,8 @@ def confirm_lineup(guild_id: int, event_id: int):
 def reorder_bench(guild_id: int, event_id: int):
     """Reorder the bench queue. Officers/admins only."""
     membership = get_membership(guild_id, current_user.id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "reorder_bench"):
+        return jsonify({"error": "Permission 'reorder_bench' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404

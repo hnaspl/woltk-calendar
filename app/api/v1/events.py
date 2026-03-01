@@ -9,7 +9,7 @@ from flask_login import current_user
 
 from app.services import event_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_events_changed
 from app.utils import notify
 
@@ -46,10 +46,8 @@ def list_events(guild_id: int):
 @login_required
 def create_event(guild_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
-    data = request.get_json(silent=True) or {}
-    required = {"title", "realm_name", "starts_at_utc"}
+    if not has_permission(membership, "create_events"):
+        return jsonify({"error": "Permission 'create_events' required"}), 403
     missing = required - data.keys()
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
@@ -77,8 +75,8 @@ def get_event(guild_id: int, event_id: int):
 @login_required
 def update_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "edit_events"):
+        return jsonify({"error": "Permission 'edit_events' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -96,8 +94,8 @@ def update_event(guild_id: int, event_id: int):
 @login_required
 def delete_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "delete_events"):
+        return jsonify({"error": "Permission 'delete_events' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -110,8 +108,8 @@ def delete_event(guild_id: int, event_id: int):
 @login_required
 def lock_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "lock_signups"):
+        return jsonify({"error": "Permission 'lock_signups' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -125,8 +123,8 @@ def lock_event(guild_id: int, event_id: int):
 @login_required
 def unlock_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "lock_signups"):
+        return jsonify({"error": "Permission 'lock_signups' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -139,8 +137,8 @@ def unlock_event(guild_id: int, event_id: int):
 @login_required
 def cancel_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "cancel_events"):
+        return jsonify({"error": "Permission 'cancel_events' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -154,8 +152,8 @@ def cancel_event(guild_id: int, event_id: int):
 @login_required
 def complete_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "cancel_events"):
+        return jsonify({"error": "Permission 'cancel_events' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -169,8 +167,8 @@ def complete_event(guild_id: int, event_id: int):
 @login_required
 def duplicate_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "duplicate_events"):
+        return jsonify({"error": "Permission 'duplicate_events' required"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404

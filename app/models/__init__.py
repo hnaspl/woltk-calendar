@@ -7,6 +7,7 @@ from app.models.raid import RaidDefinition, RaidTemplate, EventSeries, RaidEvent
 from app.models.signup import Signup, LineupSlot, RaidBan
 from app.models.attendance import AttendanceRecord
 from app.models.notification import Notification, JobQueue
+from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
 
 __all__ = [
     "User",
@@ -23,4 +24,8 @@ __all__ = [
     "AttendanceRecord",
     "Notification",
     "JobQueue",
+    "SystemRole",
+    "Permission",
+    "RolePermission",
+    "RoleGrantRule",
 ]

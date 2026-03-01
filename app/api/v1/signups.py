@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from app.services import event_service, signup_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_signups_changed, emit_lineup_changed
 from app.utils import notify
 
@@ -52,7 +52,7 @@ def create_signup(guild_id: int, event_id: int):
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
     membership = get_membership(guild_id, current_user.id)
-    is_officer = is_officer_or_admin(membership)
+    is_officer = has_permission(membership, "manage_signups")
 
     try:
         signup = signup_service.create_signup(
@@ -112,7 +112,7 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
 
     # Users may update their own signup; officers can update any
     membership = get_membership(guild_id, current_user.id)
-    if signup.user_id != current_user.id and not is_officer_or_admin(membership):
+    if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
         return jsonify({"error": "Forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -144,7 +144,7 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
         return jsonify({"error": "Signup not found"}), 404
 
     membership = get_membership(guild_id, current_user.id)
-    if signup.user_id != current_user.id and not is_officer_or_admin(membership):
+    if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
         return jsonify({"error": "Forbidden"}), 403
 
     # Capture info before deletion for notifications
@@ -203,7 +203,7 @@ def decline_signup(guild_id: int, event_id: int, signup_id: int):
         return jsonify({"error": "Signup not found"}), 404
 
     membership = get_membership(guild_id, current_user.id)
-    if signup.user_id != current_user.id and not is_officer_or_admin(membership):
+    if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
         return jsonify({"error": "Forbidden"}), 403
 
     event = event_service.get_event(event_id)
@@ -242,7 +242,7 @@ def list_bans(guild_id: int, event_id: int):
 @login_required
 def remove_ban(guild_id: int, event_id: int, character_id: int):
     membership = get_membership(guild_id, current_user.id)
-    if membership is None or not is_officer_or_admin(membership):
+    if membership is None or not has_permission(membership, "unban_characters"):
         return jsonify({"error": "Forbidden"}), 403
     _, err = _get_event_or_404(guild_id, event_id)
     if err:
@@ -262,8 +262,8 @@ def remove_ban(guild_id: int, event_id: int, character_id: int):
 def get_signup_user_characters(guild_id: int, event_id: int, signup_id: int):
     """Return the characters available for replacement (officer only)."""
     membership = get_membership(guild_id, current_user.id)
-    if membership is None or not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer privileges required"}), 403
+    if membership is None or not has_permission(membership, "view_member_characters"):
+        return jsonify({"error": "Permission 'view_member_characters' required"}), 403
     _, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
@@ -279,8 +279,8 @@ def get_signup_user_characters(guild_id: int, event_id: int, signup_id: int):
 def create_replace_request(guild_id: int, event_id: int, signup_id: int):
     """Create a character replacement request (officer only)."""
     membership = get_membership(guild_id, current_user.id)
-    if membership is None or not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer privileges required"}), 403
+    if membership is None or not has_permission(membership, "request_replacement"):
+        return jsonify({"error": "Permission 'request_replacement' required"}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err

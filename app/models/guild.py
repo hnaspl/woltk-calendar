@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import GuildRole, MemberStatus
+from app.enums import MemberStatus
 from app.extensions import db
 
 if TYPE_CHECKING:
@@ -85,9 +85,9 @@ class GuildMembership(db.Model):
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(
-        sa.Enum(GuildRole, values_callable=lambda e: [x.value for x in e]),
+        sa.String(50),
         nullable=False,
-        default=GuildRole.MEMBER.value,
+        default="member",
     )
     status: Mapped[str] = mapped_column(
         sa.Enum(MemberStatus, values_callable=lambda e: [x.value for x in e]),

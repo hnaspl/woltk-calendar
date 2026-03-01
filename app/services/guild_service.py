@@ -6,7 +6,7 @@ from typing import Optional
 
 import sqlalchemy as sa
 
-from app.enums import GuildRole, MemberStatus
+from app.enums import MemberStatus
 from app.extensions import db
 from app.models.guild import Guild, GuildMembership
 
@@ -44,7 +44,7 @@ def create_guild(
     membership = GuildMembership(
         guild_id=guild.id,
         user_id=created_by,
-        role=GuildRole.GUILD_ADMIN.value,
+        role="guild_admin",
         status=MemberStatus.ACTIVE.value,
     )
     db.session.add(membership)
@@ -113,7 +113,7 @@ def list_members(guild_id: int) -> list[GuildMembership]:
 def add_member(
     guild_id: int,
     user_id: int,
-    role: str = GuildRole.MEMBER.value,
+    role: str = "member",
     status: str = MemberStatus.ACTIVE.value,
 ) -> GuildMembership:
     existing = db.session.execute(

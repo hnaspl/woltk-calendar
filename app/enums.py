@@ -53,12 +53,6 @@ class EventStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class GuildRole(str, Enum):
-    MEMBER = "member"
-    OFFICER = "officer"
-    GUILD_ADMIN = "guild_admin"
-
-
 class MemberStatus(str, Enum):
     ACTIVE = "active"
     INVITED = "invited"

@@ -33,7 +33,6 @@ from typing import Optional
 
 import sqlalchemy as sa
 
-from app.enums import GuildRole
 from app.extensions import db, socketio
 from app.models.guild import GuildMembership
 from app.services.notification_service import create_notification
@@ -80,11 +79,29 @@ def _notify(
 
 
 def _get_officers(guild_id: int, exclude_user_id: int | None = None) -> list[int]:
-    """Return user IDs of officers and guild admins in a guild."""
+    """Return user IDs of members who have the ``manage_signups`` permission.
+
+    Uses the dynamic permission system: finds all roles that have the
+    ``manage_signups`` permission, then finds guild members with those roles.
+    """
+    from app.models.permission import Permission, RolePermission, SystemRole
+
+    # Find all role names that have the manage_signups permission
+    role_names = db.session.execute(
+        sa.select(SystemRole.name)
+        .join(RolePermission, RolePermission.role_id == SystemRole.id)
+        .join(Permission, RolePermission.permission_id == Permission.id)
+        .where(Permission.code == "manage_signups")
+    ).scalars().all()
+
+    if not role_names:
+        # Fallback: if permission tables aren't seeded yet, use legacy names
+        role_names = ["officer", "guild_admin"]
+
     rows = db.session.execute(
         sa.select(GuildMembership.user_id).where(
             GuildMembership.guild_id == guild_id,
-            GuildMembership.role.in_([GuildRole.OFFICER.value, GuildRole.GUILD_ADMIN.value]),
+            GuildMembership.role.in_(role_names),
         )
     ).scalars().all()
     if exclude_user_id is not None:
