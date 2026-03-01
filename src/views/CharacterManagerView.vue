@@ -355,7 +355,7 @@ const wowClasses = WOW_CLASSES
 const warmaneRealms = WARMANE_REALMS
 
 /** Lock all fields when editing a character imported from armory */
-const isArmoryLocked = computed(() => !!editingChar.value && !!form.armory_url)
+const isArmoryLocked = computed(() => !!editingChar.value && !!editingChar.value.armory_url)
 
 /** Lock realm when adding a new character and guild has a realm */
 const isRealmLocked = computed(() => !editingChar.value && !!guildStore.currentGuild?.realm_name)
