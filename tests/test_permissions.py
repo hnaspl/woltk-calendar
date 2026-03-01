@@ -342,7 +342,8 @@ class TestCanGrantRole:
             assert can_grant_role(gm, "officer") is True
             assert can_grant_role(gm, "raid_leader") is True
             assert can_grant_role(gm, "member") is True
-            # Guild admin can grant guild_admin to others
+            # Guild admin can grant guild_admin per GRANT_RULES (dropdown shows option),
+            # but API enforces creator-only restriction (see TestGuildAdminPromotion)
             assert can_grant_role(gm, "guild_admin") is True
 
     def test_officer_can_grant_raid_leader_and_member(self, seeded, app):
