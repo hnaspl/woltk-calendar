@@ -74,6 +74,53 @@ def update_character(character: Character, data: dict) -> Character:
 
 
 def delete_character(character: Character) -> None:
+    """Delete a character and all related records (signups, lineup slots, bans, replacements)."""
+    from app.models.signup import Signup, LineupSlot, RaidBan, CharacterReplacement
+
+    char_id = character.id
+
+    # Remove lineup slots referencing this character
+    db.session.execute(
+        sa.delete(LineupSlot).where(LineupSlot.character_id == char_id)
+    )
+
+    # Remove lineup slots via signups for this character
+    signup_ids = list(
+        db.session.execute(
+            sa.select(Signup.id).where(Signup.character_id == char_id)
+        ).scalars().all()
+    )
+    if signup_ids:
+        db.session.execute(
+            sa.delete(LineupSlot).where(LineupSlot.signup_id.in_(signup_ids))
+        )
+        # Remove replacement requests referencing these signups
+        db.session.execute(
+            sa.delete(CharacterReplacement).where(
+                CharacterReplacement.signup_id.in_(signup_ids)
+            )
+        )
+
+    # Remove replacement requests referencing this character directly
+    db.session.execute(
+        sa.delete(CharacterReplacement).where(
+            sa.or_(
+                CharacterReplacement.old_character_id == char_id,
+                CharacterReplacement.new_character_id == char_id,
+            )
+        )
+    )
+
+    # Remove signups for this character
+    db.session.execute(
+        sa.delete(Signup).where(Signup.character_id == char_id)
+    )
+
+    # Remove raid bans for this character
+    db.session.execute(
+        sa.delete(RaidBan).where(RaidBan.character_id == char_id)
+    )
+
     db.session.delete(character)
     db.session.commit()
 
