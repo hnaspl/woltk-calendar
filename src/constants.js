@@ -70,3 +70,20 @@ export const CLASS_ROLES = {
   'Warlock':       ['dps'],
   'Warrior':       ['main_tank', 'off_tank', 'tank'],
 }
+
+/**
+ * Map a Warmane talent-tree name to the canonical CLASS_SPECS name.
+ * Handles quirks like "Feral" → "Feral Combat".
+ */
+export function normalizeSpecName(treeName, className) {
+  if (!treeName) return treeName
+  const tree = treeName.trim()
+  const specs = CLASS_SPECS[className] || []
+  // Exact match
+  const exact = specs.find(s => s.toLowerCase() === tree.toLowerCase())
+  if (exact) return exact
+  // Prefix match (e.g. "Feral" matches "Feral Combat")
+  const prefix = specs.find(s => s.toLowerCase().startsWith(tree.toLowerCase()))
+  if (prefix) return prefix
+  return tree
+}

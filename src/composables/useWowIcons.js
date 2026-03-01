@@ -129,21 +129,17 @@ export function useWowIcons() {
     return CLASS_COLORS[normalizeClass(className)] ?? '#8b8d91'
   }
 
-  function getSpecIcon(specName) {
+  function getSpecIcon(specName, className) {
     const specMap = {
       // Warrior
       'arms':           spec_arms,
       'fury':           spec_fury,
-      'protection warrior': icon_tank,
       // Paladin
-      'holy paladin':   spec_holy_paladin,
-      'protection paladin': spec_prot_paladin,
       'retribution':    spec_retribution,
       // Druid
       'balance':        spec_balance,
       'feral':          spec_feral,
       'feral combat':   spec_feral,
-      'restoration druid': spec_resto_druid,
       // Hunter
       'beast mastery':  spec_bm,
       'marksmanship':   spec_mm,
@@ -151,7 +147,6 @@ export function useWowIcons() {
       // Mage
       'arcane':         spec_arcane,
       'fire':           spec_fire,
-      'frost mage':     spec_frost_mage,
       // Warlock
       'affliction':     spec_affliction,
       'demonology':     spec_demonology,
@@ -159,9 +154,7 @@ export function useWowIcons() {
       // Shaman
       'elemental':      spec_elemental,
       'enhancement':    spec_enhancement,
-      'restoration shaman': spec_resto_shaman,
       // Priest
-      'holy priest':    spec_holy_priest,
       'discipline':     spec_discipline,
       'shadow':         spec_shadow,
       // Rogue
@@ -170,16 +163,27 @@ export function useWowIcons() {
       'subtlety':       spec_subtlety,
       // Death Knight
       'blood':          spec_blood,
-      'frost dk':       spec_frost_dk,
       'unholy':         spec_unholy,
-      // Unqualified aliases (Warmane returns bare tree names)
-      'protection':     icon_tank,
-      'holy':           spec_holy_paladin,
-      'frost':          spec_frost_mage,
-      'restoration':    spec_resto_druid,
     }
+
+    // Ambiguous specs — resolved by class context
+    const ambiguous = {
+      'frost':       { 'death knight': spec_frost_dk, _default: spec_frost_mage },
+      'holy':        { priest: spec_holy_priest, _default: spec_holy_paladin },
+      'protection':  { warrior: icon_tank, _default: spec_prot_paladin },
+      'restoration': { shaman: spec_resto_shaman, _default: spec_resto_druid },
+    }
+
     const key = specName?.toLowerCase().trim() ?? ''
-    return specMap[key] ?? icon_fallback
+    if (specMap[key]) return specMap[key]
+
+    const amb = ambiguous[key]
+    if (amb) {
+      const cls = className?.toLowerCase().trim() ?? ''
+      return amb[cls] ?? amb._default
+    }
+
+    return icon_fallback
   }
 
   return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS }

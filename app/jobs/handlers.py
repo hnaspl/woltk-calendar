@@ -86,6 +86,7 @@ def handle_sync_all_characters(payload: dict) -> None:
     from datetime import datetime, timezone as tz
 
     from app.extensions import db
+    from app.constants import normalize_spec_name
     from app.services import character_service, warmane_service
     from app.services.character_service import _default_role_for_class
 
@@ -116,10 +117,11 @@ def handle_sync_all_characters(payload: dict) -> None:
                         char.default_role = default_role
             char.armory_url = char_data["armory_url"]
             talents = char_data.get("talents", [])
+            cls_name = char.class_name
             if talents:
-                char.primary_spec = talents[0].get("tree")
+                char.primary_spec = normalize_spec_name(talents[0].get("tree"), cls_name)
                 if len(talents) > 1:
-                    char.secondary_spec = talents[1].get("tree")
+                    char.secondary_spec = normalize_spec_name(talents[1].get("tree"), cls_name)
             meta = char.char_metadata or {}
             meta["level"] = char_data.get("level")
             meta["race"] = char_data.get("race")

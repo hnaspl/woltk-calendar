@@ -18,9 +18,10 @@ import { computed } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 
 const props = defineProps({
-  spec: { type: String, required: true }
+  spec: { type: String, required: true },
+  className: { type: String, default: '' }
 })
 
 const { getSpecIcon } = useWowIcons()
-const iconUrl = computed(() => getSpecIcon(props.spec))
+const iconUrl = computed(() => getSpecIcon(props.spec, props.className))
 </script>

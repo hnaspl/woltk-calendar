@@ -53,8 +53,10 @@
                   Lv{{ s.character.metadata.level }}
                 </span>
               </div>
-              <div class="flex items-center gap-1 text-[10px] text-text-muted">
-                <span v-if="s.chosen_spec" class="text-amber-300">{{ s.chosen_spec }}</span>
+              <div class="flex items-center gap-1 text-[10px] text-text-muted flex-wrap">
+                <template v-if="s.chosen_spec">
+                  <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+                </template>
                 <span v-if="profString(s)">{{ profString(s) }}</span>
               </div>
             </div>
@@ -154,6 +156,7 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
+import SpecBadge from '@/components/common/SpecBadge.vue'
 import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'

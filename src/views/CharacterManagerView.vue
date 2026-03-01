@@ -311,7 +311,7 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS } from '@/constants'
+import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS, normalizeSpecName } from '@/constants'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
 
@@ -488,9 +488,9 @@ async function lookupFromWarmane() {
     if (data?.name) form.name = data.name
     // Auto-fill spec from talents
     if (data?.talents?.length) {
-      form.spec = data.talents[0]?.tree || ''
+      form.spec = normalizeSpecName(data.talents[0]?.tree, form.class) || ''
       if (data.talents.length > 1) {
-        form.secondary_spec = data.talents[1]?.tree || ''
+        form.secondary_spec = normalizeSpecName(data.talents[1]?.tree, form.class) || ''
       }
     }
     // Store warmane data for metadata on save

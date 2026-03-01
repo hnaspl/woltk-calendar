@@ -119,7 +119,9 @@
                   <div class="flex items-center gap-2 flex-wrap">
                     <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
                     <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
-                    <SpecBadge v-if="signup.chosen_spec" :spec="signup.chosen_spec" />
+                    <template v-if="signup.chosen_spec">
+                      <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
+                    </template>
                   </div>
                   <!-- Row 3: Professions (separate row for clarity) -->
                   <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
