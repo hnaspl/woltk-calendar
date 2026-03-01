@@ -100,6 +100,22 @@
             </div>
             <p v-if="rosterFilter && filteredRoster.length === 0" class="text-xs text-text-muted py-2">No matching characters.</p>
           </div>
+          <!-- Multi-match user selection (shown when a roster click finds multiple users) -->
+          <div v-if="availableUsers.length > 0" class="mt-3 space-y-1">
+            <p class="text-xs text-text-muted">Multiple users match "{{ addMemberQuery }}" — select one:</p>
+            <div class="max-h-40 overflow-y-auto space-y-1">
+              <button
+                v-for="u in availableUsers"
+                :key="u.id"
+                type="button"
+                class="w-full flex items-center justify-between px-3 py-2 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors text-sm"
+                @click="doAddMember(u)"
+              >
+                <span class="text-text-primary">{{ u.username }}</span>
+                <span class="text-xs text-accent-gold">Add</span>
+              </button>
+            </div>
+          </div>
         </div>
         <!-- Standard search for non-Warmane guilds -->
         <div v-else>
@@ -391,8 +407,13 @@ async function doAddMemberByName(characterName) {
   try {
     // Search for a user account matching this character name
     const users = await guildsApi.getAvailableUsers(guildStore.currentGuild.id, characterName)
-    if (users.length > 0) {
+    if (users.length === 1) {
       await doAddMember(users[0])
+    } else if (users.length > 1) {
+      // Show available matches for manual selection
+      availableUsers.value = users
+      addMemberQuery.value = characterName
+      uiStore.showToast(`Multiple users match "${characterName}" — select one below.`, 'info')
     } else {
       uiStore.showToast(`No registered user found for "${characterName}". They need to create an account first.`, 'info')
     }
