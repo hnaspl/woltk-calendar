@@ -219,12 +219,22 @@ def update_lineup_grouped(
     db.session.flush()
 
     role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "tanks": "tank", "healers": "healer", "dps": "dps"}
+    # Track users who already have a character in a role slot to enforce
+    # one-character-per-player. Extras are pushed to bench automatically.
+    users_in_lineup: set[int] = set()
+    overflow_to_bench: list[int] = []  # signup IDs moved to bench
+
     for key, slot_group in role_map.items():
         signup_ids = data.get(key, [])
         for idx, signup_id in enumerate(signup_ids):
             signup = db.session.get(Signup, signup_id)
             if signup is None:
                 continue
+            # Enforce one character per player in lineup
+            if signup.user_id in users_in_lineup:
+                overflow_to_bench.append(signup_id)
+                continue
+            users_in_lineup.add(signup.user_id)
             # Sync signup's chosen_role to match the lineup column
             if signup.chosen_role != slot_group:
                 # Validate class-role constraint before changing role
@@ -242,14 +252,21 @@ def update_lineup_grouped(
             db.session.add(slot)
 
     # Persist bench queue order (entries can be plain IDs or {id, chosen_role} dicts)
+    # Prepend any overflow signups (moved from role slots due to one-char-per-player)
     bench_queue_entries = data.get("bench_queue", [])
-    for idx, entry in enumerate(bench_queue_entries):
+    all_bench = overflow_to_bench + list(bench_queue_entries)
+    seen_bench_ids: set[int] = set()
+    bench_idx = 0
+    for entry in all_bench:
         if isinstance(entry, dict):
             signup_id = entry.get("id")
             new_role = entry.get("chosen_role")
         else:
-            signup_id = entry
+            signup_id = int(entry) if entry is not None else None
             new_role = None
+        if signup_id is None or signup_id in seen_bench_ids:
+            continue
+        seen_bench_ids.add(signup_id)
         signup = db.session.get(Signup, signup_id)
         if signup is None:
             continue
@@ -260,13 +277,14 @@ def update_lineup_grouped(
         slot = LineupSlot(
             raid_event_id=raid_event_id,
             slot_group="bench",
-            slot_index=idx,
+            slot_index=bench_idx,
             signup_id=signup_id,
             character_id=signup.character_id,
             confirmed_by=confirmed_by,
             confirmed_at=datetime.now(timezone.utc),
         )
         db.session.add(slot)
+        bench_idx += 1
 
     db.session.commit()
     return get_lineup_grouped(raid_event_id)
