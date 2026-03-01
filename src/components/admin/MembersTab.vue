@@ -172,7 +172,7 @@
                 <div class="flex items-center gap-2">
                   <img :src="getClassIcon(c.class_name)" :alt="c.class_name" class="w-6 h-6 rounded flex-shrink-0" />
                   <div>
-                    <span class="font-medium" :style="{ color: getClassColor(c.class_name) }">{{ c.name }}</span>
+                    <span class="font-medium cursor-pointer hover:underline" :style="{ color: getClassColor(c.class_name) }" @click="openCharDetailModal(c)">{{ c.name }}</span>
                     <span class="text-text-muted text-xs ml-1.5">{{ c.class_name }}</span>
                   </div>
                 </div>
