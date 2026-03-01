@@ -14,10 +14,11 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Realm *</label>
-          <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+          <select v-model="form.realm" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
             <option value="">Select realm…</option>
             <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
           </select>
+          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">Realm is locked for Warmane-sourced guilds.</p>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Description</label>
@@ -102,6 +103,7 @@ const error = ref(null)
 const saveError = ref(null)
 const form = reactive({ name: '', realm: '', description: '' })
 const warmaneRealms = WARMANE_REALMS
+const isWarmaneSource = ref(false)
 
 async function loadGuildData() {
   loading.value = true
@@ -110,6 +112,7 @@ async function loadGuildData() {
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
+      isWarmaneSource.value = !!g.warmane_source
     }
   } catch {
     error.value = 'Failed to load guild settings'

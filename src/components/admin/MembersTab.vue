@@ -67,7 +67,42 @@
     <!-- Add Member modal -->
     <WowModal v-model="showAddMember" title="Add Member" size="sm">
       <div class="space-y-3">
-        <div>
+        <!-- Warmane roster fetch for Warmane-sourced guilds -->
+        <div v-if="isWarmaneSource">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-text-muted">Fetch guild roster from Warmane to find members.</p>
+            <WowButton variant="secondary" class="text-xs py-1 px-3" :loading="fetchingRoster" @click="fetchWarmaneRoster">
+              {{ fetchingRoster ? 'Fetching…' : 'Fetch Roster' }}
+            </WowButton>
+          </div>
+          <div v-if="warmaneRosterError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneRosterError }}</div>
+          <div v-if="warmaneRoster.length > 0" class="space-y-1">
+            <label class="block text-xs text-text-muted mb-1">Filter by name</label>
+            <input
+              v-model="rosterFilter"
+              placeholder="Type to filter…"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none mb-2"
+            />
+            <div class="max-h-48 overflow-y-auto space-y-1">
+              <button
+                v-for="ch in filteredRoster"
+                :key="ch.name"
+                type="button"
+                class="w-full flex items-center justify-between px-3 py-2 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors text-sm"
+                @click="doAddMemberByName(ch.name)"
+              >
+                <div>
+                  <span class="text-text-primary">{{ ch.name }}</span>
+                  <span class="text-text-muted text-xs ml-2">{{ ch.class_name }} · Lv{{ ch.level }}</span>
+                </div>
+                <span class="text-xs text-accent-gold">Add</span>
+              </button>
+            </div>
+            <p v-if="rosterFilter && filteredRoster.length === 0" class="text-xs text-text-muted py-2">No matching characters.</p>
+          </div>
+        </div>
+        <!-- Standard search for non-Warmane guilds -->
+        <div v-else>
           <label class="block text-xs text-text-muted mb-1">Search by username</label>
           <input
             v-model="addMemberQuery"
@@ -77,7 +112,7 @@
           />
         </div>
         <div v-if="searchingUsers" class="text-xs text-text-muted">Searching…</div>
-        <div v-if="availableUsers.length > 0" class="max-h-40 overflow-y-auto space-y-1">
+        <div v-if="availableUsers.length > 0 && !isWarmaneSource" class="max-h-40 overflow-y-auto space-y-1">
           <button
             v-for="u in availableUsers"
             :key="u.id"
@@ -89,7 +124,7 @@
             <span class="text-xs text-accent-gold">Add</span>
           </button>
         </div>
-        <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers" class="text-xs text-text-muted">
+        <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers && !isWarmaneSource" class="text-xs text-text-muted">
           No matching users found.
         </div>
       </div>
@@ -143,6 +178,7 @@ import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import * as guildsApi from '@/api/guilds'
+import * as warmaneApi from '@/api/warmane'
 import api from '@/api'
 
 const guildStore = useGuildStore()
@@ -157,6 +193,8 @@ const members = ref([])
 const allRoles = ref([])
 const showKickConfirm = ref(false)
 const kickTarget = ref(null)
+
+const isWarmaneSource = computed(() => !!guildStore.currentGuild?.warmane_source)
 
 async function fetchRoles() {
   try {
@@ -320,5 +358,46 @@ async function doAddMember(user) {
 function formatDate(d) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// Warmane roster fetch
+const fetchingRoster = ref(false)
+const warmaneRoster = ref([])
+const warmaneRosterError = ref(null)
+const rosterFilter = ref('')
+
+const filteredRoster = computed(() => {
+  if (!rosterFilter.value) return warmaneRoster.value
+  const q = rosterFilter.value.toLowerCase()
+  return warmaneRoster.value.filter(ch => ch.name.toLowerCase().includes(q))
+})
+
+async function fetchWarmaneRoster() {
+  const g = guildStore.currentGuild
+  if (!g) return
+  fetchingRoster.value = true
+  warmaneRosterError.value = null
+  try {
+    const data = await warmaneApi.lookupGuild(g.realm_name, g.name)
+    warmaneRoster.value = data.roster || []
+  } catch (err) {
+    warmaneRosterError.value = err?.response?.data?.message ?? 'Failed to fetch guild roster from Warmane'
+  } finally {
+    fetchingRoster.value = false
+  }
+}
+
+async function doAddMemberByName(characterName) {
+  try {
+    // Search for a user account matching this character name
+    const users = await guildsApi.getAvailableUsers(guildStore.currentGuild.id, characterName)
+    if (users.length > 0) {
+      await doAddMember(users[0])
+    } else {
+      uiStore.showToast(`No registered user found for "${characterName}". They need to create an account first.`, 'info')
+    }
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+  }
 }
 </script>

@@ -322,15 +322,15 @@ const navGroups = computed(() => {
   // Guild management visible to users with relevant permissions
   if (canManageGuild.value || hasAdminAccess.value) {
     const guildItems = []
-    if (hasAdminAccess.value) {
-      guildItems.push({ label: 'Admin Panel', to: '/admin', icon: icons.admin })
-    }
     if (canManageGuild.value) {
       guildItems.push(
         { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
         { label: 'Templates', to: '/guild/templates', icon: icons.templates },
         { label: 'Recurring Raids', to: '/guild/series', icon: icons.series }
       )
+    }
+    if (hasAdminAccess.value) {
+      guildItems.push({ label: 'Admin Panel', to: '/admin', icon: icons.admin })
     }
     groups.push({
       label: 'Guild Management',
@@ -454,6 +454,7 @@ async function doCreateGuild() {
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
       allow_self_join: newGuild.allow_self_join,
+      warmane_source: !!guildLookupMatch.value,
     })
     await guildStore.fetchGuilds()
     await guildStore.fetchAllGuilds()

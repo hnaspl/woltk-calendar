@@ -18,6 +18,7 @@ def create_guild(
     faction: Optional[str] = None,
     region: Optional[str] = None,
     allow_self_join: bool = True,
+    warmane_source: bool = False,
 ) -> Guild:
     # Check for duplicate guild (case-insensitive name + realm)
     existing = db.session.execute(
@@ -35,6 +36,7 @@ def create_guild(
         faction=faction,
         region=region,
         allow_self_join=allow_self_join,
+        warmane_source=warmane_source,
         created_by=created_by,
     )
     db.session.add(guild)
@@ -60,6 +62,9 @@ def update_guild(guild: Guild, data: dict) -> Guild:
     allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join"}
     for key, value in data.items():
         if key in allowed:
+            # Prevent changing realm on Warmane-sourced guilds
+            if key == "realm_name" and guild.warmane_source:
+                continue
             setattr(guild, key, value)
     db.session.commit()
     return guild

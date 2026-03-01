@@ -106,6 +106,7 @@ def create_guild():
             faction=data.get("faction"),
             region=data.get("region"),
             allow_self_join=data.get("allow_self_join", True),
+            warmane_source=bool(data.get("warmane_source", False)),
         )
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409
