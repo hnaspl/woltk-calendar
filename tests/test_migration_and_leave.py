@@ -692,3 +692,72 @@ class TestAdminLineupUpdateAutoPromote:
         assert not lineup_service.has_role_slot(s1.id), \
             "Main character should be moved to bench (one-char-per-player)"
         assert lineup_service.get_bench_info(s1.id) is not None
+
+    def test_admin_swaps_alt_into_slot_main_missing_from_data(self, seed):
+        """When admin drags alt from bench into main's DPS slot, the main
+        disappears from the frontend data entirely (not in dps, not in
+        bench_queue). The backend should auto-bench the orphaned main."""
+        from app.models.character import Character
+        char1b = Character(
+            user_id=seed["user1"].id, guild_id=seed["guild"].id,
+            realm_name="Icecrown", name="HunterOneAlt2",
+            class_name="Hunter", default_role="dps",
+            is_main=False, is_active=True,
+        )
+        db.session.add(char1b)
+        db.session.commit()
+
+        # User1 main in DPS slot
+        s1 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=seed["char1"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User2 fills second DPS slot
+        s2 = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user2"].id,
+            character_id=seed["char2"].id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            event=seed["event"],
+        )
+        # User1's alt goes to bench
+        s1b = signup_service.create_signup(
+            raid_event_id=seed["event"].id,
+            user_id=seed["user1"].id,
+            character_id=char1b.id,
+            chosen_role="dps", chosen_spec=None, note=None,
+            raid_size=seed["event"].raid_size,
+            force_bench=True,
+            event=seed["event"],
+        )
+
+        assert lineup_service.has_role_slot(s1.id)
+        assert lineup_service.has_role_slot(s2.id)
+        assert not lineup_service.has_role_slot(s1b.id)
+
+        # Admin drags s1b from bench to replace s1 in DPS.
+        # Frontend sends s1b in DPS, s1 is NOT in the data at all.
+        lineup_service.update_lineup_grouped(
+            seed["event"].id,
+            {
+                "dps": [s1b.id, s2.id],
+                "bench_queue": [],
+            },
+            confirmed_by=seed["user1"].id,
+        )
+
+        # s1b should be in lineup
+        assert lineup_service.has_role_slot(s1b.id), \
+            "Alt character should be in the DPS slot"
+        # s1 should NOT disappear - it should be auto-benched
+        assert not lineup_service.has_role_slot(s1.id), \
+            "Main character should not be in a role slot"
+        bench_info = lineup_service.get_bench_info(s1.id)
+        assert bench_info is not None, \
+            "Main character should be auto-benched, not disappear"
+        assert bench_info["waiting_for"] == "dps"

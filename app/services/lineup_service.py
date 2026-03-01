@@ -219,14 +219,17 @@ def update_lineup_grouped(
     # Snapshot which roles had signups before the update so we can detect
     # freed slots and trigger auto-promotion afterwards.
     old_role_signups: dict[str, set[int]] = {}
+    old_bench_ids: set[int] = set()
     old_slots = db.session.execute(
         sa.select(LineupSlot).where(
             LineupSlot.raid_event_id == raid_event_id,
-            LineupSlot.slot_group != "bench",
         )
     ).scalars().all()
     for slot in old_slots:
-        old_role_signups.setdefault(slot.slot_group, set()).add(slot.signup_id)
+        if slot.slot_group == "bench":
+            old_bench_ids.add(slot.signup_id)
+        else:
+            old_role_signups.setdefault(slot.slot_group, set()).add(slot.signup_id)
 
     # Remove all existing slots for this event
     db.session.execute(
@@ -296,6 +299,16 @@ def update_lineup_grouped(
     demoted_bench = [e for e in all_bench_raw if _entry_id(e) in removed_from_lineup]
     all_bench = regular_bench + demoted_bench
 
+    # Detect orphaned signups: signups that were in the old lineup (role or
+    # bench) but are missing from the new data entirely.  These are
+    # automatically placed at the end of the bench so they don't disappear.
+    all_old_ids = all_old_role_ids | old_bench_ids
+    explicit_bench_ids = {_entry_id(e) for e in all_bench}
+    accounted_ids = all_new_role_ids | explicit_bench_ids | {None}
+    orphaned_ids = all_old_ids - accounted_ids
+    for oid in orphaned_ids:
+        all_bench.append(oid)
+
     seen_bench_ids: set[int] = set()
     bench_idx = 0
     for entry in all_bench:
@@ -330,14 +343,15 @@ def update_lineup_grouped(
     db.session.commit()
 
     # Notify players whose characters were moved to bench due to
-    # one-character-per-player enforcement.
-    if overflow_to_bench:
+    # one-character-per-player enforcement or orphaned from old lineup.
+    auto_benched = set(overflow_to_bench) | orphaned_ids
+    if auto_benched:
         try:
             from app.services import event_service
             from app.utils.notify import notify_signup_benched
             event = event_service.get_event(raid_event_id)
             if event:
-                for sid in overflow_to_bench:
+                for sid in auto_benched:
                     s = db.session.get(Signup, sid)
                     if s:
                         notify_signup_benched(s, event)
