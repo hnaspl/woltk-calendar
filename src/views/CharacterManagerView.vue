@@ -73,8 +73,8 @@
             <div class="flex flex-wrap gap-1.5 mb-2">
               <ClassBadge :class-name="char.class" />
               <RoleBadge v-if="char.role" :role="char.role" />
-              <SpecBadge v-if="char.spec" :spec="char.spec" />
-              <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" />
+              <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
+              <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
             </div>
             <!-- Synced metadata -->
             <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
@@ -142,7 +142,7 @@
             <div class="flex flex-wrap gap-1.5 mb-3">
               <ClassBadge :class-name="char.class" />
               <RoleBadge v-if="char.role" :role="char.role" />
-              <SpecBadge v-if="char.spec" :spec="char.spec" />
+              <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
             </div>
 
             <div class="flex gap-2">

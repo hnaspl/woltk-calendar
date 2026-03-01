@@ -153,7 +153,9 @@
                   <span v-if="raidLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidLabel(su.raid_type) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">
                     {{ su.character.name }}
-                    <span v-if="su.chosen_spec" class="text-amber-200"> · {{ su.chosen_spec }}</span>
+                  </span>
+                  <span v-if="su.chosen_spec" class="inline-flex items-center gap-1 flex-wrap mt-0.5">
+                    <SpecBadge v-for="sp in su.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="su.character?.class_name" />
                   </span>
                 </div>
                 <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
@@ -180,6 +182,7 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
+import SpecBadge from '@/components/common/SpecBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'

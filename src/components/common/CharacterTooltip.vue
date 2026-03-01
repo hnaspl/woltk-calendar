@@ -53,11 +53,21 @@
               </tr>
               <tr v-if="character.primary_spec">
                 <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Primary</td>
-                <td class="py-0.5"><span class="px-1.5 py-0.5 bg-amber-500/15 text-amber-300 rounded text-[11px]">⭐ {{ character.primary_spec }}</span></td>
+                <td class="py-0.5">
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/15 text-amber-300 rounded text-[11px]">
+                    <img v-if="getSpecIcon(character.primary_spec, character.class_name)" :src="getSpecIcon(character.primary_spec, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
+                    {{ character.primary_spec }}
+                  </span>
+                </td>
               </tr>
               <tr v-if="character.secondary_spec">
                 <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Secondary</td>
-                <td class="py-0.5"><span class="px-1.5 py-0.5 bg-gray-500/15 text-gray-400 rounded text-[11px]">{{ character.secondary_spec }}</span></td>
+                <td class="py-0.5">
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-500/15 text-gray-400 rounded text-[11px]">
+                    <img v-if="getSpecIcon(character.secondary_spec, character.class_name)" :src="getSpecIcon(character.secondary_spec, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
+                    {{ character.secondary_spec }}
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -68,7 +78,12 @@
             <table class="w-full">
               <tbody>
                 <tr v-for="(t, i) in talents" :key="i">
-                  <td class="text-text-primary py-0.5">{{ t.tree ?? 'Unknown' }}</td>
+                  <td class="py-0.5">
+                    <span class="inline-flex items-center gap-1 text-text-primary">
+                      <img v-if="getSpecIcon(t.tree, character.class_name)" :src="getSpecIcon(t.tree, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
+                      {{ t.tree ?? 'Unknown' }}
+                    </span>
+                  </td>
                   <td v-if="t.points" class="text-text-muted text-right py-0.5">{{ formatPoints(t.points) }}</td>
                 </tr>
               </tbody>
@@ -155,6 +170,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { normalizeSpecName } from '@/constants'
 
 const props = defineProps({
   character: { type: Object, default: null },
@@ -164,7 +180,7 @@ const props = defineProps({
 const show = ref(false)
 const hideTimeout = ref(null)
 const dragging = ref(false)
-const { getClassIcon, getClassColor } = useWowIcons()
+const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
 
 function onMouseEnter() {
   if (dragging.value) return
@@ -196,7 +212,14 @@ const classIcon = computed(() => props.character?.class_name ? getClassIcon(prop
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')
 
 const meta = computed(() => props.character?.metadata ?? {})
-const talents = computed(() => meta.value.talents ?? [])
+const talents = computed(() => {
+  const raw = meta.value.talents ?? []
+  const cls = props.character?.class_name ?? ''
+  return raw.map(t => ({
+    ...t,
+    tree: normalizeSpecName(t.tree, cls) ?? t.tree,
+  }))
+})
 const glyphs = computed(() => meta.value.glyphs ?? [])
 const professions = computed(() => meta.value.professions ?? [])
 const equipment = computed(() => (meta.value.equipment ?? []).filter(e => e?.name))
