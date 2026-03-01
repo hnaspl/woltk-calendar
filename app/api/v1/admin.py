@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.services import auth_service
+from app.extensions import db
 from app.utils.auth import login_required
 from app.utils.permissions import has_permission
 
@@ -114,3 +115,47 @@ def trigger_sync():
     from app.jobs.handlers import handle_sync_all_characters
     handle_sync_all_characters({})
     return jsonify({"message": "Sync completed"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Global system settings
+# ---------------------------------------------------------------------------
+
+@bp.get("/settings/system")
+@login_required
+def get_system_settings():
+    """Return all global system settings. Any logged-in user can read."""
+    from app.models.system_setting import SystemSetting
+    rows = db.session.execute(db.select(SystemSetting)).scalars().all()
+    settings = {r.key: r.value for r in rows}
+    # Provide defaults for known settings
+    if "wowhead_tooltips" not in settings:
+        settings["wowhead_tooltips"] = "true"
+    return jsonify(settings), 200
+
+
+@bp.put("/settings/system")
+@login_required
+def update_system_settings():
+    """Update global system settings. Requires manage_system_settings permission."""
+    err = _require_permission("manage_system_settings")
+    if err:
+        return err
+    from app.models.system_setting import SystemSetting
+    data = request.get_json(silent=True) or {}
+    allowed_keys = {"wowhead_tooltips"}
+    for key, value in data.items():
+        if key not in allowed_keys:
+            continue
+        existing = db.session.get(SystemSetting, key)
+        if existing:
+            existing.value = str(value).lower()
+        else:
+            db.session.add(SystemSetting(key=key, value=str(value).lower()))
+    db.session.commit()
+    # Return updated settings
+    rows = db.session.execute(db.select(SystemSetting)).scalars().all()
+    settings = {r.key: r.value for r in rows}
+    if "wowhead_tooltips" not in settings:
+        settings["wowhead_tooltips"] = "true"
+    return jsonify(settings), 200

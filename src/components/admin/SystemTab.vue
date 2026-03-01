@@ -119,6 +119,33 @@
       </div>
     </WowCard>
 
+    <!-- Global System Settings -->
+    <WowCard>
+      <h2 class="wow-heading text-base mb-4">Global Settings</h2>
+
+      <div v-if="sysSettingsLoading" class="h-16 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else class="space-y-4 max-w-lg">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <button
+            type="button"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+            :class="sysSettingsForm.wowhead_tooltips ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+            @click="sysSettingsForm.wowhead_tooltips = !sysSettingsForm.wowhead_tooltips"
+          >
+            <span
+              class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+              :class="sysSettingsForm.wowhead_tooltips ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+          <div>
+            <span class="text-sm text-text-primary">Enable Wowhead Tooltips</span>
+            <p class="text-[10px] text-text-muted mt-0.5">When enabled, hovering equipment items shows rich tooltips with full item statistics from Wowhead. When disabled, basic item info is shown inline.</p>
+          </div>
+        </label>
+        <WowButton :loading="sysSettingsSaving" @click="saveSysSettings">Save Settings</WowButton>
+      </div>
+    </WowCard>
+
     <!-- Delete confirmation -->
     <WowModal v-model="showDeleteConfirm" title="Delete User" size="sm">
       <p class="text-text-muted">Permanently delete <strong class="text-text-primary">{{ deleteTarget?.username }}</strong>? This cannot be undone.</p>
@@ -157,6 +184,11 @@ const autosyncSaving = ref(false)
 const syncing = ref(false)
 const autosyncForm = ref({ enabled: false, interval_minutes: 60 })
 
+// System settings state
+const sysSettingsLoading = ref(true)
+const sysSettingsSaving = ref(false)
+const sysSettingsForm = ref({ wowhead_tooltips: true })
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -176,6 +208,17 @@ onMounted(async () => {
     // ignore – defaults are fine
   } finally {
     autosyncLoading.value = false
+  }
+
+  // Load system settings
+  sysSettingsLoading.value = true
+  try {
+    const settings = await adminApi.getSystemSettings()
+    sysSettingsForm.value = { wowhead_tooltips: settings.wowhead_tooltips !== 'false' }
+  } catch {
+    // ignore – defaults are fine
+  } finally {
+    sysSettingsLoading.value = false
   }
 })
 
@@ -245,6 +288,21 @@ async function triggerManualSync() {
     uiStore.showToast('Sync failed', 'error')
   } finally {
     syncing.value = false
+  }
+}
+
+async function saveSysSettings() {
+  sysSettingsSaving.value = true
+  try {
+    const updated = await adminApi.updateSystemSettings({
+      wowhead_tooltips: sysSettingsForm.value.wowhead_tooltips,
+    })
+    sysSettingsForm.value = { wowhead_tooltips: updated.wowhead_tooltips !== 'false' }
+    uiStore.showToast('System settings saved', 'success')
+  } catch {
+    uiStore.showToast('Failed to save system settings', 'error')
+  } finally {
+    sysSettingsSaving.value = false
   }
 }
 

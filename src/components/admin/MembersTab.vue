@@ -215,7 +215,7 @@
     <CharacterDetailModal
       v-model="showCharDetailModal"
       :character="charDetailTarget"
-      :use-wowhead="guildStore.currentGuild?.wowhead_tooltips !== false"
+      :use-wowhead="systemSettings.wowheadEnabled()"
     />
   </div>
 </template>
@@ -231,6 +231,7 @@ import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
 import api from '@/api'
@@ -240,6 +241,8 @@ const uiStore = useUiStore()
 const authStore = useAuthStore()
 const permissions = usePermissions()
 const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
+const systemSettings = useSystemSettings()
+systemSettings.fetchSettings()
 
 const loading = ref(true)
 const saving = ref(false)

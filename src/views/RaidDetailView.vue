@@ -238,6 +238,7 @@
               </button>
             </WowCard>
             <CompositionSummary
+              v-if="permissions.can('view_signups')"
               :lineup-counts="lineupCounts"
               :max-size="event.raid_size ?? event.size"
               :melee-dps-slots="event.melee_dps_slots ?? 0"

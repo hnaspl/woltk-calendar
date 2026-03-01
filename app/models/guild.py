@@ -68,7 +68,6 @@ class Guild(db.Model):
             "settings": self.settings,
             "allow_self_join": self.allow_self_join,
             "warmane_source": self.warmane_source,
-            "wowhead_tooltips": self.wowhead_tooltips,
             "timezone": self.timezone,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,

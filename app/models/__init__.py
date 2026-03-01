@@ -8,6 +8,7 @@ from app.models.signup import Signup, LineupSlot, RaidBan
 from app.models.attendance import AttendanceRecord
 from app.models.notification import Notification, JobQueue
 from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
+from app.models.system_setting import SystemSetting
 
 __all__ = [
     "User",
@@ -28,4 +29,5 @@ __all__ = [
     "Permission",
     "RolePermission",
     "RoleGrantRule",
+    "SystemSetting",
 ]

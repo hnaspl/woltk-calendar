@@ -78,6 +78,7 @@ ALL_PERMISSIONS = [
     ("trigger_sync", "Trigger Sync", "Trigger character synchronization", "admin"),
     ("manage_autosync", "Manage Auto-Sync", "Configure auto-sync settings", "admin"),
     ("manage_roles", "Manage Roles", "Create/edit/delete roles and permissions", "admin"),
+    ("manage_system_settings", "Manage System Settings", "Configure global system settings", "admin"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -154,6 +155,7 @@ ROLE_PERMISSIONS = {
         # Admin-only
         "list_system_users", "manage_system_users",
         "trigger_sync", "manage_autosync",
+        "manage_system_settings",
     ],
 }
 

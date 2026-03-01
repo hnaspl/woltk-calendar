@@ -314,7 +314,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -432,6 +432,26 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// Re-load when user joins a guild while on this page
+watch(
+  () => guildStore.currentGuild?.id,
+  async (newId) => {
+    if (!newId) return
+    if (error.value === 'You need to join a guild first before managing characters') {
+      error.value = null
+      loading.value = true
+      try {
+        const raw = await charApi.getMyCharacters(newId)
+        characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
+      } catch {
+        error.value = 'Failed to load characters'
+      } finally {
+        loading.value = false
+      }
+    }
+  }
+)
 
 async function loadArchivedCharacters() {
   try {
