@@ -1,9 +1,9 @@
 <template>
   <WowCard>
-    <h3 class="wow-heading text-base mb-4">Composition</h3>
+    <h3 class="wow-heading text-base mb-4">{{ t('composition.title') }}</h3>
 
     <div v-if="total === 0" class="text-center py-4 text-text-muted text-sm">
-      No players assigned yet.
+      {{ t('composition.noPlayers') }}
     </div>
 
     <div v-else class="space-y-3 sm:space-y-4">
@@ -18,7 +18,7 @@
             class="text-xs font-semibold"
             :class="role.count >= role.target ? 'text-green-400' : 'text-yellow-400'"
           >
-            {{ role.count >= role.target ? '✓ Full' : `${role.target - role.count} needed` }}
+            {{ role.count >= role.target ? '✓ ' + t('common.labels.full') : t('composition.needed', { count: role.target - role.count }) }}
           </span>
         </div>
         <!-- Progress bar -->
@@ -34,7 +34,7 @@
       <hr class="gold-divider" />
 
       <div class="flex items-center justify-between text-sm">
-        <span class="text-text-muted">Total assigned</span>
+        <span class="text-text-muted">{{ t('composition.totalAssigned') }}</span>
         <span class="text-text-primary font-bold">{{ total }} / {{ maxSize ?? '?' }}</span>
       </div>
     </div>
@@ -43,8 +43,11 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   lineupCounts: { type: Object, default: null },

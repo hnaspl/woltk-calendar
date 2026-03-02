@@ -8,20 +8,20 @@
         class="w-9 h-9 rounded border border-border-gold"
       />
       <div>
-        <div class="text-sm font-bold text-accent-gold font-wow leading-tight">Raid Calendar</div>
+        <div class="text-sm font-bold text-accent-gold font-wow leading-tight">{{ t('auth.appTitle') }}</div>
         <div class="text-xs text-text-muted">WotLK Warmane</div>
       </div>
     </div>
 
     <!-- Guild Switcher -->
     <div class="px-4 py-3 border-b border-[#2a3450]">
-      <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">Guild</label>
+      <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('common.labels.guild') }}</label>
       <select
         :value="guildStore.currentGuild?.id ?? ''"
         class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
         @change="onGuildChange"
       >
-        <option v-if="!guildStore.guilds.length" value="">No guilds joined</option>
+        <option v-if="!guildStore.guilds.length" value="">{{ t('guild.noGuilds') }}</option>
         <option
           v-for="g in guildStore.guilds"
           :key="g.id"
@@ -31,7 +31,7 @@
 
       <!-- Available guilds to join -->
       <div v-if="availableGuilds.length > 0" class="mt-2">
-        <label class="text-[10px] text-text-muted uppercase tracking-wider mb-1 block">Available Guilds</label>
+        <label class="text-[10px] text-text-muted uppercase tracking-wider mb-1 block">{{ t('guild.availableGuilds') }}</label>
         <div class="space-y-1 max-h-32 overflow-y-auto">
           <div
             v-for="g in availableGuilds"
@@ -44,7 +44,7 @@
               class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors whitespace-nowrap font-medium"
               :disabled="joiningGuildId === g.id"
               @click="doJoinGuild(g)"
-            >{{ joiningGuildId === g.id ? 'Joining…' : 'Join' }}</button>
+            >{{ joiningGuildId === g.id ? t('common.labels.joining') : t('guild.join') }}</button>
           </div>
         </div>
       </div>
@@ -58,7 +58,7 @@
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Create Guild
+        {{ t('guild.createGuild') }}
       </button>
     </div>
 
@@ -99,22 +99,22 @@
     <div v-if="showCreateGuild" class="fixed inset-0 z-[100] flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60" @click="showCreateGuild = false" />
       <div class="relative bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md mx-4 p-6 z-10">
-        <h3 class="wow-heading text-lg mb-4">Create Guild</h3>
+        <h3 class="wow-heading text-lg mb-4">{{ t('guild.createGuild') }}</h3>
 
         <!-- Step 1: Lookup guild on Warmane -->
         <div v-if="!guildLookupDone" class="space-y-4">
-          <p class="text-sm text-text-muted">Enter your guild name to look it up on Warmane. Realm and faction will be filled automatically.</p>
+          <p class="text-sm text-text-muted">{{ t('guild.createHelp') }}</p>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
-            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" placeholder="My Guild" @keydown.enter.prevent="lookupGuild" />
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="lookupGuild" />
           </div>
           <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
           <div v-if="guildLookupNotFound" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
-            Guild not found on any Warmane realm. Would you like to enter details manually?
+            {{ t('guild.notFound') }}
           </div>
           <!-- Multiple realm matches -->
           <div v-if="guildLookupMatches.length > 1" class="space-y-2">
-            <p class="text-sm text-green-300">Found on {{ guildLookupMatches.length }} realms — select one:</p>
+            <p class="text-sm text-green-300">{{ t('guild.foundOnRealms', { count: guildLookupMatches.length }) }}</p>
             <div v-for="m in guildLookupMatches" :key="m.realm" class="flex items-center gap-3 p-3 rounded border text-sm cursor-pointer transition-colors"
               :class="m.alreadyAdded ? 'border-border-default bg-bg-tertiary opacity-60 cursor-not-allowed' : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
               @click="!m.alreadyAdded && selectGuildMatch(m)"
@@ -126,15 +126,15 @@
                 >{{ m.faction }}</span>
                 <span class="text-text-muted text-xs ml-2">{{ m.member_count ?? 0 }} members</span>
               </div>
-              <span v-if="m.alreadyAdded" class="text-xs text-yellow-400">Already added</span>
-              <span v-else class="text-xs text-accent-gold">Select →</span>
+              <span v-if="m.alreadyAdded" class="text-xs text-yellow-400">{{ t('guild.alreadyAdded') }}</span>
+              <span v-else class="text-xs text-accent-gold">{{ t('guild.select') }}</span>
             </div>
           </div>
           <div class="flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">Cancel</button>
-            <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">Enter Manually</button>
+            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">{{ t('common.buttons.cancel') }}</button>
+            <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">{{ t('guild.enterManually') }}</button>
             <button type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
-              {{ lookingUpGuild ? 'Searching…' : 'Search on Warmane' }}
+              {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnWarmane') }}
             </button>
           </div>
         </div>
@@ -144,7 +144,7 @@
           <!-- Show Warmane match info -->
           <div v-if="guildLookupMatch" class="p-3 rounded bg-green-900/20 border border-green-700 text-sm">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-green-300 font-medium">✓ Found on Warmane</span>
+              <span class="text-green-300 font-medium">✓ {{ t('guild.foundOnWarmane') }}</span>
               <span v-if="guildLookupMatch.faction" class="px-2 py-0.5 rounded text-xs font-medium"
                 :class="guildLookupMatch.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >{{ guildLookupMatch.faction }}</span>
@@ -152,45 +152,45 @@
             <span class="text-text-muted text-xs">{{ guildLookupMatch.member_count ?? 0 }} members on {{ newGuild.realm_name }}</span>
           </div>
           <div v-if="guildLookupMatch?.alreadyAdded" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
-            ⚠ This guild is already added. You can join it from the available guilds list instead.
+            ⚠ {{ t('guild.alreadyAddedWarning') }}
           </div>
           <div v-if="guildManualMode" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
-            Manual entry mode — guild not verified on Warmane.
+            {{ t('guild.manualEntry') }}
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
             <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :readonly="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Realm *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
-              <option value="">Select realm…</option>
+              <option value="">{{ t('common.fields.selectRealm') }}</option>
               <option v-for="r in WARMANE_REALMS" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Faction</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.faction') }}</label>
             <select v-model="newGuild.faction" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
-              <option value="">Select faction…</option>
+              <option value="">{{ t('guild.selectFaction') }}</option>
               <option value="Alliance">Alliance</option>
               <option value="Horde">Horde</option>
             </select>
           </div>
           <div class="flex items-center gap-2">
             <input id="allow-self-join" v-model="newGuild.allow_self_join" type="checkbox" class="w-4 h-4 rounded bg-bg-tertiary border border-border-default accent-accent-gold" />
-            <label for="allow-self-join" class="text-sm text-text-muted">Allow users to join by themselves</label>
+            <label for="allow-self-join" class="text-sm text-text-muted">{{ t('guild.allowSelfJoin') }}</label>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Timezone</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.timezone') }}</label>
             <select v-model="newGuild.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option v-for="tz in GUILD_TIMEZONES" :key="tz" :value="tz">{{ tz }}</option>
             </select>
           </div>
           <div v-if="createGuildError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createGuildError }}</div>
           <div class="flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="resetCreateGuild">Back</button>
+            <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="resetCreateGuild">{{ t('common.buttons.back') }}</button>
             <button type="submit" :disabled="creatingGuild || guildLookupMatch?.alreadyAdded" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50">
-              {{ creatingGuild ? 'Creating…' : 'Create Guild' }}
+              {{ creatingGuild ? t('common.labels.creating') : t('guild.createGuild') }}
             </button>
           </div>
         </form>
@@ -202,6 +202,7 @@
 <script setup>
 import { computed, h, ref, reactive, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
@@ -211,6 +212,8 @@ import { useSocket } from '@/composables/useSocket'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
+
+const { t } = useI18n()
 
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
@@ -267,7 +270,7 @@ async function doJoinGuild(guild) {
     if (!guildStore.currentGuild) guildStore.setCurrentGuild(guild)
     uiStore.showToast(`Joined ${guild.name}!`, 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to join guild', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('guild.toasts.failedToJoin'), 'error')
   } finally {
     joiningGuildId.value = null
   }
@@ -318,12 +321,12 @@ const hasAdminAccess = computed(() =>
 const navGroups = computed(() => {
   const groups = [
     {
-      label: 'Overview',
+      label: t('nav.overview'),
       items: [
-        { label: 'Dashboard', to: '/dashboard', icon: icons.dashboard },
-        { label: 'Calendar', to: '/calendar', icon: icons.calendar },
-        { label: 'Characters', to: '/characters', icon: icons.chars },
-        { label: 'Attendance', to: '/attendance', icon: icons.attendance }
+        { label: t('common.labels.dashboard'), to: '/dashboard', icon: icons.dashboard },
+        { label: t('common.labels.calendar'), to: '/calendar', icon: icons.calendar },
+        { label: t('common.labels.characters'), to: '/characters', icon: icons.chars },
+        { label: t('common.labels.attendance'), to: '/attendance', icon: icons.attendance }
       ]
     }
   ]
@@ -333,24 +336,24 @@ const navGroups = computed(() => {
     const guildItems = []
     if (canManageGuild.value) {
       guildItems.push(
-        { label: 'Raid Definitions', to: '/guild/raid-definitions', icon: icons.raids },
-        { label: 'Templates', to: '/guild/templates', icon: icons.templates },
-        { label: 'Recurring Raids', to: '/guild/series', icon: icons.series }
+        { label: t('nav.raidDefinitions'), to: '/guild/raid-definitions', icon: icons.raids },
+        { label: t('nav.templates'), to: '/guild/templates', icon: icons.templates },
+        { label: t('nav.recurringRaids'), to: '/guild/series', icon: icons.series }
       )
     }
     if (hasAdminAccess.value) {
-      guildItems.push({ label: 'Admin Panel', to: '/admin', icon: icons.admin })
+      guildItems.push({ label: t('nav.adminPanel'), to: '/admin', icon: icons.admin })
     }
     groups.push({
-      label: 'Guild Management',
+      label: t('nav.guildManagement'),
       items: guildItems
     })
   }
 
   groups.push({
-    label: 'Account',
+    label: t('nav.account'),
     items: [
-      { label: 'Profile', to: '/profile', icon: icons.profile }
+      { label: t('nav.profile'), to: '/profile', icon: icons.profile }
     ]
   })
 
@@ -503,7 +506,7 @@ async function doCreateGuild() {
     guildManualMode.value = false
     guildLookupError.value = null
     guildLookupNotFound.value = false
-    uiStore.showToast('Guild created!', 'success')
+    uiStore.showToast(t('guild.guildCreated'), 'success')
   } catch (err) {
     createGuildError.value = err?.response?.data?.message ?? 'Failed to create guild'
   } finally {

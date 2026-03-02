@@ -1,12 +1,12 @@
 <template>
   <WowCard>
     <div class="flex items-center justify-between mb-4">
-      <h3 class="wow-heading text-base">Signups</h3>
-      <span class="text-sm text-text-muted">{{ signups.length }} total</span>
+      <h3 class="wow-heading text-base">{{ t('signupList.title') }}</h3>
+      <span class="text-sm text-text-muted">{{ t('signupList.total', { count: signups.length }) }}</span>
     </div>
 
     <div v-if="signups.length === 0" class="text-center py-6 text-text-muted text-sm">
-      No signups yet.
+      {{ t('common.labels.noSignups') }}
     </div>
 
     <!-- Side-by-side layout for In Lineup and Bench -->
@@ -78,13 +78,13 @@
                 <input
                   v-model="editForm.chosen_spec"
                   class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none"
-                  placeholder="e.g. Holy, Frost…"
+                  :placeholder="t('signupList.specPlaceholder')"
                 />
               </div>
 
               <div class="flex justify-end gap-2 pt-1">
-                <button class="px-3 py-1 text-xs text-text-muted hover:text-text-primary rounded border border-border-default hover:border-border-gold transition-colors" @click="cancelEdit">Cancel</button>
-                <button class="px-3 py-1 text-xs text-accent-gold hover:text-amber-300 rounded border border-accent-gold/50 hover:border-accent-gold transition-colors font-medium" @click="saveEdit(signup)">Save</button>
+                <button class="px-3 py-1 text-xs text-text-muted hover:text-text-primary rounded border border-border-default hover:border-border-gold transition-colors" @click="cancelEdit">{{ t('common.buttons.cancel') }}</button>
+                <button class="px-3 py-1 text-xs text-accent-gold hover:text-amber-300 rounded border border-accent-gold/50 hover:border-accent-gold transition-colors font-medium" @click="saveEdit(signup)">{{ t('common.buttons.save') }}</button>
               </div>
             </div>
 
@@ -115,7 +115,7 @@
                   <span
                     v-if="charAchievements(signup)"
                     class="text-xs text-amber-400"
-                    title="Achievement Points"
+                    :title="t('signupList.achievementPoints')"
                   >🏆 {{ charAchievements(signup) }}</span>
                 </div>
                 <!-- Row 2: Class + Role -->
@@ -158,21 +158,21 @@
                     class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-border-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold transition-colors"
                     :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
                     @click.stop="openCharacterModal(signup.character)"
-                  >🔍 View Details</button>
+                  >🔍 {{ t('signupList.viewDetails') }}</button>
                   <!-- Officer action buttons -->
                   <template v-if="canManage">
                     <button
                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
                       @click.stop="startEdit(signup)"
-                    >Edit</button>
+                    >{{ t('common.buttons.edit') }}</button>
                     <button
                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
                       @click.stop="startReplaceCharacter(signup)"
-                    >Replace</button>
+                    >{{ t('signupList.replace') }}</button>
                     <button
                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
                       @click.stop="removeSignup(signup)"
-                    >Remove</button>
+                    >{{ t('common.buttons.remove') }}</button>
                   </template>
                 </div>
               </div>
@@ -192,43 +192,42 @@
   />
 
   <!-- Remove confirmation modal (officer only) -->
-  <WowModal v-model="showRemoveModal" :title="'Remove ' + (removeTarget?.character?.name ?? 'Player')">
+  <WowModal v-model="showRemoveModal" :title="t('signupList.removeTitle', { name: removeTarget?.character?.name ?? 'Player' })">
     <div class="space-y-4">
       <p class="text-sm text-text-muted">
-        How would you like to remove <strong class="text-text-primary">{{ removeTarget?.character?.name ?? 'this player' }}</strong> from this raid?
+        {{ t('signupList.removeQuestion', { name: removeTarget?.character?.name ?? t('signupList.thisPlayer') }) }}
       </p>
       <div class="space-y-2">
         <button
           class="w-full text-left px-4 py-3 rounded border border-border-default bg-bg-tertiary hover:border-border-gold transition-colors"
           @click="confirmRemove(false)"
         >
-          <div class="text-sm font-medium text-text-primary">Remove this time</div>
-          <div class="text-xs text-text-muted mt-0.5">The player can sign up again if they wish.</div>
+          <div class="text-sm font-medium text-text-primary">{{ t('signupList.removeThisTime') }}</div>
+          <div class="text-xs text-text-muted mt-0.5">{{ t('signupList.removeThisTimeDesc') }}</div>
         </button>
         <button
           class="w-full text-left px-4 py-3 rounded border border-red-800 bg-red-900/20 hover:border-red-500 transition-colors"
           @click="confirmRemove(true)"
         >
-          <div class="text-sm font-medium text-red-400">Permanently kick from raid</div>
-          <div class="text-xs text-red-300/70 mt-0.5">The player will be banned from signing up to this raid with this character.</div>
+          <div class="text-sm font-medium text-red-400">{{ t('signupList.permanentKick') }}</div>
+          <div class="text-xs text-red-300/70 mt-0.5">{{ t('signupList.permanentKickDesc') }}</div>
         </button>
       </div>
       <div class="flex justify-end">
-        <button class="text-sm text-text-muted hover:text-text-primary transition-colors" @click="showRemoveModal = false">Cancel</button>
+        <button class="text-sm text-text-muted hover:text-text-primary transition-colors" @click="showRemoveModal = false">{{ t('common.buttons.cancel') }}</button>
       </div>
     </div>
   </WowModal>
 
   <!-- Replace character modal (officer only) -->
-  <WowModal v-model="showReplaceModal" :title="'Replace Character — ' + (replaceTarget?.character?.name ?? 'Player')">
+  <WowModal v-model="showReplaceModal" :title="t('signupList.replaceTitle', { name: replaceTarget?.character?.name ?? 'Player' })">
     <div class="space-y-4">
       <p class="text-sm text-text-muted">
-        Select a replacement character for <strong class="text-text-primary">{{ replaceTarget?.character?.name ?? 'this player' }}</strong>.
-        The player will be notified and can confirm, decline, or leave the raid.
+        {{ t('signupList.replaceDescription', { name: replaceTarget?.character?.name ?? t('signupList.thisPlayer') }) }}
       </p>
-      <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">Loading characters…</div>
+      <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">{{ t('common.labels.loadingCharacters') }}</div>
       <div v-else-if="replaceChars.filter(ch => ch.id !== replaceTarget?.character_id).length === 0" class="text-center py-4 text-text-muted text-sm">
-        This player has no other characters available for replacement.
+        {{ t('signupList.noReplacementChars') }}
       </div>
       <template v-else>
         <div class="space-y-2">
@@ -255,17 +254,17 @@
           </button>
         </div>
         <div>
-          <label class="text-[10px] text-text-muted">Reason (optional)</label>
-          <input v-model="replaceReason" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none" placeholder="e.g. Need a tank for this fight…" />
+          <label class="text-[10px] text-text-muted">{{ t('signupList.reasonOptional') }}</label>
+          <input v-model="replaceReason" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-2 py-1 text-xs focus:border-border-gold outline-none" :placeholder="t('signupList.reasonPlaceholder')" />
         </div>
       </template>
       <div class="flex justify-end gap-2">
-        <button class="text-sm text-text-muted hover:text-text-primary transition-colors" @click="showReplaceModal = false">Cancel</button>
+        <button class="text-sm text-text-muted hover:text-text-primary transition-colors" @click="showReplaceModal = false">{{ t('common.buttons.cancel') }}</button>
         <button
           v-if="selectedReplaceCharId"
           class="text-sm text-accent-gold hover:text-amber-300 font-medium transition-colors"
           @click="submitReplaceRequest"
-        >Request Replacement</button>
+        >{{ t('signupList.requestReplacement') }}</button>
       </div>
     </div>
   </WowModal>
@@ -273,6 +272,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
@@ -285,6 +285,8 @@ import { useGuildStore } from '@/stores/guild'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
 import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
+
+const { t } = useI18n()
 
 const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
@@ -314,14 +316,14 @@ function openCharacterModal(character) {
   showCharacterModal.value = true
 }
 
-const LINEUP_GROUPS = [
-  { key: 'going',    label: 'In Lineup', cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
-  { key: 'bench',    label: 'Bench',     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
-  { key: 'declined', label: 'Declined',  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
-]
+const LINEUP_GROUPS = computed(() => [
+  { key: 'going',    label: t('common.labels.inLineup'), cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
+  { key: 'bench',    label: t('common.labels.bench'),     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
+  { key: 'declined', label: t('common.labels.declined'),  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
+])
 
 const groups = computed(() =>
-  LINEUP_GROUPS.map(g => ({
+  LINEUP_GROUPS.value.map(g => ({
     ...g,
     items: props.signups.filter(s => (s.lineup_status || 'going') === g.key)
   }))

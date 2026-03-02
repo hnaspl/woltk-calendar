@@ -3,8 +3,8 @@
     <!-- Roles list -->
     <WowCard>
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">All Roles ({{ roles.length }})</h2>
-        <WowButton @click="openCreateRole">+ New Role</WowButton>
+        <h2 class="wow-heading text-base">{{ t('roles.allRoles') }} ({{ roles.length }})</h2>
+        <WowButton @click="openCreateRole">{{ t('roles.newRole') }}</WowButton>
       </div>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
@@ -14,12 +14,12 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Level</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Permissions</th>
-              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Can Assign</th>
-              <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
-              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.role') }}</th>
+              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.level') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.permissions') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.canAssign') }}</th>
+              <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.type') }}</th>
+              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -30,7 +30,7 @@
               </td>
               <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ role.level }}</td>
               <td class="px-4 py-2.5">
-                <span class="text-accent-gold text-xs font-medium">{{ role.permissions.length }} permissions</span>
+                <span class="text-accent-gold text-xs font-medium">{{ role.permissions.length }} {{ t('roles.permissionsCount') }}</span>
               </td>
               <td class="hidden md:table-cell px-4 py-2.5">
                 <div class="flex flex-wrap gap-1">
@@ -46,17 +46,17 @@
                 <span
                   class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
                   :class="role.is_system ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-green-900/50 text-green-300 border border-green-600'"
-                >{{ role.is_system ? 'System' : 'Custom' }}</span>
+                >{{ role.is_system ? t('common.labels.system') : t('common.labels.custom') }}</span>
               </td>
               <td class="px-4 py-2.5 text-right">
                 <div class="flex flex-wrap gap-1 justify-end">
-                <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditRole(role)">Edit</WowButton>
+                <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditRole(role)">{{ t('common.buttons.edit') }}</WowButton>
                 <WowButton
                   v-if="!role.is_system"
                   variant="danger"
                   class="text-xs py-1 px-2"
                   @click="confirmDeleteRole(role)"
-                >Delete</WowButton>
+                >{{ t('common.buttons.delete') }}</WowButton>
                 </div>
               </td>
             </tr>
@@ -67,43 +67,43 @@
 
     <!-- All permissions reference -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">Available Permissions ({{ allPermissions.length }})</h2>
+      <h2 class="wow-heading text-base mb-4">{{ t('roles.availablePermissions') }} ({{ allPermissions.length }})</h2>
 
       <div v-if="permissionsLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else>
         <div v-for="cat in permissionCategories" :key="cat" class="mb-4">
-          <h3 class="text-xs text-accent-gold uppercase tracking-wider mb-2 px-1">{{ cat }}</h3>
+          <h3 class="text-xs text-accent-gold uppercase tracking-wider mb-2 px-1">{{ permCategoryLabel(cat) }}</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <div
               v-for="perm in permissionsByCategory(cat)"
               :key="perm.code"
               class="px-3 py-2 rounded bg-bg-tertiary border border-border-default"
             >
-              <div class="text-sm text-text-primary">{{ perm.display_name }}</div>
-              <div class="text-xs text-text-muted">{{ perm.code }}</div>
+              <div class="text-sm text-text-primary">{{ permLabel(perm.code, perm.display_name) }}</div>
+              <div class="text-[11px] text-text-muted mt-0.5">{{ permDesc(perm.code) }}</div>
             </div>
           </div>
         </div>
       </div>
     </WowCard>
 
-    <!-- Grant Rules -->
-    <WowCard>
+    <!-- Grant Rules — only visible to global admins -->
+    <WowCard v-if="isGlobalAdmin">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">Role Grant Rules</h2>
-        <WowButton @click="showGrantRuleModal = true">+ Add Rule</WowButton>
+        <h2 class="wow-heading text-base">{{ t('roles.grantRules') }}</h2>
+        <WowButton @click="showGrantRuleModal = true">{{ t('roles.addRule') }}</WowButton>
       </div>
-      <p class="text-text-muted text-sm mb-4">Define which roles can assign other roles to guild members.</p>
+      <p class="text-text-muted text-sm mb-4">{{ t('roles.grantRulesHelp') }}</p>
 
       <div v-if="grantRulesLoading" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role (Granter)</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.granter') }}</th>
               <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase"></th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Can Assign (Grantee)</th>
-              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.grantee') }}</th>
+              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -112,11 +112,11 @@
               <td class="px-4 py-2.5 text-center text-accent-gold">→</td>
               <td class="px-4 py-2.5 text-text-primary">{{ roleDisplayName(rule.grantee_role_name) }}</td>
               <td class="px-4 py-2.5 text-right">
-                <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">Remove</WowButton>
+                <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">{{ t('common.buttons.remove') }}</WowButton>
               </td>
             </tr>
             <tr v-if="!grantRules.length">
-              <td colspan="4" class="px-4 py-4 text-center text-text-muted text-sm">No grant rules defined.</td>
+              <td colspan="4" class="px-4 py-4 text-center text-text-muted text-sm">{{ t('roles.noGrantRules') }}</td>
             </tr>
           </tbody>
         </table>
@@ -124,41 +124,41 @@
     </WowCard>
 
     <!-- Create/Edit Role Modal -->
-    <WowModal v-model="showRoleModal" :title="editingRole ? 'Edit Role' : 'Create Role'" size="lg">
+    <WowModal v-model="showRoleModal" :title="editingRole ? t('roles.editRole') : t('roles.createRole')" size="lg">
       <form @submit.prevent="saveRole" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Name (internal) *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('roles.nameInternal') }}</label>
             <input
               v-model="roleForm.name"
               required
               :disabled="editingRole?.is_system"
               class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50"
-              placeholder="e.g. raid_leader"
+              :placeholder="t('roles.namePlaceholder')"
             />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Display Name *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('roles.displayName') }}</label>
             <input
               v-model="roleForm.display_name"
               required
               class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-              placeholder="e.g. Raid Leader"
+              :placeholder="t('roles.displayNamePlaceholder')"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">Description</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
           <input
             v-model="roleForm.description"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-            placeholder="Brief description of this role"
+            :placeholder="t('roles.descriptionPlaceholder')"
           />
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">Level (higher = more authority)</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('roles.levelLabel') }}</label>
           <input
             v-model.number="roleForm.level"
             type="number"
@@ -170,19 +170,20 @@
 
         <!-- Permission checkboxes grouped by category -->
         <div>
-          <label class="block text-xs text-text-muted mb-2">Permissions</label>
+          <label class="block text-xs text-text-muted mb-2">{{ t('roles.permissions') }}</label>
           <div class="max-h-80 overflow-y-auto border border-border-default rounded p-3 space-y-4 bg-bg-tertiary/30">
             <div v-for="cat in permissionCategories" :key="cat">
               <div class="flex items-center gap-2 mb-2">
-                <h4 class="text-xs text-accent-gold uppercase tracking-wider">{{ cat }}</h4>
-                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, true)">All</button>
-                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, false)">None</button>
+                <h4 class="text-xs text-accent-gold uppercase tracking-wider">{{ permCategoryLabel(cat) }}</h4>
+                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, true)">{{ t('common.labels.all') }}</button>
+                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, false)">{{ t('common.labels.none') }}</button>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
                 <label
                   v-for="perm in permissionsByCategory(cat)"
                   :key="perm.code"
                   class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-tertiary cursor-pointer text-sm"
+                  :title="permDesc(perm.code)"
                 >
                   <input
                     type="checkbox"
@@ -190,7 +191,7 @@
                     v-model="roleForm.permissions"
                     class="w-3.5 h-3.5 rounded bg-bg-tertiary border border-border-default accent-accent-gold"
                   />
-                  <span class="text-text-primary">{{ perm.display_name }}</span>
+                  <span class="text-text-primary">{{ permLabel(perm.code, perm.display_name) }}</span>
                 </label>
               </div>
             </div>
@@ -202,41 +203,40 @@
 
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showRoleModal = false">Cancel</WowButton>
-          <WowButton :loading="savingRole" @click="saveRole">{{ editingRole ? 'Save Changes' : 'Create Role' }}</WowButton>
+          <WowButton variant="secondary" @click="showRoleModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="savingRole" @click="saveRole">{{ editingRole ? t('common.fields.saveChanges') : t('roles.createRole') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Delete Role Confirmation -->
-    <WowModal v-model="showDeleteConfirm" title="Delete Role" size="sm">
+    <WowModal v-model="showDeleteConfirm" :title="t('roles.deleteRole')" size="sm">
       <p class="text-text-muted">
-        Permanently delete the role <strong class="text-text-primary">{{ deleteTarget?.display_name }}</strong>?
-        Members with this role will lose their permissions.
+        {{ t('roles.deleteConfirm', { role: deleteTarget?.display_name }) }}
       </p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="deletingRole" @click="doDeleteRole">Delete</WowButton>
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="deletingRole" @click="doDeleteRole">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Add Grant Rule Modal -->
-    <WowModal v-model="showGrantRuleModal" title="Add Grant Rule" size="sm">
+    <WowModal v-model="showGrantRuleModal" :title="t('roles.addGrantRule')" size="sm">
       <form @submit.prevent="doCreateGrantRule" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Granter Role (who can assign)</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterLabel') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>Select role…</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
+            <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
+            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Grantee Role (role to be assigned)</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeLabel') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>Select role…</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
+            <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
+            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div v-if="grantRuleError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ grantRuleError }}</div>
@@ -244,8 +244,8 @@
 
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showGrantRuleModal = false">Cancel</WowButton>
-          <WowButton :loading="creatingGrantRule" @click="doCreateGrantRule">Add Rule</WowButton>
+          <WowButton variant="secondary" @click="showGrantRuleModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="creatingGrantRule" @click="doCreateGrantRule">{{ t('roles.addRule') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -254,13 +254,19 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useUiStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import * as rolesApi from '@/api/roles'
 
+const { t } = useI18n()
 const uiStore = useUiStore()
+const authStore = useAuthStore()
+
+const isGlobalAdmin = computed(() => !!authStore.user?.is_admin)
 
 // Roles state
 const roles = ref([])
@@ -312,6 +318,24 @@ function permissionsByCategory(category) {
   return allPermissions.value.filter(p => p.category === category)
 }
 
+function permLabel(code, fallback) {
+  const key = 'permissions.' + code
+  const label = t(key)
+  return label !== key ? label : fallback
+}
+
+function permDesc(code) {
+  const key = 'permissions.' + code + '_desc'
+  const desc = t(key)
+  return desc !== key ? desc : ''
+}
+
+function permCategoryLabel(cat) {
+  const key = 'permissionCategories.' + cat
+  const label = t(key)
+  return label !== key ? label : cat
+}
+
 function roleDisplayName(roleName) {
   const role = roles.value.find(r => r.name === roleName)
   return role ? role.display_name : roleName
@@ -339,7 +363,7 @@ async function loadRoles() {
   try {
     roles.value = await rolesApi.getRoles()
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load roles'
+    error.value = err?.response?.data?.message ?? t('roles.toasts.failedToLoadRoles')
   } finally {
     loading.value = false
   }
@@ -350,7 +374,7 @@ async function loadPermissions() {
   try {
     allPermissions.value = await rolesApi.getPermissions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load permissions', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToLoadPermissions'), 'error')
   } finally {
     permissionsLoading.value = false
   }
@@ -361,7 +385,7 @@ async function loadGrantRules() {
   try {
     grantRules.value = await rolesApi.getGrantRules()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load grant rules', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToLoadRules'), 'error')
   } finally {
     grantRulesLoading.value = false
   }
@@ -404,16 +428,16 @@ async function saveRole() {
 
     if (editingRole.value) {
       await rolesApi.updateRole(editingRole.value.id, data)
-      uiStore.showToast('Role updated', 'success')
+      uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
     } else {
       await rolesApi.createRole(data)
-      uiStore.showToast('Role created', 'success')
+      uiStore.showToast(t('roles.toasts.roleCreated'), 'success')
     }
 
     showRoleModal.value = false
     await loadRoles()
   } catch (err) {
-    roleFormError.value = err?.response?.data?.message ?? 'Failed to save role'
+    roleFormError.value = err?.response?.data?.message ?? t('roles.toasts.failedToSaveRole')
   } finally {
     savingRole.value = false
   }
@@ -428,11 +452,11 @@ async function doDeleteRole() {
   deletingRole.value = true
   try {
     await rolesApi.deleteRole(deleteTarget.value.id)
-    uiStore.showToast('Role deleted', 'success')
+    uiStore.showToast(t('roles.toasts.roleDeleted'), 'success')
     showDeleteConfirm.value = false
     await loadRoles()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to delete role', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToDeleteRole'), 'error')
   } finally {
     deletingRole.value = false
   }
@@ -441,7 +465,7 @@ async function doDeleteRole() {
 // Grant rules
 async function doCreateGrantRule() {
   if (!grantRuleForm.granter_role_id || !grantRuleForm.grantee_role_id) {
-    grantRuleError.value = 'Both roles are required'
+    grantRuleError.value = t('roles.bothRequired')
     return
   }
   grantRuleError.value = null
@@ -451,13 +475,13 @@ async function doCreateGrantRule() {
       granter_role_id: grantRuleForm.granter_role_id,
       grantee_role_id: grantRuleForm.grantee_role_id
     })
-    uiStore.showToast('Grant rule added', 'success')
+    uiStore.showToast(t('roles.toasts.grantRuleAdded'), 'success')
     showGrantRuleModal.value = false
     grantRuleForm.granter_role_id = null
     grantRuleForm.grantee_role_id = null
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
-    grantRuleError.value = err?.response?.data?.message ?? 'Failed to add grant rule'
+    grantRuleError.value = err?.response?.data?.message ?? t('roles.toasts.failedToAddRule')
   } finally {
     creatingGrantRule.value = false
   }
@@ -466,10 +490,10 @@ async function doCreateGrantRule() {
 async function doDeleteGrantRule(rule) {
   try {
     await rolesApi.deleteGrantRule(rule.id)
-    uiStore.showToast('Grant rule removed', 'success')
+    uiStore.showToast(t('roles.toasts.grantRuleRemoved'), 'success')
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to remove grant rule', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToRemoveRule'), 'error')
   }
 }
 </script>

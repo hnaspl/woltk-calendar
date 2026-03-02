@@ -25,58 +25,58 @@
               <div class="flex items-center gap-2 flex-wrap mb-2">
                 <h1 class="wow-heading text-lg sm:text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
-                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Done</span>
-                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Cancelled</span>
+                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.done') }}</span>
+                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('common.status.cancelled') }}</span>
               </div>
 
               <!-- Completed/cancelled event locked banner -->
               <div v-if="event.status === 'completed' && hasAttendance" class="mt-2 px-3 py-2 rounded bg-green-900/20 border border-green-700/40 text-green-300 text-xs">
-                🔒 This raid is <strong>completed</strong> and attendance has been recorded. All modifications are locked to prevent data manipulation.
+                🔒 {{ t('raidDetail.completedLocked') }}
               </div>
               <div v-else-if="event.status === 'cancelled'" class="mt-2 px-3 py-2 rounded bg-red-900/20 border border-red-700/40 text-red-300 text-xs">
-                🔒 This raid has been <strong>cancelled</strong>. All modifications are locked.
+                🔒 {{ t('raidDetail.cancelledLocked') }}
               </div>
 
               <!-- Informative details grid -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-6 gap-y-1.5 text-sm mt-2">
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📅</span>
-                  <span><strong class="text-text-primary">Starts:</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.starts') }}</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
                 </div>
                 <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⏱️</span>
-                  <span><strong class="text-text-primary">Duration:</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.duration') }}</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
                 </div>
                 <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⚔️</span>
-                  <span><strong class="text-text-primary">Raid:</strong> {{ raidLabel(event.raid_type) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidLabel(event.raid_type) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📝</span>
                   <span>
-                    <strong class="text-text-primary">Signups:</strong>{{ ' ' }}
+                    <strong class="text-text-primary">{{ t('raidDetail.signups') }}</strong>{{ ' ' }}
                     <template v-if="event.status === 'locked' || event.is_locked">
-                      <span class="text-red-400 font-medium">Closed</span>
+                      <span class="text-red-400 font-medium">{{ t('raidDetail.closed') }}</span>
                     </template>
                     <template v-else-if="event.status === 'cancelled'">
-                      <span class="text-red-400 font-medium">Cancelled</span>
+                      <span class="text-red-400 font-medium">{{ t('common.status.cancelled') }}</span>
                     </template>
                     <template v-else-if="event.status === 'completed'">
-                      <span class="text-text-muted">Completed</span>
+                      <span class="text-text-muted">{{ t('common.status.completed') }}</span>
                     </template>
                     <template v-else>
-                      <span class="text-green-400 font-medium">Open</span>
+                      <span class="text-green-400 font-medium">{{ t('common.status.open') }}</span>
                     </template>
-                    <span class="ml-1 text-text-muted"> ({{ signups.length }} signed up)</span>
+                    <span class="ml-1 text-text-muted"> ({{ signups.length }} {{ t('raidDetail.signedUp') }})</span>
                   </span>
                 </div>
                 <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">🔒</span>
-                  <span><strong class="text-text-primary">Signups Close:</strong> {{ formatDateTime(event.close_signups_at) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.signupsClose') }}</strong> {{ formatDateTime(event.close_signups_at) }}</span>
                 </div>
                 <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">🌐</span>
-                  <span><strong class="text-text-primary">Realm:</strong> {{ event.realm_name ?? event.realm }}</span>
+                  <span><strong class="text-text-primary">{{ t('common.labels.realmColon') }}</strong> {{ event.realm_name ?? event.realm }}</span>
                 </div>
               </div>
 
@@ -87,22 +87,22 @@
 
             <!-- Officer actions -->
             <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-1.5 sm:gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
-              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">Edit</WowButton>
+              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">{{ t('common.buttons.edit') }}</WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
-                {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
+                {{ (event.status === 'locked' || event.is_locked) ? t('raidDetail.unlock') : t('raidDetail.lock') }}
               </WowButton>
-              <WowButton variant="secondary" @click="doDuplicate">Duplicate</WowButton>
+              <WowButton variant="secondary" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
-                Mark Done
+                {{ t('raidDetail.markDone') }}
               </WowButton>
               <WowButton
                 v-if="event.status === 'completed' && permissions.can('record_attendance')"
                 variant="primary"
                 @click="showAttendanceModal = true"
               >
-                {{ hasAttendance ? 'Update Attendance' : 'Record Attendance' }}
+                {{ hasAttendance ? t('raidDetail.updateAttendance') : t('common.labels.recordAttendance') }}
               </WowButton>
-              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">{{ t('raidDetail.cancelEvent') }}</WowButton>
             </div>
           </div>
         </WowCard>
@@ -226,15 +226,15 @@
                       <button
                         class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
                         @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'confirm')"
-                      >Confirm</button>
+                      >{{ t('common.buttons.confirm') }}</button>
                       <button
                         class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
                         @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'decline')"
-                      >Decline</button>
+                      >{{ t('common.buttons.decline') }}</button>
                       <button
                         class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
                         @click="leaveRaid(s)"
-                      >Leave Raid</button>
+                      >{{ t('common.labels.leaveRaid') }}</button>
                     </div>
                   </div>
                 </div>
@@ -288,100 +288,98 @@
     </div>
 
     <!-- Edit Event modal -->
-    <WowModal v-model="showEditModal" title="Edit Event" size="md">
+    <WowModal v-model="showEditModal" :title="t('raidDetail.editEvent')" size="md">
       <form @submit.prevent="saveEvent" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Title *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.titleRequired') }}</label>
           <input v-model="editForm.title" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
-            <option value="">None (use defaults)</option>
-            <optgroup label="Built-in Raids">
+            <option value="">{{ t('raidDetail.noneUseDefaults') }}</option>
+            <optgroup :label="t('calendar.builtInRaids')">
               <option v-for="rd in editBuiltinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
-            <optgroup v-if="editCustomDefs.length" label="Custom Raids">
+            <optgroup v-if="editCustomDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in editCustomDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
           </select>
-          <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
+          <p class="text-[10px] text-text-muted mt-1">{{ t('calendar.manageCustomRaids') }} <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">{{ t('nav.raidDefinitions') }}</router-link></p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Size</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
             <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">10-man</option>
-              <option :value="25">25-man</option>
+              <option :value="10">{{ t('calendar.tenMan') }}</option>
+              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
             <select v-model="editForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="normal">Normal</option>
-              <option value="heroic">Heroic</option>
+              <option value="normal">{{ t('calendar.normal') }}</option>
+              <option value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Status</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.status') }}</label>
             <select v-model="editForm.status" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="draft">Draft</option>
-              <option value="open">Open</option>
-              <option value="locked">Locked</option>
+              <option value="draft">{{ t('common.status.draft') }}</option>
+              <option value="open">{{ t('common.status.open') }}</option>
+              <option value="locked">{{ t('common.status.locked') }}</option>
             </select>
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }}</label>
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Approx. Duration (minutes)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.durationMinutes') }}</label>
             <input v-model.number="editForm.duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.closeSignupsAt') }}</label>
           <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           <span class="text-[10px] text-text-muted">Must be before event start time</span>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Instructions</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.instructions') }}</label>
           <textarea v-model="editForm.instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div v-if="editError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ editError }}</div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showEditModal = false">Cancel</WowButton>
-          <WowButton :loading="actionLoading" @click="saveEvent">Save</WowButton>
+          <WowButton variant="secondary" @click="showEditModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="actionLoading" @click="saveEvent">{{ t('common.buttons.save') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Cancel confirmation modal -->
-    <WowModal v-model="confirmCancel" title="Cancel Event" size="sm">
-      <p class="text-text-muted mb-4">Are you sure you want to cancel this event? This cannot be undone.</p>
+    <WowModal v-model="confirmCancel" :title="t('raidDetail.cancelEvent')" size="sm">
+      <p class="text-text-muted mb-4">{{ t('raidDetail.cancelEventConfirm') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="confirmCancel = false">Nevermind</WowButton>
-          <WowButton variant="danger" :loading="actionLoading" @click="cancelEvent">Cancel Event</WowButton>
+          <WowButton variant="secondary" @click="confirmCancel = false">{{ t('raidDetail.nevermind') }}</WowButton>
+          <WowButton variant="danger" :loading="actionLoading" @click="cancelEvent">{{ t('raidDetail.cancelEvent') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Leave Raid confirmation modal -->
-    <WowModal v-model="showLeaveModal" title="Leave Raid" size="sm">
+    <WowModal v-model="showLeaveModal" :title="t('common.labels.leaveRaid')" size="sm">
       <p class="text-text-muted">
-        Are you sure you want to remove
-        <strong class="text-text-primary">{{ leaveSignup?.character?.name ?? 'this character' }}</strong>
-        from this raid? This will remove the character from the signup list and lineup.
+        {{ t('raidDetail.leaveRaidConfirm', { character: leaveSignup?.character?.name ?? t('raidDetail.thisCharacter') }) }}
       </p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showLeaveModal = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">Leave Raid</WowButton>
+          <WowButton variant="secondary" @click="showLeaveModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">{{ t('common.labels.leaveRaid') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -425,6 +423,7 @@ import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as attendanceApi from '@/api/attendance'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -435,6 +434,7 @@ const permissions = usePermissions()
 const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
+const { t } = useI18n()
 
 const event = ref(null)
 const signups = ref([])
@@ -552,7 +552,7 @@ onMounted(async () => {
     // Fetch pending character replacement requests
     await loadReplacementRequests()
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load raid details'
+    error.value = err?.response?.data?.message ?? t('common.errors.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -647,7 +647,7 @@ watch(() => route.params.id, async (newId, oldId) => {
     event.value = ev
     signups.value = su
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load raid details'
+    error.value = err?.response?.data?.message ?? t('common.errors.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -668,9 +668,9 @@ async function toggleLock() {
       event.value = updated
     }
     const nowLocked = event.value.status === 'locked'
-    uiStore.showToast(`Event ${nowLocked ? 'locked' : 'unlocked'}`, 'success')
+    uiStore.showToast(t(nowLocked ? 'raidDetail.toasts.eventLocked' : 'raidDetail.toasts.eventUnlocked'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Action failed', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.actionFailed'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -681,9 +681,9 @@ async function markComplete() {
   try {
     await eventsApi.completeEvent(guildId.value, event.value.id)
     event.value.status = 'completed'
-    uiStore.showToast('Event marked as completed!', 'success')
+    uiStore.showToast(t('raidDetail.toasts.eventCompleted'), 'success')
   } catch {
-    uiStore.showToast('Failed to complete event', 'error')
+    uiStore.showToast(t('raidDetail.toasts.failedToComplete'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -695,9 +695,9 @@ async function cancelEvent() {
     await eventsApi.cancelEvent(guildId.value, event.value.id)
     event.value.status = 'cancelled'
     confirmCancel.value = false
-    uiStore.showToast('Event cancelled', 'warning')
+    uiStore.showToast(t('raidDetail.toasts.eventCancelled'), 'warning')
   } catch {
-    uiStore.showToast('Failed to cancel event', 'error')
+    uiStore.showToast(t('raidDetail.toasts.failedToCancel'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -707,10 +707,10 @@ async function doDuplicate() {
   actionLoading.value = true
   try {
     const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id)
-    uiStore.showToast('Event duplicated! Redirecting…', 'success')
+    uiStore.showToast(t('raidDetail.toasts.eventDuplicated'), 'success')
     router.push({ name: 'raid-detail', params: { id: newEvent.id } })
   } catch {
-    uiStore.showToast('Failed to duplicate event', 'error')
+    uiStore.showToast(t('raidDetail.toasts.failedToDuplicate'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -754,11 +754,11 @@ function onEditRaidDefChange() {
 async function saveEvent() {
   if (actionLoading.value) return
   if (!editForm.title || !editForm.starts_at_utc) {
-    editError.value = 'Title and date are required'
+    editError.value = t('raidDetail.toasts.titleDateRequired')
     return
   }
   if (editForm.close_signups_at && new Date(editForm.close_signups_at) >= new Date(editForm.starts_at_utc)) {
-    editError.value = 'Close signups time must be before the event start time'
+    editError.value = t('calendar.closeSignupsError')
     return
   }
   editError.value = null
@@ -779,9 +779,9 @@ async function saveEvent() {
     const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)
     event.value = updated
     showEditModal.value = false
-    uiStore.showToast('Event updated!', 'success')
+    uiStore.showToast(t('raidDetail.toasts.eventUpdated'), 'success')
   } catch (err) {
-    editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to update event'
+    editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('raidDetail.toasts.failedToUpdate')
   } finally {
     actionLoading.value = false
   }
@@ -789,7 +789,7 @@ async function saveEvent() {
 
 function onSignedUp(signup) {
   signups.value.push(signup)
-  uiStore.showToast('Signed up successfully!', 'success')
+  uiStore.showToast(t('common.toasts.signedUp'), 'success')
 }
 
 function leaveRaid(signup) {
@@ -815,9 +815,9 @@ async function confirmLeaveRaid() {
       console.warn('Failed to reload signups', err)
       signups.value = signups.value.filter(s => s.id !== signupId)
     }
-    uiStore.showToast('You have left the raid', 'success')
+    uiStore.showToast(t('raidDetail.toasts.leftRaid'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to leave raid', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('raidDetail.toasts.failedToLeave'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -832,7 +832,7 @@ async function onSignupUpdated(updated) {
     const idx = signups.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) signups.value[idx] = updated
   }
-  uiStore.showToast('Signup updated!', 'success')
+  uiStore.showToast(t('raidDetail.toasts.signupUpdated'), 'success')
   editingSignupId.value = null
 }
 
@@ -846,7 +846,7 @@ async function onSignupRemoved(signupId) {
   }
   // Refresh bans in case a permanent kick was applied
   try { bans.value = await signupsApi.getBans(guildId.value, event.value.id) } catch { /* ignore */ }
-  uiStore.showToast('Signup removed', 'success')
+  uiStore.showToast(t('raidDetail.toasts.signupRemoved'), 'success')
 }
 
 async function onLineupSaved(payload) {
@@ -857,7 +857,7 @@ async function onLineupSaved(payload) {
     console.warn('Failed to reload signups after lineup save', err)
   }
   if (!payload?.auto) {
-    uiStore.showToast('Lineup saved!', 'success')
+    uiStore.showToast(t('raidDetail.toasts.lineupSaved'), 'success')
   }
 }
 
@@ -867,7 +867,7 @@ function onLineupUpdated(counts) {
 
 function onAttendanceSaved() {
   hasAttendance.value = true
-  uiStore.showToast('Attendance recorded!', 'success')
+  uiStore.showToast(t('raidDetail.toasts.attendanceRecorded'), 'success')
 }
 
 // --- Character replacement requests ---
@@ -896,7 +896,7 @@ async function resolveReplacement(requestId, action) {
       action === 'confirm' ? 'success' : 'info'
     )
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to process replacement', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'), 'error')
   }
 }
 

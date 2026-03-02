@@ -8,6 +8,7 @@ from flask_login import current_user
 from app.services import event_service, raid_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission
+from app.i18n import _t
 
 bp = Blueprint("templates", __name__)
 
@@ -20,7 +21,7 @@ def _check_membership(guild_id: int):
 @login_required
 def list_templates(guild_id: int):
     if _check_membership(guild_id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     templates = event_service.list_templates(guild_id)
     return jsonify([t.to_dict() for t in templates]), 200
 
@@ -30,10 +31,10 @@ def list_templates(guild_id: int):
 def create_template(guild_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("name") or not data.get("raid_definition_id"):
-        return jsonify({"error": "name and raid_definition_id are required"}), 400
+        return jsonify({"error": _t("api.templates.nameRequired")}), 400
     tmpl = event_service.create_template(guild_id, current_user.id, data)
     return jsonify(tmpl.to_dict()), 201
 
@@ -42,10 +43,10 @@ def create_template(guild_id: int):
 @login_required
 def get_template(guild_id: int, tmpl_id: int):
     if _check_membership(guild_id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
-        return jsonify({"error": "Template not found"}), 404
+        return jsonify({"error": _t("api.templates.notFound")}), 404
     return jsonify(tmpl.to_dict()), 200
 
 
@@ -54,10 +55,10 @@ def get_template(guild_id: int, tmpl_id: int):
 def update_template(guild_id: int, tmpl_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
-        return jsonify({"error": "Template not found"}), 404
+        return jsonify({"error": _t("api.templates.notFound")}), 404
     data = request.get_json(silent=True) or {}
     tmpl = event_service.update_template(tmpl, data)
     return jsonify(tmpl.to_dict()), 200
@@ -68,12 +69,12 @@ def update_template(guild_id: int, tmpl_id: int):
 def delete_template(guild_id: int, tmpl_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
-        return jsonify({"error": "Template not found"}), 404
+        return jsonify({"error": _t("api.templates.notFound")}), 404
     event_service.delete_template(tmpl)
-    return jsonify({"message": "Template deleted"}), 200
+    return jsonify({"message": _t("api.templates.deleted")}), 200
 
 
 @bp.post("/<int:tmpl_id>/copy")
@@ -82,10 +83,10 @@ def copy_template(guild_id: int, tmpl_id: int):
     """Copy a template into another guild."""
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None:
-        return jsonify({"error": "Template not found"}), 404
+        return jsonify({"error": _t("api.templates.notFound")}), 404
     try:
         copy = event_service.copy_template_to_guild(tmpl, guild_id, current_user.id)
     except ValueError as exc:
@@ -98,13 +99,13 @@ def copy_template(guild_id: int, tmpl_id: int):
 def apply_template(guild_id: int, tmpl_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
-        return jsonify({"error": "Template not found"}), 404
+        return jsonify({"error": _t("api.templates.notFound")}), 404
     data = request.get_json(silent=True) or {}
     if not data.get("start_time"):
-        return jsonify({"error": "start_time is required"}), 400
+        return jsonify({"error": _t("api.templates.startRequired")}), 400
 
     # Build event data from template
     rd = raid_service.get_raid_definition(tmpl.raid_definition_id)

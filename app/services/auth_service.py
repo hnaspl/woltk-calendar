@@ -8,6 +8,7 @@ import sqlalchemy as sa
 
 from app.extensions import bcrypt, db
 from app.models.user import User
+from app.i18n import _t
 
 
 def register_user(email: str, username: str, password: str, display_name: Optional[str] = None) -> User:
@@ -16,13 +17,13 @@ def register_user(email: str, username: str, password: str, display_name: Option
         sa.select(User).where(User.email == email)
     ).scalar_one_or_none()
     if existing_email:
-        raise ValueError("Email already registered")
+        raise ValueError(_t("auth.errors.emailTaken"))
 
     existing_username = db.session.execute(
         sa.select(User).where(User.username == username)
     ).scalar_one_or_none()
     if existing_username:
-        raise ValueError("Username already taken")
+        raise ValueError(_t("auth.errors.usernameTaken"))
 
     user = User(
         email=email,
@@ -48,7 +49,7 @@ def change_password(user: User, new_password: str) -> None:
 
 def update_profile(user: User, data: dict) -> User:
     """Update user profile fields."""
-    allowed = {"display_name", "timezone"}
+    allowed = {"display_name", "timezone", "language"}
     for key, value in data.items():
         if key in allowed and value is not None:
             setattr(user, key, value)

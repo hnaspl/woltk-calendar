@@ -12,12 +12,12 @@
       </div>
       <template v-else>
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 class="wow-heading text-xl sm:text-2xl">Raid Definitions</h1>
+        <h1 class="wow-heading text-xl sm:text-2xl">{{ t('raidDefinitions.title') }}</h1>
         <WowButton @click="openAddModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          New Definition
+          {{ t('raidDefinitions.newDefinition') }}
         </WowButton>
       </div>
 
@@ -25,11 +25,11 @@
         <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
       <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
-        You need to create or join a guild first before managing raid definitions. Use the sidebar to create a guild.
+        {{ t('raidDefinitions.noGuild') }}
       </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
       <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
-        No raid definitions yet. Create one to start scheduling raids.
+        {{ t('raidDefinitions.noDefinitions') }}
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <WowCard v-for="def in definitions" :key="def.id">
@@ -38,7 +38,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-text-primary truncate">{{ def.name }}</span>
-                <span v-if="def.is_builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40">Default</span>
+                <span v-if="def.is_builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40">{{ t('raidDefinitions.default') }}</span>
               </div>
               <div class="flex items-center gap-1.5 mt-1">
                 <RaidSizeBadge v-if="def.size" :size="def.size" />
@@ -70,9 +70,9 @@
           </div>
           <div class="flex flex-wrap gap-1.5 sm:gap-2">
             <WowButton v-if="def.is_builtin && hasMultipleGuilds" variant="secondary" class="flex-1 text-xs py-1.5" @click="openCopyModal(def)">
-              📋 Copy to Guild
+              📋 {{ t('raidDefinitions.copyToGuild') }}
             </WowButton>
-            <WowButton v-if="!def.is_builtin || canManageDefaults" variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">Edit</WowButton>
+            <WowButton v-if="!def.is_builtin || canManageDefaults" variant="secondary" class="flex-1 text-xs py-1.5" @click="openEditModal(def)">{{ t('common.buttons.edit') }}</WowButton>
             <WowButton v-if="!def.is_builtin || canManageDefaults" variant="danger" class="text-xs py-1.5 px-3" @click="confirmDelete(def)">✕</WowButton>
           </div>
         </WowCard>
@@ -81,43 +81,43 @@
     </div>
 
     <!-- Add/Edit modal -->
-    <WowModal v-model="showModal" :title="editing ? 'Edit Raid Definition' : 'New Raid Definition'" size="lg">
+    <WowModal v-model="showModal" :title="editing ? t('raidDefinitions.editDefinition') : t('raidDefinitions.newRaidDefinition')" size="lg">
       <form @submit.prevent="saveDef" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Name *</label>
-            <input v-model="form.name" required placeholder="ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.nameRequired') }}</label>
+            <input v-model="form.name" required :placeholder="t('raidDefinitions.namePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Type *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.raidType') }}</label>
             <select v-model="form.raid_type" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select…</option>
+              <option value="">{{ t('common.fields.select') }}</option>
               <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Size *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.sizeRequired') }}</label>
             <select v-model.number="form.size" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select…</option>
-              <option :value="10">10-man</option>
-              <option :value="25">25-man</option>
+              <option value="">{{ t('common.fields.select') }}</option>
+              <option :value="10">{{ t('calendar.tenMan') }}</option>
+              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Guild (Realm)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.guildRealm') }}</label>
             <select v-model.number="selectedGuildId" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Default Duration (minutes)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.defaultDuration') }}</label>
             <input v-model.number="form.default_duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-2">Slot Allocation</label>
+          <label class="block text-xs text-text-muted mb-2">{{ t('raidDefinitions.slotAllocation') }}</label>
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <label class="block text-xs text-text-muted mb-1">Main Tank</label>
@@ -132,7 +132,7 @@
               <input v-model.number="form.melee_dps_slots" type="number" min="0" max="10" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div>
-              <label class="block text-xs text-text-muted mb-1">Healers</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.healers') }}</label>
               <input v-model.number="form.healer_slots" type="number" min="1" max="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div>
@@ -146,12 +146,12 @@
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
           <label class="flex items-center gap-2 cursor-pointer">
             <input v-model="applyToOtherGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-            <span class="text-sm text-text-primary">Also create in my other guilds</span>
+            <span class="text-sm text-text-primary">{{ t('common.copy.copyToOther') }}</span>
           </label>
           <div v-if="applyToOtherGuilds" class="mt-2 space-y-1 pl-6">
             <label class="flex items-center gap-2 cursor-pointer mb-1">
               <input type="checkbox" :checked="allOtherGuildsSelected" @change="toggleAllOtherGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-              <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+              <span class="text-xs text-accent-gold font-semibold">{{ t('common.copy.copyToAll') }}</span>
             </label>
             <label v-for="g in copyTargetGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
               <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -162,19 +162,19 @@
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="saveDef">{{ editing ? 'Save' : 'Create' }}</WowButton>
+          <WowButton variant="secondary" @click="showModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="saveDef">{{ editing ? t('common.buttons.save') : t('common.buttons.create') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Copy to Guild modal -->
-    <WowModal v-model="showCopyModal" title="Copy Definition to Guilds" size="sm">
+    <WowModal v-model="showCopyModal" :title="t('raidDefinitions.copyDefinitionToGuilds')" size="sm">
       <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.name }}</strong> to selected guilds:</p>
       <div class="space-y-1">
         <label class="flex items-center gap-2 cursor-pointer mb-1">
           <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-          <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+          <span class="text-xs text-accent-gold font-semibold">{{ t('common.copy.copyToAll') }}</span>
         </label>
         <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
           <input v-model="copyGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -183,30 +183,30 @@
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showCopyModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">Copy</WowButton>
+          <WowButton variant="secondary" @click="showCopyModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">{{ t('common.buttons.copy') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Confirmation modal for no guilds selected -->
-    <WowModal v-model="showNoGuildConfirm" title="No additional guilds selected" size="sm">
-      <p class="text-text-muted text-sm">This definition will only be created in <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+    <WowModal v-model="showNoGuildConfirm" :title="t('common.copy.noAdditionalGuilds')" size="sm">
+      <p class="text-text-muted text-sm">{{ t('common.copy.onlyCreatedIn') }} <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. {{ t('common.copy.goBackQuestion') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="goBackToForm">Go Back</WowButton>
-          <WowButton @click="confirmSaveCurrentOnly">Continue</WowButton>
+          <WowButton variant="secondary" @click="goBackToForm">{{ t('common.buttons.goBack') }}</WowButton>
+          <WowButton @click="confirmSaveCurrentOnly">{{ t('common.buttons.continue') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Delete confirmation -->
-    <WowModal v-model="showDeleteConfirm" title="Delete Definition" size="sm">
-      <p class="text-text-muted">Delete <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>? Events using this definition won't be affected.</p>
+    <WowModal v-model="showDeleteConfirm" :title="t('raidDefinitions.deleteDefinition')" size="sm">
+      <p class="text-text-muted">Delete <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>? {{ t('raidDefinitions.eventsNotAffected') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doDelete">Delete</WowButton>
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDelete">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -228,12 +228,14 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { RAID_TYPES } from '@/constants'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
+const { t } = useI18n()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_raid_definitions'))
 const canManageDefaults = computed(() => permissions.can('manage_default_definitions'))
@@ -310,7 +312,7 @@ async function loadDefinitions() {
     const data = await raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
     if (version === loadVersion && isActive) definitions.value = data
   } catch {
-    if (version === loadVersion && isActive) error.value = 'Failed to load raid definitions'
+    if (version === loadVersion && isActive) error.value = t('raidDefinitions.failedToLoad')
   } finally {
     if (version === loadVersion && isActive) loading.value = false
   }
@@ -357,9 +359,9 @@ function openCopyModal(def) {
 
 async function saveDef() {
   formError.value = null
-  if (!form.name || !form.raid_type || !form.size) { formError.value = 'Name, type and size are required'; return }
+  if (!form.name || !form.raid_type || !form.size) { formError.value = t('raidDefinitions.toasts.nameTypeSizeRequired'); return }
   const totalSlots = (form.main_tank_slots || 0) + (form.off_tank_slots || 0) + (form.melee_dps_slots || 0) + (form.healer_slots || 0) + (form.range_dps_slots || 0)
-  if (totalSlots > form.size) { formError.value = `Total slots (${totalSlots}) cannot exceed raid size (${form.size})`; return }
+  if (totalSlots > form.size) { formError.value = t('raidDefinitions.toasts.slotsExceedSize', { total: totalSlots, size: form.size }); return }
 
   // Check if multi-guild is checked but no guilds selected
   if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
@@ -383,7 +385,7 @@ async function confirmSaveCurrentOnly() {
 async function doSave() {
   const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
   const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
-  if (!targetGuild) { formError.value = 'Please select a guild'; return }
+  if (!targetGuild) { formError.value = t('common.copy.selectGuild'); return }
   saving.value = true
   // Set realm from selected guild
   const payload = { ...form, realm: targetGuild.realm_name ?? '' }
@@ -404,12 +406,12 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await raidDefsApi.createRaidDefinition(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
+        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? 'Definition updated' : `Definition created in ${guildLabel}`, 'success')
+    uiStore.showToast(editing.value ? t('raidDefinitions.definitionUpdated') : t('raidDefinitions.toasts.definitionCreated', { guild: guildLabel }), 'success')
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -425,8 +427,8 @@ async function doDelete() {
     await raidDefsApi.deleteRaidDefinition(guildStore.currentGuild.id, deleteTarget.value.id)
     definitions.value = definitions.value.filter(d => d.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast('Definition deleted', 'success')
-  } catch { uiStore.showToast('Failed to delete', 'error') }
+    uiStore.showToast(t('raidDefinitions.definitionDeleted'), 'success')
+  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
   finally { saving.value = false }
 }
 
@@ -442,9 +444,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
   } else {
-    uiStore.showToast(`"${copySource.value.name}" copied to ${succeeded} guild(s)`, 'success')
+    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
 }

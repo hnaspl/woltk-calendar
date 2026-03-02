@@ -1,7 +1,7 @@
 <template>
   <AppShell>
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      <h1 class="wow-heading text-xl sm:text-2xl">Guild Settings</h1>
+      <h1 class="wow-heading text-xl sm:text-2xl">{{ t('admin.tabs.guildSettings') }}</h1>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
@@ -9,44 +9,44 @@
       <template v-else>
         <!-- Guild info form -->
         <WowCard>
-          <h2 class="wow-heading text-base mb-4">Guild Information</h2>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
           <form @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
             <div>
-              <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
               <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div>
-              <label class="block text-xs text-text-muted mb-1">Realm *</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
               <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option value="">Select realm…</option>
+                <option value="">{{ t('common.fields.selectRealm') }}</option>
                 <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs text-text-muted mb-1">Description</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
               <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
             </div>
             <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
-            <WowButton type="submit" :loading="saving">Save Changes</WowButton>
+            <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
           </form>
         </WowCard>
 
         <!-- Warmane Guild Lookup -->
         <WowCard>
-          <h2 class="wow-heading text-base mb-4">Warmane Guild Info</h2>
-          <p class="text-text-muted text-sm mb-4">Fetch guild roster and info from the Warmane armory API.</p>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.warmaneInfo') }}</h2>
+          <p class="text-text-muted text-sm mb-4">{{ t('members.fetchRoster') }}</p>
           <form @submit.prevent="fetchWarmaneGuild" class="flex items-end gap-3 max-w-lg">
             <div class="flex-1">
-              <label class="block text-xs text-text-muted mb-1">Guild Name</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildName') }}</label>
               <input v-model="warmaneGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div class="w-40">
-              <label class="block text-xs text-text-muted mb-1">Realm</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
               <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                 <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
-            <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">Fetch</WowButton>
+            <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">{{ t('guildSettings.fetch') }}</WowButton>
           </form>
 
           <div v-if="warmaneError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
@@ -87,18 +87,18 @@
         <!-- Members table -->
         <WowCard>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="wow-heading text-base">Members ({{ members.length }})</h2>
+            <h2 class="wow-heading text-base">{{ t('common.labels.members') }} ({{ members.length }})</h2>
             <WowButton variant="secondary" class="text-xs py-1 px-3" @click="showAddMember = true">
-              + Add Member
+              + {{ t('members.addMember') }}
             </WowButton>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-                  <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.username') }}</th>
+                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.role') }}</th>
+                  <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-default">
@@ -116,10 +116,10 @@
                   </td>
                   <td class="px-4 py-2.5 text-right space-x-2">
                     <WowButton variant="ghost" class="text-xs py-1 px-2" @click="viewMemberChars(m)">
-                      Characters
+                      {{ t('common.labels.characters') }}
                     </WowButton>
                     <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
-                      Remove
+                      {{ t('common.buttons.remove') }}
                     </WowButton>
                   </td>
                 </tr>
@@ -131,29 +131,29 @@
     </div>
 
     <!-- Kick confirmation -->
-    <WowModal v-model="showKickConfirm" title="Remove Member" size="sm">
+    <WowModal v-model="showKickConfirm" :title="t('members.removeMember')" size="sm">
       <p class="text-text-muted">Remove <strong class="text-text-primary">{{ kickTarget?.username ?? kickTarget?.user?.username }}</strong> from the guild?</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showKickConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doKick">Remove</WowButton>
+          <WowButton variant="secondary" @click="showKickConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doKick">{{ t('common.buttons.remove') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Add Member modal -->
-    <WowModal v-model="showAddMember" title="Add Member" size="sm">
+    <WowModal v-model="showAddMember" :title="t('members.addMemberTitle')" size="sm">
       <div class="space-y-3">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Search by username</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('members.searchByUsername') }}</label>
           <input
             v-model="addMemberQuery"
-            placeholder="Type username…"
+            :placeholder="t('members.typePlaceholder')"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
             @input="searchUsers"
           />
         </div>
-        <div v-if="searchingUsers" class="text-xs text-text-muted">Searching…</div>
+        <div v-if="searchingUsers" class="text-xs text-text-muted">{{ t('common.labels.searching') }}</div>
         <div v-if="availableUsers.length > 0" class="max-h-40 overflow-y-auto space-y-1">
           <button
             v-for="u in availableUsers"
@@ -163,19 +163,19 @@
             @click="doAddMember(u)"
           >
             <span class="text-text-primary">{{ u.username }}</span>
-            <span class="text-xs text-accent-gold">Add</span>
+            <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
           </button>
         </div>
         <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers" class="text-xs text-text-muted">
-          No matching users found.
+          {{ t('members.noMatchingUsers') }}
         </div>
       </div>
     </WowModal>
 
     <!-- Member Characters modal -->
     <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="md">
-      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
-      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
+      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">{{ t('common.labels.loadingCharacters') }}</div>
+      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">{{ t('members.noCharacters') }}</div>
       <div v-else class="overflow-x-auto max-h-72 overflow-y-auto">
         <table class="w-full text-xs">
           <thead class="sticky top-0">
@@ -224,11 +224,13 @@ import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
 import api from '@/api'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -287,7 +289,7 @@ async function loadGuildData() {
       members.value = guildStore.members
     }
   } catch {
-    error.value = 'Failed to load guild settings'
+    error.value = t('guildSettings.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -317,7 +319,7 @@ async function saveGuild() {
       realm_name: form.realm,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast('Guild settings saved', 'success')
+    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
@@ -329,9 +331,9 @@ async function updateRole(member, role) {
   try {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
-    uiStore.showToast('Role updated', 'success')
+    uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update role', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'), 'error')
   }
 }
 
@@ -360,9 +362,9 @@ async function doKick() {
     await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
     members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
-    uiStore.showToast('Member removed', 'success')
+    uiStore.showToast(t('common.toasts.memberRemoved'), 'success')
   } catch {
-    uiStore.showToast('Failed to remove member', 'error')
+    uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
   } finally {
     saving.value = false
   }
@@ -390,7 +392,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to load characters', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'), 'error')
   } finally {
     loadingMemberChars.value = false
   }
@@ -418,7 +420,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? 'Failed to search users', 'error')
+      uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToSearch'), 'error')
     } finally {
       searchingUsers.value = false
     }
@@ -433,9 +435,9 @@ async function doAddMember(user) {
     showAddMember.value = false
     addMemberQuery.value = ''
     availableUsers.value = []
-    uiStore.showToast(`${user.username} added to guild`, 'success')
+    uiStore.showToast(t('guildSettings.toasts.memberAdded', { username: user.username }), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
   }
 }
 

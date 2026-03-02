@@ -1,6 +1,12 @@
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+
+/**
+ * Map vue-i18n locale to BCP-47 locale tag for Intl APIs.
+ */
+const LOCALE_MAP = { en: 'en-GB', pl: 'pl-PL' }
 
 /**
  * Timezone formatting composable.
@@ -9,9 +15,15 @@ import { useGuildStore } from '@/stores/guild'
 export function useTimezone() {
   const authStore = useAuthStore()
   const guildStore = useGuildStore()
+  const { locale, t } = useI18n()
 
   const guildTimezone = computed(() => guildStore.currentGuild?.timezone || 'Europe/Warsaw')
   const userTimezone = computed(() => authStore.user?.timezone || 'Europe/Warsaw')
+
+  /** Current BCP-47 locale for Intl formatting. */
+  function intlLocale() {
+    return LOCALE_MAP[locale.value] || 'en-GB'
+  }
 
   /**
    * Format a UTC ISO string into a localized date/time string in the given timezone.
@@ -26,7 +38,7 @@ export function useTimezone() {
         hour: '2-digit', minute: '2-digit', hour12: false,
         timeZone: tz,
       }
-      return date.toLocaleString('en-GB', { ...defaults, ...options })
+      return date.toLocaleString(intlLocale(), { ...defaults, ...options })
     } catch {
       return isoString
     }
@@ -55,7 +67,7 @@ export function useTimezone() {
     if (guildTimezone.value === userTimezone.value) return gTime
     const uTime = formatUserTime(isoString, options)
     if (gTime === uTime) return gTime
-    return `${gTime} (your time: ${uTime})`
+    return `${gTime} (${t('common.time.yourTime')}: ${uTime})`
   }
 
   /**
@@ -70,7 +82,7 @@ export function useTimezone() {
         year: 'numeric', month: 'short', day: '2-digit',
         timeZone: tz,
       }
-      return date.toLocaleDateString('en-GB', { ...defaults, ...options })
+      return date.toLocaleDateString(intlLocale(), { ...defaults, ...options })
     } catch {
       return isoString
     }

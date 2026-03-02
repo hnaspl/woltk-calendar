@@ -19,19 +19,19 @@
       </div>
       <div class="tooltip-details">
         <div class="tooltip-row">
-          <span class="tooltip-label">Status:</span>
+          <span class="tooltip-label">{{ t('common.fields.status') }}:</span>
           <span :class="['tooltip-status', `status-${tooltip.status}`]">{{ tooltip.statusLabel }}</span>
         </div>
         <div class="tooltip-row">
-          <span class="tooltip-label">Size:</span>
-          <span>{{ tooltip.size }}-man {{ tooltip.difficulty }}</span>
+          <span class="tooltip-label">{{ t('calendar.size') }}:</span>
+          <span>{{ tooltip.size }}-man {{ tooltip.difficultyLabel }}</span>
         </div>
         <div v-if="tooltip.signupCount != null" class="tooltip-row">
-          <span class="tooltip-label">Signups:</span>
+          <span class="tooltip-label">{{ t('calendar.signups') }}:</span>
           <span>{{ tooltip.signupCount }} / {{ tooltip.size }}</span>
         </div>
         <div v-if="tooltip.signupExpired" class="tooltip-row tooltip-warning">
-          ⚠ Signup time expired
+          ⚠ {{ t('calendar.signupExpired') }}
         </div>
       </div>
     </div>
@@ -40,11 +40,13 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
+import plLocale from '@fullcalendar/core/locales/pl'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
 
@@ -56,6 +58,7 @@ const props = defineProps({
 const emit = defineEmits(['event-click', 'date-click'])
 
 const { getRaidIcon } = useWowIcons()
+const { t, locale } = useI18n()
 const tzHelper = useTimezone()
 const calendarRef = ref(null)
 
@@ -72,6 +75,7 @@ const tooltip = reactive({
   statusLabel: '',
   size: 25,
   difficulty: 'normal',
+  difficultyLabel: '',
   signupCount: null,
   signupExpired: false
 })
@@ -91,13 +95,20 @@ const tooltipStyle = computed(() => {
   return style
 })
 
-const statusLabels = {
-  open: 'Open',
-  locked: 'Locked',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  draft: 'Draft'
-}
+const statusLabels = computed(() => ({
+  open: t('common.status.open'),
+  locked: t('common.status.locked'),
+  completed: t('common.status.completed'),
+  cancelled: t('common.status.cancelled'),
+  draft: t('common.status.draft')
+}))
+
+const difficultyLabels = computed(() => ({
+  normal: t('calendar.normal'),
+  heroic: t('calendar.heroic')
+}))
+
+const fcLocale = computed(() => locale.value === 'pl' ? plLocale : undefined)
 
 function formatTime(isoStr) {
   if (!isoStr) return ''
@@ -118,9 +129,10 @@ function showTooltip(info) {
   tooltip.time = formatTime(ev.starts_at_utc)
   tooltip.icon = getRaidIcon(ev.raid_type)
   tooltip.status = ev.status ?? 'open'
-  tooltip.statusLabel = statusLabels[tooltip.status] ?? tooltip.status
+  tooltip.statusLabel = statusLabels.value[tooltip.status] ?? tooltip.status
   tooltip.size = ev.raid_size ?? 25
   tooltip.difficulty = ev.difficulty ?? 'normal'
+  tooltip.difficultyLabel = difficultyLabels.value[tooltip.difficulty] ?? tooltip.difficulty
   tooltip.signupCount = ev.signup_count ?? null
 
   // Check if signup time has expired
@@ -234,6 +246,7 @@ function renderEventContent(arg) {
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: props.initialView,
+  locale: fcLocale.value,
   timeZone: tzHelper.guildTimezone.value,
   headerToolbar: {
     left: 'prev,next today',

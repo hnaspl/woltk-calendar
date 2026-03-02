@@ -13,14 +13,14 @@
       <template v-else>
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-xl sm:text-2xl">Raid Templates</h1>
-          <p class="text-text-muted text-sm mt-0.5">Save recurring raid schedules as templates</p>
+          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('templates.title') }}</h1>
+          <p class="text-text-muted text-sm mt-0.5">{{ t('templates.subtitle') }}</p>
         </div>
         <WowButton @click="openAddModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          New Template
+          {{ t('templates.newTemplateTitle') }}
         </WowButton>
       </div>
 
@@ -28,11 +28,11 @@
         <div v-for="i in 3" :key="i" class="h-20 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
       <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
-        You need to create or join a guild first before managing templates. Use the sidebar to create a guild.
+        {{ t('templates.noGuild') }}
       </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
       <div v-else-if="templates.length === 0" class="text-center py-12 text-text-muted">
-        No templates yet. Create a template to quickly schedule recurring raids.
+        {{ t('templates.noTemplates') }}
       </div>
       <div v-else class="space-y-3">
         <WowCard v-for="tpl in templates" :key="tpl.id">
@@ -44,17 +44,17 @@
                 <RaidSizeBadge v-if="tpl.raid_size" :size="tpl.raid_size" />
                 <span v-if="tpl.difficulty === 'heroic'" class="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-600">Heroic</span>
               </div>
-              <div class="text-xs text-text-muted mt-1">{{ tpl.default_instructions ?? 'No instructions' }}</div>
+              <div class="text-xs text-text-muted mt-1">{{ tpl.default_instructions ?? t('templates.noInstructions') }}</div>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(tpl)">
-                📋 Copy
+                📋 {{ t('common.buttons.copy') }}
               </WowButton>
               <WowButton variant="secondary" class="text-xs py-1.5" @click="openApply(tpl)">
-                Apply
+                {{ t('common.buttons.apply') }}
               </WowButton>
               <WowButton variant="secondary" class="text-xs py-1.5" @click="openEditModal(tpl)">
-                Edit
+                {{ t('common.buttons.edit') }}
               </WowButton>
               <WowButton variant="danger" class="text-xs py-1.5 px-2" @click="confirmDelete(tpl)">✕</WowButton>
             </div>
@@ -65,38 +65,38 @@
     </div>
 
     <!-- Add/Edit template modal -->
-    <WowModal v-model="showModal" :title="editing ? 'Edit Template' : 'New Template'" size="md">
+    <WowModal v-model="showModal" :title="editing ? t('templates.editTemplate') : t('templates.newTemplateTitle')" size="md">
       <form @submit.prevent="saveTemplate" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Template Name *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('templates.templateName') }}</label>
           <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Raid Definition *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="">Select raid…</option>
+            <option value="">{{ t('templates.selectRaid') }}</option>
             <option v-for="d in raidDefinitions" :key="d.id" :value="d.id">{{ d.name }}</option>
           </select>
-          <p v-if="raidDefinitions.length === 0" class="text-xs text-text-muted mt-1">No raid definitions found. Create one in Raid Definitions first.</p>
+          <p v-if="raidDefinitions.length === 0" class="text-xs text-text-muted mt-1">{{ t('templates.noRaidDefs') }}</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Size</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
             <select v-model.number="form.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">10-man</option>
-              <option :value="25">25-man</option>
+              <option :value="10">{{ t('calendar.tenMan') }}</option>
+              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
             <select v-model="form.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="normal">Normal</option>
-              <option value="heroic">Heroic</option>
+              <option value="normal">{{ t('calendar.normal') }}</option>
+              <option value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Instructions</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.instructions') }}</label>
           <textarea v-model="form.default_instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
@@ -104,12 +104,12 @@
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
           <label class="flex items-center gap-2 cursor-pointer">
             <input v-model="applyToOtherGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-            <span class="text-sm text-text-primary">Also create in my other guilds</span>
+            <span class="text-sm text-text-primary">{{ t('common.copy.copyToOther') }}</span>
           </label>
           <div v-if="applyToOtherGuilds" class="mt-2 space-y-1 pl-6">
             <label class="flex items-center gap-2 cursor-pointer mb-1">
               <input type="checkbox" :checked="allOtherGuildsSelected" @change="toggleAllOtherGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-              <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+              <span class="text-xs text-accent-gold font-semibold">{{ t('common.copy.copyToAll') }}</span>
             </label>
             <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
               <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -120,19 +120,19 @@
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="saveTemplate">{{ editing ? 'Save' : 'Create' }}</WowButton>
+          <WowButton variant="secondary" @click="showModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="saveTemplate">{{ editing ? t('common.buttons.save') : t('common.buttons.create') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Copy to Guild modal -->
-    <WowModal v-model="showCopyModal" title="Copy Template to Guilds" size="sm">
+    <WowModal v-model="showCopyModal" :title="t('templates.copyTemplateToGuilds')" size="sm">
       <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.name }}</strong> to selected guilds:</p>
       <div class="space-y-1">
         <label class="flex items-center gap-2 cursor-pointer mb-1">
           <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-          <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+          <span class="text-xs text-accent-gold font-semibold">{{ t('common.copy.copyToAll') }}</span>
         </label>
         <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
           <input v-model="copyGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -141,47 +141,47 @@
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showCopyModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">Copy</WowButton>
+          <WowButton variant="secondary" @click="showCopyModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">{{ t('common.buttons.copy') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Confirmation modal for no guilds selected -->
-    <WowModal v-model="showNoGuildConfirm" title="No additional guilds selected" size="sm">
-      <p class="text-text-muted text-sm">This template will only be created in <strong class="text-text-primary">{{ currentGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+    <WowModal v-model="showNoGuildConfirm" :title="t('common.copy.noAdditionalGuilds')" size="sm">
+      <p class="text-text-muted text-sm">{{ t('common.copy.onlyCreatedIn') }} <strong class="text-text-primary">{{ currentGuildLabel }}</strong>. {{ t('common.copy.goBackQuestion') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="goBackToForm">Go Back</WowButton>
-          <WowButton @click="confirmSaveCurrentOnly">Continue</WowButton>
+          <WowButton variant="secondary" @click="goBackToForm">{{ t('common.buttons.goBack') }}</WowButton>
+          <WowButton @click="confirmSaveCurrentOnly">{{ t('common.buttons.continue') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Apply template modal -->
-    <WowModal v-model="showApply" title="Apply Template" size="sm">
+    <WowModal v-model="showApply" :title="t('templates.applyTemplate')" size="sm">
       <div class="space-y-4">
         <p class="text-text-muted text-sm">Schedule a new event from template <strong class="text-text-primary">{{ applyTarget?.name }}</strong>.</p>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }}</label>
           <input v-model="applyDate" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showApply = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="doApply">Schedule</WowButton>
+          <WowButton variant="secondary" @click="showApply = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="doApply">{{ t('common.buttons.schedule') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Delete confirmation -->
-    <WowModal v-model="showDeleteConfirm" title="Delete Template" size="sm">
-      <p class="text-text-muted">Delete template <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>?</p>
+    <WowModal v-model="showDeleteConfirm" :title="t('templates.deleteTemplate')" size="sm">
+      <p class="text-text-muted">{{ t('templates.deleteTemplateConfirm') }} <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>?</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doDelete">Delete</WowButton>
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDelete">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -202,12 +202,14 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useTimezone } from '@/composables/useTimezone'
 import * as templatesApi from '@/api/templates'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
+const { t } = useI18n()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_templates'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
@@ -281,7 +283,7 @@ async function loadData() {
       raidDefinitions.value = defs
     }
   } catch {
-    if (version === loadVersion && isActive) error.value = 'Failed to load templates'
+    if (version === loadVersion && isActive) error.value = t('templates.failedToLoad')
   } finally {
     if (version === loadVersion && isActive) loading.value = false
   }
@@ -327,7 +329,7 @@ function openCopyModal(tpl) {
 
 async function saveTemplate() {
   formError.value = null
-  if (!form.name || !form.raid_definition_id) { formError.value = 'Name and raid definition are required'; return }
+  if (!form.name || !form.raid_definition_id) { formError.value = t('templates.toasts.nameRaidDefRequired'); return }
 
   // Check if multi-guild is checked but no guilds selected
   if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
@@ -370,12 +372,12 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await templatesApi.createTemplate(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
+        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
       }
     }
     showModal.value = false
     const guildLabel = currentGuildLabel.value
-    uiStore.showToast(editing.value ? 'Template updated' : `Template created in ${guildLabel}`, 'success')
+    uiStore.showToast(editing.value ? t('templates.toasts.templateUpdated') : t('templates.toasts.templateCreated', { guild: guildLabel }), 'success')
   } catch (err) {
     formError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally { saving.value = false }
@@ -387,9 +389,9 @@ async function doApply() {
   try {
     await templatesApi.applyTemplate(guildStore.currentGuild.id, applyTarget.value.id, { start_time: tzHelper.guildLocalToUtc(applyDate.value) })
     showApply.value = false
-    uiStore.showToast('Event scheduled from template!', 'success')
+    uiStore.showToast(t('templates.eventScheduled'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to apply template', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('templates.toasts.failedToApply'), 'error')
   } finally { saving.value = false }
 }
 
@@ -399,8 +401,8 @@ async function doDelete() {
     await templatesApi.deleteTemplate(guildStore.currentGuild.id, deleteTarget.value.id)
     templates.value = templates.value.filter(t => t.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast('Template deleted', 'success')
-  } catch { uiStore.showToast('Failed to delete', 'error') }
+    uiStore.showToast(t('templates.templateDeleted'), 'success')
+  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
   finally { saving.value = false }
 }
 
@@ -416,9 +418,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
   } else {
-    uiStore.showToast(`"${copySource.value.name}" copied to ${succeeded} guild(s)`, 'success')
+    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
 }

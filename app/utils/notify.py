@@ -5,6 +5,11 @@ All notification-creating functions follow the same pattern:
   2. Push a ``notification`` Socket.IO event to the target user so the
      bell badge updates in real time.
 
+Notifications store **both** a pre-rendered English fallback (title/body)
+and i18n translation keys + params (title_key/body_key + title_params/body_params).
+The frontend renders notifications using the i18n keys when available,
+falling back to the pre-rendered text.
+
 Notification types (stored in Notification.type):
   - signup_confirmed        – your signup has been confirmed
   - signup_benched          – you were placed on the bench
@@ -28,6 +33,7 @@ Notification types (stored in Notification.type):
 
 from __future__ import annotations
 
+import json as _json
 import logging
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -82,6 +88,11 @@ def _notify(
     body: Optional[str] = None,
     guild_id: Optional[int] = None,
     raid_event_id: Optional[int] = None,
+    *,
+    title_key: Optional[str] = None,
+    body_key: Optional[str] = None,
+    title_params: Optional[dict] = None,
+    body_params: Optional[dict] = None,
 ) -> None:
     """Create a notification and push it in real time."""
     try:
@@ -92,6 +103,10 @@ def _notify(
             body=body,
             guild_id=guild_id,
             raid_event_id=raid_event_id,
+            title_key=title_key,
+            body_key=body_key,
+            title_params=title_params,
+            body_params=body_params,
         )
         _push_to_user(user_id)
     except Exception:
@@ -144,49 +159,76 @@ def _char_name(signup) -> str:
 
 def notify_signup_confirmed(signup, event) -> None:
     """Notify the player that their signup is confirmed (going)."""
+    char = _char_name(signup)
+    etag = _event_tag(event)
+    role = _role_name(signup.chosen_role)
     _notify(
         user_id=signup.user_id,
         notification_type="signup_confirmed",
-        title=f"{_char_name(signup)} confirmed for {_event_tag(event)}",
-        body=f"Your character {_char_name(signup)} is signed up as {_role_name(signup.chosen_role)} in {event.title}.",
+        title=f"{char} confirmed for {etag}",
+        body=f"Your character {char} is signed up as {role} in {event.title}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.signupConfirmed.title",
+        body_key="notify.signupConfirmed.body",
+        title_params={"character": char, "event": etag},
+        body_params={"character": char, "role": role, "eventTitle": event.title},
     )
 
 
 def notify_signup_benched(signup, event) -> None:
     """Notify the player that they were placed on the bench."""
+    char = _char_name(signup)
+    etag = _event_tag(event)
+    role = _role_name(signup.chosen_role)
     _notify(
         user_id=signup.user_id,
         notification_type="signup_benched",
-        title=f"{_char_name(signup)} benched for {_event_tag(event)}",
-        body=f"Your character {_char_name(signup)} ({_role_name(signup.chosen_role)}) is on the bench queue for {event.title}. You'll be auto-promoted if a spot opens up.",
+        title=f"{char} benched for {etag}",
+        body=f"Your character {char} ({role}) is on the bench queue for {event.title}. You'll be auto-promoted if a spot opens up.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.signupBenched.title",
+        body_key="notify.signupBenched.body",
+        title_params={"character": char, "event": etag},
+        body_params={"character": char, "role": role, "eventTitle": event.title},
     )
 
 
 def notify_signup_promoted(signup, event) -> None:
     """Notify the player that they were promoted from bench to roster."""
+    char = _char_name(signup)
+    etag = _event_tag(event)
+    role = _role_name(signup.chosen_role)
     _notify(
         user_id=signup.user_id,
         notification_type="signup_promoted",
-        title=f"🎉 {_char_name(signup)} promoted to roster for {_event_tag(event)}",
-        body=f"A {_role_name(signup.chosen_role)} slot opened up and {_char_name(signup)} has been moved from the bench to the active roster!",
+        title=f"🎉 {char} promoted to roster for {etag}",
+        body=f"A {role} slot opened up and {char} has been moved from the bench to the active roster!",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.signupPromoted.title",
+        body_key="notify.signupPromoted.body",
+        title_params={"character": char, "event": etag},
+        body_params={"role": role, "character": char},
     )
 
 
 def notify_signup_declined_by_officer(signup, event, officer_name: str) -> None:
     """Notify the player that an officer declined their signup."""
+    char = _char_name(signup)
+    etag = _event_tag(event)
     _notify(
         user_id=signup.user_id,
         notification_type="signup_declined",
-        title=f"{_char_name(signup)} declined for {_event_tag(event)}",
-        body=f"Your character {_char_name(signup)} was declined by {officer_name} for {event.title}.",
+        title=f"{char} declined for {etag}",
+        body=f"Your character {char} was declined by {officer_name} for {event.title}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.signupDeclined.title",
+        body_key="notify.signupDeclined.body",
+        title_params={"character": char, "event": etag},
+        body_params={"character": char, "officer": officer_name, "eventTitle": event.title},
     )
 
 
@@ -194,38 +236,56 @@ def notify_signup_removed_by_officer(signup, event, officer_name: str) -> None:
     """Notify the player that an officer removed their signup."""
     user_id = signup.user_id if hasattr(signup, "user_id") else signup
     char = _char_name(signup) if hasattr(signup, "character") else "your character"
+    etag = _event_tag(event)
     _notify(
         user_id=user_id,
         notification_type="signup_removed",
-        title=f"{char} removed from {_event_tag(event)}",
+        title=f"{char} removed from {etag}",
         body=f"Your character {char} was removed from {event.title} by {officer_name}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.signupRemoved.title",
+        body_key="notify.signupRemoved.body",
+        title_params={"character": char, "event": etag},
+        body_params={"character": char, "eventTitle": event.title, "officer": officer_name},
     )
 
 
 def notify_signup_permanently_kicked(user_id, event, officer_name: str, char_name: str) -> None:
     """Notify the player that their character was permanently kicked from the raid."""
     uid = user_id.user_id if hasattr(user_id, "user_id") else user_id
+    etag = _event_tag(event)
     _notify(
         user_id=uid,
         notification_type="signup_permanently_kicked",
-        title=f"⛔ {char_name} permanently kicked from {_event_tag(event)}",
+        title=f"⛔ {char_name} permanently kicked from {etag}",
         body=f"Your character {char_name} has been permanently kicked from {event.title} by {officer_name}. You cannot sign up with this character again for this raid.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.signupKicked.title",
+        body_key="notify.signupKicked.body",
+        title_params={"character": char_name, "event": etag},
+        body_params={"character": char_name, "eventTitle": event.title, "officer": officer_name},
     )
 
 
 def notify_role_changed(signup, event, old_role: str, new_role: str) -> None:
     """Notify the player that their role/assignment was changed."""
+    char = _char_name(signup)
+    etag = _event_tag(event)
+    old_r = _role_name(old_role)
+    new_r = _role_name(new_role)
     _notify(
         user_id=signup.user_id,
         notification_type="signup_role_changed",
-        title=f"{_char_name(signup)} role changed for {_event_tag(event)}",
-        body=f"{_char_name(signup)}'s role in {event.title} was changed from {_role_name(old_role)} to {_role_name(new_role)}.",
+        title=f"{char} role changed for {etag}",
+        body=f"{char}'s role in {event.title} was changed from {old_r} to {new_r}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.roleChanged.title",
+        body_key="notify.roleChanged.body",
+        title_params={"character": char, "event": etag},
+        body_params={"character": char, "eventTitle": event.title, "oldRole": old_r, "newRole": new_r},
     )
 
 
@@ -237,13 +297,19 @@ def notify_queue_position_changed(
     new_position: int,
 ) -> None:
     """Notify the player that their position in the bench queue changed."""
+    etag = _event_tag(event)
+    role_label = _role_name(role)
     _notify(
         user_id=user_id,
         notification_type="queue_position_changed",
-        title=f"{character_name} is now #{new_position} in queue for {_event_tag(event)}",
-        body=f"{character_name} is now #{new_position} in the {_role_name(role)} bench queue for {event.title}.",
+        title=f"{character_name} is now #{new_position} in queue for {etag}",
+        body=f"{character_name} is now #{new_position} in the {role_label} bench queue for {event.title}.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.queuePositionChanged.title",
+        body_key="notify.queuePositionChanged.body",
+        title_params={"character": character_name, "position": str(new_position), "event": etag},
+        body_params={"character": character_name, "position": str(new_position), "role": role_label, "eventTitle": event.title},
     )
 
 
@@ -293,6 +359,9 @@ def notify_event_created(event, guild_id: int) -> None:
     if not member_ids:
         return
 
+    t_params = {"eventTitle": event.title, "guildTag": guild_tag}
+    b_params = {"starts": starts}
+
     now = datetime.now(timezone.utc)
     db.session.bulk_save_objects([
         Notification(
@@ -303,6 +372,10 @@ def notify_event_created(event, guild_id: int) -> None:
             guild_id=guild_id,
             raid_event_id=event.id,
             created_at=now,
+            title_key="notify.eventCreated.title",
+            body_key="notify.eventCreated.body",
+            title_params=_json.dumps(t_params),
+            body_params=_json.dumps(b_params),
         )
         for uid in member_ids
     ])
@@ -323,53 +396,73 @@ def _get_signed_up_users(event_id: int) -> list[int]:
 
 def notify_event_cancelled(event) -> None:
     """Notify all signed-up players that the event was cancelled."""
+    etag = _event_tag(event)
     for uid in _get_signed_up_users(event.id):
         _notify(
             user_id=uid,
             notification_type="event_cancelled",
-            title=f"❌ Raid cancelled: {_event_tag(event)}",
+            title=f"❌ Raid cancelled: {etag}",
             body=f"The raid \"{event.title}\" has been cancelled.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.eventCancelled.title",
+            body_key="notify.eventCancelled.body",
+            title_params={"event": etag},
+            body_params={"eventTitle": event.title},
         )
 
 
 def notify_event_locked(event) -> None:
     """Notify all signed-up players that signups are now closed."""
+    etag = _event_tag(event)
     for uid in _get_signed_up_users(event.id):
         _notify(
             user_id=uid,
             notification_type="event_locked",
-            title=f"🔒 Signups closed: {_event_tag(event)}",
+            title=f"🔒 Signups closed: {etag}",
             body=f"Signups are now closed for \"{event.title}\". The roster is being finalized.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.eventLocked.title",
+            body_key="notify.eventLocked.body",
+            title_params={"event": etag},
+            body_params={"eventTitle": event.title},
         )
 
 
 def notify_event_updated(event) -> None:
     """Notify all signed-up players that event details changed."""
+    etag = _event_tag(event)
     for uid in _get_signed_up_users(event.id):
         _notify(
             user_id=uid,
             notification_type="event_updated",
-            title=f"✏️ Raid updated: {_event_tag(event)}",
+            title=f"✏️ Raid updated: {etag}",
             body=f"Event details for \"{event.title}\" have been updated. Check for any schedule or roster changes.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.eventUpdated.title",
+            body_key="notify.eventUpdated.body",
+            title_params={"event": etag},
+            body_params={"eventTitle": event.title},
         )
 
 
 def notify_event_completed(event) -> None:
     """Notify all signed-up players that the event was completed."""
+    etag = _event_tag(event)
     for uid in _get_signed_up_users(event.id):
         _notify(
             user_id=uid,
             notification_type="event_completed",
-            title=f"✅ Raid completed: {_event_tag(event)}",
+            title=f"✅ Raid completed: {etag}",
             body=f"The raid \"{event.title}\" has been marked as completed. GG!",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.eventCompleted.title",
+            body_key="notify.eventCompleted.body",
+            title_params={"event": etag},
+            body_params={"eventTitle": event.title},
         )
 
 
@@ -387,17 +480,26 @@ def notify_member_joined_guild(user_id: int, guild) -> None:
             title=f"👤 New member joined {guild.name} {tag}",
             body="A new member has joined your guild.",
             guild_id=guild.id,
+            title_key="notify.memberJoined.title",
+            body_key="notify.memberJoined.body",
+            title_params={"guildName": guild.name, "guildTag": tag},
+            body_params={},
         )
 
 
 def notify_removed_from_guild(user_id: int, guild) -> None:
     """Notify a user that they were removed from a guild."""
+    tag = _guild_tag(guild)
     _notify(
         user_id=user_id,
         notification_type="guild_member_removed",
-        title=f"Removed from {guild.name} {_guild_tag(guild)}",
+        title=f"Removed from {guild.name} {tag}",
         body="You have been removed from this guild.",
         guild_id=guild.id,
+        title_key="notify.removedFromGuild.title",
+        body_key="notify.removedFromGuild.body",
+        title_params={"guildName": guild.name, "guildTag": tag},
+        body_params={},
     )
 
 
@@ -409,12 +511,17 @@ def notify_guild_role_changed(user_id: int, guild, new_role: str) -> None:
         sa.select(SystemRole.display_name).where(SystemRole.name == new_role)
     ).scalar_one_or_none()
     display = display_name if display_name else new_role.replace("_", " ").title()
+    tag = _guild_tag(guild)
     _notify(
         user_id=user_id,
         notification_type="guild_role_changed",
-        title=f"🏅 Rank changed to {display} in {guild.name} {_guild_tag(guild)}",
+        title=f"🏅 Rank changed to {display} in {guild.name} {tag}",
         body=f"Your rank has been changed to {display}.",
         guild_id=guild.id,
+        title_key="notify.guildRoleChanged.title",
+        body_key="notify.guildRoleChanged.body",
+        title_params={"role": display, "guildName": guild.name, "guildTag": tag},
+        body_params={"role": display},
     )
 
 
@@ -424,27 +531,37 @@ def notify_guild_role_changed(user_id: int, guild, new_role: str) -> None:
 
 def notify_officers_new_signup(signup, event, character_name: str) -> None:
     """Notify officers that someone signed up for a raid."""
+    role = _role_name(signup.chosen_role)
     for officer_id in _get_officers(event.guild_id, exclude_user_id=signup.user_id):
         _notify(
             user_id=officer_id,
             notification_type="officer_signup_new",
             title=f"{character_name} signed up for {event.title}",
-            body=f"{character_name} signed up as {_role_name(signup.chosen_role)} for {event.title}.",
+            body=f"{character_name} signed up as {role} for {event.title}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.officerNewSignup.title",
+            body_key="notify.officerNewSignup.body",
+            title_params={"character": character_name, "eventTitle": event.title},
+            body_params={"character": character_name, "role": role, "eventTitle": event.title},
         )
 
 
 def notify_officers_signup_left(signup, event, character_name: str) -> None:
     """Notify officers that someone left/declined a raid."""
+    role = _role_name(signup.chosen_role)
     for officer_id in _get_officers(event.guild_id, exclude_user_id=signup.user_id):
         _notify(
             user_id=officer_id,
             notification_type="officer_signup_left",
             title=f"{character_name} left {event.title}",
-            body=f"{character_name} (previously {_role_name(signup.chosen_role)}) left {event.title}.",
+            body=f"{character_name} (previously {role}) left {event.title}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.officerSignupLeft.title",
+            body_key="notify.officerSignupLeft.body",
+            title_params={"character": character_name, "eventTitle": event.title},
+            body_params={"character": character_name, "role": role, "eventTitle": event.title},
         )
 
 
@@ -452,14 +569,19 @@ def notify_officers_signup_withdrawn(
     event, user_id: int, character_name: str, role: str,
 ) -> None:
     """Notify officers that a player withdrew from a raid (post-deletion)."""
+    role_label = _role_name(role)
     for officer_id in _get_officers(event.guild_id, exclude_user_id=user_id):
         _notify(
             user_id=officer_id,
             notification_type="officer_signup_left",
             title=f"{character_name} left {event.title}",
-            body=f"{character_name} (previously {_role_name(role)}) withdrew from {event.title}.",
+            body=f"{character_name} (previously {role_label}) withdrew from {event.title}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.officerSignupLeft.title",
+            body_key="notify.officerSignupWithdrawn.body",
+            title_params={"character": character_name, "eventTitle": event.title},
+            body_params={"character": character_name, "role": role_label, "eventTitle": event.title},
         )
 
 
@@ -473,6 +595,10 @@ def notify_officers_lineup_changed(event, changed_by_user_id: int) -> None:
             body=f"Another officer has modified the raid lineup for {event.title}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.officerLineupChanged.title",
+            body_key="notify.officerLineupChanged.body",
+            title_params={"eventTitle": event.title},
+            body_params={"eventTitle": event.title},
         )
 
 
@@ -489,6 +615,10 @@ def notify_ownership_transferred(guild, new_owner_id: int, old_owner_id: int) ->
         title=f"🏰 You are now the owner of {guild.name} {tag}",
         body=f"You have been granted full ownership of {guild.name}. You now have all guild owner privileges and responsibilities.",
         guild_id=guild.id,
+        title_key="notify.ownershipTransferred.newOwner.title",
+        body_key="notify.ownershipTransferred.newOwner.body",
+        title_params={"guildName": guild.name, "guildTag": tag},
+        body_params={"guildName": guild.name},
     )
     _notify(
         user_id=old_owner_id,
@@ -496,6 +626,10 @@ def notify_ownership_transferred(guild, new_owner_id: int, old_owner_id: int) ->
         title=f"Guild ownership transferred for {guild.name} {tag}",
         body=f"You are no longer the owner of {guild.name}. Your role has been changed to member.",
         guild_id=guild.id,
+        title_key="notify.ownershipTransferred.oldOwner.title",
+        body_key="notify.ownershipTransferred.oldOwner.body",
+        title_params={"guildName": guild.name, "guildTag": tag},
+        body_params={"guildName": guild.name},
     )
 
 
@@ -504,36 +638,51 @@ def notify_character_replacement_requested(signup, event, officer_name: str, rep
     old_name = replacement.old_character.name if replacement.old_character else "your character"
     new_name = replacement.new_character.name if replacement.new_character else "another character"
     reason = f" Reason: {replacement.reason}" if replacement.reason else ""
+    etag = _event_tag(event)
     _notify(
         user_id=signup.user_id,
         notification_type="character_replacement_requested",
-        title=f"🔄 Character swap requested for {_event_tag(event)}",
+        title=f"🔄 Character swap requested for {etag}",
         body=f"{officer_name} wants to replace {old_name} with {new_name} in {event.title}.{reason} Please confirm, decline, or leave the raid.",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.replacementRequested.title",
+        body_key="notify.replacementRequested.body",
+        title_params={"event": etag},
+        body_params={"officer": officer_name, "oldCharacter": old_name, "newCharacter": new_name, "eventTitle": event.title, "reason": reason},
     )
 
 
 def notify_character_replacement_resolved(replacement, event, signup, action: str) -> None:
     """Notify the requesting officer about the replacement resolution."""
     char_name = replacement.old_character.name if replacement.old_character else "character"
+    etag = _event_tag(event)
     if action == "confirm":
+        new_char = replacement.new_character.name if replacement.new_character else "new character"
         _notify(
             user_id=replacement.requested_by,
             notification_type="character_replacement_confirmed",
-            title=f"✅ Character swap accepted for {_event_tag(event)}",
-            body=f"The player accepted the character swap from {char_name} to {replacement.new_character.name if replacement.new_character else 'new character'} in {event.title}.",
+            title=f"✅ Character swap accepted for {etag}",
+            body=f"The player accepted the character swap from {char_name} to {new_char} in {event.title}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.replacementConfirmed.title",
+            body_key="notify.replacementConfirmed.body",
+            title_params={"event": etag},
+            body_params={"oldCharacter": char_name, "newCharacter": new_char, "eventTitle": event.title},
         )
     elif action == "decline":
         _notify(
             user_id=replacement.requested_by,
             notification_type="character_replacement_declined",
-            title=f"❌ Character swap declined for {_event_tag(event)}",
+            title=f"❌ Character swap declined for {etag}",
             body=f"The player declined the character swap for {char_name} in {event.title}.",
             guild_id=event.guild_id,
             raid_event_id=event.id,
+            title_key="notify.replacementDeclined.title",
+            body_key="notify.replacementDeclined.body",
+            title_params={"event": etag},
+            body_params={"character": char_name, "eventTitle": event.title},
         )
 
 
@@ -556,11 +705,16 @@ def notify_attendance_recorded(record, event) -> None:
         char_name = "your character"
     outcome_label = _OUTCOME_LABELS.get(record.outcome, record.outcome)
     note_text = f" Note: {record.note}" if record.note else ""
+    etag = _event_tag(event)
     _notify(
         user_id=record.user_id,
         notification_type="attendance_recorded",
-        title=f"📋 Attendance recorded for {_event_tag(event)}",
+        title=f"📋 Attendance recorded for {etag}",
         body=f"{char_name}: {outcome_label}.{note_text}",
         guild_id=event.guild_id,
         raid_event_id=event.id,
+        title_key="notify.attendanceRecorded.title",
+        body_key="notify.attendanceRecorded.body",
+        title_params={"event": etag},
+        body_params={"character": char_name, "outcome": record.outcome, "note": note_text},
     )

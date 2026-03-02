@@ -8,12 +8,12 @@
           alt="Raid Calendar"
           class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 border-border-gold mx-auto mb-4 shadow-gold"
         />
-        <h1 class="wow-heading text-xl sm:text-2xl mb-1">Raid Calendar</h1>
-        <p class="text-text-muted text-sm">WotLK Warmane Guild Management</p>
+        <h1 class="wow-heading text-xl sm:text-2xl mb-1">{{ t('auth.appTitle') }}</h1>
+        <p class="text-text-muted text-sm">{{ t('auth.appSubtitle') }}</p>
       </div>
 
       <WowCard :gold="true">
-        <h2 class="text-lg font-semibold text-text-primary mb-6">Sign In</h2>
+        <h2 class="text-lg font-semibold text-text-primary mb-6">{{ t('auth.signIn') }}</h2>
 
         <div v-if="error" class="mb-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">
           {{ error }}
@@ -21,38 +21,38 @@
 
         <form @submit.prevent="handleLogin" class="space-y-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Email</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.email') }}</label>
             <input
               v-model="email"
               type="email"
               autocomplete="email"
               required
-              placeholder="you@example.com"
+              :placeholder="t('auth.placeholders.email')"
               class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2.5 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50 transition-colors"
             />
           </div>
 
           <div>
-            <label class="block text-xs text-text-muted mb-1">Password</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('auth.password') }}</label>
             <input
               v-model="password"
               type="password"
               autocomplete="current-password"
               required
-              placeholder="••••••••"
+              :placeholder="t('auth.placeholders.password')"
               class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2.5 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50 transition-colors"
             />
           </div>
 
           <WowButton type="submit" :loading="loading" class="w-full mt-2">
-            Sign In
+            {{ t('auth.signIn') }}
           </WowButton>
         </form>
 
         <p class="text-center text-sm text-text-muted mt-6">
-          No account?
+          {{ t('auth.noAccount') }}
           <RouterLink to="/register" class="text-accent-gold hover:text-yellow-400 transition-colors">
-            Register
+            {{ t('auth.register') }}
           </RouterLink>
         </p>
       </WowCard>
@@ -63,11 +63,13 @@
 <script setup>
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/composables/useAuth'
 import { useWowIcons } from '@/composables/useWowIcons'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 
+const { t } = useI18n()
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
 
@@ -84,7 +86,7 @@ async function handleLogin() {
   try {
     await login(email.value, password.value)
   } catch (err) {
-    error.value = err?.response?.data?.message ?? authError.value ?? 'Login failed. Please check your credentials.'
+    error.value = err?.response?.data?.message ?? authError.value ?? t('auth.loginFailed')
   } finally {
     loading.value = false
   }

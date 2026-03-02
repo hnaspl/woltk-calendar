@@ -10,6 +10,7 @@ from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_lineup_changed, emit_signups_changed
 from app.utils import notify
+from app.i18n import _t
 
 bp = Blueprint("lineup", __name__)
 
@@ -61,10 +62,10 @@ def _build_guild_role_map_for_event(guild_id: int, event_id: int) -> dict:
 @login_required
 def get_lineup(guild_id: int, event_id: int):
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
-        return jsonify({"error": "Event not found"}), 404
+        return jsonify({"error": _t("api.events.notFound")}), 404
     role_map = _build_guild_role_map_for_event(guild_id, event_id)
     grouped = lineup_service.get_lineup_grouped(event_id, guild_role_map=role_map)
     return jsonify(grouped), 200
@@ -75,12 +76,12 @@ def get_lineup(guild_id: int, event_id: int):
 def update_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "update_lineup"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
-        return jsonify({"error": "Event not found"}), 404
+        return jsonify({"error": _t("api.events.notFound")}), 404
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify lineup on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.lineup.cannotModifyCompleted")}), 403
 
     data = request.get_json(silent=True) or {}
 
@@ -96,7 +97,7 @@ def update_lineup(guild_id: int, event_id: int):
             fresh = lineup_service.get_lineup_grouped(event_id)
             return jsonify({
                 "error": "lineup_conflict",
-                "message": "Lineup was modified by another officer",
+                "message": _t("api.lineup.conflict"),
                 "lineup": fresh,
             }), 409
         except Exception as exc:
@@ -109,7 +110,7 @@ def update_lineup(guild_id: int, event_id: int):
     # Legacy format: {slots: [{slot_group, slot_index, signup_id, ...}, ...]}
     slots_data = data.get("slots", [])
     if not isinstance(slots_data, list):
-        return jsonify({"error": "slots must be a list"}), 400
+        return jsonify({"error": _t("api.lineup.slotsMustBeList")}), 400
 
     try:
         slots = lineup_service.update_lineup(event_id, slots_data, current_user.id)
@@ -124,12 +125,12 @@ def update_lineup(guild_id: int, event_id: int):
 def confirm_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "confirm_lineup"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
-        return jsonify({"error": "Event not found"}), 404
+        return jsonify({"error": _t("api.events.notFound")}), 404
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify lineup on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.lineup.cannotModifyCompleted")}), 403
     slots = lineup_service.confirm_lineup(event_id, current_user.id)
     return jsonify([s.to_dict() for s in slots]), 200
 
@@ -140,17 +141,17 @@ def reorder_bench(guild_id: int, event_id: int):
     """Reorder the bench queue. Officers/admins only."""
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "reorder_bench"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
-        return jsonify({"error": "Event not found"}), 404
+        return jsonify({"error": _t("api.events.notFound")}), 404
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify lineup on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.lineup.cannotModifyCompleted")}), 403
 
     data = request.get_json(silent=True) or {}
     ordered_ids = data.get("ordered_signup_ids", [])
     if not isinstance(ordered_ids, list):
-        return jsonify({"error": "ordered_signup_ids must be a list"}), 400
+        return jsonify({"error": _t("api.lineup.orderedIdsMustBeList")}), 400
 
     result, position_changes = lineup_service.reorder_bench_queue(
         event_id, ordered_ids

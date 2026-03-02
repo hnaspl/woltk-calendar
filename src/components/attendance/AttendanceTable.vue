@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div v-if="dateSections.length === 0" class="px-4 py-8 text-center text-text-muted">
-      No attendance data available.
+      {{ t('attendance.noData') }}
     </div>
 
     <div v-for="section in dateSections" :key="section.dateKey">
@@ -16,11 +16,11 @@
           <table class="w-full text-sm table-fixed">
             <thead>
               <tr class="bg-bg-tertiary border-b border-border-default">
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[28%]">Raid</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[22%]">Character</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[15%]">Class</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[12%]">Status</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[23%]">Note</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[28%]">{{ t('common.labels.raid') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[22%]">{{ t('common.fields.character') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[15%]">{{ t('common.labels.class') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[12%]">{{ t('common.fields.status') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[23%]">{{ t('common.fields.note') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border-default">
@@ -101,10 +101,13 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import { useTimezone } from '@/composables/useTimezone'
 import { useWowIcons } from '@/composables/useWowIcons'
+
+const { t } = useI18n()
 
 const tz = useTimezone()
 const { getClassIcon, getClassColor, getRaidIcon } = useWowIcons()
@@ -126,9 +129,9 @@ function guildDateKey(isoStr) {
 }
 
 function outcomeLabel(o) {
-  if (o === 'attended') return 'Attended'
-  if (o === 'late') return 'Late'
-  return 'Unattended'
+  if (o === 'attended') return t('attendance.attended')
+  if (o === 'late') return t('attendance.late')
+  return t('attendance.unattended')
 }
 
 function outcomeClasses(o) {

@@ -1,24 +1,23 @@
 <template>
-  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" title="Record Attendance" size="lg">
+  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('common.labels.recordAttendance')" size="lg">
     <div class="space-y-4">
       <p class="text-text-muted text-sm">
-        Set attendance outcome for each player in the raid lineup.
-        Bench players are excluded from attendance.
+        {{ t('attendance.modal.description') }}
       </p>
 
       <div v-if="players.length === 0" class="py-8 text-center text-text-muted">
-        No signups found for this event.
+        {{ t('attendance.modal.noSignups') }}
       </div>
 
       <div v-else class="overflow-x-auto max-h-[55vh] overflow-y-auto">
         <table class="w-full text-sm">
           <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Character</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">Class</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">Role</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Outcome</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Note</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('common.fields.character') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('common.labels.class') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('common.fields.role') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('attendance.modal.outcome') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('common.fields.note') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -33,15 +32,15 @@
                   v-model="p.outcome"
                   class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
                 >
-                  <option value="attended">Attended</option>
-                  <option value="late">Late</option>
-                  <option value="no_show">Unattended</option>
+                  <option value="attended">{{ t('attendance.attended') }}</option>
+                  <option value="late">{{ t('attendance.late') }}</option>
+                  <option value="no_show">{{ t('attendance.unattended') }}</option>
                 </select>
               </td>
               <td class="px-3 py-2">
                 <input
                   v-model="p.note"
-                  placeholder="Optional note…"
+                  :placeholder="t('common.labels.optionalNote')"
                   class="w-full bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
                 />
               </td>
@@ -58,8 +57,8 @@
         <span v-if="saveProgress" class="text-xs text-text-muted">{{ saveProgress }}</span>
         <span v-else />
         <div class="flex gap-3">
-          <WowButton variant="secondary" @click="emit('update:modelValue', false)">Cancel</WowButton>
-          <WowButton :loading="saving" :disabled="players.length === 0" @click="saveAttendance">Save Attendance</WowButton>
+          <WowButton variant="secondary" @click="emit('update:modelValue', false)">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" :disabled="players.length === 0" @click="saveAttendance">{{ t('attendance.modal.saveAttendance') }}</WowButton>
         </div>
       </div>
     </template>
@@ -68,6 +67,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowModal from '@/components/common/WowModal.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -83,6 +83,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'saved'])
 
+const { t } = useI18n()
 const { getClassColor } = useWowIcons()
 const uiStore = useUiStore()
 
@@ -129,7 +130,7 @@ async function saveAttendance() {
       saved++
       saveProgress.value = `${saved} / ${total} saved…`
     }
-    uiStore.showToast('Attendance recorded successfully!', 'success')
+    uiStore.showToast(t('attendance.modal.recorded'), 'success')
     emit('saved')
     emit('update:modelValue', false)
   } catch (err) {

@@ -7,6 +7,7 @@ from flask_login import current_user
 
 from app.services import notification_service
 from app.utils.auth import login_required
+from app.i18n import _t
 
 bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 
@@ -27,7 +28,7 @@ def list_notifications():
 def mark_read(notification_id: int):
     notif = notification_service.get_notification(notification_id)
     if notif is None or notif.user_id != current_user.id:
-        return jsonify({"error": "Notification not found"}), 404
+        return jsonify({"error": _t("api.notifications.notFound")}), 404
     notif = notification_service.mark_read(notif)
     return jsonify(notif.to_dict()), 200
 
@@ -51,7 +52,7 @@ def unread_count():
 def delete_notification(notification_id: int):
     deleted = notification_service.delete_notification(notification_id, current_user.id)
     if not deleted:
-        return jsonify({"error": "Notification not found"}), 404
+        return jsonify({"error": _t("api.notifications.notFound")}), 404
     return jsonify({"deleted": True}), 200
 
 

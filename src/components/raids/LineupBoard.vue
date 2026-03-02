@@ -1,11 +1,11 @@
 <template>
   <WowCard :padded="false">
     <div class="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 border-b border-border-default">
-      <h3 class="wow-heading text-base">Lineup Board</h3>
+      <h3 class="wow-heading text-base">{{ t('lineup.title') }}</h3>
       <div v-if="canManage" class="flex items-center gap-2">
-        <span v-if="dirty" class="text-xs text-yellow-400">Unsaved changes</span>
+        <span v-if="dirty" class="text-xs text-yellow-400">{{ t('lineup.unsavedChanges') }}</span>
         <WowButton variant="secondary" @click="saveLineup" :loading="saving" class="text-xs py-1 px-3">
-          Save Lineup
+          {{ t('lineup.saveLineup') }}
         </WowButton>
       </div>
     </div>
@@ -94,7 +94,7 @@
       @drop.prevent="canManage && onDropBench()"
     >
       <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">
-        Bench Queue<template v-if="canManage"> ({{ bench.length }})</template>
+        {{ t('lineup.benchQueue') }}<template v-if="canManage"> ({{ bench.length }})</template>
         <span v-if="!canManage && currentUserId" class="text-text-muted normal-case"> — showing only your characters</span>
       </p>
       <div v-if="visibleBenchByRole.length > 0" class="space-y-3">
@@ -129,33 +129,31 @@
         </div>
       </div>
       <p v-if="bench.length === 0 && draggedId" class="text-xs text-yellow-400/60 italic">
-        Drop here to move to bench
+        {{ t('lineup.dropToBench') }}
       </p>
     </div>
 
   </WowCard>
 
   <!-- Role change confirmation modal -->
-  <WowModal v-model="showRoleChangeModal" title="Change Player Role?" size="sm">
+  <WowModal v-model="showRoleChangeModal" :title="t('lineup.changeRoleTitle')" size="sm">
     <div v-if="roleChangePending" class="space-y-3">
       <p class="text-text-muted text-sm">
         <strong class="text-text-primary">{{ roleChangePending.signup.character?.name ?? 'Player' }}</strong>
-        is signed up as
+        {{ t('lineup.signedUpAs') }}
         <strong class="text-accent-gold">{{ ROLE_LABEL_MAP[roleChangePending.signup.chosen_role] ?? roleChangePending.signup.chosen_role }}</strong>.
       </p>
       <p class="text-text-muted text-sm">
-        Do you want to change their role to
-        <strong class="text-accent-gold">{{ roleChangePending.targetCol.label }}</strong>
-        and place them in the lineup?
+        {{ t('lineup.changeRoleConfirm', { role: roleChangePending.targetCol.label }) }}
       </p>
       <p class="text-xs text-yellow-400/80">
-        This will update their signup role and move them into the {{ roleChangePending.targetCol.label }} column.
+        {{ t('lineup.changeRoleNote', { role: roleChangePending.targetCol.label }) }}
       </p>
     </div>
     <template #footer>
       <div class="flex justify-end gap-3">
-        <WowButton variant="secondary" @click="cancelRoleChange">Place on Bench</WowButton>
-        <WowButton variant="primary" @click="confirmRoleChange">Change Role &amp; Place</WowButton>
+        <WowButton variant="secondary" @click="cancelRoleChange">{{ t('lineup.placeOnBench') }}</WowButton>
+        <WowButton variant="primary" @click="confirmRoleChange">{{ t('lineup.changeAndPlace') }}</WowButton>
       </div>
     </template>
   </WowModal>
@@ -163,6 +161,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -174,6 +173,8 @@ import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
 import { CLASS_ROLES } from '@/constants'
+
+const { t } = useI18n()
 
 const props = defineProps({
   signups:        { type: Array,          default: () => [] },
@@ -688,12 +689,12 @@ async function saveLineup(auto = false) {
       benchQueue.value        = fresh.bench_queue ?? []
       lineupVersion.value     = fresh.version ?? null
       dirty.value = false
-      uiStore.showToast('Lineup was updated by another officer. Your changes were reset.', 'warning')
+      uiStore.showToast(t('lineup.toasts.updatedByOfficer'), 'warning')
       emit('saved', { auto: true })
     } else {
       console.error('Failed to save lineup', err)
       if (!auto) {
-        uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+        uiStore.showToast(err?.response?.data?.message ?? t('lineup.toasts.failedToSave'), 'error')
       }
     }
   } finally {

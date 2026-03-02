@@ -26,6 +26,7 @@ class User(UserMixin, db.Model):
     password_hash: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     display_name: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="Europe/Warsaw")
+    language: Mapped[str] = mapped_column(sa.String(5), nullable=False, default="en")
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     is_admin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -52,6 +53,7 @@ class User(UserMixin, db.Model):
             "username": self.username,
             "display_name": self.display_name,
             "timezone": self.timezone,
+            "language": self.language,
             "is_active": self.is_active,
             "is_admin": self.is_admin,
             "created_at": utc_iso(self.created_at),

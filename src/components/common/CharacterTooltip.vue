@@ -39,7 +39,7 @@
             target="_blank"
             class="ml-auto text-[10px] text-amber-400 hover:underline flex-shrink-0"
             @click.stop
-          >Armory</a>
+          >{{ t('characterDetail.armory') }}</a>
         </div>
 
         <!-- Body -->
@@ -48,11 +48,11 @@
           <table v-if="character.primary_spec || character.secondary_spec || character.default_role" class="w-full">
             <tbody>
               <tr v-if="character.default_role">
-                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Role</td>
+                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">{{ t('common.fields.role') }}</td>
                 <td class="text-text-primary py-0.5 capitalize">{{ character.default_role?.replace('_', ' ') }}</td>
               </tr>
               <tr v-if="character.primary_spec">
-                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Primary</td>
+                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">{{ t('characterDetail.primary') }}</td>
                 <td class="py-0.5">
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/15 text-amber-300 rounded text-[11px]">
                     <img v-if="getSpecIcon(character.primary_spec, character.class_name)" :src="getSpecIcon(character.primary_spec, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
@@ -61,7 +61,7 @@
                 </td>
               </tr>
               <tr v-if="character.secondary_spec">
-                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">Secondary</td>
+                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">{{ t('characterDetail.secondary') }}</td>
                 <td class="py-0.5">
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-500/15 text-gray-400 rounded text-[11px]">
                     <img v-if="getSpecIcon(character.secondary_spec, character.class_name)" :src="getSpecIcon(character.secondary_spec, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
@@ -74,7 +74,7 @@
 
           <!-- Talents (from metadata) -->
           <div v-if="talents.length > 0">
-            <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">Talent Trees</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">{{ t('characterDetail.talentTrees') }}</div>
             <table class="w-full">
               <tbody>
                 <tr v-for="(t, i) in talents" :key="i">
@@ -92,7 +92,7 @@
 
           <!-- Glyphs (from metadata) -->
           <div v-if="glyphs.length > 0">
-            <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">Glyphs</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">{{ t('characterDetail.glyphs') }}</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="(g, i) in glyphs"
@@ -104,7 +104,7 @@
 
           <!-- Professions -->
           <div v-if="professions.length > 0">
-            <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">Professions</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">{{ t('characterDetail.professions') }}</div>
             <table class="w-full">
               <tbody>
                 <tr v-for="p in professions" :key="p.name">
@@ -119,23 +119,23 @@
           <table v-if="hasStats" class="w-full border-t border-[#2a3450] pt-1">
             <tbody>
               <tr v-if="meta.achievement_points">
-                <td class="text-text-muted py-0.5"><span class="text-amber-400">🏆</span> Achievements</td>
+                <td class="text-text-muted py-0.5"><span class="text-amber-400">🏆</span> {{ t('characterDetail.achievements') }}</td>
                 <td class="text-text-primary text-right py-0.5">{{ meta.achievement_points }}</td>
               </tr>
               <tr v-if="meta.honorable_kills">
-                <td class="text-text-muted py-0.5"><span class="text-red-400">⚔</span> HKs</td>
+                <td class="text-text-muted py-0.5"><span class="text-red-400">⚔</span> {{ t('characterDetail.honorableKillsShort') }}</td>
                 <td class="text-text-primary text-right py-0.5">{{ meta.honorable_kills }}</td>
               </tr>
               <tr v-if="meta.faction">
-                <td class="text-text-muted py-0.5">{{ meta.faction === 'Alliance' ? '🔵' : '🔴' }} Faction</td>
+                <td class="text-text-muted py-0.5">{{ meta.faction === 'Alliance' ? '🔵' : '🔴' }} {{ t('common.fields.faction') }}</td>
                 <td class="text-text-primary text-right py-0.5">{{ meta.faction }}</td>
               </tr>
               <tr v-if="meta.guild">
-                <td class="text-text-muted py-0.5"><span class="text-green-400">🛡</span> Guild</td>
+                <td class="text-text-muted py-0.5"><span class="text-green-400">🛡</span> {{ t('common.labels.guild') }}</td>
                 <td class="text-text-primary text-right py-0.5 truncate max-w-[120px]">&lt;{{ meta.guild }}&gt;</td>
               </tr>
               <tr v-if="meta.gear_score">
-                <td class="text-text-muted py-0.5"><span class="text-amber-300">⚡</span> Gear Score</td>
+                <td class="text-text-muted py-0.5"><span class="text-amber-300">⚡</span> {{ t('characterDetail.gearScore') }}</td>
                 <td class="text-amber-300 text-right py-0.5 font-semibold">{{ meta.gear_score }}</td>
               </tr>
             </tbody>
@@ -169,9 +169,12 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
 import { useTimezone } from '@/composables/useTimezone'
+
+const { t } = useI18n()
 
 const props = defineProps({
   character: { type: Object, default: null },

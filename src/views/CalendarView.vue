@@ -3,10 +3,10 @@
     <div class="flex flex-col md:flex-row h-full overflow-hidden">
       <!-- Sidebar filters -->
       <aside class="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-border-default bg-bg-secondary p-4 space-y-4 overflow-y-auto">
-        <h2 class="wow-heading text-base">Filters</h2>
+        <h2 class="wow-heading text-base">{{ t('calendar.filters') }}</h2>
 
         <div v-if="guildStore.currentGuild?.realm_name" class="text-xs text-text-muted">
-          <span class="text-accent-gold">🌐</span> Realm: <span class="text-text-primary font-medium">{{ guildStore.currentGuild.realm_name }}</span>
+          <span class="text-accent-gold">🌐</span> {{ t('common.labels.realmColon') }} <span class="text-text-primary font-medium">{{ guildStore.currentGuild.realm_name }}</span>
         </div>
 
         <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -16,65 +16,65 @@
             class="accent-accent-gold w-4 h-4 rounded"
             @change="calStore.setFilter('showAllGuilds', $event.target.checked)"
           />
-          <span class="text-xs text-text-muted">View raids from all my guilds</span>
+          <span class="text-xs text-text-muted">{{ t('calendar.viewAllGuilds') }}</span>
         </label>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">Raid Type</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.raidType') }}</label>
           <select
             :value="calStore.filters.raidType"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
             @change="calStore.setFilter('raidType', $event.target.value)"
           >
-            <option value="">All raids</option>
+            <option value="">{{ t('calendar.allRaids') }}</option>
             <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">Size</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
           <select
             :value="calStore.filters.size"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
             @change="calStore.setFilter('size', $event.target.value)"
           >
-            <option value="">All sizes</option>
-            <option value="10">10-man</option>
-            <option value="25">25-man</option>
+            <option value="">{{ t('calendar.allSizes') }}</option>
+            <option value="10">{{ t('calendar.tenMan') }}</option>
+            <option value="25">{{ t('calendar.twentyFiveMan') }}</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">Status</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.status') }}</label>
           <select
             :value="calStore.filters.status"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
             @change="calStore.setFilter('status', $event.target.value)"
           >
-            <option value="">All statuses</option>
-            <option value="open">Open</option>
-            <option value="locked">Locked</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="">{{ t('calendar.allStatuses') }}</option>
+            <option value="open">{{ t('common.status.open') }}</option>
+            <option value="locked">{{ t('common.status.locked') }}</option>
+            <option value="completed">{{ t('common.status.completed') }}</option>
+            <option value="cancelled">{{ t('common.status.cancelled') }}</option>
           </select>
         </div>
 
         <WowButton variant="ghost" class="w-full text-xs" @click="calStore.clearFilters()">
-          Clear Filters
+          {{ t('calendar.clearFilters') }}
         </WowButton>
 
         <WowButton v-if="permissions.can('create_events')" class="w-full text-sm" @click="openCreateModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          Schedule Raid
+          {{ t('calendar.scheduleRaid') }}
         </WowButton>
       </aside>
 
       <!-- Calendar -->
       <div class="flex-1 p-2 sm:p-4 overflow-y-auto">
         <div v-if="calStore.loading" class="flex items-center justify-center h-64">
-          <div class="text-text-muted loading-pulse">Loading calendar…</div>
+          <div class="text-text-muted loading-pulse">{{ t('calendar.loadingCalendar') }}</div>
         </div>
         <RaidCalendar
           v-else
@@ -86,73 +86,73 @@
     </div>
 
     <!-- Schedule Raid Modal -->
-    <WowModal v-model="showCreateModal" title="Schedule Raid" size="md">
+    <WowModal v-model="showCreateModal" :title="t('calendar.scheduleRaid')" size="md">
       <form @submit.prevent="createEvent" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Guild *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.guild') }}</label>
           <select v-model.number="eventForm.guild_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onGuildSelectChange">
-            <option value="">Select guild…</option>
+            <option value="">{{ t('calendar.selectGuild') }}</option>
             <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
           </select>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Raid Definition *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="eventForm.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
-            <option value="">Select raid definition…</option>
-            <optgroup label="Built-in Raids">
+            <option value="">{{ t('calendar.selectRaidDef') }}</option>
+            <optgroup :label="t('calendar.builtInRaids')">
               <option v-for="rd in builtinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
-            <optgroup v-if="customDefs.length" label="Custom Raids">
+            <optgroup v-if="customDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in customDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
           </select>
-          <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
+          <p class="text-[10px] text-text-muted mt-1">{{ t('calendar.manageCustomRaids') }} <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">{{ t('nav.raidDefinitions') }}</router-link></p>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Title *</label>
-          <input v-model="eventForm.title" required placeholder="e.g. ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.titleRequired') }}</label>
+          <input v-model="eventForm.title" required :placeholder="t('calendar.titlePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Size</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
             <select v-model.number="eventForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">10-man</option>
-              <option :value="25">25-man</option>
+              <option :value="10">{{ t('calendar.tenMan') }}</option>
+              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
             <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="normal">Normal</option>
-              <option value="heroic">Heroic</option>
+              <option value="normal">{{ t('calendar.normal') }}</option>
+              <option value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }}</label>
             <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Duration (minutes)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.durationMinutes') }}</label>
             <input v-model.number="eventForm.duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.closeSignupsAt') }}</label>
             <input v-model="eventForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            <span class="text-[10px] text-text-muted">Leave empty to auto-lock 4h before start</span>
+            <span class="text-[10px] text-text-muted">{{ t('calendar.closeSignupsHelp') }}</span>
           </div>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Instructions</label>
-          <textarea v-model="eventForm.instructions" rows="2" placeholder="Bring flasks, food, etc." class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none placeholder:text-text-muted/50" />
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.instructions') }}</label>
+          <textarea v-model="eventForm.instructions" rows="2" :placeholder="t('calendar.instructionsPlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none placeholder:text-text-muted/50" />
         </div>
         <div v-if="createError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ createError }}</div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showCreateModal = false">Cancel</WowButton>
-          <WowButton :loading="creating" @click="createEvent">Schedule</WowButton>
+          <WowButton variant="secondary" @click="showCreateModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="creating" @click="createEvent">{{ t('common.buttons.schedule') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -175,6 +175,7 @@ import { useTimezone } from '@/composables/useTimezone'
 import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import { useI18n } from 'vue-i18n'
 
 const calStore = useCalendarStore()
 const guildStore = useGuildStore()
@@ -183,6 +184,7 @@ const permissions = usePermissions()
 const router = useRouter()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const tzHelper = useTimezone()
+const { t } = useI18n()
 
 const raidTypes = RAID_TYPES
 
@@ -266,7 +268,7 @@ function onRaidDefChange() {
 
 async function createEvent() {
   if (!eventForm.guild_id || !eventForm.starts_at_utc || !eventForm.raid_definition_id) {
-    createError.value = 'Guild, raid definition and start time are required'
+    createError.value = t('calendar.validationError')
     return
   }
   if (!eventForm.title) {
@@ -274,7 +276,7 @@ async function createEvent() {
     eventForm.title = rd?.name ?? 'Raid'
   }
   if (eventForm.close_signups_at && new Date(eventForm.close_signups_at) >= new Date(eventForm.starts_at_utc)) {
-    createError.value = 'Close signups time must be before the event start time'
+    createError.value = t('calendar.closeSignupsError')
     return
   }
   createError.value = null
@@ -295,7 +297,7 @@ async function createEvent() {
     }
     const newEvent = await eventsApi.createEvent(eventForm.guild_id, payload)
     showCreateModal.value = false
-    uiStore.showToast('Raid scheduled!', 'success')
+    uiStore.showToast(t('calendar.raidScheduled'), 'success')
     await calStore.fetchEvents()
     router.push(`/raids/${newEvent.id}`)
   } catch (err) {

@@ -9,6 +9,7 @@ from app.services import auth_service
 from app.extensions import db
 from app.utils.auth import login_required
 from app.utils.permissions import has_permission
+from app.i18n import _t
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -16,7 +17,7 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 def _require_permission(perm_code: str):
     """Return an error tuple if the current user lacks the permission, else None."""
     if not has_permission(None, perm_code):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     return None
 
 
@@ -38,13 +39,13 @@ def update_user(user_id: int):
         return err
     user = auth_service.get_user_by_id(user_id)
     if user is None:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": _t("api.admin.userNotFound")}), 404
     if user.id == current_user.id:
-        return jsonify({"error": "Cannot modify your own account here"}), 400
+        return jsonify({"error": _t("api.admin.cannotModifySelf")}), 400
 
     # Protect the primary site admin (user ID 1) from being modified
     if user.id == 1:
-        return jsonify({"error": "Cannot modify the primary site admin"}), 403
+        return jsonify({"error": _t("api.admin.cannotModifyPrimary")}), 403
 
     data = request.get_json(silent=True) or {}
 
@@ -65,16 +66,16 @@ def delete_user(user_id: int):
         return err
     user = auth_service.get_user_by_id(user_id)
     if user is None:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": _t("api.admin.userNotFound")}), 404
     if user.id == current_user.id:
-        return jsonify({"error": "Cannot delete your own account"}), 400
+        return jsonify({"error": _t("api.admin.cannotDeleteSelf")}), 400
 
     # Protect the primary site admin (user ID 1) from being deleted
     if user.id == 1:
-        return jsonify({"error": "Cannot delete the primary site admin"}), 403
+        return jsonify({"error": _t("api.admin.cannotDeletePrimary")}), 403
 
     auth_service.delete_user(user)
-    return jsonify({"message": "User deleted"}), 200
+    return jsonify({"message": _t("api.admin.userDeleted")}), 200
 
 
 @bp.post("/sync-characters")
@@ -86,7 +87,7 @@ def trigger_sync():
         return err
     from app.jobs.handlers import handle_sync_all_characters
     handle_sync_all_characters({})
-    return jsonify({"message": "Sync completed"}), 200
+    return jsonify({"message": _t("api.admin.syncCompleted")}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +135,7 @@ def update_system_settings():
             try:
                 val = str(max(5, int(data[key])))
             except (ValueError, TypeError):
-                return jsonify({"error": f"Invalid integer value for '{key}'"}), 400
+                return jsonify({"error": _t("api.admin.invalidInteger", key=key)}), 400
             existing = db.session.get(SystemSetting, key)
             if existing:
                 existing.value = val

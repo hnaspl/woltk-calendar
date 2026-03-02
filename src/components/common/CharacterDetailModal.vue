@@ -17,7 +17,7 @@
           <!-- Close button (top-left) -->
           <button
             class="absolute top-3 left-3 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-[#161b22] border border-[#2a3450] text-text-muted hover:text-text-primary hover:border-border-gold transition-colors"
-            aria-label="Close character details"
+            :aria-label="t('characterDetail.closeDetails')"
             @click="$emit('update:modelValue', false)"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,7 +53,7 @@
               target="_blank"
               class="text-[11px] text-amber-400 hover:underline flex-shrink-0 px-2 py-1 rounded border border-amber-500/30 hover:border-amber-400 transition-colors"
               @click.stop
-            >Armory ↗</a>
+            >{{ t('characterDetail.armory') }}</a>
           </div>
 
           <!-- Body — two-column when equipment is present -->
@@ -62,7 +62,7 @@
             <div class="px-4 py-3 space-y-4" :class="equipment.length > 0 ? 'md:border-r md:border-[#2a3450] overflow-y-auto' : ''">
               <!-- Specs & Role -->
               <div v-if="character.default_role || character.primary_spec || character.secondary_spec">
-                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">Role &amp; Specialization</div>
+                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">{{ t('characterDetail.roleAndSpec') }}</div>
                 <div class="space-y-1.5">
                   <div v-if="character.default_role" class="flex items-center gap-2">
                     <img :src="getRoleIcon(character.default_role)" class="w-5 h-5 rounded" />
@@ -72,14 +72,14 @@
                     <img v-if="getSpecIcon(character.primary_spec, character.class_name)" :src="getSpecIcon(character.primary_spec, character.class_name)" class="w-5 h-5 rounded" />
                     <span class="text-sm">
                       <span class="text-amber-300 font-medium">{{ character.primary_spec }}</span>
-                      <span class="text-text-muted text-xs ml-1">(Primary)</span>
+                      <span class="text-text-muted text-xs ml-1">{{ t('characterDetail.primary') }}</span>
                     </span>
                   </div>
                   <div v-if="character.secondary_spec" class="flex items-center gap-2">
                     <img v-if="getSpecIcon(character.secondary_spec, character.class_name)" :src="getSpecIcon(character.secondary_spec, character.class_name)" class="w-5 h-5 rounded" />
                     <span class="text-sm">
                       <span class="text-gray-300">{{ character.secondary_spec }}</span>
-                      <span class="text-text-muted text-xs ml-1">(Secondary)</span>
+                      <span class="text-text-muted text-xs ml-1">{{ t('characterDetail.secondary') }}</span>
                     </span>
                   </div>
                 </div>
@@ -87,7 +87,7 @@
 
               <!-- Professions -->
               <div v-if="professions.length > 0">
-                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">Professions</div>
+                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">{{ t('characterDetail.professions') }}</div>
                 <div class="space-y-1.5">
                   <div v-for="p in professions" :key="p.name" class="flex items-center gap-2">
                     <img :src="getProfessionIcon(p.name)" :alt="p.name" class="w-5 h-5 rounded" />
@@ -99,7 +99,7 @@
 
               <!-- Talents -->
               <div v-if="talents.length > 0">
-                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">Talent Trees</div>
+                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">{{ t('characterDetail.talentTrees') }}</div>
                 <div class="space-y-1.5">
                   <div v-for="(t, i) in talents" :key="i" class="flex items-center gap-2">
                     <img v-if="getSpecIcon(t.tree, character.class_name)" :src="getSpecIcon(t.tree, character.class_name)" class="w-5 h-5 rounded" />
@@ -111,7 +111,7 @@
 
               <!-- Glyphs -->
               <div v-if="glyphs.length > 0">
-                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">Glyphs</div>
+                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">{{ t('characterDetail.glyphs') }}</div>
                 <div class="flex flex-wrap gap-1.5">
                   <span
                     v-for="(g, i) in glyphs"
@@ -123,33 +123,33 @@
 
               <!-- Stats -->
               <div v-if="hasStats">
-                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">Stats</div>
+                <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">{{ t('characterDetail.stats') }}</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div v-if="meta.gear_score" class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
                     <span class="text-amber-300">⚡</span>
                     <div>
-                      <div class="text-[10px] text-text-muted">Gear Score</div>
+                      <div class="text-[10px] text-text-muted">{{ t('characterDetail.gearScore') }}</div>
                       <div class="text-sm font-bold text-amber-300">{{ meta.gear_score }}</div>
                     </div>
                   </div>
                   <div v-if="meta.honorable_kills" class="flex items-center gap-2 px-3 py-2 bg-red-500/10 rounded-lg border border-red-500/20">
                     <span class="text-red-400">⚔</span>
                     <div>
-                      <div class="text-[10px] text-text-muted">Honorable Kills</div>
+                      <div class="text-[10px] text-text-muted">{{ t('characterDetail.honorableKills') }}</div>
                       <div class="text-sm font-bold text-red-300">{{ meta.honorable_kills.toLocaleString() }}</div>
                     </div>
                   </div>
                   <div v-if="meta.faction" class="flex items-center gap-2 px-3 py-2 bg-bg-secondary rounded-lg border border-border-default">
                     <span>{{ meta.faction === 'Alliance' ? '🔵' : '🔴' }}</span>
                     <div>
-                      <div class="text-[10px] text-text-muted">Faction</div>
+                      <div class="text-[10px] text-text-muted">{{ t('common.fields.faction') }}</div>
                       <div class="text-sm text-text-primary">{{ meta.faction }}</div>
                     </div>
                   </div>
                   <div v-if="meta.guild" class="flex items-center gap-2 px-3 py-2 bg-green-500/10 rounded-lg border border-green-500/20">
                     <span class="text-green-400">🛡</span>
                     <div class="min-w-0">
-                      <div class="text-[10px] text-text-muted">Guild</div>
+                      <div class="text-[10px] text-text-muted">{{ t('common.labels.guild') }}</div>
                       <div class="text-sm text-green-300 truncate">&lt;{{ meta.guild }}&gt;</div>
                     </div>
                   </div>
@@ -158,14 +158,14 @@
 
               <!-- Last synced -->
               <div v-if="meta.last_synced" class="text-[10px] text-text-muted pt-2 border-t border-[#2a3450]">
-                Last synced: {{ formatDate(meta.last_synced) }}
+                {{ t('characterDetail.lastSynced') }} {{ formatDate(meta.last_synced) }}
               </div>
             </div>
 
             <!-- Right column: equipment (only when items exist) -->
             <div v-if="equipment.length > 0" class="px-4 py-3 overflow-y-auto">
               <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">
-                Equipment ({{ equipment.length }} items)
+                {{ t('characterDetail.equipment', { count: equipment.length }) }}
               </div>
               <div class="space-y-0.5" ref="equipmentContainer">
                 <!-- Wowhead mode: entire row is a link for tooltip on hover -->
@@ -196,7 +196,7 @@
                       >{{ item.name }}</span>
                       <div class="text-[10px] text-text-muted flex items-center gap-1.5">
                         <span>{{ equipSlotLabel(i) }}</span>
-                        <span v-if="item.enchant" class="text-green-400">✦ Enchanted</span>
+                        <span v-if="item.enchant" class="text-green-400">✦ {{ t('characterDetail.enchanted') }}</span>
                         <span v-if="item.gems?.length" class="text-blue-400">◆ {{ item.gems.length }} gem{{ item.gems.length > 1 ? 's' : '' }}</span>
                       </div>
                     </div>
@@ -244,10 +244,13 @@
 
 <script setup>
 import { computed, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
 import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
 import { useTimezone } from '@/composables/useTimezone'
+
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

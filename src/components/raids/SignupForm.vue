@@ -1,25 +1,25 @@
 <template>
   <WowCard>
-    <h3 class="wow-heading text-base mb-4">Sign Up</h3>
+    <h3 class="wow-heading text-base mb-4">{{ t('signup.title') }}</h3>
 
     <div v-if="error" class="mb-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">
       {{ error }}
     </div>
     <div v-if="success" class="mb-4 p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">
-      Signed up successfully!
+      {{ t('common.toasts.signedUp') }}
     </div>
 
     <form @submit.prevent="handleSubmit" class="space-y-4">
       <!-- Character select -->
       <div>
-        <label class="block text-xs text-text-muted mb-1">Character *</label>
+        <label class="block text-xs text-text-muted mb-1">{{ t('signup.characterRequired') }}</label>
         <select
           v-model="form.characterId"
           class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
           required
           @change="onCharacterChange"
         >
-          <option value="">Select character…</option>
+          <option value="">{{ t('signup.selectCharacter') }}</option>
           <option
             v-for="char in availableCharacters"
             :key="char.id"
@@ -29,18 +29,18 @@
           </option>
         </select>
         <span v-if="!existingSignup && signedUpCharacterIds.length > 0" class="text-[10px] text-text-muted">
-          Already signed up characters are hidden. Select another character to add.
+          {{ t('signup.alreadySignedUp') }}
         </span>
         <div v-if="bannedCharacterIds.length > 0" class="text-[10px] text-red-400 mt-1">
-          ⛔ Some characters are hidden because they have been permanently kicked from this raid.
+          ⛔ {{ t('signup.kickedWarning') }}
         </div>
       </div>
 
       <!-- Role (hidden until character is selected) -->
       <div v-if="form.characterId">
-        <label class="text-xs text-text-muted mb-1 block">Role *</label>
+        <label class="text-xs text-text-muted mb-1 block">{{ t('signup.roleRequired') }}</label>
         <div v-if="roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
-          ⚠ There are no available role slots for this character's class in this raid. This character cannot sign up for this event.
+          ⚠ {{ t('signup.noRoleSlots') }}
         </div>
         <div v-else class="flex flex-wrap gap-2">
           <button
@@ -55,18 +55,18 @@
           >
             <RoleBadge :role="r.value" />
             <span v-if="roleSlotInfo[r.value]" class="text-[10px]" :class="isRoleFull(r.value) ? 'text-yellow-400' : 'text-text-muted'">
-              {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' Full' : '' }}
+              {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' ' + t('common.labels.full') : '' }}
             </span>
           </button>
         </div>
         <p v-if="form.chosenRole && isRoleFull(form.chosenRole)" class="mt-1.5 text-xs text-yellow-400/90">
-          ⚠ All {{ ROLE_LABEL_MAP[form.chosenRole] || form.chosenRole }} slots are full. You will be placed on the <strong>bench</strong> as the next candidate when a slot opens up.
+          ⚠ {{ t('signup.roleFull', { role: ROLE_LABEL_MAP[form.chosenRole] || form.chosenRole }) }}
         </p>
       </div>
 
       <!-- Spec (multi-select, only when character selected and has valid roles) -->
       <div v-if="form.characterId && roles.length > 0">
-        <label class="block text-xs text-text-muted mb-1">Spec (select one or more)</label>
+        <label class="block text-xs text-text-muted mb-1">{{ t('signup.spec') }}</label>
         <div v-if="specOptions.length > 0" class="flex flex-wrap gap-2 mb-1">
           <button
             v-for="sp in specOptions"
@@ -82,41 +82,41 @@
         <input
           v-model="form.chosenSpec"
           type="text"
-          placeholder="e.g. Holy, Frost, Balance…"
+          :placeholder="t('signup.specPlaceholder')"
           class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
         />
       </div>
 
       <!-- Note (hidden when character has no valid roles) -->
       <div v-if="!form.characterId || roles.length > 0">
-        <label class="block text-xs text-text-muted mb-1">Note</label>
+        <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.note') }}</label>
         <textarea
           v-model="form.note"
           rows="2"
-          placeholder="Optional note…"
+          :placeholder="t('common.labels.optionalNote')"
           class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none placeholder:text-text-muted/50"
         />
       </div>
 
       <WowButton v-if="!form.characterId || roles.length > 0" type="submit" :loading="submitting" class="w-full">
-        {{ existingSignup ? 'Update Signup' : 'Sign Up' }}
+        {{ existingSignup ? t('signup.updateSignup') : t('signup.title') }}
       </WowButton>
     </form>
 
     <!-- Role Full dialog -->
-    <WowModal v-model="showRoleFullModal" title="Role Slots Full" size="sm">
+    <WowModal v-model="showRoleFullModal" :title="t('signup.roleSlotsFull')" size="sm">
       <div class="space-y-3">
         <p class="text-text-muted text-sm">
-          All <strong class="text-accent-gold">{{ roleFullLabel }}</strong> slots are full for this raid.
+          {{ t('signup.roleFullTitle', { role: roleFullLabel }) }}
         </p>
         <p v-if="roleFullIsOfficer" class="text-text-muted text-sm">
-          As an officer you can remove someone from this role in the Signups list, move them to bench, or select a different role below. You may also join the <strong class="text-yellow-400">bench</strong> yourself and wait for a slot to open.
+          {{ t('signup.officerHint') }}
         </p>
         <p v-else class="text-text-muted text-sm">
-          You can join the <strong class="text-yellow-400">bench</strong> and you will be automatically moved in when a slot opens up, or select a different role.
+          {{ t('signup.benchHint') }}
         </p>
         <div v-if="alternativeRoles.length > 0" class="mt-2">
-          <p class="text-xs text-text-muted mb-1">Available roles:</p>
+          <p class="text-xs text-text-muted mb-1">{{ t('signup.availableRoles') }}</p>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="r in alternativeRoles"
@@ -132,8 +132,8 @@
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showRoleFullModal = false">Cancel</WowButton>
-          <WowButton variant="primary" :loading="submitting" @click="forceBenchSignup">Join Bench</WowButton>
+          <WowButton variant="secondary" @click="showRoleFullModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="primary" :loading="submitting" @click="forceBenchSignup">{{ t('signup.joinBench') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -142,6 +142,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -149,6 +150,8 @@ import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
 import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
+
+const { t } = useI18n()
 
 const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
@@ -310,8 +313,8 @@ watch(
 )
 
 async function handleSubmit() {
-  if (!form.characterId) { error.value = 'Please select a character'; return }
-  if (!form.chosenRole)  { error.value = 'Please select a role'; return }
+  if (!form.characterId) { error.value = t('signup.selectCharacterError'); return }
+  if (!form.chosenRole)  { error.value = t('signup.selectRoleError'); return }
 
   error.value = null
   success.value = false
