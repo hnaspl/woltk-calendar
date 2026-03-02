@@ -11,8 +11,8 @@
  */
 import { createI18n } from 'vue-i18n'
 
-import en from '../translations/en.json'
-import pl from '../translations/pl.json'
+import en from '@translations/en.json'
+import pl from '@translations/pl.json'
 
 /**
  * Detect browser language, mapped to supported locales.
