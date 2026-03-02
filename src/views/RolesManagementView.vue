@@ -4,7 +4,7 @@
       <h1 class="wow-heading text-2xl">Roles &amp; Permissions</h1>
 
       <div v-if="!permissions.can('manage_roles')" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have permission to manage roles.
+        You do not have the appropriate permissions.
       </div>
 
       <template v-else>

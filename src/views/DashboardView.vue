@@ -205,7 +205,7 @@ const calStore = useCalendarStore()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 const tzHelper = useTimezone()
-const { on, off } = useSocket()
+const { joinGuild, leaveGuild, on, off } = useSocket()
 
 let isActive = true
 const loading = ref(true)
@@ -251,6 +251,7 @@ onMounted(async () => {
   loading.value = true
   try {
     await guildStore.fetchGuilds()
+    if (guildStore.currentGuild) joinGuild(guildStore.currentGuild.id)
     await refreshDashboard()
   } finally {
     loading.value = false
@@ -264,6 +265,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   isActive = false
+  if (guildStore.currentGuild) leaveGuild(guildStore.currentGuild.id)
   off('events_changed', handleEventsChanged)
   off('guilds_changed', handleGuildsChanged)
   off('guild_changed', handleGuildChanged)
@@ -274,7 +276,11 @@ onUnmounted(() => {
 // Also refresh when guild changes in sidebar
 watch(
   () => guildStore.currentGuild?.id,
-  (newId, oldId) => { if (newId && newId !== oldId) refreshDashboard() }
+  (newId, oldId) => {
+    if (oldId) leaveGuild(oldId)
+    if (newId) joinGuild(newId)
+    if (newId && newId !== oldId) refreshDashboard()
+  }
 )
 
 const now = new Date()

@@ -175,7 +175,7 @@ def permission_required(permission_code: str) -> Callable:
                 return jsonify({"error": "guild_id missing"}), 400
             membership = get_membership(guild_id, current_user.id)
             if not has_permission(membership, permission_code):
-                return jsonify({"error": f"Permission '{permission_code}' required"}), 403
+                return jsonify({"error": "You do not have the appropriate permissions"}), 403
             kwargs["membership"] = membership
             return f(*args, **kwargs)
 
