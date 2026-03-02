@@ -247,7 +247,7 @@ async function saveGuild() {
       timezone: form.timezone,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast('Guild settings saved', 'success')
+    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {

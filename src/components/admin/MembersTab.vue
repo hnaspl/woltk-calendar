@@ -417,9 +417,9 @@ async function updateRole(member, role) {
   try {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
-    uiStore.showToast('Role updated', 'success')
+    uiStore.showToast(t('members.toasts.roleUpdated'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update role', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.failedToUpdateRole'), 'error')
   }
 }
 
@@ -434,9 +434,9 @@ async function doKick() {
     await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
     members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
-    uiStore.showToast('Member removed', 'success')
+    uiStore.showToast(t('members.toasts.memberRemoved'), 'success')
   } catch {
-    uiStore.showToast('Failed to remove member', 'error')
+    uiStore.showToast(t('members.toasts.failedToRemoveMember'), 'error')
   } finally {
     saving.value = false
   }
@@ -466,7 +466,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to load characters', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.failedToLoadCharacters'), 'error')
   } finally {
     loadingMemberChars.value = false
   }
@@ -494,7 +494,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? 'Failed to search users', 'error')
+      uiStore.showToast(err?.response?.data?.message ?? t('members.toasts.failedToSearchUsers'), 'error')
     } finally {
       searchingUsers.value = false
     }
@@ -511,7 +511,7 @@ async function doAddMember(user) {
     availableUsers.value = []
     uiStore.showToast(`${user.username} added to guild`, 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('members.toasts.failedToAddMember'), 'error')
   }
 }
 
@@ -569,7 +569,7 @@ async function doAddMemberByName(characterName) {
       uiStore.showToast(`No registered user found for "${characterName}". They need to create an account first.`, 'info')
     }
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('members.toasts.failedToAddMember'), 'error')
   }
 }
 
@@ -647,9 +647,9 @@ async function doTransferOwnership() {
     onTransferModalClose(false)
     await guildStore.fetchGuild(guildStore.currentGuild.id)
     await loadMembers()
-    uiStore.showToast('Guild ownership transferred successfully', 'success')
+    uiStore.showToast(t('members.toasts.ownershipTransferred'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to transfer ownership', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.failedToTransfer'), 'error')
   } finally {
     transferring.value = false
   }

@@ -689,12 +689,12 @@ async function saveLineup(auto = false) {
       benchQueue.value        = fresh.bench_queue ?? []
       lineupVersion.value     = fresh.version ?? null
       dirty.value = false
-      uiStore.showToast('Lineup was updated by another officer. Your changes were reset.', 'warning')
+      uiStore.showToast(t('lineup.toasts.updatedByOfficer'), 'warning')
       emit('saved', { auto: true })
     } else {
       console.error('Failed to save lineup', err)
       if (!auto) {
-        uiStore.showToast(err?.response?.data?.message ?? 'Failed to save lineup', 'error')
+        uiStore.showToast(err?.response?.data?.message ?? t('lineup.toasts.failedToSave'), 'error')
       }
     }
   } finally {

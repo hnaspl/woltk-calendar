@@ -351,7 +351,7 @@ async function loadPermissions() {
   try {
     allPermissions.value = await rolesApi.getPermissions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load permissions', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToLoadPermissions'), 'error')
   } finally {
     permissionsLoading.value = false
   }
@@ -362,7 +362,7 @@ async function loadGrantRules() {
   try {
     grantRules.value = await rolesApi.getGrantRules()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load grant rules', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToLoadRules'), 'error')
   } finally {
     grantRulesLoading.value = false
   }
@@ -405,10 +405,10 @@ async function saveRole() {
 
     if (editingRole.value) {
       await rolesApi.updateRole(editingRole.value.id, data)
-      uiStore.showToast('Role updated', 'success')
+      uiStore.showToast(t('roles.toasts.roleUpdated'), 'success')
     } else {
       await rolesApi.createRole(data)
-      uiStore.showToast('Role created', 'success')
+      uiStore.showToast(t('roles.toasts.roleCreated'), 'success')
     }
 
     showRoleModal.value = false
@@ -429,11 +429,11 @@ async function doDeleteRole() {
   deletingRole.value = true
   try {
     await rolesApi.deleteRole(deleteTarget.value.id)
-    uiStore.showToast('Role deleted', 'success')
+    uiStore.showToast(t('roles.toasts.roleDeleted'), 'success')
     showDeleteConfirm.value = false
     await loadRoles()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to delete role', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToDeleteRole'), 'error')
   } finally {
     deletingRole.value = false
   }
@@ -452,7 +452,7 @@ async function doCreateGrantRule() {
       granter_role_id: grantRuleForm.granter_role_id,
       grantee_role_id: grantRuleForm.grantee_role_id
     })
-    uiStore.showToast('Grant rule added', 'success')
+    uiStore.showToast(t('roles.toasts.grantRuleAdded'), 'success')
     showGrantRuleModal.value = false
     grantRuleForm.granter_role_id = null
     grantRuleForm.grantee_role_id = null
@@ -467,10 +467,10 @@ async function doCreateGrantRule() {
 async function doDeleteGrantRule(rule) {
   try {
     await rolesApi.deleteGrantRule(rule.id)
-    uiStore.showToast('Grant rule removed', 'success')
+    uiStore.showToast(t('roles.toasts.grantRuleRemoved'), 'success')
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to remove grant rule', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToRemoveRule'), 'error')
   }
 }
 </script>

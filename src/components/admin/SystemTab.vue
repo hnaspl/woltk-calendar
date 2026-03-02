@@ -224,9 +224,9 @@ async function toggleBlock(user) {
     const updated = await adminApi.updateUser(user.id, { is_active: !user.is_active })
     const idx = users.value.findIndex(u => u.id === user.id)
     if (idx !== -1) users.value[idx] = updated
-    uiStore.showToast(updated.is_active ? 'User unblocked' : 'User blocked', 'success')
+    uiStore.showToast(t(updated.is_active ? 'admin.system.toasts.userUnblocked' : 'admin.system.toasts.userBlocked'), 'success')
   } catch {
-    uiStore.showToast('Failed to update user', 'error')
+    uiStore.showToast(t('admin.system.toasts.failedToUpdateUser'), 'error')
   }
 }
 
@@ -240,7 +240,7 @@ async function toggleAdmin(user) {
       : `${updated.username} admin status revoked`
     uiStore.showToast(msg, 'success')
   } catch {
-    uiStore.showToast('Failed to update admin status', 'error')
+    uiStore.showToast(t('admin.system.toasts.failedToUpdateAdmin'), 'error')
   }
 }
 
@@ -255,9 +255,9 @@ async function doDelete() {
     await adminApi.deleteUser(deleteTarget.value.id)
     users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast('User deleted', 'success')
+    uiStore.showToast(t('admin.system.toasts.userDeleted'), 'success')
   } catch {
-    uiStore.showToast('Failed to delete user', 'error')
+    uiStore.showToast(t('admin.system.toasts.failedToDeleteUser'), 'error')
   } finally {
     deleting.value = false
   }
@@ -276,9 +276,9 @@ async function saveAllSettings() {
       autosync_enabled: updated.autosync_enabled === 'true',
       autosync_interval_minutes: parseInt(updated.autosync_interval_minutes) || 60,
     }
-    uiStore.showToast('System settings saved', 'success')
+    uiStore.showToast(t('admin.system.toasts.settingsSaved'), 'success')
   } catch {
-    uiStore.showToast('Failed to save system settings', 'error')
+    uiStore.showToast(t('admin.system.toasts.failedToSaveSettings'), 'error')
   } finally {
     sysSettingsSaving.value = false
   }
@@ -288,9 +288,9 @@ async function triggerManualSync() {
   syncing.value = true
   try {
     await adminApi.triggerSync()
-    uiStore.showToast('Character sync completed', 'success')
+    uiStore.showToast(t('admin.system.toasts.syncCompleted'), 'success')
   } catch {
-    uiStore.showToast('Sync failed', 'error')
+    uiStore.showToast(t('admin.system.toasts.syncFailed'), 'error')
   } finally {
     syncing.value = false
   }

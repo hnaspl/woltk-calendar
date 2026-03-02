@@ -130,7 +130,7 @@ async function saveAttendance() {
       saved++
       saveProgress.value = `${saved} / ${total} saved…`
     }
-    uiStore.showToast('Attendance recorded successfully!', 'success')
+    uiStore.showToast(t('attendance.modal.recorded'), 'success')
     emit('saved')
     emit('update:modelValue', false)
   } catch (err) {

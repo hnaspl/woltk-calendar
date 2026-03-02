@@ -270,7 +270,7 @@ async function doJoinGuild(guild) {
     if (!guildStore.currentGuild) guildStore.setCurrentGuild(guild)
     uiStore.showToast(`Joined ${guild.name}!`, 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to join guild', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('guild.toasts.failedToJoin'), 'error')
   } finally {
     joiningGuildId.value = null
   }
