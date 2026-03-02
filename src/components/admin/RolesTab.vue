@@ -15,10 +15,10 @@
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Level</th>
+              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Level</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Permissions</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Can Assign</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Can Assign</th>
+              <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
             </tr>
           </thead>
@@ -28,11 +28,11 @@
                 <div class="text-text-primary font-medium">{{ role.display_name }}</div>
                 <div class="text-xs text-text-muted">{{ role.name }}</div>
               </td>
-              <td class="px-4 py-2.5 text-text-muted">{{ role.level }}</td>
+              <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ role.level }}</td>
               <td class="px-4 py-2.5">
                 <span class="text-accent-gold text-xs font-medium">{{ role.permissions.length }} permissions</span>
               </td>
-              <td class="px-4 py-2.5">
+              <td class="hidden md:table-cell px-4 py-2.5">
                 <div class="flex flex-wrap gap-1">
                   <span
                     v-for="grantee in role.can_grant"
@@ -42,13 +42,14 @@
                   <span v-if="!role.can_grant.length" class="text-xs text-text-muted">—</span>
                 </div>
               </td>
-              <td class="px-4 py-2.5">
+              <td class="hidden lg:table-cell px-4 py-2.5">
                 <span
                   class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
                   :class="role.is_system ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-green-900/50 text-green-300 border border-green-600'"
                 >{{ role.is_system ? 'System' : 'Custom' }}</span>
               </td>
-              <td class="px-4 py-2.5 text-right space-x-2">
+              <td class="px-4 py-2.5 text-right">
+                <div class="flex flex-wrap gap-1 justify-end">
                 <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditRole(role)">Edit</WowButton>
                 <WowButton
                   v-if="!role.is_system"
@@ -56,6 +57,7 @@
                   class="text-xs py-1 px-2"
                   @click="confirmDeleteRole(role)"
                 >Delete</WowButton>
+                </div>
               </td>
             </tr>
           </tbody>

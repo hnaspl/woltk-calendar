@@ -13,20 +13,20 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">ID</th>
+              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">ID</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Email</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Email</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Admin</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Registered</th>
+              <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Registered</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
             <tr v-for="u in users" :key="u.id" class="hover:bg-bg-tertiary/50 transition-colors">
-              <td class="px-4 py-2.5 text-text-muted">{{ u.id }}</td>
+              <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ u.id }}</td>
               <td class="px-4 py-2.5 text-text-primary font-medium">{{ u.username }}</td>
-              <td class="px-4 py-2.5 text-text-muted">{{ u.email }}</td>
+              <td class="hidden md:table-cell px-4 py-2.5 text-text-muted">{{ u.email }}</td>
               <td class="px-4 py-2.5">
                 <span
                   class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
@@ -39,8 +39,9 @@
                 <span v-if="u.is_admin" class="text-accent-gold text-xs font-bold">Admin</span>
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
-              <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(u.created_at) }}</td>
-              <td class="px-4 py-2.5 text-right space-x-2">
+              <td class="hidden lg:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(u.created_at) }}</td>
+              <td class="px-4 py-2.5 text-right">
+                <div class="flex flex-wrap gap-1 justify-end">
                 <template v-if="u.id !== authStore.user.id && u.id !== 1">
                   <WowButton
                     v-if="!u.is_admin"
@@ -70,6 +71,7 @@
                 </template>
                 <span v-else-if="u.id === authStore.user.id" class="text-text-muted text-xs italic">You</span>
                 <span v-else class="text-text-muted text-xs italic">Primary Admin</span>
+                </div>
               </td>
             </tr>
           </tbody>
