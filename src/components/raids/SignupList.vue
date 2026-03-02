@@ -10,9 +10,9 @@
     </div>
 
     <!-- Side-by-side layout for In Lineup and Bench -->
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <template v-for="group in groups" :key="group.key">
-        <div v-if="group.items.length > 0" :class="group.key === 'declined' ? 'xl:col-span-2' : ''">
+        <div v-if="group.items.length > 0" :class="group.key === 'declined' ? 'lg:col-span-2' : ''">
           <div class="flex items-center gap-2 mb-2">
             <span
               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
