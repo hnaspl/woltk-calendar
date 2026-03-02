@@ -60,5 +60,22 @@ class User(UserMixin, db.Model):
             "updated_at": utc_iso(self.updated_at),
         }
 
+    def to_safe_dict(self) -> dict:
+        """Return a dict without sensitive fields (email).
+
+        Use this when returning user data to other (non-admin) users.
+        """
+        return {
+            "id": self.id,
+            "username": self.username,
+            "display_name": self.display_name,
+            "timezone": self.timezone,
+            "language": self.language,
+            "is_active": self.is_active,
+            "is_admin": self.is_admin,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
+        }
+
     def __repr__(self) -> str:
         return f"<User id={self.id} username={self.username!r}>"

@@ -91,7 +91,8 @@
       "methodNotAllowed": "Method not allowed",
       "internalError": "Internal server error",
       "permissionDenied": "You do not have the appropriate permissions",
-      "failedToLoad": "Failed to load data"
+      "failedToLoad": "Failed to load data",
+      "rateLimited": "Too many requests. Please try again later."
     },
     "toasts": {
       "actionFailed": "Action failed",
@@ -185,15 +186,21 @@
       "repeatPassword": "Repeat password"
     },
     "errors": {
-      "emailRequired": "email, username and password are required",
-      "loginRequired": "email and password are required",
+      "emailRequired": "Email, username and password are required",
+      "loginRequired": "Email and password are required",
       "invalidCredentials": "Invalid credentials",
       "accountDisabled": "Account is disabled",
       "passwordRequired": "current_password and new_password are required",
-      "passwordTooShort": "Password must be at least 4 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
       "currentPasswordWrong": "Current password is incorrect",
       "emailTaken": "Email already registered",
-      "usernameTaken": "Username already taken"
+      "usernameTaken": "Username already taken",
+      "emailTooLong": "Email must be at most 255 characters",
+      "emailInvalidFormat": "Please enter a valid email address",
+      "emailDisposable": "Disposable or temporary email addresses are not allowed",
+      "emailInvalidDomain": "Email domain does not appear to be valid",
+      "usernameLengthInvalid": "Username must be between 2 and 80 characters",
+      "displayNameTooLong": "Display name must be at most 100 characters"
     },
     "messages": {
       "loggedOut": "Logged out",
@@ -579,8 +586,13 @@
       "guildName": "Guild Name"
     },
     "toasts": {
-      "failedToJoin": "Failed to join guild"
-    }
+      "failedToJoin": "Failed to join guild",
+      "joined": "Joined {name}!",
+      "failedToSearchWarmane": "Failed to search Warmane API",
+      "failedToCreate": "Failed to create guild"
+    },
+    "memberCount": "{count} members",
+    "membersOnRealm": "{count} members on {realm}"
   },
   "members": {
     "title": "Members ({count})",

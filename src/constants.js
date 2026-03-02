@@ -115,6 +115,40 @@ export function formatDuration(minutes) {
   return `${m}m`
 }
 
+/** WoW item quality CSS classes, keyed by quality integer (0–6). */
+export const ITEM_QUALITY_COLORS = {
+  0: { text: 'text-gray-500',   border: 'border-gray-600/40',   bg: 'bg-gray-900/40' },   // Poor
+  1: { text: 'text-gray-300',   border: 'border-gray-500/40',   bg: 'bg-gray-800/30' },   // Common
+  2: { text: 'text-green-400',  border: 'border-green-500/40',  bg: 'bg-green-900/20' },   // Uncommon
+  3: { text: 'text-blue-400',   border: 'border-blue-500/40',   bg: 'bg-blue-900/20' },    // Rare
+  4: { text: 'text-purple-400', border: 'border-purple-500/50', bg: 'bg-purple-900/20' },   // Epic
+  5: { text: 'text-orange-400', border: 'border-orange-500/50', bg: 'bg-orange-900/20' },   // Legendary
+  6: { text: 'text-red-400',    border: 'border-red-500/50',    bg: 'bg-red-900/20' },      // Artifact
+}
+
+/** WoW item quality display labels, keyed by quality integer (0–6). */
+export const ITEM_QUALITY_LABELS = {
+  0: 'Poor', 1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary', 6: 'Artifact',
+}
+
+/** Resolve the full quality color object ({text, border, bg}) for an equipment item. */
+export function getItemQuality(item) {
+  if (item.quality != null) return ITEM_QUALITY_COLORS[item.quality] ?? ITEM_QUALITY_COLORS[4]
+  // Fallback: items with an ID but no quality field default to Rare (blue)
+  if (item.item) return ITEM_QUALITY_COLORS[3]
+  return ITEM_QUALITY_COLORS[1]
+}
+
+/** Get just the text-color CSS class for an equipment item's quality. */
+export function getItemQualityText(item) {
+  return getItemQuality(item).text
+}
+
+/** Get the display label for a quality integer. */
+export function getItemQualityLabel(q) {
+  return ITEM_QUALITY_LABELS[q] ?? ''
+}
+
 /** Get human-readable label for a raid type code. */
 export function raidTypeLabel(raidType) {
   if (!raidType) return raidType

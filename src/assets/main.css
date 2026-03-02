@@ -1,32 +1,34 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* ── WoW theme CSS variables ─────────────────────────────────── */
-:root {
-  --color-bg-primary:    #0a0e17;
-  --color-bg-secondary:  #141926;
-  --color-bg-tertiary:   #1c2333;
-  --color-border:        #2a3450;
-  --color-border-gold:   #c9a930;
-  --color-accent-gold:   #f8d648;
-  --color-accent-blue:   #3fc7eb;
-  --color-text-primary:  #e8e6e0;
-  --color-text-muted:    #8b8d91;
-  --color-danger:        #e53e3e;
-  --color-success:       #38a169;
+/* ── Tailwind v4 theme customization ─────────────────────────── */
+@theme {
+  --color-bg-primary: #0a0e17;
+  --color-bg-secondary: #141926;
+  --color-bg-tertiary: #1c2333;
+  --color-border-default: #2a3450;
+  --color-border: #2a3450;
+  --color-border-gold: #c9a930;
+  --color-accent-gold: #f8d648;
+  --color-accent-blue: #3fc7eb;
+  --color-text-primary: #e8e6e0;
+  --color-text-muted: #8b8d91;
 
-  /* WoW class colors */
-  --class-death-knight: #C41E3A;
-  --class-druid:        #FF7C0A;
-  --class-hunter:       #AAD372;
-  --class-mage:         #3FC7EB;
-  --class-paladin:      #F48CBA;
-  --class-priest:       #FFFFFF;
-  --class-rogue:        #FFF468;
-  --class-shaman:       #0070DD;
-  --class-warlock:      #8788EE;
-  --class-warrior:      #C69B6D;
+  --color-wow-death-knight: #C41E3A;
+  --color-wow-druid: #FF7C0A;
+  --color-wow-hunter: #AAD372;
+  --color-wow-mage: #3FC7EB;
+  --color-wow-paladin: #F48CBA;
+  --color-wow-priest: #FFFFFF;
+  --color-wow-rogue: #FFF468;
+  --color-wow-shaman: #0070DD;
+  --color-wow-warlock: #8788EE;
+  --color-wow-warrior: #C69B6D;
+
+  --font-family-wow: "LifeCraft", "Cinzel", Georgia, serif;
+  --font-family-sans: Inter, system-ui, sans-serif;
+
+  --shadow-gold: 0 0 12px rgba(201, 169, 48, 0.4);
+  --shadow-gold-lg: 0 0 24px rgba(201, 169, 48, 0.6);
 }
 
 /* ── Base resets ─────────────────────────────────────────────── */

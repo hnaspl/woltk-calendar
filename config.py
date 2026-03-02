@@ -1,4 +1,11 @@
-"""Application configuration loaded from environment variables."""
+"""Application configuration loaded from environment variables.
+
+All session/cookie security settings are driven by FLASK_ENV:
+  - "development" / "dev"  → HTTP-friendly (no Secure flag on cookies)
+  - "production"           → HTTPS-enforced (Secure flag on cookies)
+
+Only SECRET_KEY and FLASK_ENV are required to configure the app.
+"""
 
 from __future__ import annotations
 
@@ -26,9 +33,9 @@ class Config:
     }
 
     # --------------------------------------------------------------- Session
-    SESSION_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    SESSION_COOKIE_SECURE: bool = False
     SESSION_COOKIE_HTTPONLY: bool = True
-    SESSION_COOKIE_SAMESITE: str = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
+    SESSION_COOKIE_SAMESITE: str = "Lax"
     PERMANENT_SESSION_LIFETIME: timedelta = timedelta(
         seconds=int(os.environ.get("PERMANENT_SESSION_LIFETIME", "86400"))
     )
@@ -36,7 +43,7 @@ class Config:
     # --------------------------------------------------------- Remember cookie
     REMEMBER_COOKIE_HTTPONLY: bool = True
     REMEMBER_COOKIE_SAMESITE: str = "Lax"
-    REMEMBER_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"  # mirrors session cookie
+    REMEMBER_COOKIE_SECURE: bool = False
 
     # ------------------------------------------------------------------ CORS
     CORS_ORIGINS: list[str] = [
@@ -45,6 +52,13 @@ class Config:
         if o.strip()
     ]
 
+    # ---------------------------------------------------------- Proxy Fix
+    # Enable when running behind a reverse proxy (nginx, Vite dev-server,
+    # Docker network, etc.) so Flask sees the real client IP via
+    # X-Forwarded-For. Required for session_protection="strong".
+    PROXY_FIX_ENABLED: bool = os.environ.get("PROXY_FIX_ENABLED", "true").lower() == "true"
+    PROXY_FIX_NUM_PROXIES: int = int(os.environ.get("PROXY_FIX_NUM_PROXIES", "1"))
+
     # ----------------------------------------------------------- APScheduler
     SCHEDULER_ENABLED: bool = os.environ.get("SCHEDULER_ENABLED", "true").lower() == "true"
     SCHEDULER_TIMEZONE: str = os.environ.get("SCHEDULER_TIMEZONE", "UTC")
@@ -52,6 +66,8 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG: bool = True
+    SESSION_COOKIE_SECURE: bool = False
+    REMEMBER_COOKIE_SECURE: bool = False
 
 
 class TestingConfig(Config):
@@ -62,6 +78,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     SESSION_COOKIE_SECURE: bool = True
+    REMEMBER_COOKIE_SECURE: bool = True
     SQLALCHEMY_ENGINE_OPTIONS: dict = {
         "connect_args": {"timeout": 20},
         "pool_pre_ping": True,
@@ -77,6 +94,7 @@ class ProductionConfig(Config):
 
 _config_map: dict[str, type[Config]] = {
     "development": DevelopmentConfig,
+    "dev": DevelopmentConfig,
     "testing": TestingConfig,
     "production": ProductionConfig,
 }

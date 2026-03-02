@@ -36,6 +36,9 @@ def db(app):
     """Create all tables before each test and drop them after."""
     with app.app_context():
         _db.create_all()
+        # Reset rate limiter state between tests
+        from app.utils.rate_limit import reset as _reset_rate_limit
+        _reset_rate_limit()
         yield _db
         _db.session.rollback()
         _db.drop_all()

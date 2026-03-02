@@ -91,7 +91,8 @@
       "methodNotAllowed": "Metoda niedozwolona",
       "internalError": "Wewnętrzny błąd serwera",
       "permissionDenied": "Nie masz odpowiednich uprawnień",
-      "failedToLoad": "Nie udało się załadować danych"
+      "failedToLoad": "Nie udało się załadować danych",
+      "rateLimited": "Zbyt wiele żądań. Spróbuj ponownie później."
     },
     "toasts": {
       "actionFailed": "Akcja nie powiodła się",
@@ -190,10 +191,16 @@
       "invalidCredentials": "Nieprawidłowe dane logowania",
       "accountDisabled": "Konto jest wyłączone",
       "passwordRequired": "Aktualne i nowe hasło są wymagane",
-      "passwordTooShort": "Hasło musi mieć co najmniej 4 znaki",
+      "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków",
       "currentPasswordWrong": "Aktualne hasło jest nieprawidłowe",
       "emailTaken": "Email jest już zarejestrowany",
-      "usernameTaken": "Nazwa użytkownika jest już zajęta"
+      "usernameTaken": "Nazwa użytkownika jest już zajęta",
+      "emailTooLong": "Email może mieć maksymalnie 255 znaków",
+      "emailInvalidFormat": "Podaj prawidłowy adres email",
+      "emailDisposable": "Jednorazowe lub tymczasowe adresy email nie są dozwolone",
+      "emailInvalidDomain": "Domena email nie wydaje się prawidłowa",
+      "usernameLengthInvalid": "Nazwa użytkownika musi mieć od 2 do 80 znaków",
+      "displayNameTooLong": "Nazwa wyświetlana może mieć maksymalnie 100 znaków"
     },
     "messages": {
       "loggedOut": "Wylogowano",
@@ -579,8 +586,13 @@
       "guildName": "Nazwa Gildii"
     },
     "toasts": {
-      "failedToJoin": "Nie udało się dołączyć do gildii"
-    }
+      "failedToJoin": "Nie udało się dołączyć do gildii",
+      "joined": "Dołączono do {name}!",
+      "failedToSearchWarmane": "Nie udało się przeszukać API Warmane",
+      "failedToCreate": "Nie udało się utworzyć gildii"
+    },
+    "memberCount": "{count} członków",
+    "membersOnRealm": "{count} członków na {realm}"
   },
   "members": {
     "title": "Członkowie ({count})",

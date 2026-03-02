@@ -82,7 +82,8 @@ def available_users(guild_id: int, membership):
     q = request.args.get("q", "").strip()
     query = sa.select(User).where(User.is_active.is_(True))
     if q:
-        query = query.where(User.username.ilike(f"%{q}%"))
+        safe_q = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        query = query.where(User.username.ilike(f"%{safe_q}%"))
     query = query.order_by(User.username.asc()).limit(50)
 
     users = db.session.execute(query).scalars().all()

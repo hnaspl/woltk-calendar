@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+filterwarnings = [
+    # Flask-Login 0.7.0 fixed utcnow(); keep filter as safety net for
+    # transitive dependencies that may still use it.
+    "ignore:datetime.datetime.utcnow\\(\\) is deprecated:DeprecationWarning",
+]
