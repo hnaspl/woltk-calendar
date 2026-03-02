@@ -6,8 +6,6 @@ the values match the authoritative backend definitions.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from app.constants import (
