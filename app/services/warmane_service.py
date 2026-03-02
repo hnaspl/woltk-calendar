@@ -17,17 +17,21 @@ Both endpoints require a browser-like User-Agent header.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Optional
+from urllib.parse import quote
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 WARMANE_API_BASE = "http://armory.warmane.com/api"
-REQUEST_TIMEOUT = 10  # seconds
+REQUEST_TIMEOUT = 15  # seconds
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
 }
+_MAX_RETRIES = 2
+_RETRY_DELAY = 2  # seconds
 
 
 def fetch_character(realm: str, name: str) -> Optional[dict]:
@@ -35,40 +39,58 @@ def fetch_character(realm: str, name: str) -> Optional[dict]:
 
     Returns full character data (class, level, race, equipment, talents,
     professions, achievement points) or None if not found / API error.
+    Retries up to _MAX_RETRIES times on transient failures.
     """
-    url = f"{WARMANE_API_BASE}/character/{name}/{realm}/summary"
-    try:
-        resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
-        if resp.status_code != 200:
-            logger.warning("Warmane API returned %s for %s/%s", resp.status_code, realm, name)
+    url = f"{WARMANE_API_BASE}/character/{quote(name, safe='')}/{quote(realm, safe='')}/summary"
+    for attempt in range(_MAX_RETRIES):
+        try:
+            resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
+            if resp.status_code != 200:
+                logger.warning("Warmane API returned %s for %s/%s (attempt %d)", resp.status_code, realm, name, attempt + 1)
+                if attempt < _MAX_RETRIES - 1:
+                    time.sleep(_RETRY_DELAY)
+                    continue
+                return None
+            data = resp.json()
+            if "error" in data:
+                return None
+            return data
+        except (requests.RequestException, ValueError) as exc:
+            logger.warning("Warmane API error for character %s/%s: %s (attempt %d)", realm, name, exc, attempt + 1)
+            if attempt < _MAX_RETRIES - 1:
+                time.sleep(_RETRY_DELAY)
+                continue
             return None
-        data = resp.json()
-        if "error" in data:
-            return None
-        return data
-    except (requests.RequestException, ValueError) as exc:
-        logger.warning("Warmane API error for character %s/%s: %s", realm, name, exc)
-        return None
+    return None
 
 
 def fetch_guild(realm: str, guild_name: str) -> Optional[dict]:
     """Fetch guild summary + roster from the Warmane armory API.
 
     Returns a dict with guild data or None if not found / API error.
+    Retries up to _MAX_RETRIES times on transient failures.
     """
-    url = f"{WARMANE_API_BASE}/guild/{guild_name}/{realm}/summary"
-    try:
-        resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
-        if resp.status_code != 200:
-            logger.warning("Warmane API returned %s for guild %s/%s", resp.status_code, realm, guild_name)
+    url = f"{WARMANE_API_BASE}/guild/{quote(guild_name, safe='')}/{quote(realm, safe='')}/summary"
+    for attempt in range(_MAX_RETRIES):
+        try:
+            resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
+            if resp.status_code != 200:
+                logger.warning("Warmane API returned %s for guild %s/%s (attempt %d)", resp.status_code, realm, guild_name, attempt + 1)
+                if attempt < _MAX_RETRIES - 1:
+                    time.sleep(_RETRY_DELAY)
+                    continue
+                return None
+            data = resp.json()
+            if "error" in data:
+                return None
+            return data
+        except (requests.RequestException, ValueError) as exc:
+            logger.warning("Warmane API error for guild %s/%s: %s (attempt %d)", realm, guild_name, exc, attempt + 1)
+            if attempt < _MAX_RETRIES - 1:
+                time.sleep(_RETRY_DELAY)
+                continue
             return None
-        data = resp.json()
-        if "error" in data:
-            return None
-        return data
-    except (requests.RequestException, ValueError) as exc:
-        logger.warning("Warmane API error for guild %s/%s: %s", realm, guild_name, exc)
-        return None
+    return None
 
 
 _VALID_CLASSES = {

@@ -39,65 +39,71 @@
 
     <!-- Warmane Guild Info (only for Warmane-sourced guilds) -->
     <WowCard v-if="isWarmaneSource">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <img :src="getGuildIcon()" alt="Guild" class="w-6 h-6 rounded-sm" />
-          <h2 class="wow-heading text-base">Warmane Guild Info</h2>
-        </div>
+      <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-          <span v-if="lastRefreshed" class="text-[10px] text-text-muted">
+          <img :src="getGuildIcon()" alt="Guild" class="w-8 h-8 rounded" />
+          <h2 class="wow-heading text-lg">Warmane Guild Info</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <span v-if="lastRefreshed" class="text-xs text-text-muted">
             Last refreshed: {{ lastRefreshed }}
           </span>
           <WowButton
             v-if="canManualRefresh"
             variant="secondary"
-            class="text-xs py-1 px-3"
+            class="text-sm py-1.5 px-4"
             :loading="fetchingWarmane"
             @click="fetchWarmaneRoster"
           >Refresh</WowButton>
         </div>
       </div>
 
-      <div v-if="fetchingWarmane && !warmaneGuildData" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else-if="warmaneError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
+      <div v-if="fetchingWarmane && !warmaneGuildData" class="h-56 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else-if="warmaneError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
 
-      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Left column: Guild Info -->
-        <div class="space-y-4">
-          <h3 class="text-sm font-semibold text-accent-gold uppercase tracking-wider">Guild Details</h3>
-          <div class="space-y-3">
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-text-muted w-24 flex-shrink-0">Guild Name</span>
-              <span class="text-sm text-text-primary font-medium">{{ warmaneGuildData.name }}</span>
+        <div class="space-y-6">
+          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">Guild Details</h3>
+
+          <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-5 space-y-4">
+            <div class="flex items-center gap-4">
+              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Guild Name</span>
+              <span class="text-base text-text-primary font-semibold">{{ warmaneGuildData.name }}</span>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-text-muted w-24 flex-shrink-0">Realm</span>
-              <span class="text-sm text-text-primary">{{ warmaneGuildData.realm }}</span>
+            <div class="border-t border-border-default/50" />
+            <div class="flex items-center gap-4">
+              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Realm</span>
+              <span class="text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-text-muted w-24 flex-shrink-0">Faction</span>
-              <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold"
+            <div class="border-t border-border-default/50" />
+            <div class="flex items-center gap-4">
+              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Faction</span>
+              <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
                 :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >
-                <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-4 h-4 rounded-sm" />
+                <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-6 h-6 rounded" />
                 {{ warmaneGuildData.faction }}
               </span>
-              <span v-else class="text-sm text-text-muted">Unknown</span>
+              <span v-else class="text-base text-text-muted">Unknown</span>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-text-muted w-24 flex-shrink-0">Members</span>
-              <span class="text-sm text-text-primary font-medium">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
+            <div class="border-t border-border-default/50" />
+            <div class="flex items-center gap-4">
+              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Members</span>
+              <span class="text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
             </div>
           </div>
 
           <!-- Class distribution -->
-          <div v-if="classDistribution.length" class="mt-4">
-            <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Class Distribution</h4>
-            <div class="grid grid-cols-2 gap-1.5">
-              <div v-for="cd in classDistribution" :key="cd.name" class="flex items-center gap-2 text-xs">
-                <img :src="getClassIcon(cd.name)" :alt="cd.name" class="w-4 h-4 rounded-sm" />
-                <span :style="{ color: getClassColor(cd.name) }">{{ cd.name }}</span>
-                <span class="text-text-muted ml-auto">{{ cd.count }}</span>
+          <div v-if="classDistribution.length">
+            <h4 class="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Class Distribution</h4>
+            <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-4">
+              <div class="grid grid-cols-2 gap-3">
+                <div v-for="cd in classDistribution" :key="cd.name" class="flex items-center gap-3 py-1">
+                  <img :src="getClassIcon(cd.name)" :alt="cd.name" class="w-6 h-6 rounded flex-shrink-0" />
+                  <span class="text-sm font-medium" :style="{ color: getClassColor(cd.name) }">{{ cd.name }}</span>
+                  <span class="text-sm text-text-muted ml-auto font-medium">{{ cd.count }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -105,31 +111,31 @@
 
         <!-- Right column: Member Roster -->
         <div>
-          <h3 class="text-sm font-semibold text-accent-gold uppercase tracking-wider mb-3">Member Roster ({{ warmaneGuildData.roster?.length ?? 0 }})</h3>
-          <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-96 overflow-y-auto rounded border border-border-default">
-            <table class="w-full text-xs">
+          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">Member Roster ({{ warmaneGuildData.roster?.length ?? 0 }})</h3>
+          <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-[32rem] overflow-y-auto rounded-lg border border-border-default">
+            <table class="w-full text-sm">
               <thead class="sticky top-0 z-10">
                 <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-3 py-2 text-text-muted uppercase">Character</th>
-                  <th class="text-left px-3 py-2 text-text-muted uppercase">Level</th>
-                  <th class="text-left px-3 py-2 text-text-muted uppercase">Race</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Character</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Level</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Race</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-border-default">
+              <tbody class="divide-y divide-border-default/60">
                 <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50 transition-colors">
-                  <td class="px-3 py-1.5">
-                    <div class="flex items-center gap-2">
-                      <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-5 h-5 rounded-sm flex-shrink-0" />
-                      <span class="font-medium" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
+                  <td class="px-4 py-2.5">
+                    <div class="flex items-center gap-3">
+                      <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-7 h-7 rounded flex-shrink-0" />
+                      <span class="font-semibold text-sm" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
                     </div>
                   </td>
-                  <td class="px-3 py-1.5 text-text-muted">{{ ch.level }}</td>
-                  <td class="px-3 py-1.5 text-text-muted">{{ ch.race }}</td>
+                  <td class="px-4 py-2.5 text-text-muted font-medium">{{ ch.level }}</td>
+                  <td class="px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div v-else class="text-center py-8 text-text-muted text-sm">No roster data available.</div>
+          <div v-else class="text-center py-12 text-text-muted text-sm bg-bg-secondary/30 rounded-lg border border-border-default">No roster data available.</div>
         </div>
       </div>
     </WowCard>
@@ -256,14 +262,23 @@ async function fetchWarmaneRoster() {
   if (!guildStore.currentGuild?.id) return
   warmaneError.value = null
   fetchingWarmane.value = true
-  try {
-    warmaneGuildData.value = await guildsApi.getWarmaneRoster(guildStore.currentGuild.id)
-    lastRefreshed.value = new Date().toLocaleTimeString()
-  } catch (err) {
-    warmaneError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from Warmane'
-  } finally {
-    fetchingWarmane.value = false
+  const maxAttempts = 2
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      warmaneGuildData.value = await guildsApi.getWarmaneRoster(guildStore.currentGuild.id)
+      lastRefreshed.value = new Date().toLocaleTimeString()
+      warmaneError.value = null
+      break
+    } catch (err) {
+      if (attempt < maxAttempts) {
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        continue
+      }
+      warmaneError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from Warmane'
+    }
   }
+  fetchingWarmane.value = false
 }
 
 // Class distribution computed from roster
