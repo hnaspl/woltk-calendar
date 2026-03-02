@@ -6,7 +6,7 @@
       No players assigned yet.
     </div>
 
-    <div v-else class="space-y-4">
+    <div v-else class="space-y-3 sm:space-y-4">
       <div v-for="role in roleSummary" :key="role.name">
         <div class="flex items-center justify-between mb-1.5">
           <div class="flex items-center gap-2">

@@ -4,7 +4,7 @@
     <div class="flex items-center gap-3">
       <button
         type="button"
-        class="lg:hidden p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
+        class="lg:hidden p-2 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
         @click="uiStore.toggleSidebar()"
         aria-label="Toggle sidebar"
       >

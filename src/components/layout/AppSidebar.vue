@@ -1,7 +1,7 @@
 <template>
   <aside class="flex-col w-64 bg-[#0d111d] border-r border-[#2a3450] h-screen overflow-y-auto">
     <!-- Logo / Guild branding -->
-    <div class="flex items-center gap-3 px-5 py-5 border-b border-[#2a3450]">
+    <div class="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-5 border-b border-[#2a3450]">
       <img
         :src="logoIcon"
         alt="WoW Calendar"

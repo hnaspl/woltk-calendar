@@ -91,22 +91,22 @@
             <!-- Normal display -->
             <div
               v-else
-              class="flex items-start gap-3 px-4 py-4 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
+              class="flex items-start gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
             >
               <!-- Class icon -->
               <img
                 v-if="signup.character?.class_name"
                 :src="getClassIcon(signup.character.class_name)"
                 :alt="signup.character.class_name"
-                class="w-10 h-10 rounded border border-border-default flex-shrink-0 mt-0.5"
+                class="w-8 h-8 sm:w-10 sm:h-10 rounded border border-border-default flex-shrink-0 mt-0.5"
               />
-              <div class="w-10 h-10 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
+              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
                 <!-- Row 1: Name + Level + Achievements -->
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-base font-semibold text-text-primary truncate">
+                  <span class="text-sm sm:text-base font-semibold text-text-primary truncate">
                     {{ signup.character?.name ?? 'Unknown' }}
                   </span>
                   <span v-if="charLevel(signup)" class="inline-flex items-center gap-0.5 text-xs font-medium text-accent-gold bg-accent-gold/10 px-2 py-0.5 rounded-full border border-accent-gold/20">
@@ -153,7 +153,7 @@
                   </span>
                 </div>
                 <!-- Action row: View Details button + Officer actions -->
-                <div class="flex items-center gap-2 mt-3 flex-wrap">
+                <div class="flex items-center gap-1 sm:gap-2 mt-3 flex-wrap">
                   <button
                     class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-border-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold transition-colors"
                     :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
