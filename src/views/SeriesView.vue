@@ -4,11 +4,11 @@
       <!-- Loading permissions -->
       <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
-        Loading…
+        {{ t('common.labels.loading') }}
       </div>
       <!-- No permission -->
       <div v-else-if="!hasViewAccess" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have the appropriate permissions to access this page.
+        {{ t('admin.noPermission') }}
       </div>
       <template v-else>
       <div class="flex items-center justify-between">
@@ -157,7 +157,7 @@
 
     <!-- Copy to Guild modal -->
     <WowModal v-model="showCopyModal" :title="t('series.copySeriesToGuilds')" size="sm">
-      <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.title }}</strong> to selected guilds:</p>
+      <p class="text-text-muted text-sm mb-3">{{ t('common.copy.copyNameToGuilds', { name: copySource?.title }) }}</p>
       <div class="space-y-1">
         <label class="flex items-center gap-2 cursor-pointer mb-1">
           <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -190,7 +190,7 @@
     <!-- Generate events modal -->
     <WowModal v-model="showGenerate" :title="t('series.generateEventsTitle')" size="sm">
       <div class="space-y-4">
-        <p class="text-text-muted text-sm">Generate upcoming events from <strong class="text-text-primary">{{ generateTarget?.title }}</strong>.</p>
+        <p class="text-text-muted text-sm">{{ t('series.generateFromSeries', { name: generateTarget?.title }) }}</p>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('series.howManyEvents') }}</label>
           <select v-model.number="generateCount" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -486,7 +486,7 @@ async function doSave() {
       guildStore.setCurrentGuild(targetGuild)
     }
   } catch (err) {
-    formError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to save'
+    formError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('common.toasts.failedToSave')
   } finally { saving.value = false }
 }
 
@@ -497,7 +497,7 @@ async function doGenerate() {
   try {
     const events = await seriesApi.generateEvents(guildStore.currentGuild.id, generateTarget.value.id, { count: generateCount.value })
     generateResult.value = Array.isArray(events) ? events.length : generateCount.value
-    uiStore.showToast(`${generateResult.value} event(s) generated!`, 'success')
+    uiStore.showToast(t('series.toasts.eventsGenerated', { count: generateResult.value }), 'success')
   } catch (err) {
     uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'), 'error')
   } finally { saving.value = false }

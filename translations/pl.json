@@ -119,7 +119,8 @@
       "failedToCreateInGuilds": "Nie udało się utworzyć w {count} gildii/gildiach",
       "copiedWithFailures": "Skopiowano do {succeeded} gildii, nie powiodło się w {failed}",
       "copiedSuccess": "\"{name}\" skopiowano do {count} gildii",
-      "onlyCreatedIn": "Zostanie utworzone tylko w"
+      "onlyCreatedIn": "Zostanie utworzone tylko w",
+      "copyNameToGuilds": "Kopiuj {name} do wybranych gildii:"
     },
     "fields": {
       "role": "Rola",
@@ -371,7 +372,11 @@
       "joinGuildFirstManage": "Musisz najpierw dołączyć do gildii, aby zarządzać postaciami"
     },
     "namePlaceholder": "Arthas",
-    "deleteCharacter": "Usuń postać"
+    "deleteCharacter": "Usuń postać",
+    "addedSuccess": "{name} został(a) dodany(a) pomyślnie.",
+    "addAnotherQuestion": "Czy chcesz dodać kolejną postać?",
+    "imDone": "Gotowe",
+    "addAnother": "Dodaj kolejną postać"
   },
   "attendance": {
     "failedToLoad": "Nie udało się załadować danych frekwencji",
@@ -417,7 +422,8 @@
       "nameTypeSizeRequired": "Nazwa, typ i rozmiar są wymagane",
       "slotsExceedSize": "Suma miejsc ({total}) nie może przekraczać rozmiaru rajdu ({size})"
     },
-    "failedToLoad": "Nie udało się załadować definicji rajdów"
+    "failedToLoad": "Nie udało się załadować definicji rajdów",
+    "deleteConfirmName": "Usunąć {name}?"
   },
   "templates": {
     "title": "Szablony rajdów",
@@ -442,7 +448,8 @@
       "failedToApply": "Nie udało się zastosować szablonu",
       "nameRaidDefRequired": "Nazwa i definicja rajdu są wymagane"
     },
-    "failedToLoad": "Nie udało się załadować szablonów"
+    "failedToLoad": "Nie udało się załadować szablonów",
+    "scheduleFromTemplate": "Zaplanuj nowe wydarzenie z szablonu {name}."
   },
   "series": {
     "title": "Rajdy cykliczne",
@@ -480,11 +487,13 @@
       "seriesUpdated": "Seria zaktualizowana",
       "seriesCreated": "Seria utworzona w {guild}",
       "failedToGenerate": "Nie udało się wygenerować wydarzeń",
-      "titleRequired": "Tytuł jest wymagany"
+      "titleRequired": "Tytuł jest wymagany",
+      "eventsGenerated": "Wygenerowano {count} wydarzeń!"
     },
     "failedToLoad": "Nie udało się załadować rajdów cyklicznych",
     "editRecurringRaid": "Edytuj rajd cykliczny",
-    "generateEventsTitle": "Generuj wydarzenia"
+    "generateEventsTitle": "Generuj wydarzenia",
+    "generateFromSeries": "Generuj nadchodzące wydarzenia z {name}."
   },
   "roles": {
     "title": "Role i uprawnienia",

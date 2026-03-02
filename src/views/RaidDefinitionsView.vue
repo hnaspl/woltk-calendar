@@ -4,11 +4,11 @@
       <!-- Loading permissions -->
       <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
-        Loading…
+        {{ t('common.labels.loading') }}
       </div>
       <!-- No permission -->
       <div v-else-if="!hasViewAccess" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have the appropriate permissions to access this page.
+        {{ t('admin.noPermission') }}
       </div>
       <template v-else>
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
@@ -170,7 +170,7 @@
 
     <!-- Copy to Guild modal -->
     <WowModal v-model="showCopyModal" :title="t('raidDefinitions.copyDefinitionToGuilds')" size="sm">
-      <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.name }}</strong> to selected guilds:</p>
+      <p class="text-text-muted text-sm mb-3">{{ t('common.copy.copyNameToGuilds', { name: copySource?.name }) }}</p>
       <div class="space-y-1">
         <label class="flex items-center gap-2 cursor-pointer mb-1">
           <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -202,7 +202,7 @@
 
     <!-- Delete confirmation -->
     <WowModal v-model="showDeleteConfirm" :title="t('raidDefinitions.deleteDefinition')" size="sm">
-      <p class="text-text-muted">Delete <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>? {{ t('raidDefinitions.eventsNotAffected') }}</p>
+      <p class="text-text-muted">{{ t('raidDefinitions.deleteConfirmName', { name: deleteTarget?.name }) }} {{ t('raidDefinitions.eventsNotAffected') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
@@ -417,7 +417,7 @@ async function doSave() {
       guildStore.setCurrentGuild(targetGuild)
     }
   } catch (err) {
-    formError.value = err?.response?.data?.message ?? err?.response?.data?.error ?? 'Failed to save'
+    formError.value = err?.response?.data?.message ?? err?.response?.data?.error ?? t('common.toasts.failedToSave')
   } finally { saving.value = false }
 }
 

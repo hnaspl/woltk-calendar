@@ -119,7 +119,8 @@
       "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
       "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
       "copiedSuccess": "\"{name}\" copied to {count} guild(s)",
-      "onlyCreatedIn": "This will only be created in"
+      "onlyCreatedIn": "This will only be created in",
+      "copyNameToGuilds": "Copy {name} to selected guilds:"
     },
     "fields": {
       "role": "Role",
@@ -371,7 +372,11 @@
       "joinGuildFirstManage": "You need to join a guild first before managing characters"
     },
     "namePlaceholder": "Arthas",
-    "deleteCharacter": "Delete Character"
+    "deleteCharacter": "Delete Character",
+    "addedSuccess": "{name} has been added successfully.",
+    "addAnotherQuestion": "Would you like to add another character?",
+    "imDone": "I'm Done",
+    "addAnother": "Add Another Character"
   },
   "attendance": {
     "failedToLoad": "Failed to load attendance data",
@@ -417,7 +422,8 @@
       "nameTypeSizeRequired": "Name, type and size are required",
       "slotsExceedSize": "Total slots ({total}) cannot exceed raid size ({size})"
     },
-    "failedToLoad": "Failed to load raid definitions"
+    "failedToLoad": "Failed to load raid definitions",
+    "deleteConfirmName": "Delete {name}?"
   },
   "templates": {
     "title": "Raid Templates",
@@ -442,7 +448,8 @@
       "failedToApply": "Failed to apply template",
       "nameRaidDefRequired": "Name and raid definition are required"
     },
-    "failedToLoad": "Failed to load templates"
+    "failedToLoad": "Failed to load templates",
+    "scheduleFromTemplate": "Schedule a new event from template {name}."
   },
   "series": {
     "title": "Recurring Raids",
@@ -480,11 +487,13 @@
       "seriesUpdated": "Series updated",
       "seriesCreated": "Series created in {guild}",
       "failedToGenerate": "Failed to generate events",
-      "titleRequired": "Title is required"
+      "titleRequired": "Title is required",
+      "eventsGenerated": "{count} event(s) generated!"
     },
     "failedToLoad": "Failed to load recurring raids",
     "editRecurringRaid": "Edit Recurring Raid",
-    "generateEventsTitle": "Generate Events"
+    "generateEventsTitle": "Generate Events",
+    "generateFromSeries": "Generate upcoming events from {name}."
   },
   "roles": {
     "title": "Roles & Permissions",
