@@ -10,20 +10,23 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   status: { type: String, required: true }
 })
 
-const statusMap = {
-  draft:      { label: 'Status: Draft',      cls: 'text-gray-300 bg-gray-500/10 border-gray-500/30',     dot: 'bg-gray-400' },
-  open:       { label: 'Status: Open',       cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
-  locked:     { label: 'Status: Locked',     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
-  completed:  { label: 'Status: Completed',  cls: 'text-blue-300 bg-blue-500/10 border-blue-500/30',     dot: 'bg-blue-400' },
-  cancelled:  { label: 'Status: Cancelled',  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
-}
+const statusMap = computed(() => ({
+  draft:      { label: t('common.status.draft'),      cls: 'text-gray-300 bg-gray-500/10 border-gray-500/30',     dot: 'bg-gray-400' },
+  open:       { label: t('common.status.open'),       cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
+  locked:     { label: t('common.status.locked'),     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
+  completed:  { label: t('common.status.completed'),  cls: 'text-blue-300 bg-blue-500/10 border-blue-500/30',     dot: 'bg-blue-400' },
+  cancelled:  { label: t('common.status.cancelled'),  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
+}))
 
-const resolved = computed(() => statusMap[props.status?.toLowerCase()] ?? {
+const resolved = computed(() => statusMap.value[props.status?.toLowerCase()] ?? {
   label: props.status,
   cls: 'text-gray-300 bg-gray-500/10 border-gray-500/30',
   dot: 'bg-gray-400'

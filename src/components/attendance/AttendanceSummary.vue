@@ -9,7 +9,10 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   records: { type: Array, default: () => [] }
@@ -35,10 +38,10 @@ const stats = computed(() => {
   const rate = total > 0 ? Math.round((attendedCount / total) * 100) : 0
 
   return [
-    { label: 'Total Raids',       value: total,         color: 'text-accent-blue' },
-    { label: 'Attended',          value: attendedCount,  color: 'text-green-400' },
-    { label: 'Absent',            value: absentCount,    color: 'text-red-400' },
-    { label: 'Attendance Rate',   value: `${rate}%`,     color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
+    { label: t('attendance.totalRaids'),      value: total,         color: 'text-accent-blue' },
+    { label: t('attendance.attended'),         value: attendedCount,  color: 'text-green-400' },
+    { label: t('attendance.absent'),           value: absentCount,    color: 'text-red-400' },
+    { label: t('attendance.attendanceRate'),   value: `${rate}%`,     color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
   ]
 })
 </script>

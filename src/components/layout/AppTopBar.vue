@@ -6,7 +6,7 @@
         type="button"
         class="lg:hidden p-2 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
         @click="uiStore.toggleSidebar()"
-        aria-label="Toggle sidebar"
+        :aria-label="t('topBar.toggleSidebar')"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
@@ -15,7 +15,7 @@
 
       <div>
         <h1 class="text-sm font-bold text-accent-gold font-wow leading-tight">
-          {{ guildStore.currentGuild?.name ?? 'No Guild' }}
+          {{ guildStore.currentGuild?.name ?? t('topBar.noGuild') }}
         </h1>
         <p class="text-xs text-text-muted leading-tight">{{ guildStore.currentGuild?.realm ?? '' }}</p>
       </div>
@@ -28,7 +28,7 @@
         <button
           type="button"
           class="relative p-2 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
-          aria-label="Notifications"
+          :aria-label="t('notifications.title')"
           @click="toggleNotif"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,25 +48,25 @@
             v-click-outside="() => notifOpen = false"
           >
             <div class="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3450]">
-              <span class="text-sm font-semibold text-text-primary">Notifications</span>
+              <span class="text-sm font-semibold text-text-primary">{{ t('notifications.title') }}</span>
               <div class="flex items-center gap-2">
                 <button
                   v-if="notifications.length > 0"
                   type="button"
                   class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors"
                   @click="markAllAsRead"
-                >Mark all read</button>
+                >{{ t('notifications.markAllRead') }}</button>
                 <button
                   v-if="notifications.length > 0"
                   type="button"
                   class="text-[10px] text-red-400 hover:text-red-300 transition-colors"
                   @click="clearAllNotifications"
-                >Clear all</button>
+                >{{ t('notifications.clearAll') }}</button>
               </div>
             </div>
             <div class="max-h-96 overflow-y-auto">
               <div v-if="notifications.length === 0" class="px-4 py-6 text-center text-sm text-text-muted">
-                No notifications yet
+                {{ t('notifications.noNotifications') }}
               </div>
               <div
                 v-for="n in notifications"
@@ -88,7 +88,7 @@
                   <button
                     type="button"
                     class="flex-shrink-0 mt-0.5 p-0.5 rounded text-text-muted hover:text-red-400 hover:bg-red-900/20 transition-colors"
-                    title="Delete notification"
+                    :title="t('notifications.deleteNotification')"
                     @click.stop="deleteNotification(n)"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +133,7 @@
               <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
-              My Characters
+              {{ t('notifications.myCharacters') }}
             </RouterLink>
             <hr class="border-[#2a3450]" />
             <button
@@ -144,7 +144,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
               </svg>
-              Sign Out
+              {{ t('auth.signOut') }}
             </button>
           </div>
         </Transition>
@@ -156,12 +156,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
 import * as notifApi from '@/api/notifications'
 import { useTimezone } from '@/composables/useTimezone'
+
+const { t } = useI18n()
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
