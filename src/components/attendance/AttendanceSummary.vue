@@ -12,8 +12,7 @@ import { computed } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 
 const props = defineProps({
-  records: { type: Array, default: () => [] },
-  events:  { type: Array, default: () => [] }
+  records: { type: Array, default: () => [] }
 })
 
 const stats = computed(() => {

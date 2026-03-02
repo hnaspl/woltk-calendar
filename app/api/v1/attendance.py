@@ -11,6 +11,10 @@ from app.services import attendance_service, event_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission
 from app.utils import notify
+from app.models.signup import LineupSlot
+from app.enums import SlotGroup
+import sqlalchemy as sa
+from app.extensions import db
 
 bp = Blueprint("attendance", __name__)
 
@@ -41,6 +45,17 @@ def record_attendance(guild_id: int, event_id: int):
     missing = required - data.keys()
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    # Reject bench characters — only lineup members can have attendance recorded
+    lineup_slot = db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.raid_event_id == event_id,
+            LineupSlot.character_id == data["character_id"],
+        )
+    ).scalar_one_or_none()
+    if lineup_slot is None or lineup_slot.slot_group == SlotGroup.BENCH.value:
+        return jsonify({"error": "Only characters in the raid lineup can have attendance recorded"}), 400
+
     try:
         record = attendance_service.record_attendance(
             raid_event_id=event_id,

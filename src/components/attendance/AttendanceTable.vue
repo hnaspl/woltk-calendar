@@ -1,148 +1,113 @@
 <template>
-  <WowCard :padded="false">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-bg-tertiary border-b border-border-default">
-            <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Character</th>
-            <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Class</th>
-            <th
-              v-for="ev in displayEvents"
-              :key="ev.id"
-              class="text-center px-2 py-3 text-xs text-text-muted min-w-[80px]"
-            >
-              <WowTooltip :text="ev.title" position="bottom">
-                <div class="truncate max-w-[70px] mx-auto">{{ formatDate(ev.starts_at_utc) }}</div>
-              </WowTooltip>
-            </th>
-            <th class="text-center px-4 py-3 text-xs text-text-muted uppercase tracking-wider">%</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border-default">
-          <tr
-            v-for="row in tableRows"
-            :key="row.characterId"
-            class="hover:bg-bg-tertiary/50 transition-colors"
-          >
-            <td class="px-4 py-2.5 font-medium text-text-primary">{{ row.characterName }}</td>
-            <td class="px-4 py-2.5">
-              <ClassBadge :class-name="row.class" />
-            </td>
-            <td
-              v-for="ev in displayEvents"
-              :key="ev.id"
-              class="px-2 py-2.5 text-center"
-            >
-              <span
-                v-if="row.attended.has(ev.id)"
-                class="inline-block w-5 h-5 rounded-full bg-green-500/20 border border-green-500 text-green-400 text-xs leading-5"
-                title="Present"
-              >✓</span>
-              <span
-                v-else-if="row.signedUp.has(ev.id)"
-                class="inline-block w-5 h-5 rounded-full bg-red-500/20 border border-red-500 text-red-400 text-xs leading-5"
-                title="Absent"
-              >✗</span>
-              <span v-else class="text-border-default">–</span>
-            </td>
-            <td class="px-4 py-2.5 text-center">
-              <span
-                class="font-semibold"
-                :class="row.pct >= 75 ? 'text-green-400' : row.pct >= 50 ? 'text-yellow-400' : 'text-red-400'"
-              >{{ row.pct }}%</span>
-            </td>
-          </tr>
-          <tr v-if="tableRows.length === 0">
-            <td :colspan="displayEvents.length + 3" class="px-4 py-8 text-center text-text-muted">
-              No attendance data available.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <div class="space-y-6">
+    <div v-if="eventSections.length === 0" class="px-4 py-8 text-center text-text-muted">
+      No attendance data available.
     </div>
-  </WowCard>
+
+    <div v-for="section in eventSections" :key="section.eventId">
+      <!-- Event date header -->
+      <div class="flex items-center gap-3 mb-2">
+        <h3 class="text-base font-semibold text-border-gold">{{ formatDate(section.date) }}</h3>
+        <span class="text-sm text-text-muted">{{ section.title }}</span>
+      </div>
+
+      <WowCard :padded="false">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-bg-tertiary border-b border-border-default">
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Character</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Class</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Status</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Note</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-default">
+              <tr
+                v-for="row in section.rows"
+                :key="row.characterId"
+                class="hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <td class="px-4 py-2.5 font-medium text-text-primary">{{ row.characterName }}</td>
+                <td class="px-4 py-2.5">
+                  <ClassBadge :class-name="row.className" />
+                </td>
+                <td class="px-4 py-2.5">
+                  <span
+                    class="inline-flex items-center gap-1 text-xs font-semibold"
+                    :class="outcomeClass(row.outcome)"
+                  >{{ outcomeLabel(row.outcome) }}</span>
+                </td>
+                <td class="px-4 py-2.5 text-text-muted text-xs">{{ row.note || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </WowCard>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
-import WowTooltip from '@/components/common/WowTooltip.vue'
 
 const props = defineProps({
-  records: { type: Array, default: () => [] }, // attendance records
-  events:  { type: Array, default: () => [] }, // raid events
-  signups: { type: Array, default: () => [] }  // all signups across events
+  records: { type: Array, default: () => [] },
+  events:  { type: Array, default: () => [] }
 })
 
 function formatDate(d) {
-  if (!d) return '?'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-// Only show events that have attendance records for the current user
-const displayEvents = computed(() => {
-  const eventIdsWithRecords = new Set(
-    props.records.map(r => r.raid_event_id ?? r.event_id)
-  )
-  return props.events
-    .filter(ev => eventIdsWithRecords.has(ev.id))
-    .sort((a, b) => new Date(a.starts_at_utc) - new Date(b.starts_at_utc))
-})
+function outcomeLabel(o) {
+  if (o === 'attended') return 'Attended'
+  if (o === 'late') return 'Late'
+  return 'Unattended'
+}
 
-const tableRows = computed(() => {
-  const charMap = new Map()
+function outcomeClass(o) {
+  if (o === 'attended') return 'text-green-400'
+  if (o === 'late') return 'text-yellow-400'
+  return 'text-red-400'
+}
 
-  // Populate from signups (if available)
-  props.signups.forEach(su => {
-    const cid = su.character_id ?? su.character?.id
-    if (!cid) return
-    if (!charMap.has(cid)) {
-      charMap.set(cid, {
-        characterId: cid,
-        characterName: su.character?.name ?? '?',
-        class: su.character?.class_name ?? '',
-        attended: new Set(),
-        signedUp: new Set()
-      })
-    }
-    charMap.get(cid).signedUp.add(su.raid_event_id ?? su.event_id)
-  })
+const eventSections = computed(() => {
+  // Build a lookup for events by id
+  const eventMap = new Map()
+  props.events.forEach(ev => eventMap.set(ev.id, ev))
 
-  // Populate from attendance records
+  // Group records by event
+  const grouped = new Map()
   props.records.forEach(r => {
-    const cid = r.character_id
-    if (!cid) return
-    const eventId = r.raid_event_id ?? r.event_id
-    if (!charMap.has(cid)) {
-      charMap.set(cid, {
-        characterId: cid,
-        characterName: r.character?.name ?? '?',
-        class: r.character?.class_name ?? '',
-        attended: new Set(),
-        signedUp: new Set()
-      })
-    }
-    const entry = charMap.get(cid)
-    // Update character info from records if it was missing
-    if (entry.characterName === '?' && r.character?.name) {
-      entry.characterName = r.character.name
-    }
-    if (!entry.class && r.character?.class_name) {
-      entry.class = r.character.class_name
-    }
-    // Mark as signed up (they were in the raid)
-    entry.signedUp.add(eventId)
-    // Mark as attended if outcome is attended or late
-    if (r.outcome === 'attended' || r.outcome === 'late') {
-      entry.attended.add(eventId)
-    }
+    const eid = r.raid_event_id ?? r.event_id
+    if (!grouped.has(eid)) grouped.set(eid, [])
+    grouped.get(eid).push(r)
   })
 
-  return Array.from(charMap.values()).map(row => {
-    const total = row.signedUp.size || 1
-    const pct = Math.round((row.attended.size / total) * 100)
-    return { ...row, pct }
-  }).sort((a, b) => b.pct - a.pct)
+  // Build sections sorted by event date (most recent first)
+  return Array.from(grouped.entries())
+    .map(([eid, recs]) => {
+      const ev = eventMap.get(eid)
+      return {
+        eventId: eid,
+        title: ev?.title ?? 'Raid',
+        date: ev?.starts_at_utc ?? null,
+        rows: recs.map(r => ({
+          characterId: r.character_id,
+          characterName: r.character?.name ?? 'Unknown',
+          className: r.character?.class_name ?? '',
+          outcome: r.outcome,
+          note: r.note
+        }))
+      }
+    })
+    .sort((a, b) => {
+      if (!a.date || !b.date) return 0
+      return new Date(b.date) - new Date(a.date)
+    })
 })
 </script>

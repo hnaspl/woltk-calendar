@@ -26,8 +26,8 @@
       </div>
 
       <template v-else>
-        <AttendanceSummary :records="records" :events="events" />
-        <AttendanceTable :records="records" :events="events" :signups="signups" />
+        <AttendanceSummary :records="records" />
+        <AttendanceTable :records="records" :events="events" />
       </template>
     </div>
   </AppShell>
@@ -51,7 +51,6 @@ const error = ref(null)
 const period = ref('30')
 const records = ref([])
 const events = ref([])
-const signups = ref([])
 
 onMounted(() => fetchData())
 watch(period, fetchData)
@@ -69,7 +68,7 @@ async function fetchData() {
     params.user_id = authStore.user?.id
     const [recs, evs] = await Promise.all([
       attendanceApi.getAttendance(guildId, params),
-      eventsApi.getEvents(guildId, { status: 'completed', ...params })
+      eventsApi.getEvents(guildId)
     ])
     records.value = recs
     events.value = evs
