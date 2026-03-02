@@ -256,12 +256,7 @@ function formatTime(iso) {
  * pre-rendered English title.
  */
 function notifTitle(n) {
-  if (n.title_key && n.title_params) {
-    return t(n.title_key, n.title_params)
-  }
-  if (n.title_key) {
-    return t(n.title_key)
-  }
+  if (n.title_key) return t(n.title_key, n.title_params || {})
   return n.title ?? ''
 }
 
@@ -270,12 +265,7 @@ function notifTitle(n) {
  * pre-rendered English body.
  */
 function notifBody(n) {
-  if (n.body_key && n.body_params) {
-    return t(n.body_key, n.body_params)
-  }
-  if (n.body_key) {
-    return t(n.body_key)
-  }
+  if (n.body_key) return t(n.body_key, n.body_params || {})
   return n.body ?? ''
 }
 
