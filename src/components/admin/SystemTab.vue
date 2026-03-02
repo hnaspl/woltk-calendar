@@ -152,7 +152,7 @@
       <h2 class="wow-heading text-base mb-2">{{ t('admin.system.discord.title') }}</h2>
       <p class="text-text-muted text-xs mb-4">{{ t('admin.system.discord.help') }}</p>
 
-      <div v-if="discordLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-if="discordLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" aria-label="Loading Discord settings" />
       <div v-else class="space-y-4 max-w-lg">
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.discord.clientId') }}</label>
