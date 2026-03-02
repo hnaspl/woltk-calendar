@@ -730,3 +730,122 @@ class TestEdgeCaseTimezones:
         event_notif = next(n for n in notifs if n.type == "event_created")
 
         assert "19:30" in event_notif.body
+
+
+class TestMidnightEventHandling:
+    """Verify midnight and near-midnight events are stored and returned correctly.
+
+    The frontend converts datetime-local values from guild timezone to UTC
+    before sending them to the backend.  These tests verify the backend
+    side: that naive and timezone-aware midnight strings are stored correctly,
+    and that the API round-trips them without date drift.
+    """
+
+    def test_midnight_utc_stored_correctly(self, tz_seed):
+        """An event at exactly 00:00 UTC stores hour 0."""
+        g = tz_seed["guild_warsaw"]
+        t = datetime(2026, 3, 16, 0, 0, tzinfo=timezone.utc)
+        ev = _create_event(g, tz_seed["admin"], tz_seed["rd_warsaw"], t, "Midnight UTC")
+        assert ev.starts_at_utc.hour == 0
+        assert ev.starts_at_utc.day == 16
+
+    def test_midnight_utc_api_roundtrip(self, app, tz_seed):
+        """POST midnight UTC → GET returns the same midnight UTC."""
+        g = tz_seed["guild_warsaw"]
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(tz_seed["admin"].id)
+
+            resp = client.post(f"/api/v1/guilds/{g.id}/events", json={
+                "title": "Midnight API Raid",
+                "realm_name": g.realm_name,
+                "starts_at_utc": "2026-03-16T00:00:00+00:00",
+                "raid_size": 25,
+                "difficulty": "normal",
+                "raid_definition_id": tz_seed["rd_warsaw"].id,
+            })
+            assert resp.status_code == 201
+            eid = resp.get_json()["id"]
+
+            resp2 = client.get(f"/api/v1/guilds/{g.id}/events/{eid}")
+            assert resp2.status_code == 200
+            parsed = datetime.fromisoformat(resp2.get_json()["starts_at_utc"])
+            assert parsed.hour == 0
+            assert parsed.day == 16
+
+    def test_naive_midnight_string_treated_as_utc(self, tz_seed):
+        """_ensure_utc treats a naive midnight string as UTC."""
+        from app.services.event_service import _ensure_utc
+
+        result = _ensure_utc("2026-03-16T00:00:00")
+        assert result.hour == 0
+        assert result.day == 16
+        assert result.tzinfo == timezone.utc
+
+    def test_midnight_notification_correct_date(self, tz_seed):
+        """Notification for midnight UTC shows correct guild-local date/time.
+
+        00:00 UTC on Mar 16 → 01:00 CET on Mar 16 (Warsaw, winter).
+        """
+        g = tz_seed["guild_warsaw"]
+        t = datetime(2026, 3, 16, 0, 0, tzinfo=timezone.utc)
+        ev = _create_event(g, tz_seed["admin"], tz_seed["rd_warsaw"], t, "Midnight CET")
+
+        notification_service.delete_all_notifications(tz_seed["admin"].id)
+
+        with patch("app.utils.notify._push_to_user"):
+            notify.notify_event_created(ev, g.id)
+
+        notifs = notification_service.list_notifications(tz_seed["admin"].id)
+        event_notif = next(n for n in notifs if n.type == "event_created")
+
+        # 00:00 UTC → 01:00 CET (Warsaw winter, UTC+1)
+        assert "01:00" in event_notif.body
+        assert "Mar 16" in event_notif.body
+
+    def test_pre_midnight_negative_offset_guild(self, app, tz_seed):
+        """23:00 UTC stored for US guild; notification shows correct local time.
+
+        23:00 UTC → 18:00 EST (America/New_York, winter, UTC-5).
+        """
+        g = tz_seed["guild_us"]
+        t = datetime(2026, 1, 15, 23, 0, tzinfo=timezone.utc)
+        ev = _create_event(g, tz_seed["admin"], tz_seed["rd_us"], t, "Late Night US")
+
+        notification_service.delete_all_notifications(tz_seed["admin"].id)
+
+        with patch("app.utils.notify._push_to_user"):
+            notify.notify_event_created(ev, g.id)
+
+        notifs = notification_service.list_notifications(tz_seed["admin"].id)
+        event_notif = next(n for n in notifs if n.type == "event_created")
+
+        # 23:00 UTC → 18:00 EST
+        assert "18:00" in event_notif.body
+
+    def test_midnight_local_as_utc_for_tokyo(self, tz_seed):
+        """Midnight in Tokyo (00:00 JST) = 15:00 UTC previous day.
+
+        Frontend would convert: user picks 2026-03-16 00:00 in guild tz
+        Asia/Tokyo (UTC+9) → sends 2026-03-15T15:00:00+00:00 to backend.
+        """
+        g = tz_seed["guild_jp"]
+        # This is what the frontend would send after guildLocalToUtc conversion
+        t = datetime(2026, 3, 15, 15, 0, tzinfo=timezone.utc)
+        ev = _create_event(g, tz_seed["admin"], tz_seed["rd_jp"], t, "Midnight Tokyo")
+
+        assert ev.starts_at_utc.hour == 15
+        assert ev.starts_at_utc.day == 15
+
+        # Notification should show midnight in JST
+        notification_service.delete_all_notifications(tz_seed["admin"].id)
+
+        with patch("app.utils.notify._push_to_user"):
+            notify.notify_event_created(ev, g.id)
+
+        notifs = notification_service.list_notifications(tz_seed["admin"].id)
+        event_notif = next(n for n in notifs if n.type == "event_created")
+
+        # 15:00 UTC → 00:00 JST (next day Mar 16)
+        assert "00:00" in event_notif.body
+        assert "Mar 16" in event_notif.body
