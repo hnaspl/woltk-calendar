@@ -53,8 +53,8 @@ def record_attendance(guild_id: int, event_id: int):
             LineupSlot.character_id == data["character_id"],
         )
     ).scalar_one_or_none()
-    if lineup_slot is None or lineup_slot.slot_group == SlotGroup.BENCH.value:
-        return jsonify({"error": "Only characters in the raid lineup can have attendance recorded"}), 400
+    if lineup_slot is not None and lineup_slot.slot_group == SlotGroup.BENCH.value:
+        return jsonify({"error": "Bench characters cannot have attendance recorded"}), 400
 
     try:
         record = attendance_service.record_attendance(
