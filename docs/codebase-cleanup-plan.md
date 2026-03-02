@@ -463,26 +463,27 @@ The bench/queue system spans:
 ## 9. Migration Checklist
 
 ### Phase 1 – Frontend Constants (Low Risk)
-- [ ] Add `ROLE_LABEL_MAP` to `src/constants.js`
-- [ ] Update `RaidDetailView.vue` — import `ROLE_LABEL_MAP`
-- [ ] Update `DashboardView.vue` — replace `BENCH_ROLE_LABELS` with imported `ROLE_LABEL_MAP`
-- [ ] Update `LineupBoard.vue` — import `ROLE_LABEL_MAP`
-- [ ] Update `SignupForm.vue` — import `ROLE_LABEL_MAP`
-- [ ] Update `SignupList.vue` — import `ROLE_LABEL_MAP`
-- [ ] Update `AttendanceModal.vue` — import `ROLE_LABEL_MAP`, fix 'Healer' inconsistency
-- [ ] Update `RoleBadge.vue` — import `ROLE_LABEL_MAP`
-- [ ] Add `EVENT_STATUSES` to `src/constants.js`
-- [ ] Add `ATTENDANCE_OUTCOMES` to `src/constants.js`
-- [ ] Run `npx vite build` — must succeed
-- [ ] Run all bench/queue tests — must pass
+- [x] Add `ROLE_LABEL_MAP` to `src/constants.js`
+- [x] Update `RaidDetailView.vue` — import `ROLE_LABEL_MAP`
+- [x] Update `DashboardView.vue` — replace `BENCH_ROLE_LABELS` with imported `ROLE_LABEL_MAP`
+- [x] Update `LineupBoard.vue` — import `ROLE_LABEL_MAP`
+- [x] Update `SignupForm.vue` — import `ROLE_LABEL_MAP`
+- [x] Update `SignupList.vue` — import `ROLE_LABEL_MAP`
+- [x] Update `AttendanceModal.vue` — import `ROLE_LABEL_MAP`, fix 'Healer' inconsistency
+- [x] Update `RoleBadge.vue` — import `ROLE_LABEL_MAP`
+- [x] Add `EVENT_STATUSES` to `src/constants.js`
+- [x] Add `ATTENDANCE_OUTCOMES` to `src/constants.js`
+- [x] Run `npx vite build` — must succeed
+- [x] Run all bench/queue tests — must pass
 
 ### Phase 2 – Frontend Shared Utilities (Low Risk)
-- [ ] Create `src/composables/useFormatting.js`
-- [ ] Update `MembersTab.vue` — use shared `formatDate`
-- [ ] Update `AttendanceTable.vue` — use shared `formatDate`
-- [ ] Update `CharacterDetailModal.vue` — use shared `formatDate`
-- [ ] Update `CharacterTooltip.vue` — use shared `formatDate`
-- [ ] Run `npx vite build` — must succeed
+- [x] Create `src/composables/useFormatting.js`
+- [x] Update `MembersTab.vue` — use shared `formatDate`
+- [x] Update `AttendanceTable.vue` — use shared `formatDate`
+- [x] Update `CharacterDetailModal.vue` — use shared `formatDate`
+- [x] Update `CharacterTooltip.vue` — use shared `formatDate`
+- [x] Update `SystemTab.vue` — use shared `formatDate` (bonus)
+- [x] Run `npx vite build` — must succeed
 
 ### Phase 3 – Backend API Helpers (Medium Risk)
 - [ ] Create `app/utils/api_helpers.py`
