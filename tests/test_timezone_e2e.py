@@ -785,7 +785,8 @@ class TestMidnightEventHandling:
     def test_midnight_notification_correct_date(self, tz_seed):
         """Notification for midnight UTC shows correct guild-local date/time.
 
-        00:00 UTC on Mar 16 → 01:00 CET on Mar 16 (Warsaw, winter).
+        00:00 UTC on Mar 16 → 01:00 CET on Mar 16 (Warsaw, CET=UTC+1;
+        DST does not start until Mar 29 in 2026).
         """
         g = tz_seed["guild_warsaw"]
         t = datetime(2026, 3, 16, 0, 0, tzinfo=timezone.utc)

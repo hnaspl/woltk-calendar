@@ -114,8 +114,9 @@ export function useTimezone() {
   function guildLocalToUtc(localStr) {
     if (!localStr) return localStr
     // Build a Date in the guild timezone by computing the UTC offset for that moment.
-    // 1. Parse the naive string as a rough UTC guess
-    const naive = new Date(localStr + 'Z')               // treat as UTC temporarily
+    // 1. Parse the naive string as if it were UTC (deliberately misinterpreted —
+    //    this intermediate value lets us derive the guild-timezone offset below).
+    const naive = new Date(localStr + 'Z')
     // 2. Format that instant in the guild tz to get the wall-clock parts
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: guildTimezone.value,
@@ -149,7 +150,8 @@ export function useTimezone() {
       hour: '2-digit', minute: '2-digit', hour12: false,
     }).formatToParts(date)
     const get = (type) => parts.find(p => p.type === type)?.value ?? '00'
-    // en-CA formats as YYYY-MM-DD; hour may return "24" at midnight in some locales
+    // en-CA formats as YYYY-MM-DD; some ICU implementations return "24" for
+    // midnight (ECMA-402 hourCycle h23 edge case), so normalise to "00".
     let hour = get('hour')
     if (hour === '24') hour = '00'
     return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`
