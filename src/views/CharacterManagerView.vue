@@ -210,7 +210,7 @@
         <template v-if="editingChar || manualEntry || lookupResult === 'found'">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.nameRequired') }}</label>
-            <input v-model="form.name" required placeholder="Arthas" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+            <input v-model="form.name" required :placeholder="t('characters.namePlaceholder')" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.classRequired') }}</label>
@@ -361,6 +361,7 @@ const syncing = ref(null)
 const lookingUp = ref(false)
 const lookupResult = ref(null)
 const error = ref(null)
+const errorIsNoGuild = ref(false)
 const formError = ref(null)
 const showModal = ref(false)
 const showRemoveConfirm = ref(false)
@@ -423,7 +424,8 @@ onMounted(async () => {
   loading.value = true
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (!guildStore.currentGuild) {
-    error.value = 'You need to join a guild first before managing characters'
+    error.value = t('characters.toasts.joinGuildFirstManage')
+    errorIsNoGuild.value = true
     loading.value = false
     return
   }
@@ -442,8 +444,9 @@ watch(
   () => guildStore.currentGuild?.id,
   async (newId) => {
     if (!newId) return
-    if (error.value === 'You need to join a guild first before managing characters') {
+    if (errorIsNoGuild.value) {
       error.value = null
+      errorIsNoGuild.value = false
       loading.value = true
       try {
         const raw = await charApi.getMyCharacters(newId)
@@ -553,8 +556,8 @@ const warmaneData = ref(null)
 
 async function saveChar() {
   formError.value = null
-  if (!guildStore.currentGuild) { formError.value = 'You need to join a guild first before adding characters'; return }
-  if (!form.name || !form.class || !form.realm) { formError.value = 'Name, class and realm are required'; return }
+  if (!guildStore.currentGuild) { formError.value = t('characters.toasts.joinGuildFirst'); return }
+  if (!form.name || !form.class || !form.realm) { formError.value = t('characters.toasts.nameClassRealmRequired'); return }
   saving.value = true
   try {
     const payload = {
@@ -586,12 +589,12 @@ async function saveChar() {
       const updated = await charApi.updateCharacter(guildStore.currentGuild.id, editingChar.value.id, payload)
       const idx = characters.value.findIndex(c => c.id === editingChar.value.id)
       if (idx !== -1) characters.value[idx] = mapChar(updated)
-      uiStore.showToast('Character updated', 'success')
+      uiStore.showToast(t('characters.toasts.characterUpdated'), 'success')
     } else {
       const created = await charApi.createCharacter(guildStore.currentGuild.id, payload)
       characters.value.push(mapChar(created))
       lastAddedName.value = payload.name
-      uiStore.showToast('Character added', 'success')
+      uiStore.showToast(t('characters.toasts.characterAdded'), 'success')
     }
     const wasEditing = !!editingChar.value
     warmaneData.value = null
@@ -611,9 +614,9 @@ async function setMain(char) {
   try {
     await charApi.setMainCharacter(guildStore.currentGuild.id, char.id)
     characters.value.forEach(c => { c.is_main = c.id === char.id })
-    uiStore.showToast(`${char.name} set as main`, 'success')
+    uiStore.showToast(t('characters.toasts.setAsMain', { name: char.name }), 'success')
   } catch {
-    uiStore.showToast('Failed to set main', 'error')
+    uiStore.showToast(t('characters.toasts.failedToSetMain'), 'error')
   }
 }
 
@@ -623,9 +626,9 @@ async function syncFromWarmane(char) {
     const updated = await warmaneApi.syncCharacter(char.id)
     const idx = characters.value.findIndex(c => c.id === char.id)
     if (idx !== -1) characters.value[idx] = mapChar(updated)
-    uiStore.showToast(`${char.name} synced from Warmane`, 'success')
+    uiStore.showToast(t('characters.toasts.syncedFromWarmane', { name: char.name }), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Sync failed — character may not exist on Warmane', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('characters.toasts.syncFailed'), 'error')
   } finally {
     syncing.value = null
   }
@@ -637,9 +640,9 @@ async function doArchive() {
     await charApi.archiveCharacter(guildStore.currentGuild.id, removeTarget.value.id)
     characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
     showRemoveConfirm.value = false
-    uiStore.showToast('Character archived', 'success')
+    uiStore.showToast(t('characters.toasts.characterArchived'), 'success')
   } catch {
-    uiStore.showToast('Failed to archive character', 'error')
+    uiStore.showToast(t('characters.toasts.failedToArchive'), 'error')
   } finally {
     saving.value = false
   }
@@ -651,9 +654,9 @@ async function doDelete() {
     await charApi.deleteCharacter(guildStore.currentGuild.id, removeTarget.value.id)
     characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
     showRemoveConfirm.value = false
-    uiStore.showToast('Character permanently deleted', 'success')
+    uiStore.showToast(t('characters.toasts.characterDeleted'), 'success')
   } catch {
-    uiStore.showToast('Failed to delete character', 'error')
+    uiStore.showToast(t('characters.toasts.failedToDeleteChar'), 'error')
   } finally {
     saving.value = false
   }
@@ -665,9 +668,9 @@ async function doUnarchive(char) {
     const restored = await charApi.unarchiveCharacter(guildStore.currentGuild.id, char.id)
     archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== char.id)
     characters.value.push(mapChar(restored))
-    uiStore.showToast(`${char.name} restored`, 'success')
+    uiStore.showToast(t('characters.toasts.characterRestored', { name: char.name }), 'success')
   } catch {
-    uiStore.showToast('Failed to restore character', 'error')
+    uiStore.showToast(t('characters.toasts.failedToRestore'), 'error')
   } finally {
     saving.value = false
   }
@@ -679,9 +682,9 @@ async function doDeleteArchived() {
     await charApi.deleteCharacter(guildStore.currentGuild.id, deleteTarget.value.id)
     archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast('Character permanently deleted', 'success')
+    uiStore.showToast(t('characters.toasts.characterDeleted'), 'success')
   } catch {
-    uiStore.showToast('Failed to delete character', 'error')
+    uiStore.showToast(t('characters.toasts.failedToDeleteChar'), 'error')
   } finally {
     saving.value = false
   }
