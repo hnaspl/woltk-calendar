@@ -37,55 +37,96 @@
       </form>
     </WowCard>
 
-    <!-- Warmane Guild Lookup -->
-    <WowCard>
-      <h2 class="wow-heading text-base mb-4">Warmane Guild Info</h2>
-      <p class="text-text-muted text-sm mb-4">Fetch guild roster and info from the Warmane armory API.</p>
-      <form @submit.prevent="fetchWarmaneGuild" class="flex items-end gap-3 max-w-lg">
-        <div class="flex-1">
-          <label class="block text-xs text-text-muted mb-1">Guild Name</label>
-          <input v-model="warmaneGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+    <!-- Warmane Guild Info (only for Warmane-sourced guilds) -->
+    <WowCard v-if="isWarmaneSource">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="wow-heading text-base">Warmane Guild Info</h2>
+        <div class="flex items-center gap-3">
+          <span v-if="lastRefreshed" class="text-[10px] text-text-muted">
+            Last refreshed: {{ lastRefreshed }}
+          </span>
+          <WowButton
+            v-if="canManualRefresh"
+            variant="secondary"
+            class="text-xs py-1 px-3"
+            :loading="fetchingWarmane"
+            @click="fetchWarmaneRoster"
+          >🔄 Refresh</WowButton>
         </div>
-        <div class="w-40">
-          <label class="block text-xs text-text-muted mb-1">Realm</label>
-          <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
-          </select>
+      </div>
+
+      <div v-if="fetchingWarmane && !warmaneGuildData" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else-if="warmaneError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
+
+      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Left column: Guild Info -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-accent-gold uppercase tracking-wider">Guild Details</h3>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-text-muted w-24 flex-shrink-0">Guild Name</span>
+              <span class="text-sm text-text-primary font-medium">{{ warmaneGuildData.name }}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-text-muted w-24 flex-shrink-0">Realm</span>
+              <span class="text-sm text-text-primary">{{ warmaneGuildData.realm }}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-text-muted w-24 flex-shrink-0">Faction</span>
+              <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold"
+                :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+              >
+                <span>{{ warmaneGuildData.faction === 'Alliance' ? '🛡️' : '⚔️' }}</span>
+                {{ warmaneGuildData.faction }}
+              </span>
+              <span v-else class="text-sm text-text-muted">Unknown</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-text-muted w-24 flex-shrink-0">Members</span>
+              <span class="text-sm text-text-primary font-medium">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
+            </div>
+          </div>
+
+          <!-- Class distribution -->
+          <div v-if="classDistribution.length" class="mt-4">
+            <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Class Distribution</h4>
+            <div class="grid grid-cols-2 gap-1.5">
+              <div v-for="cd in classDistribution" :key="cd.name" class="flex items-center gap-2 text-xs">
+                <img :src="getClassIcon(cd.name)" :alt="cd.name" class="w-4 h-4 rounded-sm" />
+                <span :style="{ color: getClassColor(cd.name) }">{{ cd.name }}</span>
+                <span class="text-text-muted ml-auto">{{ cd.count }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">Fetch</WowButton>
-      </form>
 
-      <div v-if="warmaneError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
-
-      <div v-if="warmaneGuildData" class="mt-4 space-y-3">
-        <div class="flex items-center gap-4 text-sm">
-          <span class="text-text-muted">Guild:</span>
-          <span class="text-text-primary font-medium">{{ warmaneGuildData.name }}</span>
-          <span v-if="warmaneGuildData.faction" class="px-2 py-0.5 rounded text-xs font-medium"
-            :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
-          >{{ warmaneGuildData.faction }}</span>
-          <span class="text-text-muted">{{ warmaneGuildData.member_count }} members</span>
-        </div>
-
-        <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-64 overflow-y-auto">
-          <table class="w-full text-xs">
-            <thead class="sticky top-0">
-              <tr class="bg-bg-tertiary border-b border-border-default">
-                <th class="text-left px-3 py-2 text-text-muted uppercase">Name</th>
-                <th class="text-left px-3 py-2 text-text-muted uppercase">Class</th>
-                <th class="text-left px-3 py-2 text-text-muted uppercase">Level</th>
-                <th class="text-left px-3 py-2 text-text-muted uppercase">Race</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border-default">
-              <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50">
-                <td class="px-3 py-1.5 text-text-primary">{{ ch.name }}</td>
-                <td class="px-3 py-1.5 text-text-muted">{{ ch.class_name }}</td>
-                <td class="px-3 py-1.5 text-text-muted">{{ ch.level }}</td>
-                <td class="px-3 py-1.5 text-text-muted">{{ ch.race }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Right column: Member Roster -->
+        <div>
+          <h3 class="text-sm font-semibold text-accent-gold uppercase tracking-wider mb-3">Member Roster ({{ warmaneGuildData.roster?.length ?? 0 }})</h3>
+          <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-96 overflow-y-auto rounded border border-border-default">
+            <table class="w-full text-xs">
+              <thead class="sticky top-0 z-10">
+                <tr class="bg-bg-tertiary border-b border-border-default">
+                  <th class="text-left px-3 py-2 text-text-muted uppercase">Character</th>
+                  <th class="text-left px-3 py-2 text-text-muted uppercase">Level</th>
+                  <th class="text-left px-3 py-2 text-text-muted uppercase">Race</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border-default">
+                <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50 transition-colors">
+                  <td class="px-3 py-1.5">
+                    <div class="flex items-center gap-2">
+                      <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-5 h-5 rounded-sm flex-shrink-0" />
+                      <span class="font-medium" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-1.5 text-text-muted">{{ ch.level }}</td>
+                  <td class="px-3 py-1.5 text-text-muted">{{ ch.race }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-center py-8 text-text-muted text-sm">No roster data available.</div>
         </div>
       </div>
     </WowCard>
@@ -93,17 +134,23 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import { useWowIcons } from '@/composables/useWowIcons'
+import { usePermissions } from '@/composables/usePermissions'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
-import * as warmaneApi from '@/api/warmane'
+import * as adminApi from '@/api/admin'
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 const uiStore = useUiStore()
+const { getClassIcon, getClassColor } = useWowIcons()
+const permissions = usePermissions()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -129,6 +176,14 @@ const timezoneOptions = [
   'UTC',
 ]
 
+// Permission check: guild admin, guild creator, or global admin can manually refresh
+const canManualRefresh = computed(() => {
+  if (authStore.user?.is_admin) return true
+  const guild = guildStore.currentGuild
+  if (guild && guild.created_by === authStore.user?.id) return true
+  return permissions.can('update_guild_settings')
+})
+
 async function loadGuildData() {
   loading.value = true
   error.value = null
@@ -145,12 +200,27 @@ async function loadGuildData() {
   }
 }
 
-onMounted(loadGuildData)
+onMounted(async () => {
+  await loadGuildData()
+  if (isWarmaneSource.value) {
+    await fetchWarmaneRoster()
+    await loadAutoRefreshInterval()
+  }
+})
 
 watch(
   () => guildStore.currentGuild?.id,
-  (newId, oldId) => {
-    if (newId && newId !== oldId) loadGuildData()
+  async (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      stopAutoRefresh()
+      await loadGuildData()
+      warmaneGuildData.value = null
+      warmaneError.value = null
+      if (isWarmaneSource.value) {
+        await fetchWarmaneRoster()
+        await loadAutoRefreshInterval()
+      }
+    }
   }
 )
 
@@ -172,29 +242,66 @@ async function saveGuild() {
   }
 }
 
-// Warmane guild lookup
-const warmaneGuildName = ref('')
-const warmaneGuildRealm = ref('Icecrown')
+// Warmane guild info
 const fetchingWarmane = ref(false)
 const warmaneError = ref(null)
 const warmaneGuildData = ref(null)
+const lastRefreshed = ref(null)
+let autoRefreshTimer = null
 
-async function fetchWarmaneGuild() {
+async function fetchWarmaneRoster() {
+  if (!guildStore.currentGuild?.id) return
   warmaneError.value = null
-  warmaneGuildData.value = null
-  const name = warmaneGuildName.value || form.name
-  const realm = warmaneGuildRealm.value || form.realm
-  if (!name || !realm) {
-    warmaneError.value = 'Guild name and realm are required'
-    return
-  }
   fetchingWarmane.value = true
   try {
-    warmaneGuildData.value = await warmaneApi.lookupGuild(realm, name)
+    warmaneGuildData.value = await guildsApi.getWarmaneRoster(guildStore.currentGuild.id)
+    lastRefreshed.value = new Date().toLocaleTimeString()
   } catch (err) {
-    warmaneError.value = err?.response?.data?.message ?? 'Guild not found on Warmane'
+    warmaneError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from Warmane'
   } finally {
     fetchingWarmane.value = false
   }
 }
+
+// Class distribution computed from roster
+const classDistribution = computed(() => {
+  const roster = warmaneGuildData.value?.roster
+  if (!roster?.length) return []
+  const counts = {}
+  for (const ch of roster) {
+    const cls = ch.class_name || 'Unknown'
+    counts[cls] = (counts[cls] || 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+})
+
+// Auto-refresh using system settings interval
+async function loadAutoRefreshInterval() {
+  stopAutoRefresh()
+  try {
+    const settings = await adminApi.getSystemSettings()
+    const enabled = settings.autosync_enabled === 'true'
+    const intervalMin = parseInt(settings.autosync_interval_minutes) || 60
+    if (enabled && intervalMin > 0) {
+      autoRefreshTimer = setInterval(() => {
+        if (isWarmaneSource.value) fetchWarmaneRoster()
+      }, intervalMin * 60 * 1000)
+    }
+  } catch {
+    // If we can't load system settings (non-admin), skip auto-refresh
+  }
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer)
+    autoRefreshTimer = null
+  }
+}
+
+onUnmounted(() => {
+  stopAutoRefresh()
+})
 </script>
