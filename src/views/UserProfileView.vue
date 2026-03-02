@@ -22,7 +22,7 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.timezone') }}</label>
             <select v-model="profileForm.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
+              <option v-for="tz in timezones" :key="tz" :value="tz">{{ tzLabel(tz) }}</option>
             </select>
           </div>
           <div>
@@ -100,6 +100,12 @@ const timezones = [
   'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
   'UTC',
 ]
+
+function tzLabel(tz) {
+  const key = 'timezones.' + tz.replace(/\//g, '_').replace(/-/g, '_')
+  const label = t(key)
+  return label !== key ? label : tz
+}
 
 onMounted(() => {
   if (authStore.user) {

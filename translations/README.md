@@ -96,6 +96,25 @@ Translation keys are organized into these top-level sections:
 | `warmane` | Warmane API integration messages |
 | `topBar` | Top navigation bar |
 | `characterDetail` | Character detail modal |
+| `timezones` | Human-friendly timezone labels for dropdowns |
+| `permissions` | Permission display names and descriptions (admin panel) |
+| `permissionCategories` | Permission category headers (admin panel) |
+
+### Special character escaping
+
+The frontend uses **vue-i18n** which treats certain characters as syntax.
+These must be escaped using the literal block syntax `{'char'}`:
+
+| Character | Meaning in vue-i18n | How to escape | Example |
+|---|---|---|---|
+| `@` | Linked message (`@:key`) | `{'@'}` | `you{'@'}example.com` |
+| `{` / `}` | Variable interpolation | `{'{'}` / `{'}'}` | `{'{'}literal braces{'}'}` |
+| `|` | Pluralization separator | `{'|'}` | `A {'|'} B` |
+| `%` | Legacy format token | `{'%'}` | `100{'%'}` |
+
+> **Tip:** If a translation string renders blank or throws a console error
+> like *"Message compilation error: Invalid linked format"*, check for
+> unescaped special characters listed above.
 
 ### Unification rules
 

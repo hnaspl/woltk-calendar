@@ -28,7 +28,7 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildTimezone') }}</label>
           <select v-model="form.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tz }}</option>
+            <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tzLabel(tz) }}</option>
           </select>
           <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.timezoneHelp') }}</p>
         </div>
@@ -188,6 +188,12 @@ const timezoneOptions = [
   'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland',
   'UTC',
 ]
+
+function tzLabel(tz) {
+  const key = 'timezones.' + tz.replace(/\//g, '_').replace(/-/g, '_')
+  const label = t(key)
+  return label !== key ? label : tz
+}
 
 // Permission check: guild admin, guild creator, or global admin can manually refresh
 const canManualRefresh = computed(() => {

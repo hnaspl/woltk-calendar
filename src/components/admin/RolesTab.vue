@@ -72,15 +72,15 @@
       <div v-if="permissionsLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else>
         <div v-for="cat in permissionCategories" :key="cat" class="mb-4">
-          <h3 class="text-xs text-accent-gold uppercase tracking-wider mb-2 px-1">{{ cat }}</h3>
+          <h3 class="text-xs text-accent-gold uppercase tracking-wider mb-2 px-1">{{ permCategoryLabel(cat) }}</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <div
               v-for="perm in permissionsByCategory(cat)"
               :key="perm.code"
               class="px-3 py-2 rounded bg-bg-tertiary border border-border-default"
             >
-              <div class="text-sm text-text-primary">{{ perm.display_name }}</div>
-              <div class="text-xs text-text-muted">{{ perm.code }}</div>
+              <div class="text-sm text-text-primary">{{ permLabel(perm.code, perm.display_name) }}</div>
+              <div class="text-[11px] text-text-muted mt-0.5">{{ permDesc(perm.code) }}</div>
             </div>
           </div>
         </div>
@@ -174,7 +174,7 @@
           <div class="max-h-80 overflow-y-auto border border-border-default rounded p-3 space-y-4 bg-bg-tertiary/30">
             <div v-for="cat in permissionCategories" :key="cat">
               <div class="flex items-center gap-2 mb-2">
-                <h4 class="text-xs text-accent-gold uppercase tracking-wider">{{ cat }}</h4>
+                <h4 class="text-xs text-accent-gold uppercase tracking-wider">{{ permCategoryLabel(cat) }}</h4>
                 <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, true)">{{ t('common.labels.all') }}</button>
                 <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, false)">{{ t('common.labels.none') }}</button>
               </div>
@@ -183,6 +183,7 @@
                   v-for="perm in permissionsByCategory(cat)"
                   :key="perm.code"
                   class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-tertiary cursor-pointer text-sm"
+                  :title="permDesc(perm.code)"
                 >
                   <input
                     type="checkbox"
@@ -190,7 +191,7 @@
                     v-model="roleForm.permissions"
                     class="w-3.5 h-3.5 rounded bg-bg-tertiary border border-border-default accent-accent-gold"
                   />
-                  <span class="text-text-primary">{{ perm.display_name }}</span>
+                  <span class="text-text-primary">{{ permLabel(perm.code, perm.display_name) }}</span>
                 </label>
               </div>
             </div>
@@ -311,6 +312,24 @@ const permissionCategories = computed(() => {
 
 function permissionsByCategory(category) {
   return allPermissions.value.filter(p => p.category === category)
+}
+
+function permLabel(code, fallback) {
+  const key = 'permissions.' + code
+  const label = t(key)
+  return label !== key ? label : fallback
+}
+
+function permDesc(code) {
+  const key = 'permissions.' + code + '_desc'
+  const desc = t(key)
+  return desc !== key ? desc : ''
+}
+
+function permCategoryLabel(cat) {
+  const key = 'permissionCategories.' + cat
+  const label = t(key)
+  return label !== key ? label : cat
 }
 
 function roleDisplayName(roleName) {
