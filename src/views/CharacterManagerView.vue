@@ -180,7 +180,7 @@
           <div class="p-4 rounded bg-accent-gold/5 border border-accent-gold/30 space-y-3">
             <div class="text-sm font-semibold text-accent-gold">Import from Warmane Armory</div>
             <p class="text-xs text-text-muted">Enter your character name and realm to auto-fill all details from the Warmane armory.</p>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input v-model="form.name" placeholder="Character name" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
               <div>
                 <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />

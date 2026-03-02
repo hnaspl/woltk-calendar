@@ -46,7 +46,7 @@
               </div>
             </div>
           </div>
-          <div class="grid grid-cols-5 gap-2 text-center text-xs mb-4">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-center text-xs mb-4">
             <div class="bg-blue-600/10 rounded p-1.5">
               <div class="text-blue-200 font-bold">{{ def.main_tank_slots ?? 1 }}</div>
               <div class="text-text-muted">Main Tank</div>
@@ -83,7 +83,7 @@
     <!-- Add/Edit modal -->
     <WowModal v-model="showModal" :title="editing ? 'Edit Raid Definition' : 'New Raid Definition'" size="lg">
       <form @submit.prevent="saveDef" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Name *</label>
             <input v-model="form.name" required placeholder="ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
@@ -96,7 +96,7 @@
             </select>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Size *</label>
             <select v-model.number="form.size" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -118,7 +118,7 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-2">Slot Allocation</label>
-          <div class="grid grid-cols-5 gap-4">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <label class="block text-xs text-text-muted mb-1">Main Tank</label>
               <input v-model.number="form.main_tank_slots" type="number" min="0" max="5" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />

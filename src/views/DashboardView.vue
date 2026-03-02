@@ -56,7 +56,7 @@
                   :to="`/raids/${req.event_id}`"
                   class="text-xs text-accent-gold hover:underline"
                 >{{ req.event_title ?? 'Raid' }}</RouterLink>
-                <span v-if="req.starts_at_utc" class="text-[10px] text-text-muted">{{ formatDateTime(req.starts_at_utc) }}</span>
+                <span v-if="req.starts_at_utc" class="text-xs text-text-muted">{{ formatDateTime(req.starts_at_utc) }}</span>
               </div>
               <p class="text-text-muted text-xs">
                 <strong class="text-text-primary">{{ req.requester_name }}</strong>

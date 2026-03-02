@@ -86,7 +86,7 @@
             </div>
 
             <!-- Officer actions -->
-            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-2 flex-shrink-0">
+            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
               <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">Edit</WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
                 {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
