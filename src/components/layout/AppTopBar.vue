@@ -232,7 +232,13 @@ async function clearAllNotifications() {
 
 function formatTime(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
+  // Server stores UTC but SQLite may strip timezone suffix — ensure it's parsed as UTC
+  let utcStr = iso
+  if (!utcStr.endsWith('Z') && !utcStr.includes('+') && !/\d{2}:\d{2}$/.test(utcStr.slice(-5))) {
+    utcStr += 'Z'
+  }
+  const d = new Date(utcStr)
+  if (isNaN(d.getTime())) return ''
   const now = new Date()
   const diffMs = now - d
   const diffMin = Math.floor(diffMs / 60000)
