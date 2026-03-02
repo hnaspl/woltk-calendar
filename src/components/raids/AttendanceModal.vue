@@ -2,8 +2,8 @@
   <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" title="Record Attendance" size="lg">
     <div class="space-y-4">
       <p class="text-text-muted text-sm">
-        Set attendance outcome for each player. Lineup players default to <strong class="text-green-400">Attended</strong>,
-        bench players to <strong class="text-yellow-400">Benched</strong>.
+        Set attendance outcome for each player in the raid lineup.
+        Bench players are excluded from attendance.
       </p>
 
       <div v-if="players.length === 0" class="py-8 text-center text-text-muted">
@@ -99,11 +99,14 @@ watch(
   () => [props.modelValue, props.signups],
   () => {
     if (!props.modelValue) return
-    players.value = props.signups.map(s => ({
-      signup: s,
-      outcome: 'attended',
-      note: ''
-    }))
+    // Only include players who are in the lineup (not bench or declined)
+    players.value = props.signups
+      .filter(s => s.lineup_status === 'going')
+      .map(s => ({
+        signup: s,
+        outcome: 'attended',
+        note: ''
+      }))
   },
   { immediate: true }
 )
