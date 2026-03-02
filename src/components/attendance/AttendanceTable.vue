@@ -26,7 +26,7 @@
             <tbody class="divide-y divide-border-default">
               <tr
                 v-for="row in section.rows"
-                :key="`${row.eventId}-${row.characterId}`"
+                :key="row.recordId"
                 class="hover:bg-bg-tertiary/50 transition-colors"
               >
                 <td class="px-4 py-2.5">
@@ -83,7 +83,7 @@
         <div class="sm:hidden divide-y divide-border-default">
           <div
             v-for="row in section.rows"
-            :key="`m-${row.eventId}-${row.characterId}`"
+            :key="`m-${row.recordId}`"
             class="px-4 py-3 flex items-center gap-3"
           >
             <img
@@ -149,7 +149,7 @@ function formatDate(d) {
 
 /** Get guild-timezone date string (YYYY-MM-DD) for grouping. */
 function guildDateKey(isoStr) {
-  if (!isoStr) return 'unknown'
+  if (!isoStr) return 'no-date'
   return tz.formatGuildDate(isoStr, { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
@@ -180,7 +180,8 @@ const dateSections = computed(() => {
     const ev = eventMap.get(eid)
     return {
       eventId: eid,
-      raidTitle: ev?.title ?? 'Raid',
+      recordId: r.id ?? `${eid}-${r.character_id}`,
+      raidTitle: ev?.title ?? 'Unknown Raid',
       raidType: ev?.raid_type ?? null,
       dateUtc: ev?.starts_at_utc ?? null,
       dateKey: guildDateKey(ev?.starts_at_utc),
@@ -213,7 +214,7 @@ const dateSections = computed(() => {
 
       return {
         dateKey,
-        dateLabel: dateRows[0]?.dateUtc ? formatDate(dateRows[0].dateUtc) : dateKey,
+        dateLabel: dateRows[0]?.dateUtc ? formatDate(dateRows[0].dateUtc) : 'Unknown Date',
         rows: dateRows,
         events,
       }
