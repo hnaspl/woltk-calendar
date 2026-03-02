@@ -49,7 +49,7 @@
                 </div>
                 <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⚔️</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidLabel(event.raid_type) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidTypeLabel(event.raid_type) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📝</span>
@@ -418,7 +418,8 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
-import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
+import { useFormatting } from '@/composables/useFormatting'
+import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
@@ -434,6 +435,7 @@ const permissions = usePermissions()
 const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
+const { formatDateTime } = useFormatting()
 const { t } = useI18n()
 
 const event = ref(null)
@@ -451,7 +453,6 @@ const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
-const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 function mySignupProfessions(s) {
   return (s.character?.metadata?.professions ?? []).slice(0, 2)
@@ -898,17 +899,5 @@ async function resolveReplacement(requestId, action) {
   } catch (err) {
     uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'), 'error')
   }
-}
-
-function formatDateTime(d) {
-  if (!d) return '?'
-  return tz.formatDualTime(d, {
-    weekday: 'long', day: '2-digit', month: 'long',
-    year: 'numeric', hour: '2-digit', minute: '2-digit'
-  })
-}
-
-function raidLabel(raidType) {
-  return raidTypeLabel(raidType)
 }
 </script>

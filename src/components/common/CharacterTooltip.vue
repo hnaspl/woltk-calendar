@@ -172,7 +172,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
-import { useTimezone } from '@/composables/useTimezone'
+import { useFormatting } from '@/composables/useFormatting'
 
 const { t } = useI18n()
 
@@ -185,7 +185,7 @@ const show = ref(false)
 const hideTimeout = ref(null)
 const dragging = ref(false)
 const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
-const tzHelper = useTimezone()
+const { formatDate } = useFormatting()
 
 function onMouseEnter() {
   if (dragging.value) return
@@ -235,11 +235,6 @@ const hasStats = computed(() =>
 function formatPoints(points) {
   if (Array.isArray(points)) return points.join('/')
   return String(points)
-}
-
-function formatDate(iso) {
-  if (!iso) return '?'
-  return tzHelper.formatGuildDate(iso, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const positionClass = computed(() => ({

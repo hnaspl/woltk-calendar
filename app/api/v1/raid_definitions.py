@@ -2,37 +2,32 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from app.services import raid_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, has_permission
+from app.utils.api_helpers import get_json
+from app.utils.decorators import require_guild_permission
+from app.utils.permissions import has_permission
 from app.i18n import _t
 
 bp = Blueprint("raid_definitions", __name__)
 
 
-def _check_membership(guild_id: int):
-    return get_membership(guild_id, current_user.id)
-
-
 @bp.get("")
 @login_required
-def list_raid_definitions(guild_id: int):
-    if _check_membership(guild_id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def list_raid_definitions(guild_id: int, membership):
     definitions = raid_service.list_raid_definitions(guild_id)
     return jsonify([d.to_dict() for d in definitions]), 200
 
 
 @bp.post("")
 @login_required
-def create_raid_definition(guild_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+@require_guild_permission("manage_raid_definitions")
+def create_raid_definition(guild_id: int, membership):
+    data = get_json()
     if not data.get("name"):
         return jsonify({"error": _t("api.raidDefinitions.nameRequired")}), 400
     # Auto-generate code from raid_type or name if not provided
@@ -47,11 +42,9 @@ def create_raid_definition(guild_id: int):
 
 @bp.post("/<int:rd_id>/copy")
 @login_required
-def copy_raid_definition(guild_id: int, rd_id: int):
+@require_guild_permission("manage_raid_definitions")
+def copy_raid_definition(guild_id: int, rd_id: int, membership):
     """Copy a built-in (global) raid definition into the guild's own definitions."""
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404
@@ -64,9 +57,8 @@ def copy_raid_definition(guild_id: int, rd_id: int):
 
 @bp.get("/<int:rd_id>")
 @login_required
-def get_raid_definition(guild_id: int, rd_id: int):
-    if _check_membership(guild_id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def get_raid_definition(guild_id: int, rd_id: int, membership):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404
@@ -75,16 +67,14 @@ def get_raid_definition(guild_id: int, rd_id: int):
 
 @bp.put("/<int:rd_id>")
 @login_required
-def update_raid_definition(guild_id: int, rd_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_raid_definitions")
+def update_raid_definition(guild_id: int, rd_id: int, membership):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404
     if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     try:
         rd = raid_service.update_raid_definition(rd, data)
     except ValueError as exc:
@@ -94,10 +84,8 @@ def update_raid_definition(guild_id: int, rd_id: int):
 
 @bp.delete("/<int:rd_id>")
 @login_required
-def delete_raid_definition(guild_id: int, rd_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_raid_definitions")
+def delete_raid_definition(guild_id: int, rd_id: int, membership):
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404

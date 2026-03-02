@@ -1,8 +1,25 @@
-"""WoW / WotLK game constants used across the application."""
+"""WoW / WotLK game constants used across the application.
+
+Keep in sync with src/constants.js (frontend JavaScript equivalent).
+Shared data: WARMANE_REALMS, CLASS_ROLES, CLASS_SPECS, WOTLK_RAIDS,
+             ROLE_LABELS, normalize_spec_name().
+"""
 
 from __future__ import annotations
 
 from app.enums import WowClass, Role
+
+# ---------------------------------------------------------------------------
+# Role → display label mapping
+# Keep in sync with ROLE_LABEL_MAP / ROLE_OPTIONS in src/constants.js.
+# ---------------------------------------------------------------------------
+ROLE_LABELS: dict[str, str] = {
+    Role.MELEE_DPS.value: "Melee DPS",
+    Role.MAIN_TANK.value: "Main Tank",
+    Role.OFF_TANK.value: "Off Tank",
+    Role.HEALER.value: "Heal",
+    Role.RANGE_DPS.value: "Range DPS",
+}
 
 # ---------------------------------------------------------------------------
 # Class → available roles mapping
@@ -50,6 +67,8 @@ def normalize_spec_name(
 
     Falls back to the original *tree_name* when no match is found.
     Handles common Warmane quirks like "Feral" → "Feral Combat".
+
+    Keep in sync with src/constants.js normalizeSpecName().
     """
     if not tree_name:
         return tree_name
@@ -67,6 +86,8 @@ def normalize_spec_name(
 
 # ---------------------------------------------------------------------------
 # WotLK raid definitions (used for seed data)
+# Keep raid names in sync with RAID_TYPES in src/constants.js.
+# Use official WoW names (e.g. "The Obsidian Sanctum", not "Obsidian Sanctum").
 # ---------------------------------------------------------------------------
 WOTLK_RAIDS: list[dict] = [
     {
@@ -155,7 +176,7 @@ WOTLK_RAIDS: list[dict] = [
     },
     {
         "code": "rs",
-        "name": "Ruby Sanctum",
+        "name": "The Ruby Sanctum",
         "expansion": "wotlk",
         "category": "raid",
         "default_raid_size": 25,
@@ -169,6 +190,7 @@ WOTLK_RAIDS: list[dict] = [
 
 # ---------------------------------------------------------------------------
 # Warmane realm names
+# Keep in sync with WARMANE_REALMS in src/constants.js.
 # ---------------------------------------------------------------------------
 WARMANE_REALMS: list[str] = [
     "Icecrown",

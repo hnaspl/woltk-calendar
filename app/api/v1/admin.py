@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from app.services import auth_service
 from app.extensions import db
 from app.utils.auth import login_required
+from app.utils.api_helpers import get_json
 from app.utils.permissions import has_permission
 from app.i18n import _t
 
@@ -47,7 +48,7 @@ def update_user(user_id: int):
     if user.id == 1:
         return jsonify({"error": _t("api.admin.cannotModifyPrimary")}), 403
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
 
     if "is_active" in data:
         user = auth_service.set_user_active(user, bool(data["is_active"]))
@@ -117,7 +118,7 @@ def update_system_settings():
     if err:
         return err
     from app.models.system_setting import SystemSetting
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     # Boolean settings — validate and store as "true"/"false"
     bool_keys = {"wowhead_tooltips", "autosync_enabled"}
     for key in bool_keys:

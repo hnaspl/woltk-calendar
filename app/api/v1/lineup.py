@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from app.services import event_service, lineup_service
+from app.services import lineup_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, has_permission
+from app.utils.api_helpers import get_json, get_event_or_404, build_guild_role_map
+from app.utils.decorators import require_guild_permission
 from app.utils.realtime import emit_lineup_changed, emit_signups_changed
 from app.utils import notify
 from app.i18n import _t
@@ -19,8 +20,6 @@ def _build_guild_role_map_for_event(guild_id: int, event_id: int) -> dict:
     """Build a guild role map for all users who have signups in this event."""
     import sqlalchemy as sa
     from app.extensions import db
-    from app.models.guild import GuildMembership
-    from app.models.permission import SystemRole
     from app.models.signup import Signup
 
     user_ids = list(db.session.execute(
@@ -29,43 +28,16 @@ def _build_guild_role_map_for_event(guild_id: int, event_id: int) -> dict:
         ).distinct()
     ).scalars().all())
 
-    if not user_ids:
-        return {}
-
-    memberships = db.session.execute(
-        sa.select(GuildMembership.user_id, GuildMembership.role).where(
-            GuildMembership.guild_id == guild_id,
-            GuildMembership.user_id.in_(user_ids),
-        )
-    ).all()
-
-    role_names = list({m.role for m in memberships})
-    display_map = {}
-    if role_names:
-        roles = db.session.execute(
-            sa.select(SystemRole.name, SystemRole.display_name).where(
-                SystemRole.name.in_(role_names)
-            )
-        ).all()
-        display_map = {r.name: r.display_name for r in roles}
-
-    return {
-        m.user_id: {
-            "role": m.role,
-            "display_name": display_map.get(m.role, m.role.replace("_", " ").title()),
-        }
-        for m in memberships
-    }
+    return build_guild_role_map(guild_id, user_ids)
 
 
 @bp.get("")
 @login_required
-def get_lineup(guild_id: int, event_id: int):
-    if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": _t("api.events.notFound")}), 404
+@require_guild_permission()
+def get_lineup(guild_id: int, event_id: int, membership):
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
     role_map = _build_guild_role_map_for_event(guild_id, event_id)
     grouped = lineup_service.get_lineup_grouped(event_id, guild_role_map=role_map)
     return jsonify(grouped), 200
@@ -73,17 +45,15 @@ def get_lineup(guild_id: int, event_id: int):
 
 @bp.put("")
 @login_required
-def update_lineup(guild_id: int, event_id: int):
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "update_lineup"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": _t("api.events.notFound")}), 404
+@require_guild_permission("update_lineup")
+def update_lineup(guild_id: int, event_id: int, membership):
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
     if event.status in ("completed", "cancelled"):
         return jsonify({"error": _t("api.lineup.cannotModifyCompleted")}), 403
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
 
     # Support grouped format: {melee_dps: [id,...], healers: [id,...], range_dps: [id,...]}
     if "melee_dps" in data or "healers" in data or "range_dps" in data:
@@ -122,13 +92,11 @@ def update_lineup(guild_id: int, event_id: int):
 
 @bp.post("/confirm")
 @login_required
-def confirm_lineup(guild_id: int, event_id: int):
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "confirm_lineup"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": _t("api.events.notFound")}), 404
+@require_guild_permission("confirm_lineup")
+def confirm_lineup(guild_id: int, event_id: int, membership):
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
     if event.status in ("completed", "cancelled"):
         return jsonify({"error": _t("api.lineup.cannotModifyCompleted")}), 403
     slots = lineup_service.confirm_lineup(event_id, current_user.id)
@@ -137,18 +105,16 @@ def confirm_lineup(guild_id: int, event_id: int):
 
 @bp.put("/bench-reorder")
 @login_required
-def reorder_bench(guild_id: int, event_id: int):
+@require_guild_permission("reorder_bench")
+def reorder_bench(guild_id: int, event_id: int, membership):
     """Reorder the bench queue. Officers/admins only."""
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "reorder_bench"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": _t("api.events.notFound")}), 404
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
     if event.status in ("completed", "cancelled"):
         return jsonify({"error": _t("api.lineup.cannotModifyCompleted")}), 403
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     ordered_ids = data.get("ordered_signup_ids", [])
     if not isinstance(ordered_ids, list):
         return jsonify({"error": _t("api.lineup.orderedIdsMustBeList")}), 400

@@ -248,7 +248,7 @@ import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
 import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
-import { useTimezone } from '@/composables/useTimezone'
+import { useFormatting } from '@/composables/useFormatting'
 
 const { t } = useI18n()
 
@@ -261,7 +261,7 @@ const props = defineProps({
 defineEmits(['update:modelValue'])
 
 const { getClassIcon, getClassColor, getSpecIcon, getRoleIcon, getProfessionIcon } = useWowIcons()
-const tzHelper = useTimezone()
+const { formatDate } = useFormatting()
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')
@@ -356,11 +356,6 @@ function qualityLabel(q) {
 function formatPoints(points) {
   if (Array.isArray(points)) return points.join('/')
   return String(points)
-}
-
-function formatDate(iso) {
-  if (!iso) return '?'
-  return tzHelper.formatGuildDate(iso, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 </script>
 

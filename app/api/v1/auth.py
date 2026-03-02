@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user, login_user, logout_user
 
 from app.services import auth_service
 from app.utils.auth import login_required
+from app.utils.api_helpers import get_json
 from app.i18n import _t
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -14,7 +15,7 @@ bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 @bp.post("/register")
 def register():
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     email = (data.get("email") or "").strip().lower()
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
@@ -34,7 +35,7 @@ def register():
 
 @bp.post("/login")
 def login():
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
 
@@ -68,7 +69,7 @@ def me():
 @bp.put("/profile")
 @login_required
 def update_profile():
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     user = auth_service.update_profile(current_user, data)
     return jsonify(user.to_dict()), 200
 
@@ -76,7 +77,7 @@ def update_profile():
 @bp.post("/change-password")
 @login_required
 def change_password():
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     current_password = data.get("current_password") or ""
     new_password = data.get("new_password") or ""
 

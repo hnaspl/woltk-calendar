@@ -6,10 +6,6 @@ Permission / RolePermission models.
 
 from __future__ import annotations
 
-from functools import wraps
-from typing import Callable
-
-from flask import jsonify
 from flask_login import current_user
 
 import sqlalchemy as sa
@@ -149,36 +145,3 @@ def can_grant_role(membership: GuildMembership | None, target_role_name: str) ->
         .limit(1)
     ).scalar_one_or_none()
     return result is not None
-
-
-# ---------------------------------------------------------------------------
-# Decorator
-# ---------------------------------------------------------------------------
-
-def permission_required(permission_code: str) -> Callable:
-    """Decorator requiring a specific permission for the current guild.
-
-    Usage::
-
-        @bp.post("/some-action")
-        @login_required
-        @permission_required("manage_events")
-        def some_action(guild_id, membership, **kwargs):
-            ...
-    """
-
-    def decorator(f: Callable) -> Callable:
-        @wraps(f)
-        def decorated(*args, **kwargs):
-            guild_id = kwargs.get("guild_id")
-            if guild_id is None:
-                return jsonify({"error": "guild_id missing"}), 400
-            membership = get_membership(guild_id, current_user.id)
-            if not has_permission(membership, permission_code):
-                return jsonify({"error": "You do not have the appropriate permissions"}), 403
-            kwargs["membership"] = membership
-            return f(*args, **kwargs)
-
-        return decorated
-
-    return decorator

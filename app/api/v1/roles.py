@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 import sqlalchemy as sa
@@ -12,6 +12,7 @@ import sqlalchemy as sa
 from app.extensions import db
 from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
 from app.utils.auth import login_required
+from app.utils.api_helpers import get_json
 from app.utils.permissions import get_membership, has_permission, get_user_permissions
 from app.i18n import _t
 
@@ -90,7 +91,7 @@ def create_role():
     if err:
         return err
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     name = data.get("name", "").strip().lower().replace(" ", "_")
     display_name = data.get("display_name", "").strip()
 
@@ -143,7 +144,7 @@ def update_role(role_id: int):
     if role is None:
         return jsonify({"error": _t("api.roles.notFound")}), 404
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
 
     # Update basic fields
     if "display_name" in data:
@@ -235,7 +236,7 @@ def create_grant_rule():
     if err:
         return err
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     granter_id = data.get("granter_role_id")
     grantee_id = data.get("grantee_role_id")
 

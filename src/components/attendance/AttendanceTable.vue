@@ -105,22 +105,19 @@ import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import { useTimezone } from '@/composables/useTimezone'
+import { useFormatting } from '@/composables/useFormatting'
 import { useWowIcons } from '@/composables/useWowIcons'
 
 const { t } = useI18n()
 
 const tz = useTimezone()
+const { formatDate } = useFormatting()
 const { getClassIcon, getClassColor, getRaidIcon } = useWowIcons()
 
 const props = defineProps({
   records: { type: Array, default: () => [] },
   events:  { type: Array, default: () => [] }
 })
-
-function formatDate(d) {
-  if (!d) return '—'
-  return tz.formatGuildDate(d, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 /** Get guild-timezone date string (YYYY-MM-DD) for grouping. */
 function guildDateKey(isoStr) {
@@ -179,7 +176,7 @@ const dateSections = computed(() => {
     .map(([dateKey, dateRows]) => {
       return {
         dateKey,
-        dateLabel: dateRows[0]?.dateUtc ? formatDate(dateRows[0].dateUtc) : 'Unknown Date',
+        dateLabel: dateRows[0]?.dateUtc ? formatDate(dateRows[0].dateUtc, { weekday: 'short' }) : 'Unknown Date',
         rows: dateRows,
       }
     })

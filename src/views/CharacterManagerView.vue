@@ -300,13 +300,13 @@
     <WowModal v-model="showAddAnother" :title="t('characters.characterAdded')" size="sm">
       <div class="text-center space-y-3">
         <div class="text-3xl">✅</div>
-        <p class="text-text-primary font-medium">{{ lastAddedName }} has been added successfully.</p>
-        <p class="text-text-muted text-sm">Would you like to add another character?</p>
+        <p class="text-text-primary font-medium">{{ t('characters.addedSuccess', { name: lastAddedName }) }}</p>
+        <p class="text-text-muted text-sm">{{ t('characters.addAnotherQuestion') }}</p>
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showAddAnother = false">I'm Done</WowButton>
-          <WowButton @click="addAnotherCharacter">Add Another Character</WowButton>
+          <WowButton variant="secondary" @click="showAddAnother = false">{{ t('characters.imDone') }}</WowButton>
+          <WowButton @click="addAnotherCharacter">{{ t('characters.addAnother') }}</WowButton>
         </div>
       </template>
     </WowModal>

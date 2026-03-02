@@ -2,37 +2,31 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from app.services import event_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, has_permission
+from app.utils.api_helpers import get_json
+from app.utils.decorators import require_guild_permission
 from app.i18n import _t
 
 bp = Blueprint("series", __name__)
 
 
-def _check_membership(guild_id: int):
-    return get_membership(guild_id, current_user.id)
-
-
 @bp.get("")
 @login_required
-def list_series(guild_id: int):
-    if _check_membership(guild_id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def list_series(guild_id: int, membership):
     series_list = event_service.list_series(guild_id)
     return jsonify([s.to_dict() for s in series_list]), 200
 
 
 @bp.post("")
 @login_required
-def create_series(guild_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_series"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+@require_guild_permission("manage_series")
+def create_series(guild_id: int, membership):
+    data = get_json()
     if not data.get("title") or not data.get("realm_name"):
         return jsonify({"error": _t("api.series.titleRequired")}), 400
     series = event_service.create_series(guild_id, current_user.id, data)
@@ -41,9 +35,8 @@ def create_series(guild_id: int):
 
 @bp.get("/<int:series_id>")
 @login_required
-def get_series(guild_id: int, series_id: int):
-    if _check_membership(guild_id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def get_series(guild_id: int, series_id: int, membership):
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": _t("api.series.notFound")}), 404
@@ -52,24 +45,20 @@ def get_series(guild_id: int, series_id: int):
 
 @bp.put("/<int:series_id>")
 @login_required
-def update_series(guild_id: int, series_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_series"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_series")
+def update_series(guild_id: int, series_id: int, membership):
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": _t("api.series.notFound")}), 404
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     series = event_service.update_series(series, data)
     return jsonify(series.to_dict()), 200
 
 
 @bp.delete("/<int:series_id>")
 @login_required
-def delete_series(guild_id: int, series_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_series"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_series")
+def delete_series(guild_id: int, series_id: int, membership):
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": _t("api.series.notFound")}), 404
@@ -79,11 +68,9 @@ def delete_series(guild_id: int, series_id: int):
 
 @bp.post("/<int:series_id>/copy")
 @login_required
-def copy_series(guild_id: int, series_id: int):
+@require_guild_permission("manage_series")
+def copy_series(guild_id: int, series_id: int, membership):
     """Copy a recurring raid series into another guild."""
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_series"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     series = event_service.get_series(series_id)
     if series is None:
         return jsonify({"error": _t("api.series.notFound")}), 404
@@ -96,14 +83,12 @@ def copy_series(guild_id: int, series_id: int):
 
 @bp.post("/<int:series_id>/generate")
 @login_required
-def generate_events(guild_id: int, series_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_series"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_series")
+def generate_events(guild_id: int, series_id: int, membership):
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": _t("api.series.notFound")}), 404
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     count = int(data.get("count", 4))
     events = event_service.generate_events_from_series(series, count=count)
     return jsonify([e.to_dict() for e in events]), 201

@@ -21,11 +21,13 @@ def register_blueprints(app: Flask) -> None:
         notifications,
         warmane,
         roles,
+        meta,
     )
 
     prefix = "/api/v1"
     guild_prefix = f"{prefix}/guilds/<int:guild_id>"
 
+    app.register_blueprint(meta.bp, url_prefix=f"{prefix}/meta")
     app.register_blueprint(auth.bp, url_prefix=f"{prefix}/auth")
     app.register_blueprint(admin.bp, url_prefix=f"{prefix}/admin")
     app.register_blueprint(guilds.bp, url_prefix=f"{prefix}/guilds")

@@ -5,16 +5,6 @@ from __future__ import annotations
 from enum import Enum
 
 
-class Realm(str, Enum):
-    ICECROWN = "Icecrown"
-    LORDAERON = "Lordaeron"
-    ONYXIA = "Onyxia"
-    BLACKROCK = "Blackrock"
-    FROSTWOLF = "Frostwolf"
-    FROSTMOURNE = "Frostmourne"
-    NELTHARION = "Neltharion"
-
-
 class WowClass(str, Enum):
     DEATH_KNIGHT = "Death Knight"
     DRUID = "Druid"

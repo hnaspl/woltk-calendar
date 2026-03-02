@@ -284,11 +284,9 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useGuildStore } from '@/stores/guild'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, CLASS_ROLES } from '@/constants'
 
 const { t } = useI18n()
-
-const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 const guildStore = useGuildStore()
 const systemSettings = useSystemSettings()

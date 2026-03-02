@@ -2,37 +2,31 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from app.services import event_service, raid_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, has_permission
+from app.utils.api_helpers import get_json
+from app.utils.decorators import require_guild_permission
 from app.i18n import _t
 
 bp = Blueprint("templates", __name__)
 
 
-def _check_membership(guild_id: int):
-    return get_membership(guild_id, current_user.id)
-
-
 @bp.get("")
 @login_required
-def list_templates(guild_id: int):
-    if _check_membership(guild_id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def list_templates(guild_id: int, membership):
     templates = event_service.list_templates(guild_id)
     return jsonify([t.to_dict() for t in templates]), 200
 
 
 @bp.post("")
 @login_required
-def create_template(guild_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+@require_guild_permission("manage_templates")
+def create_template(guild_id: int, membership):
+    data = get_json()
     if not data.get("name") or not data.get("raid_definition_id"):
         return jsonify({"error": _t("api.templates.nameRequired")}), 400
     tmpl = event_service.create_template(guild_id, current_user.id, data)
@@ -41,9 +35,8 @@ def create_template(guild_id: int):
 
 @bp.get("/<int:tmpl_id>")
 @login_required
-def get_template(guild_id: int, tmpl_id: int):
-    if _check_membership(guild_id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def get_template(guild_id: int, tmpl_id: int, membership):
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": _t("api.templates.notFound")}), 404
@@ -52,24 +45,20 @@ def get_template(guild_id: int, tmpl_id: int):
 
 @bp.put("/<int:tmpl_id>")
 @login_required
-def update_template(guild_id: int, tmpl_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_templates")
+def update_template(guild_id: int, tmpl_id: int, membership):
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": _t("api.templates.notFound")}), 404
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     tmpl = event_service.update_template(tmpl, data)
     return jsonify(tmpl.to_dict()), 200
 
 
 @bp.delete("/<int:tmpl_id>")
 @login_required
-def delete_template(guild_id: int, tmpl_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_templates")
+def delete_template(guild_id: int, tmpl_id: int, membership):
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": _t("api.templates.notFound")}), 404
@@ -79,11 +68,9 @@ def delete_template(guild_id: int, tmpl_id: int):
 
 @bp.post("/<int:tmpl_id>/copy")
 @login_required
-def copy_template(guild_id: int, tmpl_id: int):
+@require_guild_permission("manage_templates")
+def copy_template(guild_id: int, tmpl_id: int, membership):
     """Copy a template into another guild."""
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None:
         return jsonify({"error": _t("api.templates.notFound")}), 404
@@ -96,14 +83,12 @@ def copy_template(guild_id: int, tmpl_id: int):
 
 @bp.post("/<int:tmpl_id>/apply")
 @login_required
-def apply_template(guild_id: int, tmpl_id: int):
-    membership = _check_membership(guild_id)
-    if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("manage_templates")
+def apply_template(guild_id: int, tmpl_id: int, membership):
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": _t("api.templates.notFound")}), 404
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     if not data.get("start_time"):
         return jsonify({"error": _t("api.templates.startRequired")}), 400
 

@@ -318,7 +318,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSystemSettings } from '@/composables/useSystemSettings'
-import { useTimezone } from '@/composables/useTimezone'
+import { useFormatting } from '@/composables/useFormatting'
 import * as guildsApi from '@/api/guilds'
 import api from '@/api'
 
@@ -329,7 +329,7 @@ const authStore = useAuthStore()
 const permissions = usePermissions()
 const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
 const systemSettings = useSystemSettings()
-const tzHelper = useTimezone()
+const { formatDate } = useFormatting()
 systemSettings.fetchSettings()
 
 const loading = ref(true)
@@ -515,10 +515,6 @@ async function doAddMember(user) {
   }
 }
 
-function formatDate(d) {
-  if (!d) return '—'
-  return tzHelper.formatGuildDate(d, { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 // Warmane roster fetch
 const fetchingRoster = ref(false)
