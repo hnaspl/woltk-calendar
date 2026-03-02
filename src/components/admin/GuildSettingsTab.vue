@@ -61,7 +61,7 @@
       <div v-if="fetchingWarmane && !warmaneGuildData" class="h-56 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="warmaneError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
 
-      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
         <!-- Left column: Guild Info -->
         <div class="space-y-6">
           <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">Guild Details</h3>

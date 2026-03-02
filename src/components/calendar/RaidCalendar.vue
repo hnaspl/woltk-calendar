@@ -267,7 +267,7 @@ watch(() => props.events, () => {
   border: 1px solid #2a2a4a;
   border-radius: 0.5rem;
   padding: 0.75rem;
-  min-width: 220px;
+  min-width: min(220px, 90vw);
   max-width: 280px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   pointer-events: none;
