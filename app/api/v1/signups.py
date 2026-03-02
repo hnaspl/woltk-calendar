@@ -85,7 +85,7 @@ def create_signup(guild_id: int, event_id: int):
         return err
 
     if event.status in ("locked", "completed", "cancelled"):
-        return jsonify({"error": "Event is locked"}), 403
+        return jsonify({"error": "Cannot sign up for a locked, completed, or cancelled event"}), 403
 
     data = request.get_json(silent=True) or {}
     required = {"character_id", "chosen_role"}
