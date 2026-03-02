@@ -45,7 +45,7 @@ def record_attendance(guild_id: int, event_id: int):
     required = {"user_id", "character_id", "outcome"}
     missing = required - data.keys()
     if missing:
-        return jsonify({"error": _t("api.attendance.missingFields", fields=", ".join(missing))}), 400
+        return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
 
     # Reject bench characters — only lineup members can have attendance recorded
     lineup_slot = db.session.execute(

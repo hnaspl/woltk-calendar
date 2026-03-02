@@ -54,7 +54,7 @@ def create_event(guild_id: int):
     required = {"title", "realm_name", "starts_at_utc"}
     missing = required - data.keys()
     if missing:
-        return jsonify({"error": _t("api.events.missingFields", fields=", ".join(missing))}), 400
+        return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
     try:
         event = event_service.create_event(guild_id, current_user.id, data)
     except (ValueError, KeyError) as exc:

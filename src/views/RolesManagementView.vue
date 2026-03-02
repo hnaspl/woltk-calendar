@@ -96,10 +96,10 @@
         <!-- Grant Rules -->
         <WowCard>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="wow-heading text-base">{{ t('roles.roleGrantRules') }}</h2>
+            <h2 class="wow-heading text-base">{{ t('roles.grantRules') }}</h2>
             <WowButton @click="showGrantRuleModal = true">+ {{ t('roles.addRule') }}</WowButton>
           </div>
-          <p class="text-text-muted text-sm mb-4">{{ t('roles.defineRoles') }}</p>
+          <p class="text-text-muted text-sm mb-4">{{ t('roles.grantRulesHelp') }}</p>
 
           <div v-if="grantRulesLoading" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
           <div v-else class="overflow-x-auto">
@@ -234,14 +234,14 @@
     <WowModal v-model="showGrantRuleModal" :title="t('roles.addGrantRule')" size="sm">
       <form @submit.prevent="doCreateGrantRule" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterRole') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterLabel') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeRole') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeLabel') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
@@ -421,7 +421,7 @@ async function saveRole() {
       uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
     } else {
       await rolesApi.createRole(data)
-      uiStore.showToast(t('roles.roleCreated'), 'success')
+      uiStore.showToast(t('roles.toasts.roleCreated'), 'success')
     }
 
     showRoleModal.value = false
@@ -442,7 +442,7 @@ async function doDeleteRole() {
   deletingRole.value = true
   try {
     await rolesApi.deleteRole(deleteTarget.value.id)
-    uiStore.showToast(t('roles.roleDeleted'), 'success')
+    uiStore.showToast(t('roles.toasts.roleDeleted'), 'success')
     showDeleteConfirm.value = false
     await loadRoles()
   } catch (err) {
@@ -465,7 +465,7 @@ async function doCreateGrantRule() {
       granter_role_id: grantRuleForm.granter_role_id,
       grantee_role_id: grantRuleForm.grantee_role_id
     })
-    uiStore.showToast(t('roles.grantRuleAdded'), 'success')
+    uiStore.showToast(t('roles.toasts.grantRuleAdded'), 'success')
     showGrantRuleModal.value = false
     grantRuleForm.granter_role_id = null
     grantRuleForm.grantee_role_id = null
@@ -480,7 +480,7 @@ async function doCreateGrantRule() {
 async function doDeleteGrantRule(rule) {
   try {
     await rolesApi.deleteGrantRule(rule.id)
-    uiStore.showToast(t('roles.grantRuleRemoved'), 'success')
+    uiStore.showToast(t('roles.toasts.grantRuleRemoved'), 'success')
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
     uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToRemoveRule'), 'error')

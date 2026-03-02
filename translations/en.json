@@ -1,4 +1,38 @@
 {
+  "_variables": {
+    "_comment": "Variable reference — these {variables} are used in translation strings below. This section is for documentation only and is not used at runtime.",
+    "character": "Character name (e.g. 'Arthas')",
+    "characters": "Comma-separated list of character names",
+    "count": "Numeric count (e.g. number of items, guilds, members)",
+    "countdown": "Countdown timer in seconds",
+    "event": "Short event/raid title",
+    "eventTitle": "Full event/raid title (may include quotes in the string)",
+    "failed": "Number of failed operations",
+    "fields": "Comma-separated list of missing field names",
+    "guild": "Guild name",
+    "guildName": "Full guild name",
+    "guildTag": "Guild tag/abbreviation (e.g. '[ABC]')",
+    "key": "Setting or field key name",
+    "n": "Numeric value (e.g. number of days)",
+    "name": "Display name (character name, role name, template name, etc.)",
+    "newCharacter": "Name of the replacement character",
+    "newRole": "Name of the new role after a change",
+    "note": "Optional note text (may be empty)",
+    "officer": "Officer's display name who performed the action",
+    "oldCharacter": "Name of the original character being replaced",
+    "oldRole": "Name of the previous role before a change",
+    "outcome": "Attendance outcome label (Attended / Late / Unattended)",
+    "position": "Queue position number (e.g. '#3')",
+    "query": "Search query string entered by the user",
+    "reason": "Optional reason text (may be empty, prefixed with space)",
+    "role": "Role name (e.g. 'Main Tank', 'Healer', 'Officer')",
+    "size": "Raid size number (e.g. 10, 25)",
+    "starts": "Formatted start date/time string",
+    "succeeded": "Number of successful operations",
+    "time": "Formatted time string",
+    "total": "Total count or sum",
+    "username": "User's username"
+  },
   "common": {
     "buttons": {
       "save": "Save",
@@ -115,7 +149,6 @@
       "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
       "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
       "copiedSuccess": "\"{name}\" copied to {count} guild(s)",
-      "copyToSelected": "Copy to selected guilds:",
       "onlyCreatedIn": "This will only be created in"
     },
     "fields": {
@@ -123,7 +156,6 @@
       "status": "Status",
       "character": "Character",
       "note": "Note",
-      "description": "Description",
       "faction": "Faction",
       "realm": "Realm",
       "realmRequired": "Realm *",
@@ -405,7 +437,6 @@
     "slotAllocation": "Slot Allocation",
     "healers": "Healers",
     "copyDefinitionToGuilds": "Copy Definition to Guilds",
-    "onlyCreatedIn": "This definition will only be created in",
     "deleteDefinition": "Delete Definition",
     "eventsNotAffected": "Events using this definition won't be affected.",
     "definitionUpdated": "Definition updated",
@@ -420,7 +451,6 @@
   "templates": {
     "title": "Raid Templates",
     "subtitle": "Save recurring raid schedules as templates",
-    "newTemplate": "New Template",
     "noGuild": "You need to create or join a guild first before managing templates. Use the sidebar to create a guild.",
     "noTemplates": "No templates yet. Create a template to quickly schedule recurring raids.",
     "noInstructions": "No instructions",
@@ -430,7 +460,6 @@
     "selectRaid": "Select raid…",
     "noRaidDefs": "No raid definitions found. Create one in Raid Definitions first.",
     "copyTemplateToGuilds": "Copy Template to Guilds",
-    "onlyCreatedIn": "This template will only be created in",
     "applyTemplate": "Apply Template",
     "deleteTemplate": "Delete Template",
     "deleteTemplateConfirm": "Delete template",
@@ -463,7 +492,6 @@
     "startTime": "Start Time (server)",
     "durationMin": "Duration (min)",
     "copySeriesToGuilds": "Copy Series to Guilds",
-    "onlyCreatedIn": "This series will only be created in",
     "howManyEvents": "How many events to create?",
     "oneEvent": "1 event",
     "twoEvents": "2 events",
@@ -517,8 +545,6 @@
     "granterLabel": "Granter Role (who can assign)",
     "granteeLabel": "Grantee Role (role to be assigned)",
     "bothRequired": "Both roles are required",
-    "grantRuleAdded": "Grant rule added",
-    "grantRuleDeleted": "Grant rule deleted",
     "toasts": {
       "roleCreated": "Role created",
       "roleDeleted": "Role deleted",
@@ -528,14 +554,7 @@
       "failedToRemoveRule": "Failed to remove grant rule",
       "failedToLoadPermissions": "Failed to load permissions",
       "failedToLoadRules": "Failed to load grant rules"
-    },
-    "defineRoles": "Define which roles can assign other roles to guild members.",
-    "grantRuleRemoved": "Grant rule removed",
-    "granteeRole": "Grantee Role (role to be assigned)",
-    "granterRole": "Granter Role (who can assign)",
-    "roleCreated": "Role created",
-    "roleDeleted": "Role deleted",
-    "roleGrantRules": "Role Grant Rules"
+    }
   },
   "guild": {
     "noGuild": "No Guild",
@@ -586,7 +605,6 @@
     "joined": "Joined",
     "removeMember": "Remove Member",
     "removeConfirm": "Remove {name} from the guild?",
-    "memberRemoved": "Member removed",
     "addMemberTitle": "Add Member",
     "fetchRoster": "Fetch guild roster from Warmane to find members.",
     "fetchRosterBtn": "Fetch Roster",
@@ -615,7 +633,6 @@
       "transferCountdown": "Transfer Ownership ({countdown}s)"
     },
     "toasts": {
-      "memberRemoved": "Member removed",
       "ownershipTransferred": "Guild ownership transferred successfully",
       "failedToTransfer": "Failed to transfer ownership"
     },
@@ -770,8 +787,7 @@
       "invalidDate": "Invalid date format",
       "cannotLockCompleted": "Cannot lock a completed or cancelled event",
       "cannotUnlockCompleted": "Cannot unlock a completed or cancelled event",
-      "completedCannotEdit": "Completed raids with attendance records cannot be edited",
-      "missingFields": "Missing fields: {fields}"
+      "completedCannotEdit": "Completed raids with attendance records cannot be edited"
     },
     "signups": {
       "cannotSignupLocked": "Cannot sign up for a locked, completed, or cancelled event",
@@ -782,8 +798,7 @@
       "banNotFound": "Ban not found",
       "banRemoved": "Ban removed",
       "newCharRequired": "new_character_id is required",
-      "invalidAction": "action must be 'confirm', 'decline', or 'leave'",
-      "missingFields": "Missing fields: {fields}"
+      "invalidAction": "action must be 'confirm', 'decline', or 'leave'"
     },
     "guilds": {
       "notFound": "Guild not found",
@@ -803,7 +818,6 @@
     "characters": {
       "notFound": "Character not found",
       "deleted": "Character deleted",
-      "missingFields": "Missing fields: {fields}",
       "characterArchived": "Archived",
       "characterUnarchived": "Unarchived"
     },
@@ -838,8 +852,7 @@
       "invalidInteger": "Invalid integer value for '{key}'"
     },
     "attendance": {
-      "benchCannotRecord": "Bench characters cannot have attendance recorded",
-      "missingFields": "Missing fields: {fields}"
+      "benchCannotRecord": "Bench characters cannot have attendance recorded"
     },
     "raidDefinitions": {
       "nameRequired": "name is required",
@@ -859,6 +872,9 @@
     },
     "notifications": {
       "notFound": "Notification not found"
+    },
+    "common": {
+      "missingFields": "Missing fields: {fields}"
     }
   },
   "notify": {
@@ -1006,20 +1022,6 @@
       "memberAdded": "{username} added to guild"
     },
     "failedToLoad": "Failed to load guild settings",
-    "addMember": "+ Add Member",
-    "addMemberTitle": "Add Member",
-    "fetch": "Fetch",
-    "fetchGuildInfo": "Fetch guild roster from Warmane to find members.",
-    "guildInformation": "Guild Information",
-    "guildNameLabel": "Guild Name",
-    "noCharactersFound": "No characters found for this member.",
-    "noMatchingUsers": "No matching users found.",
-    "realmLabel": "Realm",
-    "removeMember": "Remove Member",
-    "searchByUsername": "Search by username",
-    "settingsSaved": "Guild settings saved",
-    "title": "Guild Settings",
-    "typeUsername": "Type username…",
-    "warmaneGuildInfo": "Warmane Guild Info"
+    "fetch": "Fetch"
   }
 }

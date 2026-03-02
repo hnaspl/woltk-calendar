@@ -1,4 +1,38 @@
 {
+  "_variables": {
+    "_comment": "Referencja zmiennych — te {zmienne} są używane w poniższych ciągach tłumaczeń. Ta sekcja służy wyłącznie do dokumentacji i nie jest używana w czasie wykonywania.",
+    "character": "Nazwa postaci (np. 'Arthas')",
+    "characters": "Lista nazw postaci oddzielonych przecinkami",
+    "count": "Liczba (np. liczba przedmiotów, gildii, członków)",
+    "countdown": "Odliczanie w sekundach",
+    "event": "Krótki tytuł wydarzenia/rajdu",
+    "eventTitle": "Pełny tytuł wydarzenia/rajdu",
+    "failed": "Liczba nieudanych operacji",
+    "fields": "Lista brakujących pól oddzielonych przecinkami",
+    "guild": "Nazwa gildii",
+    "guildName": "Pełna nazwa gildii",
+    "guildTag": "Tag/skrót gildii (np. '[ABC]')",
+    "key": "Nazwa klucza ustawienia lub pola",
+    "n": "Wartość liczbowa (np. liczba dni)",
+    "name": "Wyświetlana nazwa (postać, rola, szablon itp.)",
+    "newCharacter": "Nazwa postaci zastępczej",
+    "newRole": "Nazwa nowej roli po zmianie",
+    "note": "Opcjonalny tekst notatki (może być pusty)",
+    "officer": "Nazwa oficera wykonującego akcję",
+    "oldCharacter": "Nazwa oryginalnej postaci do zastąpienia",
+    "oldRole": "Nazwa poprzedniej roli przed zmianą",
+    "outcome": "Etykieta wyniku frekwencji (Obecny / Spóźniony / Nieobecny)",
+    "position": "Numer pozycji w kolejce (np. '#3')",
+    "query": "Tekst wyszukiwania wprowadzony przez użytkownika",
+    "reason": "Opcjonalny tekst powodu (może być pusty)",
+    "role": "Nazwa roli (np. 'Main Tank', 'Healer', 'Oficer')",
+    "size": "Rozmiar rajdu (np. 10, 25)",
+    "starts": "Sformatowany ciąg daty/godziny rozpoczęcia",
+    "succeeded": "Liczba udanych operacji",
+    "time": "Sformatowany ciąg czasu",
+    "total": "Łączna liczba lub suma",
+    "username": "Nazwa użytkownika"
+  },
   "common": {
     "buttons": {
       "save": "Zapisz",
@@ -115,7 +149,6 @@
       "failedToCreateInGuilds": "Nie udało się utworzyć w {count} gildii/gildiach",
       "copiedWithFailures": "Skopiowano do {succeeded} gildii, nie powiodło się w {failed}",
       "copiedSuccess": "\"{name}\" skopiowano do {count} gildii",
-      "copyToSelected": "Kopiuj do wybranych gildii:",
       "onlyCreatedIn": "Zostanie utworzone tylko w"
     },
     "fields": {
@@ -123,7 +156,6 @@
       "status": "Status",
       "character": "Postać",
       "note": "Notatka",
-      "description": "Opis",
       "faction": "Frakcja",
       "realm": "Realm",
       "realmRequired": "Realm *",
@@ -405,7 +437,6 @@
     "slotAllocation": "Przydział miejsc",
     "healers": "Healers",
     "copyDefinitionToGuilds": "Kopiuj definicję do gildii",
-    "onlyCreatedIn": "Ta definicja zostanie utworzona tylko w",
     "deleteDefinition": "Usuń definicję",
     "eventsNotAffected": "Wydarzenia używające tej definicji nie zostaną naruszone.",
     "definitionUpdated": "Definicja zaktualizowana",
@@ -420,7 +451,6 @@
   "templates": {
     "title": "Szablony rajdów",
     "subtitle": "Zapisz powtarzalne harmonogramy rajdów jako szablony",
-    "newTemplate": "Nowy szablon",
     "noGuild": "Musisz najpierw utworzyć lub dołączyć do gildii, zanim będziesz zarządzać szablonami. Użyj paska bocznego, aby utworzyć gildię.",
     "noTemplates": "Brak szablonów. Utwórz szablon, aby szybko planować powtarzalne rajdy.",
     "noInstructions": "Brak instrukcji",
@@ -430,7 +460,6 @@
     "selectRaid": "Wybierz rajd…",
     "noRaidDefs": "Brak definicji rajdów. Najpierw utwórz jedną w Definicjach rajdów.",
     "copyTemplateToGuilds": "Kopiuj szablon do gildii",
-    "onlyCreatedIn": "Ten szablon zostanie utworzony tylko w",
     "applyTemplate": "Zastosuj szablon",
     "deleteTemplate": "Usuń szablon",
     "deleteTemplateConfirm": "Usuń szablon",
@@ -463,7 +492,6 @@
     "startTime": "Czas rozpoczęcia (serwerowy)",
     "durationMin": "Czas trwania (min)",
     "copySeriesToGuilds": "Kopiuj serię do gildii",
-    "onlyCreatedIn": "Ta seria zostanie utworzona tylko w",
     "howManyEvents": "Ile wydarzeń utworzyć?",
     "oneEvent": "1 wydarzenie",
     "twoEvents": "2 wydarzenia",
@@ -517,8 +545,6 @@
     "granterLabel": "Rola przypisująca (kto może przypisać)",
     "granteeLabel": "Rola przypisywana (co jest przypisywane)",
     "bothRequired": "Obie role są wymagane",
-    "grantRuleAdded": "Reguła dodana",
-    "grantRuleDeleted": "Reguła usunięta",
     "toasts": {
       "roleCreated": "Rola utworzona",
       "roleDeleted": "Rola usunięta",
@@ -528,14 +554,7 @@
       "failedToRemoveRule": "Nie udało się usunąć reguły",
       "failedToLoadPermissions": "Nie udało się załadować uprawnień",
       "failedToLoadRules": "Nie udało się załadować reguł przyznawania"
-    },
-    "defineRoles": "Określ, które role mogą przypisywać inne role członkom gildii.",
-    "grantRuleRemoved": "Reguła przyznawania usunięta",
-    "granteeRole": "Rola przyznawana (rola do przypisania)",
-    "granterRole": "Rola przyznająca (kto może przypisywać)",
-    "roleCreated": "Rola utworzona",
-    "roleDeleted": "Rola usunięta",
-    "roleGrantRules": "Reguły przyznawania ról"
+    }
   },
   "guild": {
     "noGuild": "Brak gildii",
@@ -586,7 +605,6 @@
     "joined": "Dołączył",
     "removeMember": "Usuń członka",
     "removeConfirm": "Usunąć {name} z gildii?",
-    "memberRemoved": "Członek usunięty",
     "addMemberTitle": "Dodaj członka",
     "fetchRoster": "Pobierz roster gildii z Warmane, aby znaleźć członków.",
     "fetchRosterBtn": "Pobierz roster",
@@ -615,7 +633,6 @@
       "transferCountdown": "Przenieś własność ({countdown}s)"
     },
     "toasts": {
-      "memberRemoved": "Członek usunięty",
       "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
       "failedToTransfer": "Nie udało się przenieść własności"
     },
@@ -770,8 +787,7 @@
       "invalidDate": "Nieprawidłowy format daty",
       "cannotLockCompleted": "Nie można zablokować ukończonego lub anulowanego wydarzenia",
       "cannotUnlockCompleted": "Nie można odblokować ukończonego lub anulowanego wydarzenia",
-      "completedCannotEdit": "Ukończone rajdy z zapisaną frekwencją nie mogą być edytowane",
-      "missingFields": "Brakujące pola: {fields}"
+      "completedCannotEdit": "Ukończone rajdy z zapisaną frekwencją nie mogą być edytowane"
     },
     "signups": {
       "cannotSignupLocked": "Nie można się zapisać na zablokowane, ukończone lub anulowane wydarzenie",
@@ -782,8 +798,7 @@
       "banNotFound": "Ban nie znaleziony",
       "banRemoved": "Ban usunięty",
       "newCharRequired": "new_character_id jest wymagane",
-      "invalidAction": "Akcja musi być 'confirm', 'decline' lub 'leave'",
-      "missingFields": "Brakujące pola: {fields}"
+      "invalidAction": "Akcja musi być 'confirm', 'decline' lub 'leave'"
     },
     "guilds": {
       "notFound": "Gildia nie znaleziona",
@@ -803,7 +818,6 @@
     "characters": {
       "notFound": "Postać nie znaleziona",
       "deleted": "Postać usunięta",
-      "missingFields": "Brakujące pola: {fields}",
       "characterArchived": "Zarchiwizowana",
       "characterUnarchived": "Przywrócona"
     },
@@ -838,8 +852,7 @@
       "invalidInteger": "Nieprawidłowa wartość całkowita dla '{key}'"
     },
     "attendance": {
-      "benchCannotRecord": "Dla postaci na ławce nie można zapisać frekwencji",
-      "missingFields": "Brakujące pola: {fields}"
+      "benchCannotRecord": "Dla postaci na ławce nie można zapisać frekwencji"
     },
     "raidDefinitions": {
       "nameRequired": "Nazwa jest wymagana",
@@ -859,6 +872,9 @@
     },
     "notifications": {
       "notFound": "Powiadomienie nie znalezione"
+    },
+    "common": {
+      "missingFields": "Brakujące pola: {fields}"
     }
   },
   "notify": {
@@ -1006,20 +1022,6 @@
       "memberAdded": "{username} dodany do gildii"
     },
     "failedToLoad": "Nie udało się załadować ustawień gildii",
-    "addMember": "+ Dodaj członka",
-    "addMemberTitle": "Dodaj członka",
-    "fetch": "Pobierz",
-    "fetchGuildInfo": "Pobierz skład gildii z Warmane, aby znaleźć członków.",
-    "guildInformation": "Informacje o gildii",
-    "guildNameLabel": "Nazwa gildii",
-    "noCharactersFound": "Nie znaleziono postaci tego członka.",
-    "noMatchingUsers": "Nie znaleziono pasujących użytkowników.",
-    "realmLabel": "Realm",
-    "removeMember": "Usuń członka",
-    "searchByUsername": "Szukaj po nazwie użytkownika",
-    "settingsSaved": "Ustawienia gildii zapisane",
-    "title": "Ustawienia gildii",
-    "typeUsername": "Wpisz nazwę użytkownika…",
-    "warmaneGuildInfo": "Informacje o gildii z Warmane"
+    "fetch": "Pobierz"
   }
 }

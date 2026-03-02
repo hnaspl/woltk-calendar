@@ -434,7 +434,7 @@ async function doKick() {
     await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
     members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
-    uiStore.showToast(t('members.toasts.memberRemoved'), 'success')
+    uiStore.showToast(t('common.toasts.memberRemoved'), 'success')
   } catch {
     uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
   } finally {

@@ -30,7 +30,7 @@ def create_character():
     required = {"guild_id", "realm_name", "name", "class_name"}
     missing = required - data.keys()
     if missing:
-        return jsonify({"error": _t("api.characters.missingFields", fields=", ".join(missing))}), 400
+        return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
 
     try:
         char = character_service.create_character(

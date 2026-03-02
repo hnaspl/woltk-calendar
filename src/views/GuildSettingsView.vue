@@ -1,7 +1,7 @@
 <template>
   <AppShell>
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      <h1 class="wow-heading text-xl sm:text-2xl">{{ t('guildSettings.title') }}</h1>
+      <h1 class="wow-heading text-xl sm:text-2xl">{{ t('admin.tabs.guildSettings') }}</h1>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
@@ -9,7 +9,7 @@
       <template v-else>
         <!-- Guild info form -->
         <WowCard>
-          <h2 class="wow-heading text-base mb-4">{{ t('guildSettings.guildInformation') }}</h2>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
           <form @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
             <div>
               <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
@@ -33,15 +33,15 @@
 
         <!-- Warmane Guild Lookup -->
         <WowCard>
-          <h2 class="wow-heading text-base mb-4">{{ t('guildSettings.warmaneGuildInfo') }}</h2>
-          <p class="text-text-muted text-sm mb-4">{{ t('guildSettings.fetchGuildInfo') }}</p>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.warmaneInfo') }}</h2>
+          <p class="text-text-muted text-sm mb-4">{{ t('members.fetchRoster') }}</p>
           <form @submit.prevent="fetchWarmaneGuild" class="flex items-end gap-3 max-w-lg">
             <div class="flex-1">
-              <label class="block text-xs text-text-muted mb-1">{{ t('guildSettings.guildNameLabel') }}</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildName') }}</label>
               <input v-model="warmaneGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div class="w-40">
-              <label class="block text-xs text-text-muted mb-1">{{ t('guildSettings.realmLabel') }}</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
               <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                 <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
               </select>
@@ -89,7 +89,7 @@
           <div class="flex items-center justify-between mb-4">
             <h2 class="wow-heading text-base">{{ t('common.labels.members') }} ({{ members.length }})</h2>
             <WowButton variant="secondary" class="text-xs py-1 px-3" @click="showAddMember = true">
-              + {{ t('guildSettings.addMember') }}
+              + {{ t('members.addMember') }}
             </WowButton>
           </div>
           <div class="overflow-x-auto">
@@ -131,7 +131,7 @@
     </div>
 
     <!-- Kick confirmation -->
-    <WowModal v-model="showKickConfirm" :title="t('guildSettings.removeMember')" size="sm">
+    <WowModal v-model="showKickConfirm" :title="t('members.removeMember')" size="sm">
       <p class="text-text-muted">Remove <strong class="text-text-primary">{{ kickTarget?.username ?? kickTarget?.user?.username }}</strong> from the guild?</p>
       <template #footer>
         <div class="flex justify-end gap-3">
@@ -142,13 +142,13 @@
     </WowModal>
 
     <!-- Add Member modal -->
-    <WowModal v-model="showAddMember" :title="t('guildSettings.addMemberTitle')" size="sm">
+    <WowModal v-model="showAddMember" :title="t('members.addMemberTitle')" size="sm">
       <div class="space-y-3">
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('guildSettings.searchByUsername') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('members.searchByUsername') }}</label>
           <input
             v-model="addMemberQuery"
-            :placeholder="t('guildSettings.typeUsername')"
+            :placeholder="t('members.typePlaceholder')"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
             @input="searchUsers"
           />
@@ -167,7 +167,7 @@
           </button>
         </div>
         <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers" class="text-xs text-text-muted">
-          {{ t('guildSettings.noMatchingUsers') }}
+          {{ t('members.noMatchingUsers') }}
         </div>
       </div>
     </WowModal>
@@ -175,7 +175,7 @@
     <!-- Member Characters modal -->
     <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="md">
       <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">{{ t('common.labels.loadingCharacters') }}</div>
-      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">{{ t('guildSettings.noCharactersFound') }}</div>
+      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">{{ t('members.noCharacters') }}</div>
       <div v-else class="overflow-x-auto max-h-72 overflow-y-auto">
         <table class="w-full text-xs">
           <thead class="sticky top-0">
@@ -319,7 +319,7 @@ async function saveGuild() {
       realm_name: form.realm,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast(t('guildSettings.settingsSaved'), 'success')
+    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {

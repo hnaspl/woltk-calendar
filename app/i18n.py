@@ -78,7 +78,7 @@ def _t(key: str, **kwargs) -> str:
 
     Placeholders use ``{name}`` syntax::
 
-        _t("api.events.missingFields", fields="title, start_time")
+        _t("api.common.missingFields", fields="title, start_time")
         # → "Missing fields: title, start_time"
 
     Falls back to English, then to the raw key.

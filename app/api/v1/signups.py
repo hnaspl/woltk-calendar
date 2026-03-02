@@ -92,7 +92,7 @@ def create_signup(guild_id: int, event_id: int):
     required = {"character_id", "chosen_role"}
     missing = required - data.keys()
     if missing:
-        return jsonify({"error": _t("api.signups.missingFields", fields=", ".join(missing))}), 400
+        return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
 
     membership = get_membership(guild_id, current_user.id)
     is_officer = has_permission(membership, "manage_signups")
