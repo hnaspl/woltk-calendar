@@ -7,6 +7,7 @@ from flask_login import current_user
 
 from app.services import character_service
 from app.utils.auth import login_required
+from app.utils.api_helpers import get_json, validate_required
 from app.i18n import _t
 
 bp = Blueprint("characters", __name__, url_prefix="/characters")
@@ -26,11 +27,10 @@ def list_characters():
 @bp.post("")
 @login_required
 def create_character():
-    data = request.get_json(silent=True) or {}
-    required = {"guild_id", "realm_name", "name", "class_name"}
-    missing = required - data.keys()
-    if missing:
-        return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
+    data = get_json()
+    err = validate_required(data, "guild_id", "realm_name", "name", "class_name")
+    if err:
+        return err
 
     try:
         char = character_service.create_character(
@@ -63,7 +63,7 @@ def update_character(char_id: int):
         return jsonify({"error": _t("api.characters.notFound")}), 404
     if char.user_id != current_user.id:
         return jsonify({"error": _t("common.errors.forbidden")}), 403
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     char = character_service.update_character(char, data)
     return jsonify(char.to_dict()), 200
 

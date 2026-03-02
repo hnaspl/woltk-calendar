@@ -11,6 +11,8 @@ from app.extensions import db
 from app.models.guild import Guild, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
+from app.utils.api_helpers import get_json
+from app.utils.decorators import require_guild_permission
 from app.utils.permissions import get_membership, has_permission, can_grant_role, has_any_guild_permission
 from app.utils.realtime import emit_guild_changed, emit_guilds_changed
 from app.utils import notify
@@ -69,12 +71,9 @@ def join_guild(guild_id: int):
 
 @bp.get("/<int:guild_id>/available-users")
 @login_required
-def available_users(guild_id: int):
+@require_guild_permission("add_members")
+def available_users(guild_id: int, membership):
     """List users not already in this guild (officer-only, for adding members)."""
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "add_members"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     from app.models.user import User
 
     # Get IDs of current members
@@ -98,7 +97,7 @@ def available_users(guild_id: int):
 def create_guild():
     if not has_any_guild_permission(current_user.id, "create_guild"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": _t("api.guilds.nameRequired")}), 400
     try:
@@ -142,7 +141,7 @@ def update_guild(guild_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "update_guild_settings"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     guild = guild_service.update_guild(guild, data)
     emit_guild_changed(guild_id)
     return jsonify(guild.to_dict()), 200
@@ -168,20 +167,17 @@ def delete_guild(guild_id: int):
 
 @bp.get("/<int:guild_id>/members")
 @login_required
-def list_members(guild_id: int):
-    if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def list_members(guild_id: int, membership):
     members = guild_service.list_members(guild_id)
     return jsonify([m.to_dict() for m in members]), 200
 
 
 @bp.post("/<int:guild_id>/members")
 @login_required
-def add_member(guild_id: int):
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "add_members"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    data = request.get_json(silent=True) or {}
+@require_guild_permission("add_members")
+def add_member(guild_id: int, membership):
+    data = get_json()
     user_id = data.get("user_id")
     if not user_id:
         return jsonify({"error": _t("api.guilds.userIdRequired")}), 400
@@ -199,10 +195,8 @@ def add_member(guild_id: int):
 
 @bp.put("/<int:guild_id>/members/<int:user_id>")
 @login_required
-def update_member(guild_id: int, user_id: int):
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "update_member_roles"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("update_member_roles")
+def update_member(guild_id: int, user_id: int, membership):
 
     target = db.session.execute(
         sa.select(GuildMembership).where(
@@ -213,7 +207,7 @@ def update_member(guild_id: int, user_id: int):
     if target is None:
         return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
 
     # Validate role changes using dynamic grant rules
     new_role = data.get("role")
@@ -264,7 +258,7 @@ def transfer_ownership(guild_id: int):
     if not is_creator and not is_global_admin:
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
-    data = request.get_json(silent=True) or {}
+    data = get_json()
     target_user_id = data.get("user_id")
     if not target_user_id:
         return jsonify({"error": _t("api.guilds.userIdRequired")}), 400
@@ -310,10 +304,8 @@ def transfer_ownership(guild_id: int):
 
 @bp.delete("/<int:guild_id>/members/<int:user_id>")
 @login_required
-def remove_member(guild_id: int, user_id: int):
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "remove_members"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+@require_guild_permission("remove_members")
+def remove_member(guild_id: int, user_id: int, membership):
 
     if user_id == current_user.id:
         return jsonify({"error": _t("api.guilds.cannotRemoveSelf")}), 400
@@ -342,11 +334,9 @@ def remove_member(guild_id: int, user_id: int):
 
 @bp.get("/<int:guild_id>/members/<int:user_id>/characters")
 @login_required
-def list_member_characters(guild_id: int, user_id: int):
+@require_guild_permission("view_member_characters")
+def list_member_characters(guild_id: int, user_id: int, membership):
     """List all characters for a guild member.  Requires view_member_characters permission."""
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "view_member_characters"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
     from app.services import character_service
 

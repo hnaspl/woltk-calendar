@@ -486,14 +486,14 @@ The bench/queue system spans:
 - [x] Run `npx vite build` — must succeed
 
 ### Phase 3 – Backend API Helpers (Medium Risk)
-- [ ] Create `app/utils/api_helpers.py`
-- [ ] Add unit tests for API helpers
-- [ ] Create `app/utils/decorators.py` with `@require_guild_permission`
-- [ ] Add unit tests for decorator
-- [ ] Move `_get_event_or_404()` to shared location
-- [ ] Move `_build_guild_role_map()` to shared location
-- [ ] Incrementally update API files (one at a time, test after each)
-- [ ] Run full test suite — all 403 tests must pass
+- [x] Create `app/utils/api_helpers.py`
+- [x] Add unit tests for API helpers
+- [x] Create `app/utils/decorators.py` with `@require_guild_permission`
+- [x] Add unit tests for decorator
+- [x] Move `_get_event_or_404()` to shared location
+- [x] Move `_build_guild_role_map()` to shared location
+- [x] Incrementally update API files (one at a time, test after each)
+- [x] Run full test suite — all 418 tests pass
 
 ### Phase 4 – Backend Utilities (Low Risk)
 - [ ] Add cross-reference comments to `app/constants.py` and `src/constants.js`

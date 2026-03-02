@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from app.extensions import db
@@ -12,6 +12,7 @@ from app.constants import normalize_spec_name
 from app.services import character_service, warmane_service
 from app.services.character_service import _default_role_for_class
 from app.utils.auth import login_required
+from app.utils.api_helpers import get_json
 from app.i18n import _t
 
 bp = Blueprint("warmane", __name__, url_prefix="/warmane")
@@ -67,7 +68,7 @@ def sync_character():
     Updates the character's class, armory URL, specs, and stores level, race,
     equipment, talents, professions, achievement points in metadata.
     """
-    body = request.get_json(silent=True) or {}
+    body = get_json()
     char_id = body.get("character_id")
 
     if not char_id:

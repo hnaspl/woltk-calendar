@@ -7,9 +7,11 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from app.services import attendance_service, event_service
+from app.services import attendance_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, has_permission
+from app.utils.api_helpers import get_json, get_event_or_404, validate_required
+from app.utils.decorators import require_guild_permission
+from app.utils.permissions import get_membership
 from app.utils import notify
 from app.models.signup import LineupSlot
 from app.enums import SlotGroup
@@ -25,9 +27,9 @@ bp = Blueprint("attendance", __name__)
 def list_event_attendance(guild_id: int, event_id: int):
     if get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": _t("common.errors.forbidden")}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": _t("api.events.notFound")}), 404
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
     records = attendance_service.list_attendance_for_event(event_id)
     return jsonify([r.to_dict() for r in records]), 200
 
@@ -36,16 +38,16 @@ def list_event_attendance(guild_id: int, event_id: int):
 @login_required
 def record_attendance(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
+    from app.utils.permissions import has_permission
     if not has_permission(membership, "record_attendance"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    event = event_service.get_event(event_id)
-    if event is None or event.guild_id != guild_id:
-        return jsonify({"error": _t("api.events.notFound")}), 404
-    data = request.get_json(silent=True) or {}
-    required = {"user_id", "character_id", "outcome"}
-    missing = required - data.keys()
-    if missing:
-        return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+    data = get_json()
+    err = validate_required(data, "user_id", "character_id", "outcome")
+    if err:
+        return err
 
     # Reject bench characters — only lineup members can have attendance recorded
     lineup_slot = db.session.execute(
