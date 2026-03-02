@@ -1,8 +1,8 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
-      <div class="flex items-center justify-between">
-        <h1 class="wow-heading text-2xl">My Characters</h1>
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <h1 class="wow-heading text-xl sm:text-2xl">My Characters</h1>
         <WowButton @click="openAddModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -58,7 +58,7 @@
                 <img
                   :src="getClassIcon(char.class)"
                   :alt="char.class"
-                  class="w-12 h-12 rounded border border-border-default"
+                  class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default"
                 />
                 <div>
                   <div class="font-bold text-text-primary">{{ char.name }}</div>
@@ -85,7 +85,7 @@
             </div>
             <div v-else class="mb-3"></div>
 
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-1.5 sm:gap-2">
               <WowButton
                 v-if="!char.is_main"
                 variant="secondary"
@@ -119,7 +119,7 @@
           <p>No archived characters.</p>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <WowCard
             v-for="char in archivedCharacters"
             :key="char.id"
@@ -131,7 +131,7 @@
               <img
                 :src="getClassIcon(char.class)"
                 :alt="char.class"
-                class="w-12 h-12 rounded border border-border-default"
+                class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default"
               />
               <div>
                 <div class="font-bold text-text-primary">{{ char.name }}</div>
@@ -145,7 +145,7 @@
               <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
             </div>
 
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-1.5 sm:gap-2">
               <WowButton
                 variant="secondary"
                 class="flex-1 text-xs py-1.5"

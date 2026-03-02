@@ -1,6 +1,6 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Loading permissions -->
       <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
@@ -11,8 +11,8 @@
         You do not have the appropriate permissions to access this page.
       </div>
       <template v-else>
-      <div class="flex items-center justify-between">
-        <h1 class="wow-heading text-2xl">Raid Definitions</h1>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <h1 class="wow-heading text-xl sm:text-2xl">Raid Definitions</h1>
         <WowButton @click="openAddModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -31,10 +31,10 @@
       <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
         No raid definitions yet. Create one to start scheduling raids.
       </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <WowCard v-for="def in definitions" :key="def.id">
           <div class="flex items-start gap-3 mb-3">
-            <img :src="getRaidIcon(def.raid_type)" :alt="def.raid_type" class="w-12 h-12 rounded border border-border-default flex-shrink-0" />
+            <img :src="getRaidIcon(def.raid_type)" :alt="def.raid_type" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-text-primary truncate">{{ def.name }}</span>
@@ -68,7 +68,7 @@
               <div class="text-text-muted">Range DPS</div>
             </div>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-1.5 sm:gap-2">
             <WowButton v-if="def.is_builtin && hasMultipleGuilds" variant="secondary" class="flex-1 text-xs py-1.5" @click="openCopyModal(def)">
               📋 Copy to Guild
             </WowButton>

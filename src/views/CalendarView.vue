@@ -72,7 +72,7 @@
       </aside>
 
       <!-- Calendar -->
-      <div class="flex-1 p-4 overflow-y-auto">
+      <div class="flex-1 p-2 sm:p-4 overflow-y-auto">
         <div v-if="calStore.loading" class="flex items-center justify-center h-64">
           <div class="text-text-muted loading-pulse">Loading calendar…</div>
         </div>

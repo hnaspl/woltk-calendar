@@ -1,6 +1,6 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Loading permissions -->
       <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
@@ -13,7 +13,7 @@
       <template v-else>
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-2xl">Recurring Raids</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">Recurring Raids</h1>
           <p class="text-text-muted text-sm mt-0.5">Set up weekly or biweekly raid schedules and bulk-generate events</p>
         </div>
         <WowButton @click="openAddModal">
@@ -55,7 +55,7 @@
                 <span>⏱ {{ s.duration_minutes }}min</span>
               </div>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(s)">
                 📋 Copy
               </WowButton>

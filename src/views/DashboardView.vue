@@ -1,10 +1,10 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-2xl">Dashboard</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">Dashboard</h1>
           <p class="text-text-muted text-sm mt-0.5">Welcome back, {{ authStore.user?.username }}!</p>
         </div>
         <RouterLink to="/calendar">
@@ -23,21 +23,21 @@
       </div>
 
       <!-- Stats row -->
-      <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-accent-gold">{{ upcomingEvents.length }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-accent-gold">{{ upcomingEvents.length }}</div>
           <div class="text-xs text-text-muted mt-1">Upcoming Raids</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
           <div class="text-xs text-text-muted mt-1">In Lineup</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
           <div class="text-xs text-text-muted mt-1">On Bench</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
           <div class="text-xs text-text-muted mt-1">No Response</div>
         </WowCard>
       </div>
@@ -66,7 +66,7 @@
                 <strong class="text-accent-gold">{{ req.new_character?.name ?? '?' }}</strong>
                 <span v-if="req.reason" class="italic"> — {{ req.reason }}</span>
               </p>
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <button
                   class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
                   @click="resolveReplacement(req, 'confirm')"
@@ -86,7 +86,7 @@
       </div>
 
       <!-- Main grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <!-- Upcoming raids (2/3 width) -->
         <div class="lg:col-span-2 space-y-3">
           <h2 class="wow-heading text-lg">Upcoming Raids</h2>
@@ -104,11 +104,11 @@
             class="block"
           >
             <WowCard class="hover:border-border-gold transition-colors cursor-pointer">
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-3 sm:gap-4">
                 <img
                   :src="getRaidIcon(ev.raid_type)"
                   :alt="ev.raid_type"
-                  class="w-12 h-12 rounded border border-border-default flex-shrink-0"
+                  class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0"
                 />
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">

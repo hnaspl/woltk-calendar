@@ -1,8 +1,8 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
-      <div class="flex items-center justify-between">
-        <h1 class="wow-heading text-2xl">Attendance</h1>
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <h1 class="wow-heading text-xl sm:text-2xl">Attendance</h1>
         <div class="flex items-center gap-3">
           <select
             v-model="period"

@@ -1,10 +1,10 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-2xl">Admin Panel</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">Admin Panel</h1>
           <p class="text-text-muted text-sm mt-0.5">
             {{ guildStore.currentGuild?.name ? `Managing ${guildStore.currentGuild.name}` : 'Manage your guild and system settings' }}
           </p>
@@ -34,7 +34,7 @@
               v-for="tab in visibleTabs"
               :key="tab.id"
               type="button"
-              class="px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
+              class="px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
               :class="activeTab === tab.id
                 ? 'text-accent-gold border-accent-gold'
                 : 'text-text-muted border-transparent hover:text-text-primary hover:border-border-default'"
