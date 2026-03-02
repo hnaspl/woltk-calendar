@@ -174,116 +174,60 @@ but components define their own `ROLE_LABEL_MAP` objects instead of deriving fro
 
 ## 4. Phase 3 – Backend API Layer Helpers
 
-**Goal:** Reduce ~250 lines of repeated error handling, permission checking, and response
-formatting in 15 API files by introducing shared helpers and decorators.
+**Goal:** Reduce repeated error handling, permission checking, and response
+formatting across API files by introducing shared helpers and decorators.
 
-### 4.1 Create `app/utils/api_helpers.py`
+### 4.1 Implemented: `app/utils/api_helpers.py`
 
-**Plan:** Create a new utility module with reusable API helpers:
+Created a shared utility module with four reusable API helpers:
 
-```python
-# app/utils/api_helpers.py
+| Helper | Signature | Replaces |
+|--------|-----------|----------|
+| `get_json()` | `→ dict` | `request.get_json(silent=True) or {}` pattern |
+| `validate_required(data, *fields)` | `→ (response, 400) \| None` | Inline missing-field checks |
+| `get_event_or_404(guild_id, event_id)` | `→ (event, None) \| (None, (response, 404))` | Local `_get_event_or_404()` in signups.py + lineup.py |
+| `build_guild_role_map(guild_id, user_ids)` | `→ dict[int, {role, display_name}]` | Local `_build_guild_role_map()` in signups.py + lineup.py |
 
-def success(data, status=200):
-    """Standard success response."""
-    return jsonify(data), status
+All guild-scoped API files import from this module. The previous local
+`_get_event_or_404()` and `_build_guild_role_map()` definitions were removed
+from `signups.py` and `lineup.py` (lineup.py retains a thin wrapper
+`_build_guild_role_map_for_event()` that adds event-scoped user ID filtering).
 
-def created(data):
-    """Standard 201 response."""
-    return jsonify(data), 201
+### 4.2 Implemented: `app/utils/decorators.py`
 
-def error(message, status=400):
-    """Standard error response."""
-    return jsonify({"error": message}), status
+Created `@require_guild_permission(permission_code=None)` decorator:
 
-def get_or_404(model, id, error_msg=None):
-    """Fetch a record by ID or abort with 404 if not found."""
-    obj = db.session.get(model, id)
-    if obj is None:
-        from flask import abort
-        abort(404, description=error_msg or _t("api.resource.notFound"))
-    return obj
+- Extracts `guild_id` from route kwargs
+- Fetches membership for `current_user`
+- When `permission_code` is provided: checks permission (with admin bypass via `has_permission()`)
+- When `permission_code` is `None`: membership-only check (no admin bypass)
+- Returns 403 on failure
+- Injects resolved `membership` into handler kwargs on success
 
-def get_json():
-    """Safely extract JSON body from request."""
-    return request.get_json(silent=True) or {}
+Applied to all guild-scoped API endpoints across 12 files:
+`events.py`, `signups.py`, `lineup.py`, `guilds.py`, `raid_definitions.py`,
+`templates.py`, `series.py`, `attendance.py`, `characters.py`, `roles.py`,
+`warmane.py`, `admin.py`.
 
-def validate_required(data, *fields):
-    """Check that required fields are present. Return error response or None."""
-    if not isinstance(data, dict):
-        return error(_t("api.common.invalidBody"))
-    missing = set(fields) - data.keys()
-    if missing:
-        return error(_t("api.common.missingFields", fields=", ".join(missing)))
-    return None
-```
+**Note:** Some endpoints retain inline `has_permission()` calls for fine-grained
+authorization checks inside handlers (e.g. owner-vs-officer logic in signups).
+These are intentional and NOT duplicates of the decorator's gate check.
 
-**Impact:**
-- ~50 `request.get_json(silent=True) or {}` calls → `get_json()`
-- ~50 `if resource is None: return jsonify({"error":...}), 404` → `get_or_404()` (raises abort)
-- ~15 required-field checks → `validate_required()`
+### 4.3 Dead Code Removed
 
-### 4.2 Create `app/utils/decorators.py` – Permission Decorator
+- `app/utils/pagination.py` — `paginate()` helper was never called by any endpoint.
+  Removed entirely in Phase 5.
+- `permission_required()` in `app/utils/permissions.py` — Superseded by
+  `@require_guild_permission` from `app/utils/decorators.py`. Removed in final sweep.
 
-**Current state:** ~40 endpoints repeat this 4-line pattern:
-```python
-membership = get_membership(guild_id, current_user.id)
-if membership is None:
-    return jsonify({"error": _t("common.errors.forbidden")}), 403
-if not has_permission(membership, "manage_events"):
-    return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-```
+### 4.4 Tests
 
-**Plan:**
-1. Create a `@require_guild_permission("permission_code")` decorator
-2. The decorator:
-   - Extracts `guild_id` from route kwargs
-   - Fetches membership for `current_user`
-   - Checks permission
-   - Returns 403 if failed
-   - Injects `membership` into the handler kwargs if successful
-3. Apply to endpoints that currently do this manually
-
-**Example usage:**
-```python
-@bp.route("/<int:event_id>", methods=["PUT"])
-@login_required
-@require_guild_permission("manage_events")
-def update_event(guild_id, event_id, membership):
-    # membership is injected by decorator
-    ...
-```
-
-**Files to modify (incrementally):**
-- `app/utils/decorators.py` (create)
-- `app/api/v1/events.py` (~10 endpoints)
-- `app/api/v1/signups.py` (~8 endpoints)
-- `app/api/v1/lineup.py` (~5 endpoints)
-- `app/api/v1/guilds.py` (~8 endpoints)
-- `app/api/v1/raid_definitions.py` (~4 endpoints)
-- `app/api/v1/templates.py` (~6 endpoints)
-- `app/api/v1/series.py` (~4 endpoints)
-- `app/api/v1/attendance.py` (~3 endpoints)
-
-### 4.3 Extract Shared `_get_event_or_404()` and `_build_guild_role_map()`
-
-**Current state:**
-- `_get_event_or_404()` is defined independently in both `signups.py` and `lineup.py`
-- `_build_guild_role_map()` (or similar logic) exists in both files
-
-**Plan:**
-1. Move `_get_event_or_404()` to `app/utils/api_helpers.py` as a generic `get_event_or_404()`
-2. Move `_build_guild_role_map()` to `app/utils/api_helpers.py` or `app/services/lineup_service.py`
-3. Update both `signups.py` and `lineup.py` to import from the shared location
-
-### 4.4 Wire Up Existing `paginate()` Utility
-
-**Current state:** `app/utils/pagination.py` has a `paginate()` helper that is never called.
-
-**Plan:**
-1. Identify list endpoints that would benefit from pagination (events, signups, attendance, etc.)
-2. Wire `paginate()` into those endpoints
-3. This is a low-priority enhancement — mark for future work
+15 unit tests in `tests/test_api_helpers.py` covering:
+- `get_json()` — empty body, valid JSON, malformed body
+- `validate_required()` — missing fields, all present, edge cases
+- `get_event_or_404()` — existing event, missing event, wrong guild
+- `build_guild_role_map()` — empty, single, multiple members
+- `@require_guild_permission` — missing membership, valid membership, permission denied, admin bypass
 
 ---
 
@@ -618,3 +562,59 @@ The bench/queue system is the most interconnected feature in the codebase:
 | `app/models/*` | No duplication found |
 | `src/api/*` | Already well-organized |
 | `src/stores/*` | Already well-organized |
+
+---
+
+## Appendix B: Post-Cleanup Sweep
+
+A final sweep after all 6 phases were completed. Findings documented below.
+
+### Dead Code Removed
+
+| Item | Location | Action |
+|------|----------|--------|
+| `permission_required()` decorator | `app/utils/permissions.py:158-184` | Removed — superseded by `@require_guild_permission` in `app/utils/decorators.py`, never imported anywhere |
+| Unused imports (`wraps`, `Callable`, `jsonify`) | `app/utils/permissions.py:9-12` | Removed — only used by the deleted decorator |
+| `request.get_json(silent=True) or {}` pattern | `app/api/v1/auth.py:17,37,71,79` | Replaced with shared `get_json()` from `app/utils/api_helpers.py` |
+| Unused `request` import | `app/api/v1/auth.py:5` | Removed — no longer needed after `get_json()` migration |
+
+### Verified Clean — No Action Needed
+
+| Category | Status | Details |
+|----------|--------|---------|
+| Backend services | ✅ | All exports in all service modules are imported and used |
+| Backend enums | ✅ | All enums in `app/enums.py` are actively used (WowClass, Role, AttendanceOutcome, EventStatus, MemberStatus, JobStatus, SlotGroup) |
+| Backend utilities | ✅ | All functions in `app/utils/` are actively called |
+| Frontend constants | ✅ | All exports from `src/constants.js` are imported somewhere |
+| Frontend API modules | ✅ | All 76 exported functions across `src/api/` files are used |
+| Frontend stores | ✅ | All 5 Pinia stores are imported and used |
+| Frontend composables | ✅ | All 9 composables are imported and used |
+| Frontend components | ✅ | No duplicate or abandoned component files |
+| Role label maps | ✅ | No local ROLE_LABEL_MAP/ROLE_LABELS definitions remain in any .vue file |
+| Local `formatDate()` | ✅ | No local `formatDate()` wrappers remain (all use `useFormatting` composable) |
+
+### Observations (Not Bugs, No Action Required)
+
+1. **`formatDateTime()` in `RaidDetailView.vue` and `DashboardView.vue`** — Both views define
+   local `formatDateTime()` functions, but these are NOT duplicates of `useFormatting.formatDate()`.
+   They call `formatDualTime()` (shows both guild + local time) rather than `formatGuildDate()`,
+   and each uses different formatting options:
+   - `RaidDetailView`: long weekday, long month, includes year
+   - `DashboardView`: short weekday, short month, no year
+   These are intentional view-specific display choices. Extracting them would add complexity
+   (parameterised options) without reducing duplication.
+
+2. **`formatTimeOnly()` in `DashboardView.vue`** — Single-use helper calling
+   `formatGuildTime()` with `hour12: false`. Used once in the template. Not worth extracting.
+
+3. **`raidLabel()` wrapper in both views** — One-liner `return raidTypeLabel(raidType)`.
+   This exists so the template can call `raidLabel(x)` instead of importing and calling
+   `raidTypeLabel(x)` directly. Minor stylistic choice, not dead code.
+
+4. **Inline `has_permission()` calls in `attendance.py`, `signups.py`, `raid_definitions.py`** —
+   These are fine-grained authorization checks inside handlers (e.g. "is this user the signup
+   owner OR an officer?"), NOT duplicates of the decorator's gate check. Intentional.
+
+5. **`_build_guild_role_map_for_event()` wrapper in `lineup.py`** — Thin wrapper around the
+   shared `build_guild_role_map()` that first queries signup user IDs scoped to an event.
+   This is event-specific logic, not a duplicate.
