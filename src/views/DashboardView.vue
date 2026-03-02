@@ -178,7 +178,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
@@ -194,6 +194,7 @@ import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
+import { useSocket } from '@/composables/useSocket'
 import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
@@ -204,42 +205,77 @@ const calStore = useCalendarStore()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 const tzHelper = useTimezone()
+const { on, off } = useSocket()
 
+let isActive = true
 const loading = ref(true)
 const mySignups = ref([])
 const replacementRequests = ref([])
+
+async function refreshSignups() {
+  try {
+    const allSignups = await eventsApi.getMySignups()
+    const nowMs = Date.now()
+    mySignups.value = allSignups.filter(su => {
+      const status = su.event_status
+      if (status === 'completed' || status === 'cancelled') return false
+      const startsAt = su.starts_at_utc
+      if (startsAt && new Date(startsAt).getTime() < nowMs) return false
+      return true
+    })
+  } catch {
+    mySignups.value = []
+  }
+}
+
+async function refreshReplacements() {
+  try {
+    replacementRequests.value = await eventsApi.getMyReplacementRequests()
+  } catch {
+    replacementRequests.value = []
+  }
+}
+
+async function refreshDashboard() {
+  if (!isActive) return
+  await calStore.fetchEvents()
+  await refreshSignups()
+  await refreshReplacements()
+}
+
+function handleEventsChanged() { if (isActive) refreshDashboard() }
+function handleGuildsChanged() { if (isActive) { guildStore.fetchGuilds(); refreshDashboard() } }
+function handleGuildChanged() { if (isActive) refreshDashboard() }
 
 onMounted(async () => {
   loading.value = true
   try {
     await guildStore.fetchGuilds()
-    // Fetch events for all user's guilds (getAllEvents is guild-agnostic)
-    await calStore.fetchEvents()
-    // Fetch user's signups across all guilds
-    try {
-      const allSignups = await eventsApi.getMySignups()
-      // Filter out signups for completed, cancelled, or past events
-      const nowMs = Date.now()
-      mySignups.value = allSignups.filter(su => {
-        const status = su.event_status
-        if (status === 'completed' || status === 'cancelled') return false
-        const startsAt = su.starts_at_utc
-        if (startsAt && new Date(startsAt).getTime() < nowMs) return false
-        return true
-      })
-    } catch {
-      mySignups.value = []
-    }
-    // Fetch pending replacement requests
-    try {
-      replacementRequests.value = await eventsApi.getMyReplacementRequests()
-    } catch {
-      replacementRequests.value = []
-    }
+    await refreshDashboard()
   } finally {
     loading.value = false
   }
+  on('events_changed', handleEventsChanged)
+  on('guilds_changed', handleGuildsChanged)
+  on('guild_changed', handleGuildChanged)
+  on('signups_changed', handleEventsChanged)
+  on('lineup_changed', handleEventsChanged)
 })
+
+onUnmounted(() => {
+  isActive = false
+  off('events_changed', handleEventsChanged)
+  off('guilds_changed', handleGuildsChanged)
+  off('guild_changed', handleGuildChanged)
+  off('signups_changed', handleEventsChanged)
+  off('lineup_changed', handleEventsChanged)
+})
+
+// Also refresh when guild changes in sidebar
+watch(
+  () => guildStore.currentGuild?.id,
+  (newId, oldId) => { if (newId && newId !== oldId) refreshDashboard() }
+)
 
 const now = new Date()
 
@@ -302,17 +338,7 @@ async function resolveReplacement(req, action) {
       action === 'confirm' ? 'success' : 'info'
     )
     // Refresh signups in case lineup status changed
-    try {
-      const allSignups = await eventsApi.getMySignups()
-      const nowMs = Date.now()
-      mySignups.value = allSignups.filter(su => {
-        const status = su.event_status
-        if (status === 'completed' || status === 'cancelled') return false
-        const startsAt = su.starts_at_utc
-        if (startsAt && new Date(startsAt).getTime() < nowMs) return false
-        return true
-      })
-    } catch { /* signups refresh is best-effort */ }
+    await refreshSignups()
   } catch (err) {
     uiStore.showToast(err?.response?.data?.error ?? 'Failed to process replacement', 'error')
   }
