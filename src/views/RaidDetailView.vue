@@ -1,6 +1,6 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Loading state -->
       <div v-if="loading" class="space-y-4">
         <div class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
@@ -19,11 +19,11 @@
             <img
               :src="getRaidIcon(event.raid_type)"
               :alt="event.raid_type"
-              class="w-20 h-20 rounded-lg border border-border-gold shadow-gold flex-shrink-0"
+              class="w-14 h-14 sm:w-20 sm:h-20 rounded-lg border border-border-gold shadow-gold flex-shrink-0"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap mb-2">
-                <h1 class="wow-heading text-xl">{{ event.title }}</h1>
+                <h1 class="wow-heading text-lg sm:text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
                 <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Done</span>
                 <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Cancelled</span>
@@ -38,7 +38,7 @@
               </div>
 
               <!-- Informative details grid -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm mt-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-6 gap-y-1.5 text-sm mt-2">
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📅</span>
                   <span><strong class="text-text-primary">Starts:</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
@@ -86,7 +86,7 @@
             </div>
 
             <!-- Officer actions -->
-            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-2 flex-shrink-0">
+            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-1.5 sm:gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
               <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">Edit</WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
                 {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
@@ -124,7 +124,7 @@
         />
 
         <!-- Main content grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <!-- Left column: signup form + my signups + composition -->
           <div class="space-y-6">
             <SignupForm
@@ -307,7 +307,7 @@
           </select>
           <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Size</label>
             <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -331,9 +331,9 @@
             </select>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
+            <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
@@ -717,10 +717,7 @@ async function doDuplicate() {
 }
 
 function toLocalDatetime(utcStr) {
-  if (!utcStr) return ''
-  const d = new Date(utcStr)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return tz.utcToGuildLocal(utcStr)
 }
 
 function openEditModal() {
@@ -774,9 +771,9 @@ async function saveEvent() {
       raid_size: editForm.raid_size,
       difficulty: editForm.difficulty,
       status: editForm.status,
-      starts_at_utc: editForm.starts_at_utc,
+      starts_at_utc: tz.guildLocalToUtc(editForm.starts_at_utc),
       duration_minutes: editForm.duration_minutes,
-      close_signups_at: editForm.close_signups_at || undefined,
+      close_signups_at: editForm.close_signups_at ? tz.guildLocalToUtc(editForm.close_signups_at) : undefined,
       instructions: editForm.instructions
     }
     const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)

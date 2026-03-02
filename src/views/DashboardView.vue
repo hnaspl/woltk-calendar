@@ -1,10 +1,10 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-2xl">Dashboard</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">Dashboard</h1>
           <p class="text-text-muted text-sm mt-0.5">Welcome back, {{ authStore.user?.username }}!</p>
         </div>
         <RouterLink to="/calendar">
@@ -23,21 +23,21 @@
       </div>
 
       <!-- Stats row -->
-      <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-accent-gold">{{ upcomingEvents.length }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-accent-gold">{{ upcomingEvents.length }}</div>
           <div class="text-xs text-text-muted mt-1">Upcoming Raids</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
           <div class="text-xs text-text-muted mt-1">In Lineup</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
           <div class="text-xs text-text-muted mt-1">On Bench</div>
         </WowCard>
         <WowCard class="text-center">
-          <div class="text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
+          <div class="text-2xl sm:text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
           <div class="text-xs text-text-muted mt-1">No Response</div>
         </WowCard>
       </div>
@@ -56,7 +56,7 @@
                   :to="`/raids/${req.event_id}`"
                   class="text-xs text-accent-gold hover:underline"
                 >{{ req.event_title ?? 'Raid' }}</RouterLink>
-                <span v-if="req.starts_at_utc" class="text-[10px] text-text-muted">{{ formatDateTime(req.starts_at_utc) }}</span>
+                <span v-if="req.starts_at_utc" class="text-xs text-text-muted">{{ formatDateTime(req.starts_at_utc) }}</span>
               </div>
               <p class="text-text-muted text-xs">
                 <strong class="text-text-primary">{{ req.requester_name }}</strong>
@@ -66,7 +66,7 @@
                 <strong class="text-accent-gold">{{ req.new_character?.name ?? '?' }}</strong>
                 <span v-if="req.reason" class="italic"> — {{ req.reason }}</span>
               </p>
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <button
                   class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
                   @click="resolveReplacement(req, 'confirm')"
@@ -85,11 +85,62 @@
         </div>
       </div>
 
+      <!-- Today's Raids (raids today that the player is signed up for) -->
+      <div v-if="!loading && todaysRaids.length > 0" class="space-y-3">
+        <h2 class="wow-heading text-lg">⚔️ Today's Raids</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <RouterLink
+            v-for="tr in todaysRaids"
+            :key="tr.event.id"
+            :to="`/raids/${tr.event.id}`"
+            class="block"
+          >
+            <WowCard class="border-accent-gold/30 hover:border-border-gold transition-colors cursor-pointer">
+              <div class="flex items-center gap-3">
+                <img
+                  :src="getRaidIcon(tr.event.raid_type)"
+                  :alt="tr.event.raid_type"
+                  class="w-10 h-10 rounded border border-border-default flex-shrink-0"
+                />
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-semibold text-text-primary text-sm truncate">{{ tr.event.title }}</span>
+                    <StatusBadge :status="tr.event.status ?? 'open'" />
+                  </div>
+                  <div class="text-xs text-text-muted mt-0.5">
+                    🕐 {{ formatTimeOnly(tr.event.starts_at_utc ?? tr.event.start_time ?? tr.event.date) }}
+                  </div>
+                  <div v-if="tr.signup" class="flex items-center gap-1 mt-0.5">
+                    <ClassBadge v-if="tr.signup.character?.class_name" :class-name="tr.signup.character.class_name" />
+                    <span class="text-xs text-text-muted truncate">{{ tr.signup.character?.name ?? 'Signed up' }}</span>
+                    <span v-if="tr.signup.lineup_status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1 py-0.5 rounded">Bench</span>
+                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">In Lineup</span>
+                  </div>
+                </div>
+              </div>
+            </WowCard>
+          </RouterLink>
+        </div>
+      </div>
+
       <!-- Main grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <!-- Upcoming raids (2/3 width) -->
         <div class="lg:col-span-2 space-y-3">
-          <h2 class="wow-heading text-lg">Upcoming Raids</h2>
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h2 class="wow-heading text-lg">Upcoming Raids</h2>
+            <select
+              v-model.number="filterDays"
+              class="text-xs bg-bg-secondary border border-border-default rounded px-2 py-1 text-text-primary focus:border-accent-gold focus:outline-none"
+            >
+              <option :value="1">Next 1 day</option>
+              <option :value="3">Next 3 days</option>
+              <option :value="7">Next 7 days</option>
+              <option :value="14">Next 14 days</option>
+              <option :value="30">Next 30 days</option>
+              <option :value="60">Next 60 days</option>
+            </select>
+          </div>
           <div v-if="loading" class="space-y-2">
             <div v-for="i in 3" :key="i" class="h-16 rounded bg-bg-secondary border border-border-default loading-pulse" />
           </div>
@@ -104,11 +155,11 @@
             class="block"
           >
             <WowCard class="hover:border-border-gold transition-colors cursor-pointer">
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-3 sm:gap-4">
                 <img
                   :src="getRaidIcon(ev.raid_type)"
                   :alt="ev.raid_type"
-                  class="w-12 h-12 rounded border border-border-default flex-shrink-0"
+                  class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0"
                 />
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
@@ -211,6 +262,7 @@ let isActive = true
 const loading = ref(true)
 const mySignups = ref([])
 const replacementRequests = ref([])
+const filterDays = ref(14)
 
 async function refreshSignups() {
   try {
@@ -249,6 +301,7 @@ function handleGuildChanged() { if (isActive) refreshDashboard() }
 
 onMounted(async () => {
   loading.value = true
+  nowTimer = setInterval(() => { now.value = new Date() }, 60000)
   try {
     await guildStore.fetchGuilds()
     if (guildStore.currentGuild) joinGuild(guildStore.currentGuild.id)
@@ -265,6 +318,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   isActive = false
+  if (nowTimer) clearInterval(nowTimer)
   if (guildStore.currentGuild) leaveGuild(guildStore.currentGuild.id)
   off('events_changed', handleEventsChanged)
   off('guilds_changed', handleGuildsChanged)
@@ -283,14 +337,20 @@ watch(
   }
 )
 
-const now = new Date()
+const now = ref(new Date())
+let nowTimer = null
 
-const upcomingEvents = computed(() =>
-  calStore.events
-    .filter(ev => new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date) >= now && ev.status !== 'cancelled')
+const upcomingEvents = computed(() => {
+  const nowMs = now.value.getTime()
+  const cutoffMs = nowMs + filterDays.value * 86400000
+  return calStore.events
+    .filter(ev => {
+      const t = new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date).getTime()
+      return t >= nowMs && t <= cutoffMs && ev.status !== 'cancelled'
+    })
     .sort((a, b) => new Date(a.starts_at_utc ?? a.start_time ?? a.date) - new Date(b.starts_at_utc ?? b.start_time ?? b.date))
-    .slice(0, 8)
-)
+    .slice(0, 20)
+})
 
 const myGoingCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'going').length)
 const myBenchCount = computed(() => mySignups.value.filter(s => s.lineup_status === 'bench').length)
@@ -316,11 +376,37 @@ const sortedMySignups = computed(() => {
   })
 })
 
+// Today's raids that the player is signed up for
+const todaysRaids = computed(() => {
+  const guildTz = tzHelper.guildTimezone.value
+  const todayStr = now.value.toLocaleDateString('en-CA', { timeZone: guildTz })
+  const signupMap = new Map()
+  for (const su of mySignups.value) {
+    signupMap.set(su.raid_event_id, su)
+  }
+  return calStore.events
+    .filter(ev => {
+      const iso = ev.starts_at_utc ?? ev.start_time ?? ev.date
+      if (!iso || ev.status === 'cancelled') return false
+      const evDate = new Date(iso).toLocaleDateString('en-CA', { timeZone: guildTz })
+      return evDate === todayStr && signupMap.has(ev.id)
+    })
+    .sort((a, b) => new Date(a.starts_at_utc ?? a.start_time ?? a.date) - new Date(b.starts_at_utc ?? b.start_time ?? b.date))
+    .map(ev => ({ event: ev, signup: signupMap.get(ev.id) }))
+})
+
 function formatDateTime(d) {
   if (!d) return '?'
   return tzHelper.formatDualTime(d, {
     weekday: 'short', day: '2-digit', month: 'short',
     hour: '2-digit', minute: '2-digit'
+  })
+}
+
+function formatTimeOnly(d) {
+  if (!d) return '?'
+  return tzHelper.formatGuildTime(d, {
+    hour: '2-digit', minute: '2-digit', hour12: false
   })
 }
 

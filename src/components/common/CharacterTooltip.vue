@@ -12,7 +12,7 @@
     <Transition name="fade">
       <div
         v-if="show && character && !dragging"
-        class="absolute z-50 w-72 bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl pointer-events-none"
+        class="absolute z-50 w-72 max-w-[calc(100vw-2rem)] bg-[#0d1117] border border-[#2a3450] rounded-lg shadow-xl pointer-events-none"
         :class="positionClass"
       >
         <!-- Header -->

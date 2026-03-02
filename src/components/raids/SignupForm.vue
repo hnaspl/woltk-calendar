@@ -42,7 +42,7 @@
         <div v-if="roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
           ⚠ There are no available role slots for this character's class in this raid. This character cannot sign up for this event.
         </div>
-        <div v-else class="flex gap-2">
+        <div v-else class="flex flex-wrap gap-2">
           <button
             v-for="r in roles"
             :key="r.value"
@@ -67,7 +67,7 @@
       <!-- Spec (multi-select, only when character selected and has valid roles) -->
       <div v-if="form.characterId && roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">Spec (select one or more)</label>
-        <div v-if="specOptions.length > 0" class="flex gap-2 mb-1">
+        <div v-if="specOptions.length > 0" class="flex flex-wrap gap-2 mb-1">
           <button
             v-for="sp in specOptions"
             :key="sp"

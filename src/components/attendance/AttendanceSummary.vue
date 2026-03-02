@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
     <WowCard v-for="stat in stats" :key="stat.label" class="text-center">
       <div class="text-2xl font-bold" :class="stat.color">{{ stat.value }}</div>
       <div class="text-xs text-text-muted mt-1">{{ stat.label }}</div>

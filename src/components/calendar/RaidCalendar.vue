@@ -101,10 +101,11 @@ const statusLabels = {
 
 function formatTime(isoStr) {
   if (!isoStr) return ''
-  return tzHelper.formatGuildTime(isoStr, {
+  const formatted = tzHelper.formatGuildTime(isoStr, {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false
   })
+  return formatted
 }
 
 function showTooltip(info) {
@@ -187,7 +188,7 @@ const fcEvents = computed(() =>
   })
 )
 
-// Custom event content renderer — shows raid icon + title + done badge
+// Custom event content renderer — shows raid icon + time + title + done badge
 function renderEventContent(arg) {
   const ev = arg.event.extendedProps
   const icon = ev._raidIcon
@@ -202,11 +203,22 @@ function renderEventContent(arg) {
   img.className = 'wow-event-icon'
   img.alt = ''
 
+  // Show short time (e.g. "19:30")
+  const timeEl = document.createElement('span')
+  timeEl.className = 'wow-event-time'
+  const startIso = ev.starts_at_utc ?? ev.start_time
+  if (startIso) {
+    timeEl.textContent = tzHelper.formatGuildTime(startIso, {
+      hour: '2-digit', minute: '2-digit', hour12: false
+    })
+  }
+
   const text = document.createElement('span')
   text.className = 'wow-event-title'
   text.textContent = arg.event.title
 
   wrapper.appendChild(img)
+  wrapper.appendChild(timeEl)
   wrapper.appendChild(text)
 
   if (ev.status === 'completed') {
@@ -267,7 +279,7 @@ watch(() => props.events, () => {
   border: 1px solid #2a2a4a;
   border-radius: 0.5rem;
   padding: 0.75rem;
-  min-width: 220px;
+  min-width: min(220px, 90vw);
   max-width: 280px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   pointer-events: none;
@@ -333,26 +345,32 @@ watch(() => props.events, () => {
 .wow-event-content {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
+  gap: 4px;
+  padding: 2px 4px;
   border-left: 3px solid;
   border-radius: 3px;
   background: rgba(26, 26, 46, 0.85);
   overflow: hidden;
   cursor: pointer;
-  min-height: 32px;
+  min-height: 22px;
 }
 .wow-event-content:hover {
   background: rgba(42, 42, 74, 0.95);
 }
 .wow-event-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.wow-event-time {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #a0aec0;
   flex-shrink: 0;
 }
 .wow-event-title {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #e2e8f0;
   white-space: nowrap;

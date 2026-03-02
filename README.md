@@ -149,6 +149,136 @@ When a raid event has enough confirmed signups for its raid size:
 - When a confirmed player removes their signup, the system auto-promotes the best-fit benched player
 - Promotion priority: matching role → mains over alts → earliest signup time
 
+#### Lineup & Bench Queue — End-to-End Flow
+
+This section describes how the lineup and bench queue system works from end to end, covering every user action and its resulting backend behavior.
+
+##### 1. Raid Creation & Slot Configuration
+
+When an admin creates a raid event linked to a raid definition, the definition specifies how many slots are available per role:
+
+| Field | Example (ICC 25) |
+|---|---|
+| `main_tank_slots` | 1 |
+| `off_tank_slots` | 1 |
+| `healer_slots` | 5 |
+| `range_dps_slots` | 12 |
+| `melee_dps_slots` | 6 |
+
+Total roster slots = sum of all role slots (25 in this example).
+
+##### 2. Player Signs Up
+
+When a player signs up for a raid event:
+
+1. **Signup record created** — A `RaidSignup` row is inserted with `lineup_status = 'going'`.
+2. **Auto-slot assignment** — `auto_assign_slot()` checks if the player's role has a free slot:
+   - **Slot available** → A `LineupSlot` is created with `slot_group` = the player's role (e.g. `healer`) and a sequential `slot_index`.
+   - **Slot full** → The signup's `lineup_status` is changed to `'bench'`, a `LineupSlot` is created with `slot_group = 'bench_queue'`, and the player is appended to the end of the bench queue.
+3. **Notification sent** — The player receives a notification: "Your character X has been placed in the lineup" or "Your character X has been placed on the bench queue".
+
+##### 3. Admin Moves Player from Lineup to Bench (via Lineup Board)
+
+The lineup board sends a `PUT /api/v1/guilds/{gid}/events/{eid}/lineup` with a grouped payload:
+
+```json
+{
+  "main_tanks": [{"signup_id": 1}],
+  "healers": [{"signup_id": 2}, {"signup_id": 3}],
+  "bench_queue": [{"signup_id": 4}, {"signup_id": 5}]
+}
+```
+
+Backend processing (`update_lineup_grouped`):
+
+1. **Version check** — Optimistic locking via `expected_version` prevents race conditions.
+2. **Delete existing slots** — All `LineupSlot` rows for this event are deleted.
+3. **Recreate from payload** — For each role group, new `LineupSlot` rows are created. Players in `bench_queue` get `slot_group = 'bench_queue'`.
+4. **Update signup statuses** — Players now in a role group → `lineup_status = 'going'`. Players in `bench_queue` → `lineup_status = 'bench'`.
+5. **One-character-per-player enforcement** — If a player has multiple signups, only one can be in the lineup. Duplicates are rejected with HTTP 400.
+6. **Slot limit enforcement** — Each role group respects the definition's slot limit. Excess signups are appended to bench queue.
+7. **Orphan handling** — Any signup not mentioned in the payload is appended to the bench queue.
+8. **Notifications sent** — Each affected player is notified of their new status.
+9. **Realtime emit** — `lineup_changed` event is broadcast to connected clients.
+
+##### 4. Admin Moves Player from Bench to Lineup
+
+Same `PUT` endpoint as above. The admin drags a bench player into a role group in the lineup board UI. The backend:
+
+1. Creates a `LineupSlot` with the role's `slot_group` and next available `slot_index`.
+2. Changes the signup's `lineup_status` from `'bench'` to `'going'`.
+3. Removes the player from the bench queue.
+4. Notifies the player: "Your character X has been promoted to the lineup".
+
+##### 5. Player Deletes Their Signup (Auto-Promote)
+
+When a player who is in the lineup (`going`) deletes their signup:
+
+1. **Signup deleted** — The `RaidSignup` and associated `LineupSlot` rows are removed.
+2. **Auto-promote triggered** — The system looks for a bench player whose role matches the freed slot:
+   - Bench queue is ordered by `slot_index` (FIFO).
+   - The first matching bench player is promoted: their `lineup_status` changes to `'going'`, they get a role `LineupSlot`, and their bench `LineupSlot` is removed.
+3. **Notification sent** — The promoted player receives: "Your character X has been promoted from bench to the lineup".
+4. **No match** — If no bench player matches the freed role, the slot remains empty.
+
+##### 6. Player Declines (Auto-Promote)
+
+Identical to deletion auto-promote. When a `going` player's signup is declined:
+
+1. Their `lineup_status` changes to `'declined'` and their `LineupSlot` is removed.
+2. Auto-promote runs for the freed role slot.
+3. The declined player is **not** placed on bench — they are simply declined.
+
+##### 7. Bench Queue Reorder
+
+Officers can reorder the bench queue via `PUT /api/v1/guilds/{gid}/events/{eid}/lineup/bench-reorder`:
+
+```json
+{"ordered_signup_ids": [5, 4, 7]}
+```
+
+Backend processing:
+
+1. **Two-phase update** — To avoid UNIQUE constraint conflicts on `slot_index`, all bench slots are first moved to temporary high indices, then reassigned to their new positions.
+2. **Position change tracking** — For each player whose position changed, the old and new positions are recorded.
+3. **Notifications sent** — Players whose queue position changed receive: "Your bench queue position changed from #2 to #1".
+4. **Partial lists** — If the request omits some bench players, they are appended after the explicitly ordered ones.
+
+##### 8. Lineup Confirm
+
+`POST /api/v1/guilds/{gid}/events/{eid}/lineup/confirm` marks all current lineup slots as confirmed. Each player in the lineup receives a confirmation notification.
+
+##### 9. Multi-Role Isolation
+
+Bench queues are role-aware:
+
+- A healer on bench will **only** be auto-promoted when a healer slot opens.
+- A DPS on bench will **not** be promoted when a tank slot opens.
+- Each role has its own independent queue ordering.
+
+##### 10. Character Replacement Requests
+
+Players can request to swap characters via `POST /guilds/{gid}/events/{eid}/signups/replace-request`. The original signup owner must confirm or decline the swap. If confirmed, the old character is removed and the new one takes the lineup slot.
+
+##### 11. Event Completion Lock
+
+Once an event is marked as `completed` or `cancelled`:
+
+- All signup modifications (create, update, delete, decline) return HTTP 403.
+- All lineup modifications (update, confirm, bench reorder) return HTTP 403.
+- Replacement requests are blocked.
+- The frontend disables all interactive controls and shows a locked banner.
+
+##### Test Coverage
+
+The bench/queue system is covered by 63 tests across 3 test files:
+
+| Test File | Tests | Coverage |
+|---|---|---|
+| `test_bench_comprehensive.py` | 25 | Basic mechanics, auto-promote on delete/decline, slot counting, multi-role isolation, FIFO ordering, class-role validation, default role auto-population, realtime emits, sequential promotions, concurrent role slots, character deletion |
+| `test_bench_e2e.py` | 11 | E2E bench auto-promote, slot counting, class-role validation, default role auto-population, queue ordering |
+| `test_bench_reorder_e2e.py` | 27 | Queue reorder, notification character names, queue position notifications, notification CRUD, full reorder flow with promotion |
+
 ### Calendar
 - Full calendar view (month/week/list) powered by FullCalendar
 - Filter by realm, raid type, size, status

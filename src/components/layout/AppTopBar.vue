@@ -4,7 +4,7 @@
     <div class="flex items-center gap-3">
       <button
         type="button"
-        class="lg:hidden p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
+        class="lg:hidden p-2 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
         @click="uiStore.toggleSidebar()"
         aria-label="Toggle sidebar"
       >
@@ -44,7 +44,7 @@
         <Transition name="fade">
           <div
             v-if="notifOpen"
-            class="absolute right-0 top-full mt-1 w-96 bg-[#141926] border border-[#2a3450] rounded-lg shadow-xl z-30 overflow-hidden"
+            class="absolute right-0 top-full mt-1 w-[calc(100vw-2rem)] sm:w-96 bg-[#141926] border border-[#2a3450] rounded-lg shadow-xl z-30 overflow-hidden"
             v-click-outside="() => notifOpen = false"
           >
             <div class="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3450]">
@@ -232,7 +232,12 @@ async function clearAllNotifications() {
 
 function formatTime(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
+  // Backend always sends UTC with +00:00 suffix via utc_iso().
+  // Safety: if the suffix is missing (e.g. different DB driver), treat as UTC.
+  const hasTimezone = iso.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(iso)
+  const normalized = hasTimezone ? iso : iso + 'Z'
+  const d = new Date(normalized)
+  if (isNaN(d.getTime())) return ''
   const now = new Date()
   const diffMs = now - d
   const diffMin = Math.floor(diffMs / 60000)

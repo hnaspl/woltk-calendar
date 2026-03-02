@@ -1,6 +1,6 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Loading permissions -->
       <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
@@ -13,7 +13,7 @@
       <template v-else>
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-2xl">Raid Templates</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">Raid Templates</h1>
           <p class="text-text-muted text-sm mt-0.5">Save recurring raid schedules as templates</p>
         </div>
         <WowButton @click="openAddModal">
@@ -36,7 +36,7 @@
       </div>
       <div v-else class="space-y-3">
         <WowCard v-for="tpl in templates" :key="tpl.id">
-          <div class="flex items-center gap-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <div class="w-12 h-12 rounded border border-border-default bg-bg-tertiary flex items-center justify-center text-xl flex-shrink-0">📋</div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
@@ -46,7 +46,7 @@
               </div>
               <div class="text-xs text-text-muted mt-1">{{ tpl.default_instructions ?? 'No instructions' }}</div>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <div class="flex items-center gap-2 flex-wrap">
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(tpl)">
                 📋 Copy
               </WowButton>
@@ -79,7 +79,7 @@
           </select>
           <p v-if="raidDefinitions.length === 0" class="text-xs text-text-muted mt-1">No raid definitions found. Create one in Raid Definitions first.</p>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Raid Size</label>
             <select v-model.number="form.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -163,7 +163,7 @@
       <div class="space-y-4">
         <p class="text-text-muted text-sm">Schedule a new event from template <strong class="text-text-primary">{{ applyTarget?.name }}</strong>.</p>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Event Date & Time *</label>
+          <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
           <input v-model="applyDate" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
       </div>
@@ -199,6 +199,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
+import { useTimezone } from '@/composables/useTimezone'
 import * as templatesApi from '@/api/templates'
 import * as raidDefsApi from '@/api/raidDefinitions'
 
@@ -206,6 +207,7 @@ const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
+const tzHelper = useTimezone()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_templates'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
@@ -383,7 +385,7 @@ async function doApply() {
   if (!applyDate.value) return
   saving.value = true
   try {
-    await templatesApi.applyTemplate(guildStore.currentGuild.id, applyTarget.value.id, { start_time: applyDate.value })
+    await templatesApi.applyTemplate(guildStore.currentGuild.id, applyTarget.value.id, { start_time: tzHelper.guildLocalToUtc(applyDate.value) })
     showApply.value = false
     uiStore.showToast('Event scheduled from template!', 'success')
   } catch (err) {

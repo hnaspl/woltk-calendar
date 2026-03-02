@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.enums import Role, SlotGroup
+from app.utils.dt import utc_iso
 from app.extensions import db
 
 
@@ -75,8 +76,8 @@ class Signup(db.Model):
             "bench_info": bench_info,
             "note": self.note,
             "gear_score_note": self.gear_score_note,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
         if self.character is not None:
             result["character"] = self.character.to_dict()
@@ -134,7 +135,7 @@ class LineupSlot(db.Model):
             "signup_id": self.signup_id,
             "character_id": self.character_id,
             "confirmed_by": self.confirmed_by,
-            "confirmed_at": self.confirmed_at.isoformat() if self.confirmed_at else None,
+            "confirmed_at": utc_iso(self.confirmed_at),
         }
         if self.character is not None:
             result["character"] = self.character.to_dict()
@@ -192,7 +193,7 @@ class RaidBan(db.Model):
             "character_id": self.character_id,
             "banned_by": self.banned_by,
             "reason": self.reason,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": utc_iso(self.created_at),
             "character": self.character.to_dict() if self.character else None,
         }
 
@@ -246,8 +247,8 @@ class CharacterReplacement(db.Model):
             "requested_by": self.requested_by,
             "reason": self.reason,
             "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "created_at": utc_iso(self.created_at),
+            "resolved_at": utc_iso(self.resolved_at),
             "old_character": self.old_character.to_dict() if self.old_character else None,
             "new_character": self.new_character.to_dict() if self.new_character else None,
             "requester_name": self.requester.username if self.requester else None,

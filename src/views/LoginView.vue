@@ -6,9 +6,9 @@
         <img
           :src="logoIcon"
           alt="Raid Calendar"
-          class="w-20 h-20 rounded-xl border-2 border-border-gold mx-auto mb-4 shadow-gold"
+          class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 border-border-gold mx-auto mb-4 shadow-gold"
         />
-        <h1 class="wow-heading text-2xl mb-1">Raid Calendar</h1>
+        <h1 class="wow-heading text-xl sm:text-2xl mb-1">Raid Calendar</h1>
         <p class="text-text-muted text-sm">WotLK Warmane Guild Management</p>
       </div>
 

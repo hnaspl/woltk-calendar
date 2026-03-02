@@ -12,47 +12,82 @@
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Joined</th>
-              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-border-default">
-            <tr v-for="m in members" :key="m.id" class="hover:bg-bg-tertiary/50 transition-colors">
-              <td class="px-4 py-2.5">
-                <div class="text-text-primary font-medium">{{ m.username ?? m.user?.username }}</div>
+      <div v-else>
+        <!-- Desktop table -->
+        <div class="hidden sm:block overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-bg-tertiary border-b border-border-default">
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Joined</th>
+                <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-default">
+              <tr v-for="m in members" :key="m.id" class="hover:bg-bg-tertiary/50 transition-colors">
+                <td class="px-4 py-2.5">
+                  <div class="text-text-primary font-medium">{{ m.username ?? m.user?.username }}</div>
+                  <div v-if="m.user_id === authStore.user?.id" class="text-[10px] text-accent-gold">You</div>
+                </td>
+                <td class="px-4 py-2.5">
+                  <select
+                    :value="m.role"
+                    :disabled="!canChangeRole(m)"
+                    class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none disabled:opacity-50"
+                    @change="updateRole(m, $event.target.value)"
+                  >
+                    <option v-for="r in roleOptionsForMember(m)" :key="r.name" :value="r.name">{{ r.display_name }}</option>
+                  </select>
+                </td>
+                <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.joined_at ?? m.created_at) }}</td>
+                <td class="px-4 py-2.5 text-right space-x-2">
+                  <button
+                    class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors"
+                    @click="viewMemberChars(m)"
+                  >
+                    📋 Characters
+                  </button>
+                  <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
+                    Remove
+                  </WowButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile card layout -->
+        <div class="sm:hidden space-y-3">
+          <div
+            v-for="m in members"
+            :key="'mobile-' + m.id"
+            class="p-3 rounded-lg bg-bg-tertiary border border-border-default space-y-2"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-text-primary font-medium text-sm">{{ m.username ?? m.user?.username }}</div>
                 <div v-if="m.user_id === authStore.user?.id" class="text-[10px] text-accent-gold">You</div>
-              </td>
-              <td class="px-4 py-2.5">
-                <select
-                  :value="m.role"
-                  :disabled="!canChangeRole(m)"
-                  class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none disabled:opacity-50"
-                  @change="updateRole(m, $event.target.value)"
-                >
-                  <option v-for="r in roleOptionsForMember(m)" :key="r.name" :value="r.name">{{ r.display_name }}</option>
-                </select>
-              </td>
-              <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.joined_at ?? m.created_at) }}</td>
-              <td class="px-4 py-2.5 text-right space-x-2">
-                <button
-                  class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors"
-                  @click="viewMemberChars(m)"
-                >
-                  📋 Characters
-                </button>
-                <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
-                  Remove
-                </WowButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              <select
+                :value="m.role"
+                :disabled="!canChangeRole(m)"
+                class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none disabled:opacity-50"
+                @change="updateRole(m, $event.target.value)"
+              >
+                <option v-for="r in roleOptionsForMember(m)" :key="r.name" :value="r.name">{{ r.display_name }}</option>
+              </select>
+            </div>
+            <div class="text-xs text-text-muted">Joined: {{ formatDate(m.joined_at ?? m.created_at) }}</div>
+            <div class="flex gap-2">
+              <button
+                class="flex-1 inline-flex items-center justify-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 transition-colors"
+                @click="viewMemberChars(m)"
+              >📋 Characters</button>
+              <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">Remove</WowButton>
+            </div>
+          </div>
+        </div>
       </div>
     </WowCard>
 
@@ -161,9 +196,9 @@
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Character</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Primary Spec</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Secondary Spec</th>
-              <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
-              <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Secondary Spec</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Details</th>
             </tr>
           </thead>
@@ -186,18 +221,18 @@
                 </div>
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
-              <td class="px-4 py-2.5">
+              <td class="hidden md:table-cell px-4 py-2.5">
                 <div v-if="c.secondary_spec" class="flex items-center gap-1.5">
                   <img v-if="getSpecIcon(c.secondary_spec, c.class_name)" :src="getSpecIcon(c.secondary_spec, c.class_name)" class="w-4 h-4 rounded" />
                   <span class="text-text-muted text-xs">{{ c.secondary_spec }}</span>
                 </div>
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
-              <td class="px-4 py-2.5 text-center">
+              <td class="hidden sm:table-cell px-4 py-2.5 text-center">
                 <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase px-1.5 py-0.5 bg-accent-gold/10 rounded">Main</span>
                 <span v-else class="text-text-muted text-[10px] px-1.5 py-0.5 bg-bg-secondary rounded">Alt</span>
               </td>
-              <td class="px-4 py-2.5 text-center">
+              <td class="hidden sm:table-cell px-4 py-2.5 text-center">
                 <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px] font-medium px-1.5 py-0.5 bg-green-400/10 rounded">Active</span>
                 <span v-else class="text-red-400 text-[10px] font-medium px-1.5 py-0.5 bg-red-400/10 rounded">Archived</span>
               </td>
@@ -221,12 +256,12 @@
 
     <!-- Transfer Ownership button -->
     <WowCard v-if="canTransferOwnership">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 class="wow-heading text-base">Guild Ownership</h2>
           <p class="text-xs text-text-muted mt-1">Transfer ownership of this guild to another member.</p>
         </div>
-        <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="showTransferModal = true">
+        <WowButton variant="danger" class="text-xs py-1.5 px-3 flex-shrink-0" @click="showTransferModal = true">
           👑 Transfer Ownership
         </WowButton>
       </div>

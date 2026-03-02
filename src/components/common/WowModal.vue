@@ -3,7 +3,7 @@
     <Transition name="fade">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
         role="dialog"
         :aria-label="title"
         aria-modal="true"
@@ -20,8 +20,8 @@
           :class="widthClass"
         >
           <!-- Header -->
-          <div class="flex items-center justify-between border-b border-[#2a3450] px-6 py-4">
-            <h2 class="wow-heading text-lg">{{ title }}</h2>
+          <div class="flex items-center justify-between border-b border-[#2a3450] px-4 sm:px-6 py-3 sm:py-4">
+            <h2 class="wow-heading text-base sm:text-lg">{{ title }}</h2>
             <button
               type="button"
               class="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
@@ -35,12 +35,12 @@
           </div>
 
           <!-- Body -->
-          <div class="px-6 py-4">
+          <div class="px-4 sm:px-6 py-3 sm:py-4">
             <slot />
           </div>
 
           <!-- Footer -->
-          <div v-if="$slots.footer" class="border-t border-[#2a3450] px-6 py-4">
+          <div v-if="$slots.footer" class="border-t border-[#2a3450] px-4 sm:px-6 py-3 sm:py-4">
             <slot name="footer" />
           </div>
         </div>

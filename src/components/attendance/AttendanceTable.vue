@@ -1,17 +1,13 @@
 <template>
   <div class="space-y-6">
-    <div v-if="eventSections.length === 0" class="px-4 py-8 text-center text-text-muted">
+    <div v-if="dateSections.length === 0" class="px-4 py-8 text-center text-text-muted">
       No attendance data available.
     </div>
 
-    <div v-for="section in eventSections" :key="section.eventId">
-      <!-- Event date header -->
-      <div class="flex items-center gap-3 mb-2 flex-wrap">
-        <h3 class="text-base font-semibold text-border-gold">{{ formatDate(section.date) }}</h3>
-        <router-link
-          :to="`/raids/${section.eventId}`"
-          class="text-sm text-text-muted hover:text-accent-gold hover:underline transition-colors"
-        >{{ section.title }}</router-link>
+    <div v-for="section in dateSections" :key="section.dateKey">
+      <!-- Date header -->
+      <div class="mb-2">
+        <h3 class="text-base font-semibold text-border-gold">{{ section.dateLabel }}</h3>
       </div>
 
       <WowCard :padded="false">
@@ -20,18 +16,29 @@
           <table class="w-full text-sm table-fixed">
             <thead>
               <tr class="bg-bg-tertiary border-b border-border-default">
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[35%]">Character</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[20%]">Class</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[15%]">Status</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[30%]">Note</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[28%]">Raid</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[22%]">Character</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[15%]">Class</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[12%]">Status</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[23%]">Note</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border-default">
               <tr
                 v-for="row in section.rows"
-                :key="row.characterId"
+                :key="row.recordId"
                 class="hover:bg-bg-tertiary/50 transition-colors"
               >
+                <td class="px-4 py-2.5">
+                  <router-link :to="`/raids/${row.eventId}`" class="flex items-center gap-2 hover:text-accent-gold transition-colors group">
+                    <img
+                      :src="getRaidIcon(row.raidType)"
+                      :alt="row.raidTitle"
+                      class="w-6 h-6 rounded border border-border-default flex-shrink-0"
+                    />
+                    <span class="font-medium truncate text-accent-gold">{{ row.raidTitle }}</span>
+                  </router-link>
+                </td>
                 <td class="px-4 py-2.5">
                   <div class="flex items-center gap-2">
                     <img
@@ -61,23 +68,28 @@
         <div class="sm:hidden divide-y divide-border-default">
           <div
             v-for="row in section.rows"
-            :key="row.characterId"
+            :key="`m-${row.recordId}`"
             class="px-4 py-3 flex items-center gap-3"
           >
             <img
-              :src="getClassIcon(row.className)"
-              :alt="row.className"
-              class="w-7 h-7 rounded flex-shrink-0"
+              :src="getRaidIcon(row.raidType)"
+              :alt="row.raidTitle"
+              class="w-8 h-8 rounded border border-border-default flex-shrink-0"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-medium text-sm truncate" :style="{ color: getClassColor(row.className) }">{{ row.characterName }}</span>
+                <router-link :to="`/raids/${row.eventId}`" class="font-medium text-sm truncate text-accent-gold">{{ row.raidTitle }}</router-link>
                 <span
                   class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
                   :class="outcomeClasses(row.outcome)"
                 >{{ outcomeLabel(row.outcome) }}</span>
               </div>
-              <div class="text-text-muted text-xs mt-0.5">{{ row.className }}</div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <img :src="getClassIcon(row.className)" :alt="row.className" class="w-4 h-4 rounded flex-shrink-0" />
+                <span class="text-xs truncate" :style="{ color: getClassColor(row.className) }">{{ row.characterName }}</span>
+                <span class="text-text-muted text-xs">·</span>
+                <span class="text-text-muted text-xs">{{ row.className }}</span>
+              </div>
               <div v-if="row.note" class="text-text-muted text-[10px] italic mt-0.5">{{ row.note }}</div>
             </div>
           </div>
@@ -95,7 +107,7 @@ import { useTimezone } from '@/composables/useTimezone'
 import { useWowIcons } from '@/composables/useWowIcons'
 
 const tz = useTimezone()
-const { getClassIcon, getClassColor } = useWowIcons()
+const { getClassIcon, getClassColor, getRaidIcon } = useWowIcons()
 
 const props = defineProps({
   records: { type: Array, default: () => [] },
@@ -105,6 +117,12 @@ const props = defineProps({
 function formatDate(d) {
   if (!d) return '—'
   return tz.formatGuildDate(d, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+/** Get guild-timezone date string (YYYY-MM-DD) for grouping. */
+function guildDateKey(isoStr) {
+  if (!isoStr) return 'no-date'
+  return tz.formatGuildDate(isoStr, { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
 function outcomeLabel(o) {
@@ -119,36 +137,55 @@ function outcomeClasses(o) {
   return 'text-red-400 bg-red-400/10'
 }
 
-const eventSections = computed(() => {
+/**
+ * Group attendance records by guild-timezone date so that multiple raids on
+ * the same day appear under one date header.  Each row carries the raid title
+ * and icon so the "Raid" column can distinguish them.
+ */
+const dateSections = computed(() => {
   const eventMap = new Map()
   props.events.forEach(ev => eventMap.set(ev.id, ev))
 
-  const grouped = new Map()
-  props.records.forEach(r => {
+  // Build flat rows with event metadata attached
+  const rows = props.records.map(r => {
     const eid = r.raid_event_id ?? r.event_id
-    if (!grouped.has(eid)) grouped.set(eid, [])
-    grouped.get(eid).push(r)
+    const ev = eventMap.get(eid)
+    return {
+      eventId: eid,
+      recordId: r.id ?? `${eid}-${r.character_id}`,
+      raidTitle: ev?.title ?? 'Unknown Raid',
+      raidType: ev?.raid_type ?? null,
+      dateUtc: ev?.starts_at_utc ?? null,
+      dateKey: guildDateKey(ev?.starts_at_utc),
+      characterId: r.character_id,
+      characterName: r.character?.name ?? 'Unknown',
+      className: r.character?.class_name ?? '',
+      outcome: r.outcome,
+      note: r.note,
+    }
+  })
+
+  // Group by guild-timezone date
+  const grouped = new Map()
+  rows.forEach(row => {
+    if (!grouped.has(row.dateKey)) grouped.set(row.dateKey, [])
+    grouped.get(row.dateKey).push(row)
   })
 
   return Array.from(grouped.entries())
-    .map(([eid, recs]) => {
-      const ev = eventMap.get(eid)
+    .map(([dateKey, dateRows]) => {
       return {
-        eventId: eid,
-        title: ev?.title ?? 'Raid',
-        date: ev?.starts_at_utc ?? null,
-        rows: recs.map(r => ({
-          characterId: r.character_id,
-          characterName: r.character?.name ?? 'Unknown',
-          className: r.character?.class_name ?? '',
-          outcome: r.outcome,
-          note: r.note
-        }))
+        dateKey,
+        dateLabel: dateRows[0]?.dateUtc ? formatDate(dateRows[0].dateUtc) : 'Unknown Date',
+        rows: dateRows,
       }
     })
     .sort((a, b) => {
-      if (!a.date || !b.date) return 0
-      return new Date(b.date) - new Date(a.date)
+      // Sort by newest date first
+      const da = a.rows[0]?.dateUtc
+      const db = b.rows[0]?.dateUtc
+      if (!da || !db) return 0
+      return new Date(db) - new Date(da)
     })
 })
 </script>

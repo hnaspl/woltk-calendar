@@ -15,8 +15,8 @@
           <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Character</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Class</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Role</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">Class</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">Role</th>
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Outcome</th>
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">Note</th>
             </tr>
@@ -26,8 +26,8 @@
               <td class="px-3 py-2 font-medium" :style="{ color: getClassColor(p.signup.character?.class_name) }">
                 {{ p.signup.character?.name ?? '?' }}
               </td>
-              <td class="px-3 py-2 text-text-muted text-xs">{{ p.signup.character?.class_name ?? '—' }}</td>
-              <td class="px-3 py-2 text-text-muted text-xs">{{ roleLabel(p.signup.chosen_role) }}</td>
+              <td class="px-3 py-2 text-text-muted text-xs hidden sm:table-cell">{{ p.signup.character?.class_name ?? '—' }}</td>
+              <td class="px-3 py-2 text-text-muted text-xs hidden sm:table-cell">{{ roleLabel(p.signup.chosen_role) }}</td>
               <td class="px-3 py-2">
                 <select
                   v-model="p.outcome"

@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.utils.dt import utc_iso
+
 from app.enums import MemberStatus
 from app.extensions import db
 
@@ -69,8 +71,8 @@ class Guild(db.Model):
             "warmane_source": self.warmane_source,
             "timezone": self.timezone,
             "created_by": self.created_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
 
     def __repr__(self) -> str:
@@ -115,7 +117,7 @@ class GuildMembership(db.Model):
             "user_id": self.user_id,
             "role": self.role,
             "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": utc_iso(self.created_at),
         }
         if self.user is not None:
             result["username"] = self.user.username

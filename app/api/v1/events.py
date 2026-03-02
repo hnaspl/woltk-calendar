@@ -9,6 +9,7 @@ from flask_login import current_user
 
 from app.services import event_service, attendance_service
 from app.utils.auth import login_required
+from app.utils.dt import utc_iso
 from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_events_changed
 from app.utils import notify
@@ -233,7 +234,7 @@ def list_my_signups():
             d["raid_type"] = s.raid_event.raid_type
             d["guild_id"] = s.raid_event.guild_id
             d["event_status"] = s.raid_event.status
-            d["starts_at_utc"] = s.raid_event.starts_at_utc.isoformat() if s.raid_event.starts_at_utc else None
+            d["starts_at_utc"] = utc_iso(s.raid_event.starts_at_utc)
         result.append(d)
     return jsonify(result), 200
 
@@ -255,6 +256,6 @@ def list_my_replacement_requests():
             d["guild_id"] = ev.guild_id
             d["event_id"] = ev.id
             d["event_status"] = ev.status
-            d["starts_at_utc"] = ev.starts_at_utc.isoformat() if ev.starts_at_utc else None
+            d["starts_at_utc"] = utc_iso(ev.starts_at_utc)
         result.append(d)
     return jsonify(result), 200

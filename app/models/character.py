@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.utils.dt import utc_iso
+
 from app.enums import Role, WowClass
 from app.extensions import db
 
@@ -87,8 +89,8 @@ class Character(db.Model):
             "is_active": self.is_active,
             "metadata": self.char_metadata,
             "armory_url": self.armory_url,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
 
     def __repr__(self) -> str:

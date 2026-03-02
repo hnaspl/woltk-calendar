@@ -1,7 +1,7 @@
 <template>
   <AppShell>
-    <div class="p-4 md:p-6 space-y-6">
-      <h1 class="wow-heading text-2xl">Roles &amp; Permissions</h1>
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <h1 class="wow-heading text-xl sm:text-2xl">Roles &amp; Permissions</h1>
 
       <div v-if="!permissions.can('manage_roles')" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
         You do not have the appropriate permissions.
@@ -22,25 +22,25 @@
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Level</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Permissions</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Can Assign</th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
-                  <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Role</th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Level</th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Permissions</th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Can Assign</th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Type</th>
+                  <th class="text-right px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-default">
                 <tr v-for="role in roles" :key="role.id" class="hover:bg-bg-tertiary/50 transition-colors">
-                  <td class="px-4 py-2.5">
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5">
                     <div class="text-text-primary font-medium">{{ role.display_name }}</div>
                     <div class="text-xs text-text-muted">{{ role.name }}</div>
                   </td>
-                  <td class="px-4 py-2.5 text-text-muted">{{ role.level }}</td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-text-muted">{{ role.level }}</td>
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5">
                     <span class="text-accent-gold text-xs font-medium">{{ role.permissions.length }} permissions</span>
                   </td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5">
                     <div class="flex flex-wrap gap-1">
                       <span
                         v-for="grantee in role.can_grant"
@@ -50,13 +50,13 @@
                       <span v-if="!role.can_grant.length" class="text-xs text-text-muted">—</span>
                     </div>
                   </td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5">
                     <span
                       class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
                       :class="role.is_system ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-green-900/50 text-green-300 border border-green-600'"
                     >{{ role.is_system ? 'System' : 'Custom' }}</span>
                   </td>
-                  <td class="px-4 py-2.5 text-right space-x-2">
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-right space-x-2">
                     <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditRole(role)">Edit</WowButton>
                     <WowButton
                       v-if="!role.is_system"
@@ -106,18 +106,18 @@
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role (Granter)</th>
-                  <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase"></th>
-                  <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Can Assign (Grantee)</th>
-                  <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Role (Granter)</th>
+                  <th class="text-center px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase"></th>
+                  <th class="text-left px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Can Assign (Grantee)</th>
+                  <th class="text-right px-2 sm:px-4 py-2 sm:py-2.5 text-xs text-text-muted uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-default">
                 <tr v-for="rule in grantRules" :key="rule.id" class="hover:bg-bg-tertiary/50 transition-colors">
-                  <td class="px-4 py-2.5 text-text-primary font-medium">{{ roleDisplayName(rule.granter_role_name) }}</td>
-                  <td class="px-4 py-2.5 text-center text-accent-gold">→</td>
-                  <td class="px-4 py-2.5 text-text-primary">{{ roleDisplayName(rule.grantee_role_name) }}</td>
-                  <td class="px-4 py-2.5 text-right">
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-text-primary font-medium">{{ roleDisplayName(rule.granter_role_name) }}</td>
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-center text-accent-gold">→</td>
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-text-primary">{{ roleDisplayName(rule.grantee_role_name) }}</td>
+                  <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-right">
                     <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">Remove</WowButton>
                   </td>
                 </tr>

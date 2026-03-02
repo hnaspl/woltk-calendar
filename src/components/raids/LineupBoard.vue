@@ -1,6 +1,6 @@
 <template>
   <WowCard :padded="false">
-    <div class="flex items-center justify-between px-5 py-3 border-b border-border-default">
+    <div class="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 border-b border-border-default">
       <h3 class="wow-heading text-base">Lineup Board</h3>
       <div v-if="canManage" class="flex items-center gap-2">
         <span v-if="dirty" class="text-xs text-yellow-400">Unsaved changes</span>
@@ -14,7 +14,7 @@
       <div
         v-for="col in columns"
         :key="col.key"
-        class="bg-bg-secondary p-4 transition-colors"
+        class="bg-bg-secondary p-3 sm:p-4 transition-colors"
         :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': canManage && dragOverTarget === col.key }"
         @dragover.prevent="canManage && handleDragOver($event, col.key)"
         @dragenter.prevent="canManage && (dragOverTarget = col.key)"
@@ -86,7 +86,7 @@
     <!-- Bench queue: grouped by role showing per-role queue positions -->
     <div
       v-if="bench.length > 0 || (canManage && draggedId)"
-      class="px-5 py-4 border-t border-border-default transition-colors"
+      class="px-3 sm:px-5 py-3 sm:py-4 border-t border-border-default transition-colors"
       :class="{ 'bg-yellow-900/10 ring-1 ring-inset ring-yellow-500/30': canManage && dragOverTarget === 'bench' }"
       @dragover.prevent="canManage && handleDragOver($event, 'bench')"
       @dragenter.prevent="canManage && (dragOverTarget = 'bench')"
@@ -219,10 +219,10 @@ const columns = computed(() => allColumns.value.filter(c => c.slots > 0))
 
 const gridClass = computed(() => {
   const count = columns.value.length
-  if (count <= 2) return 'md:grid-cols-2'
-  if (count === 3) return 'md:grid-cols-3'
-  if (count === 4) return 'md:grid-cols-4'
-  return 'md:grid-cols-5'
+  if (count <= 2) return 'sm:grid-cols-2'
+  if (count === 3) return 'sm:grid-cols-2 lg:grid-cols-3'
+  if (count === 4) return 'sm:grid-cols-2 lg:grid-cols-4'
+  return 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
 })
 
 const lineup = ref({ main_tanks: [], off_tanks: [], melee_dps: [], healers: [], range_dps: [] })

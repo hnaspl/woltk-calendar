@@ -12,7 +12,7 @@
         <!-- Modal content — wider when equipment is present for two-column layout -->
         <div
           class="relative bg-[#0d1117] border border-[#2a3450] rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-          :class="equipment.length > 0 ? 'w-full max-w-3xl' : 'w-full max-w-md'"
+          :class="equipment.length > 0 ? 'w-full max-w-md sm:max-w-lg md:max-w-3xl' : 'w-full max-w-md'"
         >
           <!-- Close button (top-left) -->
           <button
@@ -26,7 +26,7 @@
           </button>
 
           <!-- Header -->
-          <div class="flex items-center gap-3 px-4 py-3 border-b border-[#2a3450] bg-[#161b22]">
+          <div class="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-3 border-b border-[#2a3450] bg-[#161b22]">
             <img
               v-if="classIcon"
               :src="classIcon"
@@ -124,7 +124,7 @@
               <!-- Stats -->
               <div v-if="hasStats">
                 <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">Stats</div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div v-if="meta.gear_score" class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
                     <span class="text-amber-300">⚡</span>
                     <div>
@@ -176,12 +176,12 @@
                     :href="item.item ? `https://www.wowhead.com/wotlk/item=${item.item}` : undefined"
                     :data-wowhead="item.item ? `item=${item.item}&domain=wotlk` : undefined"
                     target="_blank"
-                    class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
+                    class="equip-link flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
                     @click.stop
                   >
-                    <!-- WoW-themed slot icon -->
+                    <!-- Default slot icon — hidden once Wowhead injects its own item icon -->
                     <div
-                      class="w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
+                      class="slot-icon-fallback w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
                       :class="slotIconClasses(item)"
                     >
                       <svg v-if="EQUIP_SLOTS[i]?.svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -360,3 +360,14 @@ function formatDate(iso) {
   return tzHelper.formatGuildDate(iso, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 </script>
+
+<style>
+/*
+ * Hide default equipment slot icons when Wowhead has injected its own item icons.
+ * Wowhead's iconizeLinks adds elements with class 'iconsmall' / 'iconmedium' / 'iconlarge'.
+ * The :has() selector detects their presence and hides our fallback icon.
+ */
+.equip-link:has(.iconsmall, .iconmedium, .iconlarge) > .slot-icon-fallback {
+  display: none;
+}
+</style>
