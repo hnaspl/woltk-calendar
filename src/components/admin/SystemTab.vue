@@ -3,7 +3,7 @@
     <!-- Users table -->
     <WowCard>
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">All Users ({{ users.length }})</h2>
+        <h2 class="wow-heading text-base">{{ t('admin.users.title', { count: users.length }) }}</h2>
       </div>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
@@ -13,13 +13,13 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">ID</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
-              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Email</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Admin</th>
-              <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Registered</th>
-              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.id') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.username') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.email') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.status') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.admin') }}</th>
+              <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.registered') }}</th>
+              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -32,11 +32,11 @@
                   class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
                   :class="u.is_active ? 'bg-green-900/50 text-green-300 border border-green-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
                 >
-                  {{ u.is_active ? 'Active' : 'Blocked' }}
+                  {{ u.is_active ? t('admin.users.active') : t('admin.users.blocked') }}
                 </span>
               </td>
               <td class="px-4 py-2.5">
-                <span v-if="u.is_admin" class="text-accent-gold text-xs font-bold">Admin</span>
+                <span v-if="u.is_admin" class="text-accent-gold text-xs font-bold">{{ t('admin.users.admin') }}</span>
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
               <td class="hidden lg:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(u.created_at) }}</td>
@@ -48,29 +48,29 @@
                     variant="secondary"
                     class="text-xs py-1 px-2"
                     @click="toggleAdmin(u)"
-                  >Promote Admin</WowButton>
+                  >{{ t('admin.users.promoteAdmin') }}</WowButton>
                   <WowButton
                     v-else
                     variant="secondary"
                     class="text-xs py-1 px-2"
                     @click="toggleAdmin(u)"
-                  >Revoke Admin</WowButton>
+                  >{{ t('admin.users.revokeAdmin') }}</WowButton>
                   <WowButton
                     v-if="u.is_active"
                     variant="secondary"
                     class="text-xs py-1 px-2"
                     @click="toggleBlock(u)"
-                  >Block</WowButton>
+                  >{{ t('admin.users.block') }}</WowButton>
                   <WowButton
                     v-else
                     variant="secondary"
                     class="text-xs py-1 px-2"
                     @click="toggleBlock(u)"
-                  >Unblock</WowButton>
-                  <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmDelete(u)">Delete</WowButton>
+                  >{{ t('admin.users.unblock') }}</WowButton>
+                  <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmDelete(u)">{{ t('common.buttons.delete') }}</WowButton>
                 </template>
-                <span v-else-if="u.id === authStore.user.id" class="text-text-muted text-xs italic">You</span>
-                <span v-else class="text-text-muted text-xs italic">Primary Admin</span>
+                <span v-else-if="u.id === authStore.user.id" class="text-text-muted text-xs italic">{{ t('common.labels.you') }}</span>
+                <span v-else class="text-text-muted text-xs italic">{{ t('admin.users.primaryAdmin') }}</span>
                 </div>
               </td>
             </tr>
@@ -81,7 +81,7 @@
 
     <!-- System Settings -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">System Settings</h2>
+      <h2 class="wow-heading text-base mb-4">{{ t('admin.system.title') }}</h2>
 
       <div v-if="sysSettingsLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else class="space-y-6 max-w-lg">
@@ -99,15 +99,15 @@
             />
           </button>
           <div>
-            <span class="text-sm text-text-primary">Enable Wowhead Tooltips</span>
-            <p class="text-[10px] text-text-muted mt-0.5">When enabled, hovering equipment items shows rich tooltips with full item statistics from Wowhead. When disabled, basic item info is shown inline.</p>
+            <span class="text-sm text-text-primary">{{ t('admin.system.wowheadTooltips') }}</span>
+            <p class="text-[10px] text-text-muted mt-0.5">{{ t('admin.system.wowheadHelp') }}</p>
           </div>
         </label>
 
         <!-- Auto-Sync -->
         <div class="border-t border-border-default pt-4">
-          <h3 class="text-sm text-text-primary font-medium mb-3">Warmane Character Auto-Sync</h3>
-          <p class="text-text-muted text-xs mb-3">Automatically sync all active characters from the Warmane armory at a scheduled interval.</p>
+          <h3 class="text-sm text-text-primary font-medium mb-3">{{ t('admin.system.warmaneSync') }}</h3>
+          <p class="text-text-muted text-xs mb-3">{{ t('admin.system.warmaneSyncHelp') }}</p>
 
           <div class="space-y-3">
             <label class="flex items-center gap-3 cursor-pointer">
@@ -122,38 +122,38 @@
                   :class="settingsForm.autosync_enabled ? 'translate-x-6' : 'translate-x-1'"
                 />
               </button>
-              <span class="text-sm text-text-primary">Auto-Sync Enabled</span>
+              <span class="text-sm text-text-primary">{{ t('admin.system.autoSyncEnabled') }}</span>
             </label>
 
             <div>
-              <label class="block text-xs text-text-muted mb-1">Sync Interval</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.syncInterval') }}</label>
               <select v-model.number="settingsForm.autosync_interval_minutes" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option :value="15">Every 15 minutes</option>
-                <option :value="30">Every 30 minutes</option>
-                <option :value="60">Every hour</option>
-                <option :value="120">Every 2 hours</option>
-                <option :value="360">Every 6 hours</option>
-                <option :value="720">Every 12 hours</option>
-                <option :value="1440">Every 24 hours</option>
+                <option :value="15">{{ t('admin.system.every15min') }}</option>
+                <option :value="30">{{ t('admin.system.every30min') }}</option>
+                <option :value="60">{{ t('admin.system.everyHour') }}</option>
+                <option :value="120">{{ t('admin.system.every2hours') }}</option>
+                <option :value="360">{{ t('admin.system.every6hours') }}</option>
+                <option :value="720">{{ t('admin.system.every12hours') }}</option>
+                <option :value="1440">{{ t('admin.system.every24hours') }}</option>
               </select>
             </div>
           </div>
         </div>
 
         <div class="flex gap-3 pt-2">
-          <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">Save Settings</WowButton>
-          <WowButton variant="secondary" :loading="syncing" @click="triggerManualSync">Sync Now</WowButton>
+          <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">{{ t('admin.system.saveSettings') }}</WowButton>
+          <WowButton variant="secondary" :loading="syncing" @click="triggerManualSync">{{ t('admin.system.syncNow') }}</WowButton>
         </div>
       </div>
     </WowCard>
 
     <!-- Delete confirmation -->
-    <WowModal v-model="showDeleteConfirm" title="Delete User" size="sm">
-      <p class="text-text-muted">Permanently delete <strong class="text-text-primary">{{ deleteTarget?.username }}</strong>? This cannot be undone.</p>
+    <WowModal v-model="showDeleteConfirm" :title="t('admin.users.deleteUser')" size="sm">
+      <p class="text-text-muted">{{ t('admin.users.deleteConfirm', { name: deleteTarget?.username }) }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="deleting" @click="doDelete">Delete</WowButton>
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="deleting" @click="doDelete">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -162,6 +162,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -170,6 +171,7 @@ import { useUiStore } from '@/stores/ui'
 import * as adminApi from '@/api/admin'
 import { useTimezone } from '@/composables/useTimezone'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const tzHelper = useTimezone()

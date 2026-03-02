@@ -3,9 +3,9 @@
     <!-- Members table -->
     <WowCard>
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">Members ({{ members.length }})</h2>
+        <h2 class="wow-heading text-base">{{ t('members.title', { count: members.length }) }}</h2>
         <WowButton v-if="permissions.can('manage_guild_members')" variant="secondary" class="text-xs py-1 px-3" @click="showAddMember = true">
-          + Add Member
+          {{ t('members.addMember') }}
         </WowButton>
       </div>
 
@@ -18,17 +18,17 @@
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-bg-tertiary border-b border-border-default">
-                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Username</th>
-                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Joined</th>
-                <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Actions</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.username') }}</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.role') }}</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.joined') }}</th>
+                <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border-default">
               <tr v-for="m in members" :key="m.id" class="hover:bg-bg-tertiary/50 transition-colors">
                 <td class="px-4 py-2.5">
                   <div class="text-text-primary font-medium">{{ m.username ?? m.user?.username }}</div>
-                  <div v-if="m.user_id === authStore.user?.id" class="text-[10px] text-accent-gold">You</div>
+                  <div v-if="m.user_id === authStore.user?.id" class="text-[10px] text-accent-gold">{{ t('common.labels.you') }}</div>
                 </td>
                 <td class="px-4 py-2.5">
                   <select
@@ -46,10 +46,10 @@
                     class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors"
                     @click="viewMemberChars(m)"
                   >
-                    📋 Characters
+                    📋 {{ t('members.characters') }}
                   </button>
                   <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
-                    Remove
+                    {{ t('common.buttons.remove') }}
                   </WowButton>
                 </td>
               </tr>
@@ -67,7 +67,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-text-primary font-medium text-sm">{{ m.username ?? m.user?.username }}</div>
-                <div v-if="m.user_id === authStore.user?.id" class="text-[10px] text-accent-gold">You</div>
+                <div v-if="m.user_id === authStore.user?.id" class="text-[10px] text-accent-gold">{{ t('common.labels.you') }}</div>
               </div>
               <select
                 :value="m.role"
@@ -78,13 +78,13 @@
                 <option v-for="r in roleOptionsForMember(m)" :key="r.name" :value="r.name">{{ r.display_name }}</option>
               </select>
             </div>
-            <div class="text-xs text-text-muted">Joined: {{ formatDate(m.joined_at ?? m.created_at) }}</div>
+            <div class="text-xs text-text-muted">{{ t('members.joined') }}: {{ formatDate(m.joined_at ?? m.created_at) }}</div>
             <div class="flex gap-2">
               <button
                 class="flex-1 inline-flex items-center justify-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 transition-colors"
                 @click="viewMemberChars(m)"
-              >📋 Characters</button>
-              <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">Remove</WowButton>
+              >📋 {{ t('members.characters') }}</button>
+              <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">{{ t('common.buttons.remove') }}</WowButton>
             </div>
           </div>
         </div>
@@ -92,33 +92,33 @@
     </WowCard>
 
     <!-- Kick confirmation -->
-    <WowModal v-model="showKickConfirm" title="Remove Member" size="sm">
-      <p class="text-text-muted">Remove <strong class="text-text-primary">{{ kickTarget?.username ?? kickTarget?.user?.username }}</strong> from the guild?</p>
+    <WowModal v-model="showKickConfirm" :title="t('members.removeMember')" size="sm">
+      <p class="text-text-muted">{{ t('members.removeConfirm', { name: kickTarget?.username ?? kickTarget?.user?.username }) }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showKickConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doKick">Remove</WowButton>
+          <WowButton variant="secondary" @click="showKickConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doKick">{{ t('common.buttons.remove') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Add Member modal -->
-    <WowModal v-model="showAddMember" title="Add Member" size="sm">
+    <WowModal v-model="showAddMember" :title="t('members.addMemberTitle')" size="sm">
       <div class="space-y-3">
         <!-- Warmane roster fetch for Warmane-sourced guilds -->
         <div v-if="isWarmaneSource">
           <div class="flex items-center justify-between mb-2">
-            <p class="text-xs text-text-muted">Fetch guild roster from Warmane to find members.</p>
+            <p class="text-xs text-text-muted">{{ t('members.fetchRoster') }}</p>
             <WowButton variant="secondary" class="text-xs py-1 px-3" :loading="fetchingRoster" @click="fetchWarmaneRoster">
-              {{ fetchingRoster ? 'Fetching…' : 'Fetch Roster' }}
+              {{ fetchingRoster ? t('common.labels.fetching') : t('members.fetchRosterBtn') }}
             </WowButton>
           </div>
           <div v-if="warmaneRosterError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneRosterError }}</div>
           <div v-if="warmaneRoster.length > 0" class="space-y-1">
-            <label class="block text-xs text-text-muted mb-1">Filter by name</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('members.filterByName') }}</label>
             <input
               v-model="rosterFilter"
-              placeholder="Type to filter…"
+              :placeholder="t('members.filterPlaceholder')"
               class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none mb-2"
             />
             <div class="max-h-48 overflow-y-auto space-y-1">
@@ -134,14 +134,14 @@
                   <span class="font-medium" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
                   <span class="text-text-muted text-xs">{{ ch.class_name }} · Lv{{ ch.level }}</span>
                 </div>
-                <span class="text-xs text-accent-gold">Add</span>
+                <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
               </button>
             </div>
-            <p v-if="rosterFilter && filteredRoster.length === 0" class="text-xs text-text-muted py-2">No matching characters.</p>
+            <p v-if="rosterFilter && filteredRoster.length === 0" class="text-xs text-text-muted py-2">{{ t('members.noMatchingChars') }}</p>
           </div>
           <!-- Multi-match user selection (shown when a roster click finds multiple users) -->
           <div v-if="availableUsers.length > 0" class="mt-3 space-y-1">
-            <p class="text-xs text-text-muted">Multiple users match "{{ addMemberQuery }}" — select one:</p>
+            <p class="text-xs text-text-muted">{{ t('members.multipleMatches', { query: addMemberQuery }) }}</p>
             <div class="max-h-40 overflow-y-auto space-y-1">
               <button
                 v-for="u in availableUsers"
@@ -151,22 +151,22 @@
                 @click="doAddMember(u)"
               >
                 <span class="text-text-primary">{{ u.username }}</span>
-                <span class="text-xs text-accent-gold">Add</span>
+                <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
               </button>
             </div>
           </div>
         </div>
         <!-- Standard search for non-Warmane guilds -->
         <div v-else>
-          <label class="block text-xs text-text-muted mb-1">Search by username</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('members.searchByUsername') }}</label>
           <input
             v-model="addMemberQuery"
-            placeholder="Type username…"
+            :placeholder="t('members.typePlaceholder')"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
             @input="searchUsers"
           />
         </div>
-        <div v-if="searchingUsers" class="text-xs text-text-muted">Searching…</div>
+        <div v-if="searchingUsers" class="text-xs text-text-muted">{{ t('common.labels.searching') }}</div>
         <div v-if="availableUsers.length > 0 && !isWarmaneSource" class="max-h-40 overflow-y-auto space-y-1">
           <button
             v-for="u in availableUsers"
@@ -176,30 +176,30 @@
             @click="doAddMember(u)"
           >
             <span class="text-text-primary">{{ u.username }}</span>
-            <span class="text-xs text-accent-gold">Add</span>
+            <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
           </button>
         </div>
         <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers && !isWarmaneSource" class="text-xs text-text-muted">
-          No matching users found.
+          {{ t('members.noMatchingUsers') }}
         </div>
       </div>
     </WowModal>
 
     <!-- Member Characters modal -->
     <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="2xl">
-      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
-      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
+      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">{{ t('members.loadingCharacters') }}</div>
+      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">{{ t('members.noCharacters') }}</div>
       <div v-else class="overflow-x-auto max-h-[70vh] overflow-y-auto">
         <table class="w-full text-sm">
           <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Character</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Primary Spec</th>
-              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Secondary Spec</th>
-              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
-              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
-              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Details</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.character') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.role') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.primarySpec') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.secondarySpec') }}</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.type') }}</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.status') }}</th>
+              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.details') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -229,16 +229,16 @@
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
               <td class="hidden sm:table-cell px-4 py-2.5 text-center">
-                <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase px-1.5 py-0.5 bg-accent-gold/10 rounded">Main</span>
-                <span v-else class="text-text-muted text-[10px] px-1.5 py-0.5 bg-bg-secondary rounded">Alt</span>
+                <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase px-1.5 py-0.5 bg-accent-gold/10 rounded">{{ t('members.mainChar') }}</span>
+                <span v-else class="text-text-muted text-[10px] px-1.5 py-0.5 bg-bg-secondary rounded">{{ t('members.altChar') }}</span>
               </td>
               <td class="hidden sm:table-cell px-4 py-2.5 text-center">
-                <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px] font-medium px-1.5 py-0.5 bg-green-400/10 rounded">Active</span>
-                <span v-else class="text-red-400 text-[10px] font-medium px-1.5 py-0.5 bg-red-400/10 rounded">Archived</span>
+                <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px] font-medium px-1.5 py-0.5 bg-green-400/10 rounded">{{ t('common.status.active') }}</span>
+                <span v-else class="text-red-400 text-[10px] font-medium px-1.5 py-0.5 bg-red-400/10 rounded">{{ t('common.status.archived') }}</span>
               </td>
               <td class="px-4 py-2.5 text-right">
                 <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openCharDetailModal(c)">
-                  🔍 View
+                  🔍 {{ t('members.view') }}
                 </WowButton>
               </td>
             </tr>
@@ -258,30 +258,30 @@
     <WowCard v-if="canTransferOwnership">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 class="wow-heading text-base">Guild Ownership</h2>
-          <p class="text-xs text-text-muted mt-1">Transfer ownership of this guild to another member.</p>
+          <h2 class="wow-heading text-base">{{ t('members.ownership.title') }}</h2>
+          <p class="text-xs text-text-muted mt-1">{{ t('members.ownership.description') }}</p>
         </div>
         <WowButton variant="danger" class="text-xs py-1.5 px-3 flex-shrink-0" @click="showTransferModal = true">
-          👑 Transfer Ownership
+          👑 {{ t('members.ownership.transferBtn') }}
         </WowButton>
       </div>
     </WowCard>
 
     <!-- Transfer Ownership modal -->
-    <WowModal v-model="showTransferModal" title="👑 Transfer Guild Ownership" size="sm" @update:modelValue="onTransferModalClose">
+    <WowModal v-model="showTransferModal" :title="'👑 ' + t('members.ownership.modalTitle')" size="sm" @update:modelValue="onTransferModalClose">
       <div class="space-y-4">
         <div class="p-3 rounded bg-red-900/30 border border-red-600">
-          <p class="text-red-400 font-bold text-sm">⚠️ WARNING: This action is IRREVERSIBLE!</p>
-          <p class="text-red-300 text-xs mt-2">The new owner will receive full control of the guild. You will be demoted to a regular member and lose all guild owner privileges.</p>
+          <p class="text-red-400 font-bold text-sm">⚠️ {{ t('members.ownership.warning') }}</p>
+          <p class="text-red-300 text-xs mt-2">{{ t('members.ownership.warningDesc') }}</p>
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">Select new owner</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('members.ownership.selectOwner') }}</label>
           <select
             v-model="transferTargetId"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-3 py-2 focus:border-border-gold outline-none"
           >
-            <option :value="null" disabled>Choose a member…</option>
+            <option :value="null" disabled>{{ t('members.ownership.chooseMember') }}</option>
             <option v-for="m in transferableMembers" :key="m.user_id" :value="m.user_id">
               {{ m.username ?? m.user?.username }}
             </option>
@@ -290,12 +290,12 @@
 
         <label class="flex items-start gap-2 cursor-pointer">
           <input v-model="transferConfirmed" type="checkbox" class="mt-0.5 accent-red-500" />
-          <span class="text-xs"><strong class="text-red-400">I understand that this action cannot be undone and I will lose all guild owner privileges</strong></span>
+          <span class="text-xs"><strong class="text-red-400">{{ t('members.ownership.confirmText') }}</strong></span>
         </label>
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showTransferModal = false">Cancel</WowButton>
+          <WowButton variant="secondary" @click="showTransferModal = false">{{ t('common.buttons.cancel') }}</WowButton>
           <WowButton variant="danger" :disabled="!canSubmitTransfer" :loading="transferring" @click="doTransferOwnership">
             {{ transferButtonLabel }}
           </WowButton>
@@ -307,6 +307,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -321,6 +322,7 @@ import { useTimezone } from '@/composables/useTimezone'
 import * as guildsApi from '@/api/guilds'
 import api from '@/api'
 
+const { t } = useI18n()
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
@@ -600,9 +602,9 @@ const canSubmitTransfer = computed(() => {
 
 const transferButtonLabel = computed(() => {
   if (transferCountdown.value > 0 && transferConfirmed.value) {
-    return `Transfer Ownership (${transferCountdown.value}s)`
+    return t('members.ownership.transferCountdown', { countdown: transferCountdown.value })
   }
-  return 'Transfer Ownership'
+  return t('members.ownership.transferBtn')
 })
 
 watch(transferConfirmed, (checked) => {

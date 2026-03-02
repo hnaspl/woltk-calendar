@@ -2,38 +2,38 @@
   <div class="space-y-6">
     <!-- Guild info form -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">Guild Information</h2>
+      <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
 
       <div v-if="loading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
 
       <form v-else @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Guild Name *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.nameRequired') }}</label>
           <input v-model="form.name" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
-          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">Name is locked for Warmane-sourced guilds.</p>
+          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.nameLocked') }}</p>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Realm *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.realmRequired') }}</label>
           <select v-model="form.realm" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-            <option value="">Select realm…</option>
+            <option value="">{{ t('guild.settings.selectRealm') }}</option>
             <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
           </select>
-          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">Realm is locked for Warmane-sourced guilds.</p>
+          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Description</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.description') }}</label>
           <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Guild Timezone</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildTimezone') }}</label>
           <select v-model="form.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tz }}</option>
           </select>
-          <p class="text-[10px] text-text-muted mt-1">All raid times will be displayed in this timezone by default.</p>
+          <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.timezoneHelp') }}</p>
         </div>
         <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
-        <WowButton type="submit" :loading="saving">Save Changes</WowButton>
+        <WowButton type="submit" :loading="saving">{{ t('guild.settings.saveChanges') }}</WowButton>
       </form>
     </WowCard>
 
@@ -42,11 +42,11 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div class="flex items-center gap-3">
           <img :src="getGuildIcon()" alt="Guild" class="w-8 h-8 rounded" />
-          <h2 class="wow-heading text-lg">Warmane Guild Info</h2>
+          <h2 class="wow-heading text-lg">{{ t('guild.settings.warmaneInfo') }}</h2>
         </div>
         <div class="flex items-center gap-3 sm:gap-4">
           <span v-if="lastRefreshed" class="text-xs text-text-muted">
-            Last refreshed: {{ lastRefreshed }}
+            {{ t('guild.settings.lastRefreshed') }} {{ lastRefreshed }}
           </span>
           <WowButton
             v-if="canManualRefresh"
@@ -54,7 +54,7 @@
             class="text-sm py-1.5 px-4 flex-shrink-0"
             :loading="fetchingWarmane"
             @click="fetchWarmaneRoster"
-          >Refresh</WowButton>
+          >{{ t('guild.settings.refresh') }}</WowButton>
         </div>
       </div>
 
@@ -64,39 +64,39 @@
       <div v-else-if="warmaneGuildData" class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
         <!-- Left column: Guild Info -->
         <div class="space-y-6">
-          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">Guild Details</h3>
+          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">{{ t('guild.settings.guildDetails') }}</h3>
 
           <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-5 space-y-4">
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Guild Name</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.guildName') }}</span>
               <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.name }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Realm</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.realmRequired').replace(' *', '') }}</span>
               <span class="text-sm sm:text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Faction</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.faction') }}</span>
               <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
                 :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >
                 <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-6 h-6 rounded" />
                 {{ warmaneGuildData.faction }}
               </span>
-              <span v-else class="text-sm sm:text-base text-text-muted">Unknown</span>
+              <span v-else class="text-sm sm:text-base text-text-muted">{{ t('common.labels.unknown') }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Members</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.members') }}</span>
               <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
             </div>
           </div>
 
           <!-- Class distribution -->
           <div v-if="classDistribution.length">
-            <h4 class="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Class Distribution</h4>
+            <h4 class="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">{{ t('guild.settings.classDistribution') }}</h4>
             <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-4">
               <div class="grid grid-cols-2 gap-3">
                 <div v-for="cd in classDistribution" :key="cd.name" class="flex items-center gap-3 py-1">
@@ -111,14 +111,14 @@
 
         <!-- Right column: Member Roster -->
         <div>
-          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">Member Roster ({{ warmaneGuildData.roster?.length ?? 0 }})</h3>
+          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">{{ t('guild.settings.memberRoster', { count: warmaneGuildData.roster?.length ?? 0 }) }}</h3>
           <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-[32rem] overflow-y-auto rounded-lg border border-border-default">
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10">
                 <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Character</th>
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Level</th>
-                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Race</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.character') }}</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.level') }}</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.race') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-default/60">
@@ -135,7 +135,7 @@
               </tbody>
             </table>
           </div>
-          <div v-else class="text-center py-12 text-text-muted text-sm bg-bg-secondary/30 rounded-lg border border-border-default">No roster data available.</div>
+          <div v-else class="text-center py-12 text-text-muted text-sm bg-bg-secondary/30 rounded-lg border border-border-default">{{ t('guild.settings.noRosterData') }}</div>
         </div>
       </div>
     </WowCard>
@@ -144,6 +144,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
@@ -156,6 +157,7 @@ import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
 import { useTimezone } from '@/composables/useTimezone'
 
+const { t } = useI18n()
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()

@@ -502,7 +502,8 @@
       "character": "Character",
       "level": "Level",
       "race": "Race",
-      "noRosterData": "No roster data available."
+      "noRosterData": "No roster data available.",
+      "guildName": "Guild Name"
     }
   },
   "members": {
@@ -901,5 +902,23 @@
   "language": {
     "en": "English",
     "pl": "Polski"
+  },
+  "characterDetail": {
+    "roleAndSpec": "Role & Specialization",
+    "primary": "(Primary)",
+    "secondary": "(Secondary)",
+    "professions": "Professions",
+    "talentTrees": "Talent Trees",
+    "glyphs": "Glyphs",
+    "stats": "Stats",
+    "gearScore": "Gear Score",
+    "honorableKills": "Honorable Kills",
+    "faction": "Faction",
+    "guild": "Guild",
+    "lastSynced": "Last synced:",
+    "equipment": "Equipment ({count} items)",
+    "enchanted": "Enchanted",
+    "armory": "Armory ↗",
+    "closeDetails": "Close character details"
   }
 }

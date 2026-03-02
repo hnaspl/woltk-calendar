@@ -502,7 +502,8 @@
       "character": "Postać",
       "level": "Poziom",
       "race": "Rasa",
-      "noRosterData": "Brak danych rostera."
+      "noRosterData": "Brak danych rostera.",
+      "guildName": "Nazwa Gildii"
     }
   },
   "members": {
@@ -901,5 +902,23 @@
   "language": {
     "en": "English",
     "pl": "Polski"
+  },
+  "characterDetail": {
+    "roleAndSpec": "Rola i Specjalizacja",
+    "primary": "(Główna)",
+    "secondary": "(Poboczna)",
+    "professions": "Profesje",
+    "talentTrees": "Drzewka Talentów",
+    "glyphs": "Glify",
+    "stats": "Statystyki",
+    "gearScore": "Wynik Ekwipunku",
+    "honorableKills": "Honorowe Zabójstwa",
+    "faction": "Frakcja",
+    "guild": "Gildia",
+    "lastSynced": "Ostatnia synchronizacja:",
+    "equipment": "Ekwipunek ({count} przedmiotów)",
+    "enchanted": "Zaczarowany",
+    "armory": "Zbrojownia ↗",
+    "closeDetails": "Zamknij szczegóły postaci"
   }
 }
