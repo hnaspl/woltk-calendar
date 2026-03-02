@@ -39,10 +39,12 @@ import AppShell from '@/components/layout/AppShell.vue'
 import AttendanceSummary from '@/components/attendance/AttendanceSummary.vue'
 import AttendanceTable from '@/components/attendance/AttendanceTable.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import * as attendanceApi from '@/api/attendance'
 import * as eventsApi from '@/api/events'
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 
 const loading = ref(true)
 const error = ref(null)
@@ -63,6 +65,8 @@ async function fetchData() {
 
   try {
     const params = period.value !== 'all' ? { days: period.value } : {}
+    // Only fetch current user's attendance records
+    params.user_id = authStore.user?.id
     const [recs, evs] = await Promise.all([
       attendanceApi.getAttendance(guildId, params),
       eventsApi.getEvents(guildId, { status: 'completed', ...params })

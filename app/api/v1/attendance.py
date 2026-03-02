@@ -68,5 +68,8 @@ def list_guild_attendance(guild_id: int):
     since = None
     if days:
         since = datetime.now(timezone.utc) - timedelta(days=days)
-    records = attendance_service.list_attendance_for_guild(guild_id, since=since)
+    user_id = request.args.get("user_id", type=int)
+    records = attendance_service.list_attendance_for_guild(
+        guild_id, since=since, user_id=user_id,
+    )
     return jsonify([r.to_dict() for r in records]), 200

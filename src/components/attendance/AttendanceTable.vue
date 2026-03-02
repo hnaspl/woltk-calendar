@@ -7,12 +7,12 @@
             <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Character</th>
             <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider">Class</th>
             <th
-              v-for="ev in events"
+              v-for="ev in displayEvents"
               :key="ev.id"
               class="text-center px-2 py-3 text-xs text-text-muted min-w-[80px]"
             >
               <WowTooltip :text="ev.title" position="bottom">
-                <div class="truncate max-w-[70px] mx-auto">{{ formatDate(ev.date ?? ev.start_time) }}</div>
+                <div class="truncate max-w-[70px] mx-auto">{{ formatDate(ev.starts_at_utc) }}</div>
               </WowTooltip>
             </th>
             <th class="text-center px-4 py-3 text-xs text-text-muted uppercase tracking-wider">%</th>
@@ -29,7 +29,7 @@
               <ClassBadge :class-name="row.class" />
             </td>
             <td
-              v-for="ev in events"
+              v-for="ev in displayEvents"
               :key="ev.id"
               class="px-2 py-2.5 text-center"
             >
@@ -53,7 +53,7 @@
             </td>
           </tr>
           <tr v-if="tableRows.length === 0">
-            <td :colspan="events.length + 3" class="px-4 py-8 text-center text-text-muted">
+            <td :colspan="displayEvents.length + 3" class="px-4 py-8 text-center text-text-muted">
               No attendance data available.
             </td>
           </tr>
@@ -80,8 +80,17 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
+// Only show events that have attendance records for the current user
+const displayEvents = computed(() => {
+  const eventIdsWithRecords = new Set(
+    props.records.map(r => r.raid_event_id ?? r.event_id)
+  )
+  return props.events
+    .filter(ev => eventIdsWithRecords.has(ev.id))
+    .sort((a, b) => new Date(a.starts_at_utc) - new Date(b.starts_at_utc))
+})
+
 const tableRows = computed(() => {
-  // Build a map: characterId → { name, class, attended: Set<eventId>, signedUp: Set<eventId> }
   const charMap = new Map()
 
   // Populate from signups (if available)

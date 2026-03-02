@@ -17,7 +17,9 @@ const props = defineProps({
 })
 
 const stats = computed(() => {
-  const total = props.events.length
+  // Count unique events where the user has attendance records
+  const eventIds = new Set(props.records.map(r => r.raid_event_id ?? r.event_id))
+  const total = eventIds.size
   const attended = props.records.filter(r => r.outcome === 'attended' || r.outcome === 'late').length
   const absent = props.records.filter(r => r.outcome === 'no_show').length
   const rate = total > 0 ? Math.round((attended / total) * 100) : 0

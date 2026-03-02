@@ -61,6 +61,7 @@ def list_attendance_for_event(raid_event_id: int) -> list[AttendanceRecord]:
 def list_attendance_for_guild(
     guild_id: int,
     since: Optional[datetime] = None,
+    user_id: Optional[int] = None,
 ) -> list[AttendanceRecord]:
     from app.models.raid import RaidEvent
 
@@ -72,6 +73,8 @@ def list_attendance_for_guild(
     )
     if since is not None:
         stmt = stmt.where(AttendanceRecord.recorded_at >= since)
+    if user_id is not None:
+        stmt = stmt.where(AttendanceRecord.user_id == user_id)
     stmt = stmt.order_by(AttendanceRecord.recorded_at.desc())
 
     return list(db.session.execute(stmt).scalars().unique().all())
