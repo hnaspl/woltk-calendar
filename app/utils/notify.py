@@ -276,9 +276,11 @@ def notify_event_created(event, guild_id: int) -> None:
     starts = ""
     try:
         guild_tz = ZoneInfo(guild.timezone) if guild and guild.timezone else ZoneInfo("UTC")
-        local_dt = event.starts_at_utc.astimezone(guild_tz)
-        tz_abbrev = local_dt.strftime('%Z')
-        starts = f" on {local_dt.strftime(f'%b %d at %H:%M')} {tz_abbrev}"
+        dt = event.starts_at_utc
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        local_dt = dt.astimezone(guild_tz)
+        starts = f" on {local_dt.strftime('%b %d at %H:%M')}"
     except Exception:
         pass
 

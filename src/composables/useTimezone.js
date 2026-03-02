@@ -48,17 +48,14 @@ export function useTimezone() {
 
   /**
    * Format showing both guild time and user time (if different).
-   * Includes timezone abbreviations for clarity.
-   * Returns "guild_time TZ" or "guild_time TZ (your time: user_time TZ)" if different.
+   * Returns "guild_time" or "guild_time (your time: user_time)" if different.
    */
   function formatDualTime(isoString, options = {}) {
     const gTime = formatGuildTime(isoString, options)
-    const gAbbrev = guildTzAbbrev.value
-    if (guildTimezone.value === userTimezone.value) return `${gTime} ${gAbbrev}`
+    if (guildTimezone.value === userTimezone.value) return gTime
     const uTime = formatUserTime(isoString, options)
-    const uAbbrev = userTzAbbrev.value
-    if (gTime === uTime) return `${gTime} ${gAbbrev}`
-    return `${gTime} ${gAbbrev} (your time: ${uTime} ${uAbbrev})`
+    if (gTime === uTime) return gTime
+    return `${gTime} (your time: ${uTime})`
   }
 
   /**

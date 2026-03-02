@@ -688,9 +688,9 @@ class TestEdgeCaseTimezones:
         notifs = notification_service.list_notifications(u.id)
         event_notif = next(n for n in notifs if n.type == "event_created")
 
-        # UTC guild → 19:00 UTC
+        # UTC guild → 19:00, no timezone abbreviation
         assert "19:00" in event_notif.body
-        assert "UTC" in event_notif.body
+        assert "UTC" not in event_notif.body
 
     def test_half_hour_offset_timezone(self, db, ctx):
         """Guild in India (UTC+5:30) correctly offsets by 5.5 hours."""

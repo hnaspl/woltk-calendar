@@ -105,7 +105,7 @@ function formatTime(isoStr) {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false
   })
-  return `${formatted} ${tzHelper.guildTzAbbrev.value}`
+  return formatted
 }
 
 function showTooltip(info) {
