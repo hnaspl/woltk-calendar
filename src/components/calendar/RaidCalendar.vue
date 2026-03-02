@@ -31,7 +31,7 @@
           <span>{{ tooltip.signupCount }} / {{ tooltip.size }}</span>
         </div>
         <div v-if="tooltip.signupExpired" class="tooltip-row tooltip-warning">
-          ⚠ Signup time expired
+          ⚠ {{ t('calendar.signupExpired') }}
         </div>
       </div>
     </div>
@@ -40,6 +40,7 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -56,6 +57,7 @@ const props = defineProps({
 const emit = defineEmits(['event-click', 'date-click'])
 
 const { getRaidIcon } = useWowIcons()
+const { t } = useI18n()
 const tzHelper = useTimezone()
 const calendarRef = ref(null)
 
@@ -91,13 +93,13 @@ const tooltipStyle = computed(() => {
   return style
 })
 
-const statusLabels = {
-  open: 'Open',
-  locked: 'Locked',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  draft: 'Draft'
-}
+const statusLabels = computed(() => ({
+  open: t('common.status.open'),
+  locked: t('common.status.locked'),
+  completed: t('common.status.completed'),
+  cancelled: t('common.status.cancelled'),
+  draft: t('common.status.draft')
+}))
 
 function formatTime(isoStr) {
   if (!isoStr) return ''
@@ -118,7 +120,7 @@ function showTooltip(info) {
   tooltip.time = formatTime(ev.starts_at_utc)
   tooltip.icon = getRaidIcon(ev.raid_type)
   tooltip.status = ev.status ?? 'open'
-  tooltip.statusLabel = statusLabels[tooltip.status] ?? tooltip.status
+  tooltip.statusLabel = statusLabels.value[tooltip.status] ?? tooltip.status
   tooltip.size = ev.raid_size ?? 25
   tooltip.difficulty = ev.difficulty ?? 'normal'
   tooltip.signupCount = ev.signup_count ?? null

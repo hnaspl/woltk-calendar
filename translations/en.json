@@ -217,7 +217,8 @@
     "instructionsPlaceholder": "Bring flasks, food, etc.",
     "validationError": "Guild, raid definition and start time are required",
     "closeSignupsError": "Close signups time must be before the event start time",
-    "raidScheduled": "Raid scheduled!"
+    "raidScheduled": "Raid scheduled!",
+    "signupExpired": "Signup time expired"
   },
   "raidDetail": {
     "starts": "Starts:",
@@ -920,5 +921,9 @@
     "enchanted": "Enchanted",
     "armory": "Armory ↗",
     "closeDetails": "Close character details"
+  },
+  "lockBadge": {
+    "locked": "Lineup Locked",
+    "open": "Lineup Open"
   }
 }

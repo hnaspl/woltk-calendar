@@ -217,7 +217,8 @@
     "instructionsPlaceholder": "Weź flaski, jedzenie, itp.",
     "validationError": "Gildia, definicja rajdu i czas rozpoczęcia są wymagane",
     "closeSignupsError": "Czas zamknięcia zapisów musi być przed czasem rozpoczęcia wydarzenia",
-    "raidScheduled": "Rajd zaplanowany!"
+    "raidScheduled": "Rajd zaplanowany!",
+    "signupExpired": "Czas zapisów minął"
   },
   "raidDetail": {
     "starts": "Rozpoczęcie:",
@@ -920,5 +921,9 @@
     "enchanted": "Zaczarowany",
     "armory": "Zbrojownia ↗",
     "closeDetails": "Zamknij szczegóły postaci"
+  },
+  "lockBadge": {
+    "locked": "Skład zablokowany",
+    "open": "Skład otwarty"
   }
 }
