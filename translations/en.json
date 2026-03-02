@@ -346,7 +346,8 @@
       "nameClassRealmRequired": "Name, class and realm are required",
       "joinGuildFirstManage": "You need to join a guild first before managing characters"
     },
-    "namePlaceholder": "Arthas"
+    "namePlaceholder": "Arthas",
+    "failedToLoad": "Failed to load characters"
   },
   "attendance": {
     "title": "Attendance",
@@ -414,7 +415,8 @@
       "nameTypeSizeRequired": "Name, type and size are required",
       "selectGuild": "Please select a guild",
       "slotsExceedSize": "Total slots ({total}) cannot exceed raid size ({size})"
-    }
+    },
+    "failedToLoad": "Failed to load raid definitions"
   },
   "templates": {
     "title": "Raid Templates",
@@ -452,7 +454,8 @@
       "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
       "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
       "copiedSuccess": "\"{name}\" copied to {count} guild(s)"
-    }
+    },
+    "failedToLoad": "Failed to load templates"
   },
   "series": {
     "title": "Recurring Raids",
@@ -504,7 +507,8 @@
       "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
       "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
       "copiedSuccess": "\"{name}\" copied to {count} guild(s)"
-    }
+    },
+    "failedToLoad": "Failed to load recurring raids"
   },
   "roles": {
     "title": "Roles & Permissions",
@@ -666,7 +670,8 @@
       "failedToAddMember": "Failed to add member",
       "ownershipTransferred": "Guild ownership transferred successfully",
       "failedToTransfer": "Failed to transfer ownership"
-    }
+    },
+    "failedToLoad": "Failed to load members"
   },
   "admin": {
     "title": "Admin Panel",
@@ -780,7 +785,8 @@
     "reasonOptional": "Reason (optional)",
     "reasonPlaceholder": "e.g. Need a tank for this fight…",
     "requestReplacement": "Request Replacement",
-    "thisPlayer": "this player"
+    "thisPlayer": "this player",
+    "achievementPoints": "Achievement Points"
   },
   "lineup": {
     "title": "Lineup Board",
@@ -1056,7 +1062,10 @@
     "equipment": "Equipment ({count} items)",
     "enchanted": "Enchanted",
     "armory": "Armory ↗",
-    "closeDetails": "Close character details"
+    "closeDetails": "Close character details",
+    "achievements": "Achievements",
+    "honorableKillsShort": "HKs",
+    "role": "Role"
   },
   "lockBadge": {
     "locked": "Lineup Locked",
@@ -1071,6 +1080,7 @@
       "failedToSearchUsers": "Failed to search users",
       "failedToAddMember": "Failed to add member",
       "memberAdded": "{username} added to guild"
-    }
+    },
+    "failedToLoad": "Failed to load guild settings"
   }
 }

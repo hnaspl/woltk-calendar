@@ -289,7 +289,7 @@ async function loadGuildData() {
       members.value = guildStore.members
     }
   } catch {
-    error.value = 'Failed to load guild settings'
+    error.value = t('guildSettings.failedToLoad')
   } finally {
     loading.value = false
   }

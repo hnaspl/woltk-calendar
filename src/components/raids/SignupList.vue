@@ -115,7 +115,7 @@
                   <span
                     v-if="charAchievements(signup)"
                     class="text-xs text-amber-400"
-                    title="Achievement Points"
+                    :title="t('signupList.achievementPoints')"
                   >🏆 {{ charAchievements(signup) }}</span>
                 </div>
                 <!-- Row 2: Class + Role -->

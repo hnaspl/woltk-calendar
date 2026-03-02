@@ -339,7 +339,7 @@ async function loadData() {
       templates.value = templatesData
     }
   } catch {
-    if (version === loadVersion && isActive) error.value = 'Failed to load recurring raids'
+    if (version === loadVersion && isActive) error.value = t('series.failedToLoad')
   } finally {
     if (version === loadVersion && isActive) loading.value = false
   }

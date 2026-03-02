@@ -433,7 +433,7 @@ onMounted(async () => {
     const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
     characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
   } catch (err) {
-    error.value = 'Failed to load characters'
+    error.value = t('characters.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -452,7 +452,7 @@ watch(
         const raw = await charApi.getMyCharacters(newId)
         characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
       } catch {
-        error.value = 'Failed to load characters'
+        error.value = t('characters.failedToLoad')
       } finally {
         loading.value = false
       }

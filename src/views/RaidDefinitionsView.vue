@@ -312,7 +312,7 @@ async function loadDefinitions() {
     const data = await raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
     if (version === loadVersion && isActive) definitions.value = data
   } catch {
-    if (version === loadVersion && isActive) error.value = 'Failed to load raid definitions'
+    if (version === loadVersion && isActive) error.value = t('raidDefinitions.failedToLoad')
   } finally {
     if (version === loadVersion && isActive) loading.value = false
   }

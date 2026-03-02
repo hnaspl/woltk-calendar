@@ -283,7 +283,7 @@ async function loadData() {
       raidDefinitions.value = defs
     }
   } catch {
-    if (version === loadVersion && isActive) error.value = 'Failed to load templates'
+    if (version === loadVersion && isActive) error.value = t('templates.failedToLoad')
   } finally {
     if (version === loadVersion && isActive) loading.value = false
   }

@@ -207,7 +207,7 @@ async function loadGuildData() {
       isWarmaneSource.value = !!g.warmane_source
     }
   } catch {
-    error.value = 'Failed to load guild settings'
+    error.value = t('guildSettings.failedToLoad')
   } finally {
     loading.value = false
   }

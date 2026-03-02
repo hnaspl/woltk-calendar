@@ -398,7 +398,7 @@ async function loadMembers() {
       members.value = guildStore.members
     }
   } catch {
-    error.value = 'Failed to load members'
+    error.value = t('members.failedToLoad')
   } finally {
     loading.value = false
   }

@@ -346,7 +346,8 @@
       "nameClassRealmRequired": "Nazwa, klasa i realm są wymagane",
       "joinGuildFirstManage": "Musisz najpierw dołączyć do gildii, aby zarządzać postaciami"
     },
-    "namePlaceholder": "Arthas"
+    "namePlaceholder": "Arthas",
+    "failedToLoad": "Nie udało się załadować postaci"
   },
   "attendance": {
     "title": "Frekwencja",
@@ -414,7 +415,8 @@
       "nameTypeSizeRequired": "Nazwa, typ i rozmiar są wymagane",
       "selectGuild": "Proszę wybrać gildię",
       "slotsExceedSize": "Suma miejsc ({total}) nie może przekraczać rozmiaru rajdu ({size})"
-    }
+    },
+    "failedToLoad": "Nie udało się załadować definicji rajdów"
   },
   "templates": {
     "title": "Szablony rajdów",
@@ -452,7 +454,8 @@
       "failedToCreateInGuilds": "Nie udało się utworzyć w {count} gildii/gildiach",
       "copiedWithFailures": "Skopiowano do {succeeded} gildii, nie powiodło się w {failed}",
       "copiedSuccess": "\"{name}\" skopiowano do {count} gildii"
-    }
+    },
+    "failedToLoad": "Nie udało się załadować szablonów"
   },
   "series": {
     "title": "Rajdy cykliczne",
@@ -504,7 +507,8 @@
       "failedToCreateInGuilds": "Nie udało się utworzyć w {count} gildii/gildiach",
       "copiedWithFailures": "Skopiowano do {succeeded} gildii, nie powiodło się w {failed}",
       "copiedSuccess": "\"{name}\" skopiowano do {count} gildii"
-    }
+    },
+    "failedToLoad": "Nie udało się załadować rajdów cyklicznych"
   },
   "roles": {
     "title": "Role i uprawnienia",
@@ -666,7 +670,8 @@
       "failedToAddMember": "Nie udało się dodać członka",
       "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
       "failedToTransfer": "Nie udało się przenieść własności"
-    }
+    },
+    "failedToLoad": "Nie udało się załadować członków"
   },
   "admin": {
     "title": "Panel admina",
@@ -780,7 +785,8 @@
     "reasonOptional": "Powód (opcjonalny)",
     "reasonPlaceholder": "np. Potrzebujemy tanka na ten fight…",
     "requestReplacement": "Żądaj zamiany",
-    "thisPlayer": "tego gracza"
+    "thisPlayer": "tego gracza",
+    "achievementPoints": "Punkty osiągnięć"
   },
   "lineup": {
     "title": "Tablica składu",
@@ -1056,7 +1062,10 @@
     "equipment": "Ekwipunek ({count} przedmiotów)",
     "enchanted": "Zaczarowany",
     "armory": "Zbrojownia ↗",
-    "closeDetails": "Zamknij szczegóły postaci"
+    "closeDetails": "Zamknij szczegóły postaci",
+    "achievements": "Osiągnięcia",
+    "honorableKillsShort": "HKs",
+    "role": "Rola"
   },
   "lockBadge": {
     "locked": "Skład zablokowany",
@@ -1071,6 +1080,7 @@
       "failedToSearchUsers": "Nie udało się wyszukać użytkowników",
       "failedToAddMember": "Nie udało się dodać członka",
       "memberAdded": "{username} dodany do gildii"
-    }
+    },
+    "failedToLoad": "Nie udało się załadować ustawień gildii"
   }
 }
