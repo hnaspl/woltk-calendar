@@ -40,7 +40,10 @@
     <!-- Warmane Guild Info (only for Warmane-sourced guilds) -->
     <WowCard v-if="isWarmaneSource">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">Warmane Guild Info</h2>
+        <div class="flex items-center gap-2">
+          <img :src="getGuildIcon()" alt="Guild" class="w-6 h-6 rounded-sm" />
+          <h2 class="wow-heading text-base">Warmane Guild Info</h2>
+        </div>
         <div class="flex items-center gap-3">
           <span v-if="lastRefreshed" class="text-[10px] text-text-muted">
             Last refreshed: {{ lastRefreshed }}
@@ -51,7 +54,7 @@
             class="text-xs py-1 px-3"
             :loading="fetchingWarmane"
             @click="fetchWarmaneRoster"
-          >🔄 Refresh</WowButton>
+          >Refresh</WowButton>
         </div>
       </div>
 
@@ -76,7 +79,7 @@
               <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold"
                 :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >
-                <span>{{ warmaneGuildData.faction === 'Alliance' ? '🛡️' : '⚔️' }}</span>
+                <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-4 h-4 rounded-sm" />
                 {{ warmaneGuildData.faction }}
               </span>
               <span v-else class="text-sm text-text-muted">Unknown</span>
@@ -149,7 +152,7 @@ import * as adminApi from '@/api/admin'
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
-const { getClassIcon, getClassColor } = useWowIcons()
+const { getClassIcon, getClassColor, getFactionIcon, getGuildIcon } = useWowIcons()
 const permissions = usePermissions()
 
 const loading = ref(true)

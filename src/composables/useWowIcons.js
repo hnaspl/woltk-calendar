@@ -25,6 +25,13 @@ import raid_rs from '@/assets/icons/wow/inv_misc_head_dragon_red.jpg'
 
 import icon_fallback from '@/assets/icons/wow/inv_misc_questionmark.jpg'
 
+// Faction icons
+import faction_alliance from '@/assets/icons/wow/faction_alliance.jpg'
+import faction_horde from '@/assets/icons/wow/faction_horde.jpg'
+
+// Guild icon
+import icon_guild from '@/assets/icons/wow/achievement_guildperk_everybodysfriend.jpg'
+
 // Profession icons
 import prof_alchemy from '@/assets/icons/wow/trade_alchemy.jpg'
 import prof_blacksmithing from '@/assets/icons/wow/trade_blacksmithing.jpg'
@@ -87,6 +94,13 @@ const CLASS_ICONS = {
   deathknight:  classicon_deathknight,
   dk:           classicon_deathknight
 }
+
+const FACTION_ICONS = {
+  alliance: faction_alliance,
+  horde: faction_horde,
+}
+
+const GUILD_ICON = icon_guild
 
 const ROLE_ICONS = {
   melee_dps: icon_tank,
@@ -223,5 +237,13 @@ export function useWowIcons() {
     return PROFESSION_ICONS[profName?.toLowerCase().trim()] ?? icon_fallback
   }
 
-  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, getProfessionIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS, PROFESSION_ICONS }
+  function getFactionIcon(faction) {
+    return FACTION_ICONS[faction?.toLowerCase().trim()] ?? icon_fallback
+  }
+
+  function getGuildIcon() {
+    return GUILD_ICON
+  }
+
+  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, getProfessionIcon, getFactionIcon, getGuildIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS, PROFESSION_ICONS, FACTION_ICONS }
 }
