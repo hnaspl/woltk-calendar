@@ -667,3 +667,71 @@ The bench/queue system was NOT modified during any sweep. All changes were limit
 
 Service layer logic (`_auto_promote_bench`, `update_lineup_grouped`, `reorder_bench_queue`,
 `create_signup`) remains untouched. All 122 bench/queue tests pass.
+
+---
+
+## Appendix D: Translation Sweep
+
+### Problem
+
+Several views contained hardcoded English strings instead of using the `t()` i18n function.
+These strings would not translate when the user switches to Polish (or any future language).
+
+### WoW Terminology — Intentionally Not Translated
+
+WoW-specific role labels (`Main Tank`, `Off Tank`, `Melee DPS`, `Heal`, `Range DPS`) and
+difficulty labels (`Heroic`, `Normal`) in `RaidDefinitionsView.vue`, `TemplatesView.vue`,
+and `SeriesView.vue` are **intentionally kept in English**. These are universal WoW terminology
+understood by all players regardless of language.
+
+### Strings Replaced With `t()` Calls
+
+| File | Line(s) | Hardcoded String | Replaced With |
+|------|---------|-----------------|---------------|
+| `RaidDefinitionsView.vue` | 7 | `Loading…` | `t('common.labels.loading')` |
+| `RaidDefinitionsView.vue` | 11 | `You do not have the appropriate permissions…` | `t('admin.noPermission')` |
+| `RaidDefinitionsView.vue` | 173 | `Copy {name} to selected guilds:` | `t('common.copy.copyNameToGuilds', { name })` |
+| `RaidDefinitionsView.vue` | 205 | `Delete {name}?` | `t('raidDefinitions.deleteConfirmName', { name })` |
+| `RaidDefinitionsView.vue` | 420 | `'Failed to save'` fallback | `t('common.toasts.failedToSave')` |
+| `TemplatesView.vue` | 7 | `Loading…` | `t('common.labels.loading')` |
+| `TemplatesView.vue` | 11 | `You do not have the appropriate permissions…` | `t('admin.noPermission')` |
+| `TemplatesView.vue` | 131 | `Copy {name} to selected guilds:` | `t('common.copy.copyNameToGuilds', { name })` |
+| `TemplatesView.vue` | 164 | `Schedule a new event from template {name}.` | `t('templates.scheduleFromTemplate', { name })` |
+| `TemplatesView.vue` | 382 | `'Failed to save'` fallback | `t('common.toasts.failedToSave')` |
+| `SeriesView.vue` | 7 | `Loading…` | `t('common.labels.loading')` |
+| `SeriesView.vue` | 11 | `You do not have the appropriate permissions…` | `t('admin.noPermission')` |
+| `SeriesView.vue` | 160 | `Copy {name} to selected guilds:` | `t('common.copy.copyNameToGuilds', { name })` |
+| `SeriesView.vue` | 193 | `Generate upcoming events from {name}.` | `t('series.generateFromSeries', { name })` |
+| `SeriesView.vue` | 489 | `'Failed to save'` fallback | `t('common.toasts.failedToSave')` |
+| `SeriesView.vue` | 500 | `` `${count} event(s) generated!` `` | `t('series.toasts.eventsGenerated', { count })` |
+| `CharacterManagerView.vue` | 303 | `{name} has been added successfully.` | `t('characters.addedSuccess', { name })` |
+| `CharacterManagerView.vue` | 304 | `Would you like to add another character?` | `t('characters.addAnotherQuestion')` |
+| `CharacterManagerView.vue` | 308 | `I'm Done` | `t('characters.imDone')` |
+| `CharacterManagerView.vue` | 309 | `Add Another Character` | `t('characters.addAnother')` |
+
+### New Translation Keys Added
+
+| Key | English | Polish |
+|-----|---------|--------|
+| `common.copy.copyNameToGuilds` | Copy {name} to selected guilds: | Kopiuj {name} do wybranych gildii: |
+| `raidDefinitions.deleteConfirmName` | Delete {name}? | Usunąć {name}? |
+| `templates.scheduleFromTemplate` | Schedule a new event from template {name}. | Zaplanuj nowe wydarzenie z szablonu {name}. |
+| `series.generateFromSeries` | Generate upcoming events from {name}. | Generuj nadchodzące wydarzenia z {name}. |
+| `series.toasts.eventsGenerated` | {count} event(s) generated! | Wygenerowano {count} wydarzeń! |
+| `characters.addedSuccess` | {name} has been added successfully. | {name} został(a) dodany(a) pomyślnie. |
+| `characters.addAnotherQuestion` | Would you like to add another character? | Czy chcesz dodać kolejną postać? |
+| `characters.imDone` | I'm Done | Gotowe |
+| `characters.addAnother` | Add Another Character | Dodaj kolejną postać |
+
+### Existing Keys Reused (No New Keys Needed)
+
+| Usage | Existing Key |
+|-------|-------------|
+| "Loading…" (3 views) | `common.labels.loading` |
+| "You do not have the appropriate permissions…" (3 views) | `admin.noPermission` |
+| "Failed to save" fallback (3 views) | `common.toasts.failedToSave` |
+
+### Remaining — Nothing Left to Translate
+
+All user-facing strings in `.vue` template and script sections are now wrapped in `t()` calls.
+WoW terminology (role names, difficulty labels) is intentionally kept in English.
