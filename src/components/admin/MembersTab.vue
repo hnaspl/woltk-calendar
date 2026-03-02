@@ -333,6 +333,11 @@ function roleOptionsForMember(member) {
 function canChangeRole(member) {
   if (member.user_id === authStore.user?.id) return false
   if (!permissions.can('update_member_roles')) return false
+  const isGlobalAdmin = !!authStore.user?.is_admin
+  const guild = guildStore.currentGuild
+  const isCreator = guild && guild.created_by === authStore.user?.id
+  // Global admin or guild creator can always change roles (matches backend bypass)
+  if (isGlobalAdmin || isCreator) return true
   const myRole = permissions.role.value
   const myRoleDef = allRoles.value.find(r => r.name === myRole)
   const memberRoleDef = allRoles.value.find(r => r.name === member.role)
