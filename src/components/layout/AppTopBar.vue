@@ -234,9 +234,8 @@ function formatTime(iso) {
   if (!iso) return ''
   // Backend always sends UTC with +00:00 suffix via utc_iso().
   // Safety: if the suffix is missing (e.g. different DB driver), treat as UTC.
-  const normalized = iso.endsWith('Z') || iso.includes('+') || iso.includes('-', 10)
-    ? iso
-    : iso + 'Z'
+  const hasTimezone = iso.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(iso)
+  const normalized = hasTimezone ? iso : iso + 'Z'
   const d = new Date(normalized)
   if (isNaN(d.getTime())) return ''
   const now = new Date()
