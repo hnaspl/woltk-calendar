@@ -23,6 +23,18 @@ def create_app(config_override: dict | None = None) -> Flask:
     if config_override:
         app.config.update(config_override)
 
+    # Reject insecure SECRET_KEY in production
+    _insecure_keys = {"dev-secret-key-change-me", "change-me-in-production"}
+    if (
+        not app.config.get("TESTING")
+        and not app.config.get("DEBUG")
+        and app.config.get("SECRET_KEY") in _insecure_keys
+    ):
+        raise RuntimeError(
+            "Insecure SECRET_KEY detected. Set a strong SECRET_KEY "
+            "environment variable before running in production."
+        )
+
     # -------------------------------------------------------------- Logging
     logging.basicConfig(level=app.config.get("LOG_LEVEL", "INFO"))
 
@@ -71,6 +83,17 @@ def create_app(config_override: dict | None = None) -> Flask:
     def unauthorized():
         from app.i18n import _t
         return jsonify({"error": _t("common.errors.authRequired")}), 401
+
+    # ----------------------------------------------------- Security headers
+    @app.after_request
+    def set_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+        if app.config.get("SESSION_COOKIE_SECURE"):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
     # --------------------------------------------------------- Blueprints
     from app.api.v1 import register_blueprints
@@ -159,13 +182,27 @@ def _register_socketio_handlers() -> None:
     from flask_login import current_user
     from flask_socketio import join_room, leave_room
 
+    def _get_socket_membership(guild_id, user_id):
+        """Check guild membership for SocketIO room validation."""
+        from app.utils.permissions import get_membership
+        return get_membership(guild_id, user_id)
+
     @socketio.on("join_event")
     def handle_join(data):
         if not current_user.is_authenticated:
             return
         event_id = data.get("event_id")
-        if event_id is not None:
-            join_room(f"event_{event_id}")
+        if event_id is None:
+            return
+        # Validate user has access to this event via guild membership
+        from app.services import event_service
+        event = event_service.get_event(event_id)
+        if event is None:
+            return
+        membership = _get_socket_membership(event.guild_id, current_user.id)
+        if membership is None and not getattr(current_user, "is_admin", False):
+            return
+        join_room(f"event_{event_id}")
 
     @socketio.on("leave_event")
     def handle_leave(data):
@@ -180,8 +217,13 @@ def _register_socketio_handlers() -> None:
         if not current_user.is_authenticated:
             return
         guild_id = data.get("guild_id")
-        if guild_id is not None:
-            join_room(f"guild_{guild_id}")
+        if guild_id is None:
+            return
+        # Validate user is a member of this guild
+        membership = _get_socket_membership(guild_id, current_user.id)
+        if membership is None and not getattr(current_user, "is_admin", False):
+            return
+        join_room(f"guild_{guild_id}")
 
     @socketio.on("leave_guild")
     def handle_leave_guild(data):

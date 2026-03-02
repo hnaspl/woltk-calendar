@@ -15,8 +15,11 @@ bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 @bp.get("")
 @login_required
 def list_notifications():
-    limit = min(int(request.args.get("limit", 50)), 100)
-    offset = max(int(request.args.get("offset", 0)), 0)
+    try:
+        limit = min(int(request.args.get("limit", 50)), 100)
+        offset = max(int(request.args.get("offset", 0)), 0)
+    except (ValueError, TypeError):
+        return jsonify({"error": _t("common.errors.badRequest")}), 400
     notifications = notification_service.list_notifications(
         current_user.id, limit=limit, offset=offset
     )

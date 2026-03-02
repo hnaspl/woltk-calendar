@@ -62,6 +62,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     SESSION_COOKIE_SECURE: bool = True
+    REMEMBER_COOKIE_SECURE: bool = True
     SQLALCHEMY_ENGINE_OPTIONS: dict = {
         "connect_args": {"timeout": 20},
         "pool_pre_ping": True,

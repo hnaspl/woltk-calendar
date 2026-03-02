@@ -89,6 +89,6 @@ def generate_events(guild_id: int, series_id: int, membership):
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": _t("api.series.notFound")}), 404
     data = get_json()
-    count = int(data.get("count", 4))
+    count = min(max(int(data.get("count", 4)), 1), 52)
     events = event_service.generate_events_from_series(series, count=count)
     return jsonify([e.to_dict() for e in events]), 201

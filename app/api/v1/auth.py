@@ -24,6 +24,9 @@ def register():
     if not email or not username or not password:
         return jsonify({"error": _t("auth.errors.emailRequired")}), 400
 
+    if len(password) < 8:
+        return jsonify({"error": _t("auth.errors.passwordTooShort")}), 400
+
     try:
         user = auth_service.register_user(email, username, password, display_name)
     except ValueError as exc:
@@ -84,7 +87,7 @@ def change_password():
     if not current_password or not new_password:
         return jsonify({"error": _t("auth.errors.passwordRequired")}), 400
 
-    if len(new_password) < 4:
+    if len(new_password) < 8:
         return jsonify({"error": _t("auth.errors.passwordTooShort")}), 400
 
     if not auth_service.verify_password(current_user, current_password):
