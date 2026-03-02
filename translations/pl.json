@@ -91,7 +91,8 @@
       "methodNotAllowed": "Metoda niedozwolona",
       "internalError": "Wewnętrzny błąd serwera",
       "permissionDenied": "Nie masz odpowiednich uprawnień",
-      "failedToLoad": "Nie udało się załadować danych"
+      "failedToLoad": "Nie udało się załadować danych",
+      "rateLimited": "Zbyt wiele żądań. Spróbuj ponownie później."
     },
     "toasts": {
       "actionFailed": "Akcja nie powiodła się",

@@ -8,12 +8,14 @@ from flask_login import current_user, login_user, logout_user
 from app.services import auth_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
+from app.utils.rate_limit import rate_limit
 from app.i18n import _t
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
 @bp.post("/register")
+@rate_limit(limit=5, window=60)
 def register():
     data = get_json()
     email = (data.get("email") or "").strip().lower()
@@ -22,6 +24,15 @@ def register():
     display_name = data.get("display_name")
 
     if not email or not username or not password:
+        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+
+    if len(email) > 255:
+        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+
+    if len(username) < 2 or len(username) > 80:
+        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+
+    if display_name is not None and len(display_name) > 100:
         return jsonify({"error": _t("auth.errors.emailRequired")}), 400
 
     if len(password) < 8:
@@ -37,6 +48,7 @@ def register():
 
 
 @bp.post("/login")
+@rate_limit(limit=10, window=60)
 def login():
     data = get_json()
     email = (data.get("email") or "").strip().lower()

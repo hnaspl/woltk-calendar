@@ -36,6 +36,8 @@ def app():
 def db(app):
     with app.app_context():
         _db.create_all()
+        from app.utils.rate_limit import reset as _reset_rate_limit
+        _reset_rate_limit()
         yield _db
         _db.session.rollback()
         _db.drop_all()

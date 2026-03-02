@@ -91,7 +91,8 @@
       "methodNotAllowed": "Method not allowed",
       "internalError": "Internal server error",
       "permissionDenied": "You do not have the appropriate permissions",
-      "failedToLoad": "Failed to load data"
+      "failedToLoad": "Failed to load data",
+      "rateLimited": "Too many requests. Please try again later."
     },
     "toasts": {
       "actionFailed": "Action failed",

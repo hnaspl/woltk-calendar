@@ -67,8 +67,19 @@ def create_app(config_override: dict | None = None) -> Flask:
         supports_credentials=True,
     )
 
+    # Warn if CORS allows all origins in non-debug mode
+    if (
+        not app.config.get("TESTING")
+        and not app.config.get("DEBUG")
+        and "*" in app.config.get("CORS_ORIGINS", [])
+    ):
+        app.logger.warning(
+            "CORS is configured to allow all origins (*). "
+            "Set CORS_ORIGINS to your domain(s) for production."
+        )
+
     # ------------------------------------------------------- Flask-Login
-    login_manager.session_protection = "basic"
+    login_manager.session_protection = "strong"
 
     @app.before_request
     def make_session_permanent():

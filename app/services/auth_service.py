@@ -52,6 +52,13 @@ def update_profile(user: User, data: dict) -> User:
     allowed = {"display_name", "timezone", "language"}
     for key, value in data.items():
         if key in allowed and value is not None:
+            # Enforce length limits matching database column sizes
+            if key == "display_name" and len(str(value)) > 100:
+                continue
+            if key == "timezone" and len(str(value)) > 64:
+                continue
+            if key == "language" and len(str(value)) > 5:
+                continue
             setattr(user, key, value)
     db.session.commit()
     return user
