@@ -59,6 +59,38 @@ export function useTimezone() {
   }
 
   /**
+   * Format a UTC ISO string as date-only in the given timezone (no time component).
+   */
+  function formatDateInTz(isoString, tz, options = {}) {
+    if (!isoString) return '—'
+    try {
+      const date = new Date(isoString)
+      if (isNaN(date.getTime())) return '—'
+      const defaults = {
+        year: 'numeric', month: 'short', day: '2-digit',
+        timeZone: tz,
+      }
+      return date.toLocaleDateString('en-GB', { ...defaults, ...options })
+    } catch {
+      return isoString
+    }
+  }
+
+  /**
+   * Format date-only in guild timezone.
+   */
+  function formatGuildDate(isoString, options = {}) {
+    return formatDateInTz(isoString, guildTimezone.value, options)
+  }
+
+  /**
+   * Format date-only in user timezone.
+   */
+  function formatUserDate(isoString, options = {}) {
+    return formatDateInTz(isoString, userTimezone.value, options)
+  }
+
+  /**
    * Get timezone abbreviation for display (e.g., "CET", "EST").
    */
   function tzAbbrev(tz) {
@@ -80,9 +112,12 @@ export function useTimezone() {
     guildTzAbbrev,
     userTzAbbrev,
     formatInTz,
+    formatDateInTz,
     formatGuildTime,
     formatUserTime,
     formatDualTime,
+    formatGuildDate,
+    formatUserDate,
     tzAbbrev,
   }
 }

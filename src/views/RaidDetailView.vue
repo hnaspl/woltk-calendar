@@ -25,6 +25,8 @@
               <div class="flex items-center gap-2 flex-wrap mb-2">
                 <h1 class="wow-heading text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
+                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Done</span>
+                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Cancelled</span>
               </div>
 
               <!-- Informative details grid -->
@@ -77,12 +79,12 @@
 
             <!-- Officer actions -->
             <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-2 flex-shrink-0">
-              <WowButton variant="secondary" @click="openEditModal">Edit</WowButton>
-              <WowButton variant="secondary" @click="toggleLock">
+              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">Edit</WowButton>
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
                 {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
               </WowButton>
               <WowButton variant="secondary" @click="doDuplicate">Duplicate</WowButton>
-              <WowButton v-if="event.status !== 'completed'" variant="primary" @click="markComplete">
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
                 Mark Done
               </WowButton>
               <WowButton
@@ -92,7 +94,7 @@
               >
                 {{ hasAttendance ? 'Update Attendance' : 'Record Attendance' }}
               </WowButton>
-              <WowButton variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
             </div>
           </div>
         </WowCard>

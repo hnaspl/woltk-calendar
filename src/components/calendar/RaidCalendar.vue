@@ -187,7 +187,7 @@ const fcEvents = computed(() =>
   })
 )
 
-// Custom event content renderer — shows raid icon + title
+// Custom event content renderer — shows raid icon + title + done badge
 function renderEventContent(arg) {
   const ev = arg.event.extendedProps
   const icon = ev._raidIcon
@@ -208,13 +208,21 @@ function renderEventContent(arg) {
 
   wrapper.appendChild(img)
   wrapper.appendChild(text)
+
+  if (ev.status === 'completed') {
+    const badge = document.createElement('span')
+    badge.className = 'wow-event-done-badge'
+    badge.textContent = '✓'
+    wrapper.appendChild(badge)
+  }
+
   return { domNodes: [wrapper] }
 }
 
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: props.initialView,
-  timeZone: 'UTC',
+  timeZone: tzHelper.guildTimezone.value,
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
@@ -350,6 +358,18 @@ watch(() => props.events, () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.wow-event-done-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #48bb78;
+  background: rgba(72, 187, 120, 0.15);
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 1.4;
+  margin-left: auto;
 }
 
 /* Status-based opacity for calendar events */

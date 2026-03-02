@@ -247,6 +247,7 @@ import { computed, watch, onMounted } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
 import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
+import { useTimezone } from '@/composables/useTimezone'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -257,6 +258,7 @@ const props = defineProps({
 defineEmits(['update:modelValue'])
 
 const { getClassIcon, getClassColor, getSpecIcon, getRoleIcon, getProfessionIcon } = useWowIcons()
+const tzHelper = useTimezone()
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')
@@ -355,6 +357,6 @@ function formatPoints(points) {
 
 function formatDate(iso) {
   if (!iso) return '?'
-  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return tzHelper.formatGuildDate(iso, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 </script>

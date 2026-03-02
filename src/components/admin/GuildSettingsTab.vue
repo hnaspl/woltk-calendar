@@ -154,12 +154,14 @@ import { usePermissions } from '@/composables/usePermissions'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
+import { useTimezone } from '@/composables/useTimezone'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const { getClassIcon, getClassColor, getFactionIcon, getGuildIcon } = useWowIcons()
 const permissions = usePermissions()
+const tzHelper = useTimezone()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -266,7 +268,7 @@ async function fetchWarmaneRoster() {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       warmaneGuildData.value = await guildsApi.getWarmaneRoster(guildStore.currentGuild.id)
-      lastRefreshed.value = new Date().toLocaleTimeString()
+      lastRefreshed.value = tzHelper.formatGuildTime(new Date().toISOString(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
       warmaneError.value = null
       break
     } catch (err) {

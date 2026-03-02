@@ -166,9 +166,11 @@ import WowModal from '@/components/common/WowModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import * as adminApi from '@/api/admin'
+import { useTimezone } from '@/composables/useTimezone'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const tzHelper = useTimezone()
 
 const users = ref([])
 const loading = ref(true)
@@ -292,6 +294,6 @@ async function triggerManualSync() {
 
 function formatDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return tzHelper.formatGuildDate(d, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 </script>

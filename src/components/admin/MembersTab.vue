@@ -151,10 +151,10 @@
     </WowModal>
 
     <!-- Member Characters modal -->
-    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="lg">
+    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="xl">
       <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
       <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
-      <div v-else class="overflow-x-auto max-h-96 overflow-y-auto">
+      <div v-else class="overflow-x-auto max-h-[70vh] overflow-y-auto">
         <table class="w-full text-sm">
           <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
@@ -282,6 +282,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSystemSettings } from '@/composables/useSystemSettings'
+import { useTimezone } from '@/composables/useTimezone'
 import * as guildsApi from '@/api/guilds'
 import api from '@/api'
 
@@ -291,6 +292,7 @@ const authStore = useAuthStore()
 const permissions = usePermissions()
 const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
 const systemSettings = useSystemSettings()
+const tzHelper = useTimezone()
 systemSettings.fetchSettings()
 
 const loading = ref(true)
@@ -478,7 +480,7 @@ async function doAddMember(user) {
 
 function formatDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return tzHelper.formatGuildDate(d, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 // Warmane roster fetch

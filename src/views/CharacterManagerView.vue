@@ -81,7 +81,7 @@
               {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
             </div>
             <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
-              Synced {{ new Date(char.metadata.last_synced).toLocaleDateString() }}
+              Synced {{ tzHelper.formatGuildDate(char.metadata.last_synced) }}
             </div>
             <div v-else class="mb-3"></div>
 
@@ -329,10 +329,12 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS, normalizeSpecName } from '@/constants'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
+import { useTimezone } from '@/composables/useTimezone'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const { getClassIcon } = useWowIcons()
+const tzHelper = useTimezone()
 
 /** Map display char to CharacterTooltip format */
 function charToTooltip(char) {

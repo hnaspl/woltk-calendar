@@ -161,12 +161,14 @@ import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
 import * as notifApi from '@/api/notifications'
+import { useTimezone } from '@/composables/useTimezone'
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const router = useRouter()
 const { on, off } = useSocket()
+const tzHelper = useTimezone()
 
 const profileOpen = ref(false)
 const notifOpen = ref(false)
@@ -238,7 +240,7 @@ function formatTime(iso) {
   if (diffMin < 60) return `${diffMin}m ago`
   const diffH = Math.floor(diffMin / 60)
   if (diffH < 24) return `${diffH}h ago`
-  return d.toLocaleDateString()
+  return tzHelper.formatGuildDate(d.toISOString())
 }
 
 function handleNotificationPush() {

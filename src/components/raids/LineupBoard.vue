@@ -94,8 +94,8 @@
       @drop.prevent="canManage && onDropBench()"
     >
       <p class="text-xs text-yellow-400/80 mb-2 uppercase tracking-wider">
-        Bench Queue ({{ bench.length }})
-        <span v-if="!canManage && currentUserId" class="text-text-muted normal-case"> — showing your characters</span>
+        Bench Queue<template v-if="canManage"> ({{ bench.length }})</template>
+        <span v-if="!canManage && currentUserId" class="text-text-muted normal-case"> — showing only your characters</span>
       </p>
       <div v-if="visibleBenchByRole.length > 0" class="space-y-3">
         <div v-for="group in visibleBenchByRole" :key="group.role">

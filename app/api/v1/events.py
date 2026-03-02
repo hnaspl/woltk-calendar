@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from app.services import event_service
+from app.services import event_service, attendance_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_events_changed
@@ -82,6 +82,11 @@ def update_event(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
+    # Prevent editing completed raids that have attendance recorded
+    if event.status == "completed":
+        has_records = attendance_service.list_attendance_for_event(event_id)
+        if has_records:
+            return jsonify({"error": "Completed raids with attendance records cannot be edited"}), 403
     data = request.get_json(silent=True) or {}
     try:
         event = event_service.update_event(event, data)
@@ -115,6 +120,8 @@ def lock_event(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot lock a completed or cancelled event"}), 400
     event = event_service.lock_event(event)
     emit_events_changed(guild_id)
     notify.notify_event_locked(event)
@@ -130,6 +137,8 @@ def unlock_event(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot unlock a completed or cancelled event"}), 400
     event = event_service.unlock_event(event)
     emit_events_changed(guild_id)
     return jsonify(event.to_dict()), 200

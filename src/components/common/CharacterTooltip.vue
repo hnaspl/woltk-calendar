@@ -171,6 +171,7 @@
 import { ref, computed } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName } from '@/constants'
+import { useTimezone } from '@/composables/useTimezone'
 
 const props = defineProps({
   character: { type: Object, default: null },
@@ -181,6 +182,7 @@ const show = ref(false)
 const hideTimeout = ref(null)
 const dragging = ref(false)
 const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
+const tzHelper = useTimezone()
 
 function onMouseEnter() {
   if (dragging.value) return
@@ -234,7 +236,7 @@ function formatPoints(points) {
 
 function formatDate(iso) {
   if (!iso) return '?'
-  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return tzHelper.formatGuildDate(iso, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const positionClass = computed(() => ({
