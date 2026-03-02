@@ -1,55 +1,62 @@
 <template>
   <AppShell>
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      <h1 class="wow-heading text-xl sm:text-2xl">User Profile</h1>
+      <h1 class="wow-heading text-xl sm:text-2xl">{{ t('profile.title') }}</h1>
 
       <!-- Profile form -->
       <WowCard>
-        <h2 class="wow-heading text-base mb-4">Profile Settings</h2>
+        <h2 class="wow-heading text-base mb-4">{{ t('profile.profileSettings') }}</h2>
         <form @submit.prevent="saveProfile" class="space-y-4 max-w-lg">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Username</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('auth.username') }}</label>
             <input :value="authStore.user?.username" disabled class="w-full bg-bg-tertiary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Email</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('auth.email') }}</label>
             <input :value="authStore.user?.email" disabled class="w-full bg-bg-tertiary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Display Name</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('profile.displayName') }}</label>
             <input v-model="profileForm.display_name" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Timezone</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('profile.timezone') }}</label>
             <select v-model="profileForm.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
             </select>
           </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('profile.language') }}</label>
+            <select v-model="profileForm.language" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="en">{{ t('language.en') }}</option>
+              <option value="pl">{{ t('language.pl') }}</option>
+            </select>
+          </div>
           <div v-if="profileError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ profileError }}</div>
           <div v-if="profileSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ profileSuccess }}</div>
-          <WowButton type="submit" :loading="savingProfile">Save Profile</WowButton>
+          <WowButton type="submit" :loading="savingProfile">{{ t('profile.saveProfile') }}</WowButton>
         </form>
       </WowCard>
 
       <!-- Change password -->
       <WowCard>
-        <h2 class="wow-heading text-base mb-4">Change Password</h2>
+        <h2 class="wow-heading text-base mb-4">{{ t('profile.changePassword') }}</h2>
         <form @submit.prevent="changePassword" class="space-y-4 max-w-lg">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Current Password *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('auth.currentPassword') }} *</label>
             <input v-model="pwForm.current_password" type="password" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">New Password *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('auth.newPassword') }} *</label>
             <input v-model="pwForm.new_password" type="password" required minlength="4" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Confirm New Password *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('auth.confirmNewPassword') }} *</label>
             <input v-model="pwForm.confirm_password" type="password" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div v-if="pwError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ pwError }}</div>
           <div v-if="pwSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ pwSuccess }}</div>
-          <WowButton type="submit" :loading="changingPw">Change Password</WowButton>
+          <WowButton type="submit" :loading="changingPw">{{ t('profile.changePassword') }}</WowButton>
         </form>
       </WowCard>
     </div>
@@ -58,6 +65,7 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -65,8 +73,9 @@ import { useAuthStore } from '@/stores/auth'
 import * as authApi from '@/api/auth'
 
 const authStore = useAuthStore()
+const { t, locale } = useI18n()
 
-const profileForm = reactive({ display_name: '', timezone: 'Europe/Warsaw' })
+const profileForm = reactive({ display_name: '', timezone: 'Europe/Warsaw', language: 'en' })
 const pwForm = reactive({ current_password: '', new_password: '', confirm_password: '' })
 
 const savingProfile = ref(false)
@@ -96,6 +105,7 @@ onMounted(() => {
   if (authStore.user) {
     profileForm.display_name = authStore.user.display_name || ''
     profileForm.timezone = authStore.user.timezone || 'Europe/Warsaw'
+    profileForm.language = authStore.user.language || 'en'
   }
 })
 
@@ -106,9 +116,10 @@ async function saveProfile() {
   try {
     const updated = await authApi.updateProfile(profileForm)
     authStore.user = updated
-    profileSuccess.value = 'Profile saved'
+    locale.value = updated.language || 'en'
+    profileSuccess.value = t('profile.profileSaved')
   } catch (err) {
-    profileError.value = err?.response?.data?.message ?? 'Failed to save profile'
+    profileError.value = err?.response?.data?.message ?? t('profile.failedToSave')
   } finally {
     savingProfile.value = false
   }
@@ -119,7 +130,7 @@ async function changePassword() {
   pwSuccess.value = null
 
   if (pwForm.new_password !== pwForm.confirm_password) {
-    pwError.value = 'New passwords do not match'
+    pwError.value = t('auth.newPasswordsDoNotMatch')
     return
   }
 
@@ -129,12 +140,12 @@ async function changePassword() {
       current_password: pwForm.current_password,
       new_password: pwForm.new_password,
     })
-    pwSuccess.value = 'Password changed successfully'
+    pwSuccess.value = t('profile.passwordChangedSuccess')
     pwForm.current_password = ''
     pwForm.new_password = ''
     pwForm.confirm_password = ''
   } catch (err) {
-    pwError.value = err?.response?.data?.message ?? 'Failed to change password'
+    pwError.value = err?.response?.data?.message ?? t('profile.failedToChangePassword')
   } finally {
     changingPw.value = false
   }
