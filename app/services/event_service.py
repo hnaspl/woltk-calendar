@@ -8,6 +8,7 @@ from typing import Optional
 import sqlalchemy as sa
 
 from app.extensions import db
+from app.models.guild import Guild
 from app.models.raid import EventSeries, RaidEvent, RaidTemplate
 
 
@@ -67,6 +68,40 @@ def list_templates(guild_id: int) -> list[RaidTemplate]:
     )
 
 
+def copy_template_to_guild(
+    source: RaidTemplate, guild_id: int, created_by: int
+) -> RaidTemplate:
+    """Copy a template into a specific guild."""
+    base_name = source.name
+    suffix = 1
+    while True:
+        name = f"{base_name} (Copy {suffix})" if suffix > 1 else f"{base_name} (Copy)"
+        existing = db.session.execute(
+            sa.select(RaidTemplate).where(
+                RaidTemplate.guild_id == guild_id,
+                RaidTemplate.name == name,
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            break
+        suffix += 1
+    copy = RaidTemplate(
+        guild_id=guild_id,
+        created_by=created_by,
+        raid_definition_id=source.raid_definition_id,
+        name=name,
+        raid_size=source.raid_size,
+        difficulty=source.difficulty,
+        expected_duration_minutes=source.expected_duration_minutes,
+        target_roles_json=source.target_roles_json,
+        default_instructions=source.default_instructions,
+        is_active=True,
+    )
+    db.session.add(copy)
+    db.session.commit()
+    return copy
+
+
 # ---------------------------------------------------------------------------
 # EventSeries
 # ---------------------------------------------------------------------------
@@ -120,6 +155,44 @@ def list_series(guild_id: int) -> list[EventSeries]:
     )
 
 
+def copy_series_to_guild(
+    source: EventSeries, guild_id: int, created_by: int
+) -> EventSeries:
+    """Copy a recurring raid series into a specific guild."""
+    guild = db.session.get(Guild, guild_id)
+    realm_name = guild.realm_name if guild else source.realm_name
+    base_title = source.title
+    suffix = 1
+    while True:
+        title = f"{base_title} (Copy {suffix})" if suffix > 1 else f"{base_title} (Copy)"
+        existing = db.session.execute(
+            sa.select(EventSeries).where(
+                EventSeries.guild_id == guild_id,
+                EventSeries.title == title,
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            break
+        suffix += 1
+    copy = EventSeries(
+        guild_id=guild_id,
+        created_by=created_by,
+        template_id=source.template_id,
+        title=title,
+        realm_name=realm_name,
+        timezone=source.timezone,
+        recurrence_rule=source.recurrence_rule,
+        start_time_local=source.start_time_local,
+        duration_minutes=source.duration_minutes,
+        default_raid_size=source.default_raid_size,
+        default_difficulty=source.default_difficulty,
+        active=True,
+    )
+    db.session.add(copy)
+    db.session.commit()
+    return copy
+
+
 def generate_events_from_series(series: EventSeries, count: int = 4) -> list[RaidEvent]:
     """Generate ``count`` future RaidEvents from a series' recurrence rule.
 
@@ -148,7 +221,7 @@ def generate_events_from_series(series: EventSeries, count: int = 4) -> list[Rai
             ends_at_utc=ends_at,
             raid_size=series.default_raid_size,
             difficulty=series.default_difficulty,
-            status="draft",
+            status="open",
             created_by=series.created_by,
         )
         db.session.add(event)
@@ -175,9 +248,9 @@ def _ensure_utc(dt):
 
 def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
     starts_at = _ensure_utc(data["starts_at_utc"])
+    duration = data.get("duration_minutes", 180)
     ends_at = data.get("ends_at_utc")
     if ends_at is None:
-        duration = data.get("duration_minutes", 180)
         ends_at = starts_at + timedelta(minutes=duration)
     elif isinstance(ends_at, str):
         ends_at = _ensure_utc(ends_at)
@@ -192,9 +265,10 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         realm_name=data["realm_name"],
         starts_at_utc=starts_at,
         ends_at_utc=ends_at,
+        duration_minutes=duration,
         raid_size=data.get("raid_size", 25),
         difficulty=data.get("difficulty", "normal"),
-        status=data.get("status", "draft"),
+        status=data.get("status", "open"),
         raid_type=data.get("raid_type"),
         instructions=data.get("instructions"),
     )
@@ -217,13 +291,17 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
     allowed = {
         "title", "realm_name", "starts_at_utc", "ends_at_utc", "raid_size",
         "difficulty", "status", "instructions", "raid_type", "close_signups_at",
-        "raid_definition_id",
+        "raid_definition_id", "duration_minutes",
     }
     for key, value in data.items():
         if key in allowed:
             if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
                 value = _ensure_utc(value)
             setattr(event, key, value)
+    # Recompute ends_at_utc from duration if duration was provided
+    if "duration_minutes" in data and event.starts_at_utc:
+        start_time = _ensure_utc(data["starts_at_utc"]) if "starts_at_utc" in data else _ensure_utc(event.starts_at_utc)
+        event.ends_at_utc = start_time + timedelta(minutes=event.duration_minutes)
     # Validate close_signups_at against starts_at_utc
     close_at = _ensure_utc(event.close_signups_at) if event.close_signups_at else None
     start_at = _ensure_utc(event.starts_at_utc) if event.starts_at_utc else None
@@ -267,8 +345,11 @@ def complete_event(event: RaidEvent) -> RaidEvent:
 def list_events(guild_id: int) -> list[RaidEvent]:
     return list(
         db.session.execute(
-            sa.select(RaidEvent).where(RaidEvent.guild_id == guild_id).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            sa.select(RaidEvent)
+            .where(RaidEvent.guild_id == guild_id)
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -280,8 +361,10 @@ def list_events_for_guilds(guild_ids: list[int]) -> list[RaidEvent]:
         db.session.execute(
             sa.select(RaidEvent).where(
                 RaidEvent.guild_id.in_(guild_ids)
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -297,8 +380,10 @@ def list_events_for_guilds_by_range(
                 RaidEvent.guild_id.in_(guild_ids),
                 RaidEvent.starts_at_utc >= start,
                 RaidEvent.starts_at_utc <= end,
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -310,8 +395,10 @@ def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[
                 RaidEvent.guild_id == guild_id,
                 RaidEvent.starts_at_utc >= start,
                 RaidEvent.starts_at_utc <= end,
-            ).order_by(RaidEvent.starts_at_utc)
-        ).scalars().all()
+            )
+            .options(sa.orm.joinedload(RaidEvent.raid_definition))
+            .order_by(RaidEvent.starts_at_utc)
+        ).unique().scalars().all()
     )
 
 
@@ -330,7 +417,7 @@ def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[d
         ends_at_utc=starts_at + duration,
         raid_size=event.raid_size,
         difficulty=event.difficulty,
-        status="draft",
+        status="open",
         raid_type=event.raid_type,
         instructions=event.instructions,
         created_by=created_by,

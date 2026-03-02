@@ -111,12 +111,13 @@
                       class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none disabled:opacity-50"
                       @change="updateRole(m, $event.target.value)"
                     >
-                      <option value="member">Member</option>
-                      <option value="officer">Officer</option>
-                      <option v-if="canSetGuildAdmin" value="guild_admin">Guild Admin</option>
+                      <option v-for="r in roleOptionsForMember(m)" :key="r.name" :value="r.name">{{ r.display_name }}</option>
                     </select>
                   </td>
-                  <td class="px-4 py-2.5 text-right">
+                  <td class="px-4 py-2.5 text-right space-x-2">
+                    <WowButton variant="ghost" class="text-xs py-1 px-2" @click="viewMemberChars(m)">
+                      Characters
+                    </WowButton>
                     <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
                       Remove
                     </WowButton>
@@ -170,6 +171,42 @@
         </div>
       </div>
     </WowModal>
+
+    <!-- Member Characters modal -->
+    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="md">
+      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
+      <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
+      <div v-else class="overflow-x-auto max-h-72 overflow-y-auto">
+        <table class="w-full text-xs">
+          <thead class="sticky top-0">
+            <tr class="bg-bg-tertiary border-b border-border-default">
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Name</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Class</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Main</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Default Role</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Primary Spec</th>
+              <th class="text-left px-3 py-2 text-text-muted uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border-default">
+            <tr v-for="c in memberChars" :key="c.id" class="hover:bg-bg-tertiary/50">
+              <td class="px-3 py-1.5 text-text-primary font-medium">{{ c.name }}</td>
+              <td class="px-3 py-1.5 text-text-muted">{{ c.class_name }}</td>
+              <td class="px-3 py-1.5">
+                <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase">Main</span>
+                <span v-else class="text-text-muted text-[10px]">Alt</span>
+              </td>
+              <td class="px-3 py-1.5 text-text-muted">{{ c.default_role || '—' }}</td>
+              <td class="px-3 py-1.5 text-text-muted">{{ c.primary_spec || '—' }}</td>
+              <td class="px-3 py-1.5">
+                <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px]">Active</span>
+                <span v-else class="text-red-400 text-[10px]">Archived</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -186,6 +223,7 @@ import { useAuthStore } from '@/stores/auth'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
+import api from '@/api'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
@@ -199,9 +237,41 @@ const saveError = ref(null)
 const members = ref([])
 const showKickConfirm = ref(false)
 const kickTarget = ref(null)
+const allRoles = ref([])
 
 const form = reactive({ name: '', realm: '', description: '' })
 const warmaneRealms = WARMANE_REALMS
+
+async function fetchRoles() {
+  try {
+    allRoles.value = await api.get('/roles')
+  } catch {
+    allRoles.value = []
+  }
+}
+
+/** Roles the current user is allowed to grant, based on the roles API can_grant list */
+const grantableRoles = computed(() => {
+  const myRole = permissions.role.value
+  if (!myRole && !permissions.can('manage_roles')) return []
+  // Users with manage_roles permission can grant any role
+  if (permissions.can('manage_roles') && !myRole) return allRoles.value
+  const myRoleDef = allRoles.value.find(r => r.name === myRole)
+  if (!myRoleDef) return allRoles.value
+  const grantable = new Set(myRoleDef.can_grant || [])
+  return allRoles.value.filter(r => grantable.has(r.name))
+})
+
+/** Role options to show in the dropdown for a member */
+function roleOptionsForMember(member) {
+  // Always include the member's current role so the dropdown shows the current value
+  const options = [...grantableRoles.value]
+  if (member.role && !options.find(r => r.name === member.role)) {
+    const currentRoleDef = allRoles.value.find(r => r.name === member.role)
+    if (currentRoleDef) options.push(currentRoleDef)
+  }
+  return options.sort((a, b) => a.level - b.level)
+}
 
 async function loadGuildData() {
   loading.value = true
@@ -210,7 +280,10 @@ async function loadGuildData() {
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
-      await guildStore.fetchMembers(g.id)
+      await Promise.all([
+        guildStore.fetchMembers(g.id),
+        fetchRoles()
+      ])
       members.value = guildStore.members
     }
   } catch {
@@ -262,20 +335,18 @@ async function updateRole(member, role) {
   }
 }
 
-/** Only site admins and guild admins can promote to guild_admin */
-const canSetGuildAdmin = computed(() =>
-  authStore.user?.is_admin || permissions.isGuildAdmin.value
-)
-
 /** Can the current user change this member's role? */
 function canChangeRole(member) {
-  // Can't change own role
   if (member.user_id === authStore.user?.id) return false
-  // Only site admin or guild_admin can modify a guild_admin
-  if (member.role === 'guild_admin') {
-    return authStore.user?.is_admin || permissions.isGuildAdmin.value
-  }
-  return true
+  if (!permissions.can('manage_roles')) return false
+  // Can't modify someone with equal or higher role level
+  const myRole = permissions.role.value
+  const myRoleDef = allRoles.value.find(r => r.name === myRole)
+  const memberRoleDef = allRoles.value.find(r => r.name === member.role)
+  // Users with manage_roles can bypass level check
+  if (permissions.can('manage_roles') && !myRoleDef) return true
+  if (!myRoleDef || !memberRoleDef) return false
+  return myRoleDef.level > memberRoleDef.level
 }
 
 function confirmKick(member) {
@@ -303,6 +374,27 @@ const warmaneGuildRealm = ref('Icecrown')
 const fetchingWarmane = ref(false)
 const warmaneError = ref(null)
 const warmaneGuildData = ref(null)
+
+// Member characters viewer
+const showMemberChars = ref(false)
+const memberChars = ref([])
+const loadingMemberChars = ref(false)
+const memberCharsTitle = ref('Member Characters')
+
+async function viewMemberChars(member) {
+  const username = member.username ?? member.user?.username ?? 'Unknown'
+  memberCharsTitle.value = `${username}'s Characters`
+  showMemberChars.value = true
+  loadingMemberChars.value = true
+  memberChars.value = []
+  try {
+    memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to load characters', 'error')
+  } finally {
+    loadingMemberChars.value = false
+  }
+}
 
 // Add member
 const showAddMember = ref(false)

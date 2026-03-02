@@ -145,9 +145,9 @@ html, body {
 }
 
 /* ── Role color utilities ────────────────────────────────────── */
-.role-tank    { color: #3FC7EB; }
-.role-healer  { color: #38a169; }
-.role-dps     { color: #e53e3e; }
+.role-melee-dps { color: #3FC7EB; }
+.role-healer    { color: #38a169; }
+.role-range-dps { color: #e53e3e; }
 
 /* ── Transition helpers ──────────────────────────────────────── */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }

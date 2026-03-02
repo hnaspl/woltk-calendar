@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from app.services import raid_service
 from app.utils.auth import login_required
-from app.utils.permissions import get_membership, is_officer_or_admin
+from app.utils.permissions import get_membership, has_permission
 
 bp = Blueprint("raid_definitions", __name__)
 
@@ -29,8 +29,8 @@ def list_raid_definitions(guild_id: int):
 @login_required
 def create_raid_definition(guild_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "manage_raid_definitions"):
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("name"):
         return jsonify({"error": "name is required"}), 400
@@ -42,6 +42,23 @@ def create_raid_definition(guild_id: int):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(rd.to_dict()), 201
+
+
+@bp.post("/<int:rd_id>/copy")
+@login_required
+def copy_raid_definition(guild_id: int, rd_id: int):
+    """Copy a built-in (global) raid definition into the guild's own definitions."""
+    membership = _check_membership(guild_id)
+    if not has_permission(membership, "manage_raid_definitions"):
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+    rd = raid_service.get_raid_definition(rd_id)
+    if rd is None:
+        return jsonify({"error": "Raid definition not found"}), 404
+    try:
+        copy = raid_service.copy_raid_definition_to_guild(rd, guild_id, current_user.id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(copy.to_dict()), 201
 
 
 @bp.get("/<int:rd_id>")
@@ -59,13 +76,13 @@ def get_raid_definition(guild_id: int, rd_id: int):
 @login_required
 def update_raid_definition(guild_id: int, rd_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "manage_raid_definitions"):
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
-    if rd.is_builtin and not getattr(current_user, "is_admin", False):
-        return jsonify({"error": "Built-in raid definitions cannot be modified"}), 403
+    if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     try:
         rd = raid_service.update_raid_definition(rd, data)
@@ -78,12 +95,12 @@ def update_raid_definition(guild_id: int, rd_id: int):
 @login_required
 def delete_raid_definition(guild_id: int, rd_id: int):
     membership = _check_membership(guild_id)
-    if not is_officer_or_admin(membership):
-        return jsonify({"error": "Officer or admin privileges required"}), 403
+    if not has_permission(membership, "manage_raid_definitions"):
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
-    if rd.is_builtin and not getattr(current_user, "is_admin", False):
-        return jsonify({"error": "Built-in raid definitions cannot be deleted"}), 403
+    if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     raid_service.delete_raid_definition(rd)
     return jsonify({"message": "Raid definition deleted"}), 200

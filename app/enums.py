@@ -29,20 +29,12 @@ class WowClass(str, Enum):
 
 
 class Role(str, Enum):
-    TANK = "tank"
+    MELEE_DPS = "melee_dps"
     MAIN_TANK = "main_tank"
     OFF_TANK = "off_tank"
     HEALER = "healer"
-    DPS = "dps"
+    RANGE_DPS = "range_dps"
 
-
-class SignupStatus(str, Enum):
-    GOING = "going"
-    TENTATIVE = "tentative"
-    LATE = "late"
-    DECLINED = "declined"
-    STANDBY = "standby"
-    BENCH = "bench"
 
 
 class AttendanceOutcome(str, Enum):
@@ -61,12 +53,6 @@ class EventStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class GuildRole(str, Enum):
-    MEMBER = "member"
-    OFFICER = "officer"
-    GUILD_ADMIN = "guild_admin"
-
-
 class MemberStatus(str, Enum):
     ACTIVE = "active"
     INVITED = "invited"
@@ -81,8 +67,9 @@ class JobStatus(str, Enum):
 
 
 class SlotGroup(str, Enum):
-    TANK = "tank"
+    MELEE_DPS = "melee_dps"
     MAIN_TANK = "main_tank"
     OFF_TANK = "off_tank"
     HEALER = "healer"
-    DPS = "dps"
+    RANGE_DPS = "range_dps"
+    BENCH = "bench"

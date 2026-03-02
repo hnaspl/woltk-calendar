@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import GuildRole, MemberStatus
+from app.enums import MemberStatus
 from app.extensions import db
 
 if TYPE_CHECKING:
@@ -26,6 +26,8 @@ class Guild(db.Model):
     region: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
     settings_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     allow_self_join: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True, server_default=sa.text("1"))
+    warmane_source: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False, server_default=sa.text("0"))
+    timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="Europe/Warsaw", server_default=sa.text("'Europe/Warsaw'"))
     created_by: Mapped[int | None] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
@@ -64,6 +66,8 @@ class Guild(db.Model):
             "region": self.region,
             "settings": self.settings,
             "allow_self_join": self.allow_self_join,
+            "warmane_source": self.warmane_source,
+            "timezone": self.timezone,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
@@ -75,15 +79,19 @@ class Guild(db.Model):
 
 class GuildMembership(db.Model):
     __tablename__ = "guild_memberships"
-    __table_args__ = (sa.UniqueConstraint("guild_id", "user_id", name="uq_guild_user"),)
+    __table_args__ = (
+        sa.UniqueConstraint("guild_id", "user_id", name="uq_guild_user"),
+        sa.Index("ix_guild_memberships_guild", "guild_id"),
+        sa.Index("ix_guild_memberships_user", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
-    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
+    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(
-        sa.Enum(GuildRole, values_callable=lambda e: [x.value for x in e]),
+        sa.String(50),
         nullable=False,
-        default=GuildRole.MEMBER.value,
+        default="member",
     )
     status: Mapped[str] = mapped_column(
         sa.Enum(MemberStatus, values_callable=lambda e: [x.value for x in e]),

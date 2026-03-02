@@ -12,24 +12,33 @@ import { computed } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 
 const props = defineProps({
-  records: { type: Array, default: () => [] },
-  events:  { type: Array, default: () => [] }
+  records: { type: Array, default: () => [] }
 })
 
 const stats = computed(() => {
-  const total = props.events.length
-  const attended = props.records.filter(r => r.attended).length
-  const rate = total > 0 ? Math.round((attended / total) * 100) : 0
+  // Group records by event to get per-event attendance status
+  const eventMap = new Map()
+  props.records.forEach(r => {
+    const eid = r.raid_event_id ?? r.event_id
+    if (!eventMap.has(eid)) eventMap.set(eid, [])
+    eventMap.get(eid).push(r)
+  })
 
-  const presentCount   = props.records.filter(r => r.attended).length
-  const absentCount    = props.records.filter(r => !r.attended).length
-  const benchCount     = props.records.filter(r => r.bench).length
+  const total = eventMap.size
+  let attendedCount = 0
+  let absentCount = 0
+  eventMap.forEach(records => {
+    const anyAttended = records.some(r => r.outcome === 'attended' || r.outcome === 'late')
+    if (anyAttended) attendedCount++
+    else absentCount++
+  })
+  const rate = total > 0 ? Math.round((attendedCount / total) * 100) : 0
 
   return [
-    { label: 'Total Raids',       value: total,        color: 'text-accent-blue' },
-    { label: 'Attended',          value: presentCount, color: 'text-green-400' },
-    { label: 'Absent',            value: absentCount,  color: 'text-red-400' },
-    { label: 'Attendance Rate',   value: `${rate}%`,   color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
+    { label: 'Total Raids',       value: total,         color: 'text-accent-blue' },
+    { label: 'Attended',          value: attendedCount,  color: 'text-green-400' },
+    { label: 'Absent',            value: absentCount,    color: 'text-red-400' },
+    { label: 'Attendance Rate',   value: `${rate}%`,     color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
   ]
 })
 </script>

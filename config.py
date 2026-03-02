@@ -22,6 +22,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
     SQLALCHEMY_ENGINE_OPTIONS: dict = {
         "connect_args": {"timeout": 20},
+        "pool_pre_ping": True,
     }
 
     # --------------------------------------------------------------- Session
@@ -61,6 +62,12 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     SESSION_COOKIE_SECURE: bool = True
+    SQLALCHEMY_ENGINE_OPTIONS: dict = {
+        "connect_args": {"timeout": 20},
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "pool_recycle": 1800,
+    }
     CORS_ORIGINS: list[str] = [
         o.strip()
         for o in os.environ.get("CORS_ORIGINS", "").split(",")

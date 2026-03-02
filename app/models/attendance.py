@@ -42,16 +42,21 @@ class AttendanceRecord(db.Model):
     recorder = relationship("User", foreign_keys=[recorded_by], lazy="select")
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "raid_event_id": self.raid_event_id,
+            "event_id": self.raid_event_id,
             "user_id": self.user_id,
             "character_id": self.character_id,
             "outcome": self.outcome,
+            "attended": self.outcome in ("attended", "late"),
             "note": self.note,
             "recorded_by": self.recorded_by,
             "recorded_at": self.recorded_at.isoformat() if self.recorded_at else None,
         }
+        if self.character is not None:
+            result["character"] = self.character.to_dict()
+        return result
 
     def __repr__(self) -> str:
         return f"<AttendanceRecord id={self.id} event={self.raid_event_id} user={self.user_id}>"

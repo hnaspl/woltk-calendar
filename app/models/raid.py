@@ -36,11 +36,11 @@ class RaidDefinition(db.Model):
     default_duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     raid_type: Mapped[str | None] = mapped_column(sa.String(30), nullable=True)
     realm: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
-    tank_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    melee_dps_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     main_tank_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     off_tank_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     healer_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
-    dps_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    range_dps_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     created_by: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("users.id"), nullable=True
@@ -73,11 +73,11 @@ class RaidDefinition(db.Model):
             "default_duration_minutes": self.default_duration_minutes,
             "raid_type": self.raid_type,
             "realm": self.realm,
-            "tank_slots": self.tank_slots,
+            "melee_dps_slots": self.melee_dps_slots,
             "main_tank_slots": self.main_tank_slots,
             "off_tank_slots": self.off_tank_slots,
             "healer_slots": self.healer_slots,
-            "dps_slots": self.dps_slots,
+            "range_dps_slots": self.range_dps_slots,
             "notes": self.notes,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -212,9 +212,12 @@ class EventSeries(db.Model):
 
 class RaidEvent(db.Model):
     __tablename__ = "raid_events"
+    __table_args__ = (
+        sa.Index("ix_raid_events_guild_starts", "guild_id", "starts_at_utc"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
+    guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
     series_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("event_series.id"), nullable=True
     )
@@ -228,6 +231,7 @@ class RaidEvent(db.Model):
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     starts_at_utc: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
     ends_at_utc: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     raid_size: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=25)
     difficulty: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="normal")
     status: Mapped[str] = mapped_column(
@@ -263,15 +267,15 @@ class RaidEvent(db.Model):
     signups = relationship("Signup", back_populates="raid_event", lazy="select", cascade="all, delete-orphan")
     lineup_slots = relationship("LineupSlot", back_populates="raid_event", lazy="select", cascade="all, delete-orphan")
 
-    def to_dict(self) -> dict:
+    def to_dict(self, include_signup_count: bool = False) -> dict:
         # Pull slot data from raid_definition if available
         rd = self.raid_definition
-        tank_slots = rd.tank_slots if rd and rd.tank_slots is not None else 0
+        melee_dps_slots = rd.melee_dps_slots if rd and rd.melee_dps_slots is not None else 0
         main_tank_slots = rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1
         off_tank_slots = rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1
         healer_slots = rd.healer_slots if rd and rd.healer_slots is not None else 5
-        dps_slots = rd.dps_slots if rd and rd.dps_slots is not None else 18
-        return {
+        range_dps_slots = rd.range_dps_slots if rd and rd.range_dps_slots is not None else 18
+        result = {
             "id": self.id,
             "guild_id": self.guild_id,
             "series_id": self.series_id,
@@ -281,22 +285,38 @@ class RaidEvent(db.Model):
             "realm_name": self.realm_name,
             "starts_at_utc": self.starts_at_utc.isoformat() if self.starts_at_utc else None,
             "ends_at_utc": self.ends_at_utc.isoformat() if self.ends_at_utc else None,
+            "duration_minutes": self.duration_minutes,
             "raid_size": self.raid_size,
             "difficulty": self.difficulty,
             "status": self.status,
             "raid_type": self.raid_type,
             "instructions": self.instructions,
             "close_signups_at": self.close_signups_at.isoformat() if self.close_signups_at else None,
-            "tank_slots": tank_slots,
+            "melee_dps_slots": melee_dps_slots,
             "main_tank_slots": main_tank_slots,
             "off_tank_slots": off_tank_slots,
             "healer_slots": healer_slots,
-            "dps_slots": dps_slots,
+            "range_dps_slots": range_dps_slots,
             "created_by": self.created_by,
             "locked_at": self.locked_at.isoformat() if self.locked_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        if include_signup_count:
+            from app.models.signup import LineupSlot
+            signup_ids = [s.id for s in (self.signups or [])]
+            if signup_ids:
+                active_ids = set(
+                    db.session.execute(
+                        sa.select(LineupSlot.signup_id).where(
+                            LineupSlot.signup_id.in_(signup_ids)
+                        ).distinct()
+                    ).scalars().all()
+                )
+                result["signup_count"] = len(active_ids)
+            else:
+                result["signup_count"] = 0
+        return result
 
     def __repr__(self) -> str:
         return f"<RaidEvent id={self.id} title={self.title!r} status={self.status}>"

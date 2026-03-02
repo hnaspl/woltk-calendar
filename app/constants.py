@@ -8,16 +8,16 @@ from app.enums import WowClass, Role
 # Class → available roles mapping
 # ---------------------------------------------------------------------------
 CLASS_ROLES: dict[WowClass, list[Role]] = {
-    WowClass.DEATH_KNIGHT: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
-    WowClass.DRUID: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
-    WowClass.HUNTER: [Role.DPS],
-    WowClass.MAGE: [Role.DPS],
-    WowClass.PALADIN: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.DPS],
-    WowClass.PRIEST: [Role.HEALER, Role.DPS],
-    WowClass.ROGUE: [Role.DPS],
-    WowClass.SHAMAN: [Role.HEALER, Role.DPS],
-    WowClass.WARLOCK: [Role.DPS],
-    WowClass.WARRIOR: [Role.TANK, Role.MAIN_TANK, Role.OFF_TANK, Role.DPS],
+    WowClass.DEATH_KNIGHT: [Role.MAIN_TANK, Role.OFF_TANK, Role.MELEE_DPS],
+    WowClass.DRUID: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.MELEE_DPS, Role.RANGE_DPS],
+    WowClass.HUNTER: [Role.RANGE_DPS],
+    WowClass.MAGE: [Role.RANGE_DPS],
+    WowClass.PALADIN: [Role.MAIN_TANK, Role.OFF_TANK, Role.HEALER, Role.MELEE_DPS],
+    WowClass.PRIEST: [Role.HEALER, Role.RANGE_DPS],
+    WowClass.ROGUE: [Role.MELEE_DPS],
+    WowClass.SHAMAN: [Role.HEALER, Role.MELEE_DPS, Role.RANGE_DPS],
+    WowClass.WARLOCK: [Role.RANGE_DPS],
+    WowClass.WARRIOR: [Role.MAIN_TANK, Role.OFF_TANK, Role.MELEE_DPS],
 }
 
 # ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ CLASS_ROLES: dict[WowClass, list[Role]] = {
 # ---------------------------------------------------------------------------
 CLASS_SPECS: dict[WowClass, list[str]] = {
     WowClass.DEATH_KNIGHT: ["Blood", "Frost", "Unholy"],
-    WowClass.DRUID: ["Balance", "Feral", "Restoration"],
+    WowClass.DRUID: ["Balance", "Feral Combat", "Restoration"],
     WowClass.HUNTER: ["Beast Mastery", "Marksmanship", "Survival"],
     WowClass.MAGE: ["Arcane", "Fire", "Frost"],
     WowClass.PALADIN: ["Holy", "Protection", "Retribution"],
@@ -35,6 +35,35 @@ CLASS_SPECS: dict[WowClass, list[str]] = {
     WowClass.WARLOCK: ["Affliction", "Demonology", "Destruction"],
     WowClass.WARRIOR: ["Arms", "Fury", "Protection"],
 }
+
+# Build a lookup: (lower-case class name, lower-case tree name) → canonical spec name
+_SPEC_LOOKUP: dict[tuple[str, str], str] = {}
+for _cls, _specs in CLASS_SPECS.items():
+    for _sp in _specs:
+        _SPEC_LOOKUP[(_cls.value.lower(), _sp.lower())] = _sp
+
+
+def normalize_spec_name(
+    tree_name: str | None, class_name: str | None
+) -> str | None:
+    """Map a Warmane talent-tree name to the canonical CLASS_SPECS name.
+
+    Falls back to the original *tree_name* when no match is found.
+    Handles common Warmane quirks like "Feral" → "Feral Combat".
+    """
+    if not tree_name:
+        return tree_name
+    tree = tree_name.strip()
+    cls = (class_name or "").strip().lower()
+    # Exact match first
+    canonical = _SPEC_LOOKUP.get((cls, tree.lower()))
+    if canonical:
+        return canonical
+    # Prefix match (e.g. "Feral" matches "Feral Combat")
+    for (c, s), canon in _SPEC_LOOKUP.items():
+        if c == cls and canon.lower().startswith(tree.lower()):
+            return canon
+    return tree
 
 # ---------------------------------------------------------------------------
 # WotLK raid definitions (used for seed data)
@@ -154,9 +183,9 @@ WARMANE_REALMS: list[str] = [
 # ---------------------------------------------------------------------------
 # Standard role slot distribution for raid sizes
 # ---------------------------------------------------------------------------
-# Generic "tank" slots default to 0; main_tank + off_tank cover the tank budget.
-# Players can still sign up as generic "tank" and be cross-assigned by officers.
+# Generic "melee_dps" slots default to 0; main_tank + off_tank cover the tank budget.
+# Players can still sign up as generic "melee_dps" and be cross-assigned by officers.
 ROLE_SLOTS: dict[int, dict[str, int]] = {
-    10: {"main_tank": 1, "off_tank": 1, "tank": 0, "healer": 3, "dps": 5},
-    25: {"main_tank": 1, "off_tank": 2, "tank": 0, "healer": 6, "dps": 16},
+    10: {"main_tank": 1, "off_tank": 1, "melee_dps": 0, "healer": 3, "range_dps": 5},
+    25: {"main_tank": 1, "off_tank": 2, "melee_dps": 0, "healer": 6, "range_dps": 16},
 }

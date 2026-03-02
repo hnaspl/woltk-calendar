@@ -6,14 +6,33 @@ from typing import Optional
 
 import sqlalchemy as sa
 
+from app.constants import CLASS_ROLES
+from app.enums import WowClass
 from app.extensions import db
 from app.models.character import Character
+
+
+def _default_role_for_class(class_name: str) -> str | None:
+    """Return the first allowed role for a character class.
+
+    This ensures characters always have a valid default_role so there are
+    no unselected roles anywhere in the UI.
+    """
+    for wow_class, roles in CLASS_ROLES.items():
+        if wow_class.value == class_name and roles:
+            return roles[0].value
+    return None
 
 
 def create_character(user_id: int, guild_id: int, data: dict) -> Character:
     existing = find_existing(guild_id, data["realm_name"], data["name"])
     if existing is not None:
         raise ValueError(f"Character '{data['name']}' on {data['realm_name']} already exists in this guild")
+
+    # Auto-populate default_role from CLASS_ROLES if not provided
+    default_role = data.get("default_role")
+    if not default_role and data.get("class_name"):
+        default_role = _default_role_for_class(data["class_name"])
 
     char = Character(
         user_id=user_id,
@@ -23,7 +42,7 @@ def create_character(user_id: int, guild_id: int, data: dict) -> Character:
         class_name=data["class_name"],
         primary_spec=data.get("primary_spec"),
         secondary_spec=data.get("secondary_spec"),
-        default_role=data["default_role"],
+        default_role=default_role,
         off_role=data.get("off_role"),
         is_main=data.get("is_main", False),
         is_active=data.get("is_active", True),
@@ -55,6 +74,53 @@ def update_character(character: Character, data: dict) -> Character:
 
 
 def delete_character(character: Character) -> None:
+    """Delete a character and all related records (signups, lineup slots, bans, replacements)."""
+    from app.models.signup import Signup, LineupSlot, RaidBan, CharacterReplacement
+
+    char_id = character.id
+
+    # Remove lineup slots referencing this character
+    db.session.execute(
+        sa.delete(LineupSlot).where(LineupSlot.character_id == char_id)
+    )
+
+    # Remove lineup slots via signups for this character
+    signup_ids = list(
+        db.session.execute(
+            sa.select(Signup.id).where(Signup.character_id == char_id)
+        ).scalars().all()
+    )
+    if signup_ids:
+        db.session.execute(
+            sa.delete(LineupSlot).where(LineupSlot.signup_id.in_(signup_ids))
+        )
+        # Remove replacement requests referencing these signups
+        db.session.execute(
+            sa.delete(CharacterReplacement).where(
+                CharacterReplacement.signup_id.in_(signup_ids)
+            )
+        )
+
+    # Remove replacement requests referencing this character directly
+    db.session.execute(
+        sa.delete(CharacterReplacement).where(
+            sa.or_(
+                CharacterReplacement.old_character_id == char_id,
+                CharacterReplacement.new_character_id == char_id,
+            )
+        )
+    )
+
+    # Remove signups for this character
+    db.session.execute(
+        sa.delete(Signup).where(Signup.character_id == char_id)
+    )
+
+    # Remove raid bans for this character
+    db.session.execute(
+        sa.delete(RaidBan).where(RaidBan.character_id == char_id)
+    )
+
     db.session.delete(character)
     db.session.commit()
 

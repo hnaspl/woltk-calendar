@@ -14,3 +14,8 @@ export const removeLineupSlot = (guildId, eventId, slotId) =>
 
 export const confirmLineup = (guildId, eventId) =>
   api.post(`/guilds/${guildId}/events/${eventId}/lineup/confirm`)
+
+export const reorderBench = (guildId, eventId, orderedSignupIds) =>
+  api.put(`/guilds/${guildId}/events/${eventId}/lineup/bench-reorder`, {
+    ordered_signup_ids: orderedSignupIds,
+  })

@@ -1,6 +1,7 @@
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+import api from '@/api'
 
 export function usePermissions() {
   const authStore = useAuthStore()
@@ -16,35 +17,54 @@ export function usePermissions() {
     return members.find(m => m.user_id === currentUser.value.id) ?? null
   })
 
-  const role = computed(() => membership.value?.role ?? 'member')
-
-  /** True if user is a site-wide admin (is_admin flag on user model) */
-  const isSiteAdmin = computed(() => currentUser.value?.is_admin === true)
-
-  /** True if user is a guild admin for the current guild */
-  const isGuildAdmin = computed(() => role.value === 'guild_admin')
-
-  /** True if user is a site admin OR guild admin */
-  const isAdmin = computed(() => isSiteAdmin.value || isGuildAdmin.value)
-
-  const isOfficer = computed(() =>
-    isAdmin.value || role.value === 'officer'
-  )
+  const role = computed(() => membership.value?.role ?? null)
 
   const isMember = computed(() => !!membership.value)
 
-  function can(permission) {
-    switch (permission) {
-      case 'manage_guild':       return isAdmin.value
-      case 'manage_events':      return isOfficer.value
-      case 'manage_lineup':      return isOfficer.value
-      case 'manage_members':     return isOfficer.value
-      case 'view_attendance':    return isMember.value
-      case 'record_attendance':  return isOfficer.value
-      case 'sign_up':            return isMember.value
-      default:                   return false
+  /** Dynamic permissions fetched from the backend */
+  const dynamicPermissions = ref([])
+  const permissionsLoaded = ref(false)
+
+  /** Fetch dynamic permissions for the current guild */
+  async function fetchPermissions() {
+    if (!currentGuild.value) {
+      dynamicPermissions.value = []
+      permissionsLoaded.value = false
+      return
+    }
+    try {
+      const data = await api.get(`/roles/my-permissions/${currentGuild.value.id}`)
+      dynamicPermissions.value = data.permissions || []
+      permissionsLoaded.value = true
+    } catch {
+      dynamicPermissions.value = []
+      permissionsLoaded.value = false
     }
   }
 
-  return { membership, role, isSiteAdmin, isGuildAdmin, isAdmin, isOfficer, isMember, can }
+  // Auto-fetch when guild changes (only when user is authenticated)
+  watch(
+    () => [currentGuild.value?.id, currentUser.value?.id],
+    () => {
+      if (currentGuild.value && currentUser.value) {
+        fetchPermissions()
+      }
+    },
+    { immediate: true }
+  )
+
+  /**
+   * Check if current user has a specific permission.
+   * Uses dynamically fetched permissions from the backend.
+   * Site admins (is_admin flag) bypass all checks.
+   */
+  function can(permission) {
+    if (currentUser.value?.is_admin === true) return true
+    return dynamicPermissions.value.includes(permission)
+  }
+
+  return {
+    membership, role, isMember,
+    can, dynamicPermissions, permissionsLoaded, fetchPermissions,
+  }
 }

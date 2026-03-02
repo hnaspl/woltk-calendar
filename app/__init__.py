@@ -9,7 +9,7 @@ from flask import Flask, jsonify, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
-from app.extensions import bcrypt, db, login_manager
+from app.extensions import bcrypt, db, login_manager, socketio
 
 # Vite build output directory (relative to project root)
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
@@ -30,6 +30,8 @@ def create_app(config_override: dict | None = None) -> Flask:
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
+    socketio.init_app(app, cors_allowed_origins=app.config["CORS_ORIGINS"],
+                      async_mode="gevent", logger=False, engineio_logger=False)
 
     # Enable WAL mode for SQLite (better concurrent read/write performance)
     if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
@@ -114,11 +116,18 @@ def create_app(config_override: dict | None = None) -> Flask:
     # ------------------------------------------------------- CLI commands
     _register_commands(app)
 
+    # ------------------------------------------------------- SocketIO events
+    _register_socketio_handlers()
+
     # --------------------------------------------------------- Scheduler
     with app.app_context():
         if app.config.get("SCHEDULER_ENABLED", True) and not app.config.get("TESTING", False):
             from app.jobs.scheduler import init_scheduler
             init_scheduler(app)
+
+        # Seed default permission roles/permissions if tables are empty
+        if not app.config.get("TESTING", False):
+            _seed_permissions_if_empty(app)
 
     return app
 
@@ -133,6 +142,92 @@ def _ensure_db_dir() -> None:
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
+
+
+def _register_socketio_handlers() -> None:
+    """Register Socket.IO event handlers for room-based real-time updates."""
+    from flask_login import current_user
+    from flask_socketio import join_room, leave_room
+
+    @socketio.on("join_event")
+    def handle_join(data):
+        if not current_user.is_authenticated:
+            return
+        event_id = data.get("event_id")
+        if event_id is not None:
+            join_room(f"event_{event_id}")
+
+    @socketio.on("leave_event")
+    def handle_leave(data):
+        if not current_user.is_authenticated:
+            return
+        event_id = data.get("event_id")
+        if event_id is not None:
+            leave_room(f"event_{event_id}")
+
+    @socketio.on("join_guild")
+    def handle_join_guild(data):
+        if not current_user.is_authenticated:
+            return
+        guild_id = data.get("guild_id")
+        if guild_id is not None:
+            join_room(f"guild_{guild_id}")
+
+    @socketio.on("leave_guild")
+    def handle_leave_guild(data):
+        if not current_user.is_authenticated:
+            return
+        guild_id = data.get("guild_id")
+        if guild_id is not None:
+            leave_room(f"guild_{guild_id}")
+
+    @socketio.on("connect")
+    def handle_connect():
+        """Auto-join the user's personal notification room on connect."""
+        if current_user.is_authenticated:
+            join_room(f"user_{current_user.id}")
+
+
+def _seed_system_settings_if_missing() -> int:
+    """Ensure default system settings exist in the database. Returns count of settings seeded."""
+    from app.models.system_setting import SystemSetting
+    defaults = {
+        "wowhead_tooltips": "true",
+        "autosync_enabled": "false",
+        "autosync_interval_minutes": "60",
+    }
+    seeded = 0
+    for key, default_value in defaults.items():
+        existing = db.session.get(SystemSetting, key)
+        if not existing:
+            db.session.add(SystemSetting(key=key, value=default_value))
+            seeded += 1
+    db.session.commit()
+    return seeded
+
+
+def _seed_permissions_if_empty(app: Flask) -> None:
+    """Seed default permission roles and permissions if tables are empty."""
+    try:
+        from app.models.permission import SystemRole
+        import sqlalchemy as sa
+        count = db.session.execute(
+            sa.select(sa.func.count()).select_from(SystemRole)
+        ).scalar()
+        if count == 0:
+            from app.seeds.permissions import seed_permissions
+            created = seed_permissions()
+            app.logger.info("Seeded %d default roles with permissions.", created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed permissions: %s", exc)
+
+    # Seed default system settings if missing
+    try:
+        seeded = _seed_system_settings_if_missing()
+        if seeded:
+            app.logger.info("Seeded %d default system setting(s).", seeded)
+    except Exception as exc:
+        app.logger.warning("Failed to seed system settings: %s", exc)
 
 
 def _register_commands(app: Flask) -> None:
@@ -159,6 +254,14 @@ def _register_commands(app: Flask) -> None:
         else:
             click.echo("Admin user already exists, skipped.")
 
+        from app.seeds.permissions import seed_permissions
+        perm_count = seed_permissions()
+        click.echo(f"Seeded {perm_count} role(s) with permissions.")
+
+        seeded_settings = _seed_system_settings_if_missing()
+        if seeded_settings:
+            click.echo(f"Seeded {seeded_settings} system setting(s).")
+
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")
     @click.option("--username", default=None, help="Admin username (or set ADMIN_USERNAME env var).")
@@ -177,3 +280,19 @@ def _register_commands(app: Flask) -> None:
         _ensure_db_dir()
         db.create_all()
         click.echo("Database tables created.")
+
+        # Seed permissions if empty
+        from app.models.permission import SystemRole
+        import sqlalchemy as sa
+        count = db.session.execute(
+            sa.select(sa.func.count()).select_from(SystemRole)
+        ).scalar()
+        if count == 0:
+            from app.seeds.permissions import seed_permissions
+            created = seed_permissions()
+            click.echo(f"Seeded {created} role(s) with permissions.")
+
+        # Seed default system settings if missing
+        seeded_settings = _seed_system_settings_if_missing()
+        if seeded_settings:
+            click.echo(f"Seeded {seeded_settings} system setting(s).")

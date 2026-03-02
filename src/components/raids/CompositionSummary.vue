@@ -3,7 +3,7 @@
     <h3 class="wow-heading text-base mb-4">Composition</h3>
 
     <div v-if="total === 0" class="text-center py-4 text-text-muted text-sm">
-      No confirmed signups yet.
+      No players assigned yet.
     </div>
 
     <div v-else class="space-y-4">
@@ -34,8 +34,8 @@
       <hr class="gold-divider" />
 
       <div class="flex items-center justify-between text-sm">
-        <span class="text-text-muted">Total confirmed</span>
-        <span class="text-text-primary font-bold">{{ going }} / {{ maxSize ?? '?' }}</span>
+        <span class="text-text-muted">Total assigned</span>
+        <span class="text-text-primary font-bold">{{ total }} / {{ maxSize ?? '?' }}</span>
       </div>
     </div>
   </WowCard>
@@ -47,30 +47,23 @@ import WowCard from '@/components/common/WowCard.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 
 const props = defineProps({
-  signups: { type: Array, default: () => [] },
+  lineupCounts: { type: Object, default: null },
   maxSize: { type: Number, default: null },
   // Slot targets from the raid definition
-  tankSlots:      { type: Number, default: 2 },
+  meleeDpsSlots:  { type: Number, default: 2 },
   mainTankSlots:  { type: Number, default: 1 },
   offTankSlots:   { type: Number, default: 1 },
   healerSlots:    { type: Number, default: 5 },
-  dpsSlots:       { type: Number, default: 18 }
+  rangeDpsSlots:  { type: Number, default: 18 }
 })
 
-// Only count going + tentative
-const active = computed(() =>
-  props.signups.filter(s => ['going', 'tentative'].includes(s.status))
-)
-
-const total = computed(() => active.value.length)
-
-const going = computed(() =>
-  props.signups.filter(s => s.status === 'going').length
-)
-
 function countRole(role) {
-  return active.value.filter(s => s.chosen_role === role).length
+  return props.lineupCounts?.[role] ?? 0
 }
+
+const total = computed(() =>
+  countRole('main_tank') + countRole('off_tank') + countRole('melee_dps') + countRole('healer') + countRole('range_dps')
+)
 
 const roleSummary = computed(() => [
   {
@@ -86,9 +79,9 @@ const roleSummary = computed(() => [
     barClass: 'bg-cyan-400'
   },
   {
-    name: 'tank',
-    count: countRole('tank'),
-    target: props.tankSlots,
+    name: 'melee_dps',
+    count: countRole('melee_dps'),
+    target: props.meleeDpsSlots,
     barClass: 'bg-blue-400'
   },
   {
@@ -98,10 +91,10 @@ const roleSummary = computed(() => [
     barClass: 'bg-green-400'
   },
   {
-    name: 'dps',
-    count: countRole('dps'),
-    target: props.dpsSlots,
+    name: 'range_dps',
+    count: countRole('range_dps'),
+    target: props.rangeDpsSlots,
     barClass: 'bg-red-400'
   }
-])
+].filter(r => r.target > 0))
 </script>

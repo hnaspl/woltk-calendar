@@ -6,8 +6,8 @@ export const updateUser = (userId, data) => api.put(`/admin/users/${userId}`, da
 
 export const deleteUser = (userId) => api.delete(`/admin/users/${userId}`)
 
-export const getAutosyncSettings = () => api.get('/admin/settings/autosync')
-
-export const updateAutosyncSettings = (data) => api.put('/admin/settings/autosync', data)
-
 export const triggerSync = () => api.post('/admin/sync-characters')
+
+export const getSystemSettings = () => api.get('/admin/settings/system')
+
+export const updateSystemSettings = (data) => api.put('/admin/settings/system', data)

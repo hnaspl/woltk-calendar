@@ -25,39 +25,107 @@
               <div class="flex items-center gap-2 flex-wrap mb-2">
                 <h1 class="wow-heading text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
-                <StatusBadge :status="event.status ?? 'open'" />
-                <LockBadge :locked="event.status === 'locked' || event.is_locked" />
+                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Done</span>
+                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Cancelled</span>
               </div>
 
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
-                <span>📅 {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
-                <span v-if="event.ends_at_utc || event.end_time">→ {{ formatDateTime(event.ends_at_utc ?? event.end_time) }}</span>
-                <RealmBadge v-if="event.realm_name || event.realm" :realm="event.realm_name ?? event.realm" />
+              <!-- Completed/cancelled event locked banner -->
+              <div v-if="event.status === 'completed' && hasAttendance" class="mt-2 px-3 py-2 rounded bg-green-900/20 border border-green-700/40 text-green-300 text-xs">
+                🔒 This raid is <strong>completed</strong> and attendance has been recorded. All modifications are locked to prevent data manipulation.
+              </div>
+              <div v-else-if="event.status === 'cancelled'" class="mt-2 px-3 py-2 rounded bg-red-900/20 border border-red-700/40 text-red-300 text-xs">
+                🔒 This raid has been <strong>cancelled</strong>. All modifications are locked.
               </div>
 
-              <p v-if="event.instructions || event.description" class="mt-3 text-sm text-text-muted">
+              <!-- Informative details grid -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm mt-2">
+                <div class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">📅</span>
+                  <span><strong class="text-text-primary">Starts:</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+                </div>
+                <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">⏱️</span>
+                  <span><strong class="text-text-primary">Duration:</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
+                </div>
+                <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">⚔️</span>
+                  <span><strong class="text-text-primary">Raid:</strong> {{ raidLabel(event.raid_type) }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">📝</span>
+                  <span>
+                    <strong class="text-text-primary">Signups:</strong>{{ ' ' }}
+                    <template v-if="event.status === 'locked' || event.is_locked">
+                      <span class="text-red-400 font-medium">Closed</span>
+                    </template>
+                    <template v-else-if="event.status === 'cancelled'">
+                      <span class="text-red-400 font-medium">Cancelled</span>
+                    </template>
+                    <template v-else-if="event.status === 'completed'">
+                      <span class="text-text-muted">Completed</span>
+                    </template>
+                    <template v-else>
+                      <span class="text-green-400 font-medium">Open</span>
+                    </template>
+                    <span class="ml-1 text-text-muted"> ({{ signups.length }} signed up)</span>
+                  </span>
+                </div>
+                <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">🔒</span>
+                  <span><strong class="text-text-primary">Signups Close:</strong> {{ formatDateTime(event.close_signups_at) }}</span>
+                </div>
+                <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
+                  <span class="text-accent-gold">🌐</span>
+                  <span><strong class="text-text-primary">Realm:</strong> {{ event.realm_name ?? event.realm }}</span>
+                </div>
+              </div>
+
+              <p v-if="event.instructions || event.description" class="mt-3 text-sm text-text-muted border-t border-border-default pt-2">
                 {{ event.instructions ?? event.description }}
               </p>
             </div>
 
             <!-- Officer actions -->
-            <div v-if="permissions.isOfficer.value" class="flex flex-wrap gap-2 flex-shrink-0">
-              <WowButton variant="secondary" @click="openEditModal">Edit</WowButton>
-              <WowButton variant="secondary" @click="toggleLock">
+            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-2 flex-shrink-0">
+              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">Edit</WowButton>
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
                 {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
               </WowButton>
               <WowButton variant="secondary" @click="doDuplicate">Duplicate</WowButton>
-              <WowButton v-if="event.status !== 'completed'" variant="primary" @click="markComplete">
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
                 Mark Done
               </WowButton>
-              <WowButton variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
+              <WowButton
+                v-if="event.status === 'completed' && permissions.can('record_attendance')"
+                variant="primary"
+                @click="showAttendanceModal = true"
+              >
+                {{ hasAttendance ? 'Update Attendance' : 'Record Attendance' }}
+              </WowButton>
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
             </div>
           </div>
         </WowCard>
 
+        <!-- Lineup Board (full width, under header) -->
+        <LineupBoard
+          :signups="signups"
+          :event-id="event.id"
+          :guild-id="guildId"
+          :can-manage="permissions.can('update_lineup') && event.status !== 'completed' && event.status !== 'cancelled'"
+          :current-user-id="authStore.user?.id"
+          :melee-dps-slots="event.melee_dps_slots ?? 0"
+          :main-tank-slots="event.main_tank_slots ?? 1"
+          :off-tank-slots="event.off_tank_slots ?? 1"
+          :healer-slots="event.healer_slots ?? 5"
+          :range-dps-slots="event.range_dps_slots ?? 18"
+          @saved="onLineupSaved"
+          @lineup-updated="onLineupUpdated"
+        />
+
         <!-- Main content grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Left column: signup form + composition -->
+          <!-- Left column: signup form + my signups + composition -->
           <div class="space-y-6">
             <SignupForm
               v-if="event.status === 'open' || event.status === 'draft'"
@@ -65,7 +133,9 @@
               :guild-id="guildId"
               :existing-signup="editingSignup"
               :signed-up-character-ids="mySignedUpCharacterIds"
+              :banned-character-ids="bannedCharacterIds"
               :available-roles="availableRoles"
+              :role-slot-info="roleSlotInfo"
               @signed-up="onSignedUp"
               @updated="onSignupUpdated"
             />
@@ -76,36 +146,96 @@
                 <div
                   v-for="s in mySignups"
                   :key="s.id"
-                  class="flex items-center gap-2 px-3 py-2 rounded border text-sm transition-colors"
-                  :class="editingSignupId === s.id
-                    ? 'border-accent-gold bg-accent-gold/10'
-                    : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                  class="space-y-2"
                 >
-                  <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
-                    {{ s.character?.name ?? '?' }}
-                  </span>
-                  <span class="text-text-muted text-xs">{{ s.chosen_role }} / {{ s.chosen_spec || '—' }}</span>
-                  <span v-if="s.status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">Bench</span>
-                  <span v-else class="text-xs" :class="{
-                    'text-green-400': s.status === 'going',
-                    'text-yellow-400': s.status === 'tentative',
-                    'text-red-400': s.status === 'declined'
-                  }">{{ s.status }}</span>
-                  <div class="ml-auto flex gap-1">
-                    <button
-                      v-if="event.status === 'open' || event.status === 'draft'"
-                      class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
-                      @click="editingSignupId = editingSignupId === s.id ? null : s.id"
-                    >
-                      {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
-                    </button>
-                    <button
-                      v-if="event.status === 'open' || event.status === 'draft'"
-                      class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
-                      @click="leaveRaid(s)"
-                    >
-                      Leave Raid
-                    </button>
+                  <div
+                    class="px-3 py-2.5 rounded border text-sm transition-colors"
+                    :class="editingSignupId === s.id
+                      ? 'border-accent-gold bg-accent-gold/10'
+                      : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                  >
+                    <div class="flex items-center gap-2">
+                      <img
+                        :src="getClassIcon(s.character?.class_name)"
+                        :alt="s.character?.class_name ?? ''"
+                        class="w-8 h-8 rounded flex-shrink-0"
+                      />
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
+                            {{ s.character?.name ?? '?' }}
+                          </span>
+                          <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
+                          <RoleBadge :role="s.chosen_role" />
+                          <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+                            Bench{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
+                          </span>
+                          <span v-else-if="s.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">declined</span>
+                          <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">in lineup</span>
+                        </div>
+                        <!-- Specializations -->
+                        <div v-if="s.chosen_spec" class="flex items-center gap-1 mt-1 flex-wrap">
+                          <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+                        </div>
+                        <!-- Professions with icons -->
+                        <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span
+                            v-for="prof in mySignupProfessions(s)"
+                            :key="prof.name"
+                            class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
+                          >
+                            <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
+                            {{ prof.name }} {{ prof.skill || '' }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex flex-col gap-1 flex-shrink-0">
+                        <button
+                          v-if="event.status === 'open' || event.status === 'draft'"
+                          class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
+                          @click="editingSignupId = editingSignupId === s.id ? null : s.id"
+                        >
+                          {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
+                        </button>
+                        <button
+                          v-if="event.status === 'open' || event.status === 'draft'"
+                          class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                          @click="leaveRaid(s)"
+                        >
+                          Leave Raid
+                        </button>
+                      </div>
+                    </div>
+                    <p v-if="s.note" class="text-text-muted text-[10px] italic mt-1.5 ml-10">📝 {{ s.note }}</p>
+                  </div>
+                  <!-- Pending character replacement request -->
+                  <div
+                    v-if="pendingReplacementForSignup(s.id)"
+                    class="ml-4 px-3 py-2 rounded border border-blue-700 bg-blue-900/20 text-sm space-y-2"
+                  >
+                    <p class="text-blue-300 text-xs font-medium">⚡ Character Swap Requested</p>
+                    <p class="text-text-muted text-xs">
+                      <strong class="text-text-primary">{{ pendingReplacementForSignup(s.id).requester_name }}</strong>
+                      wants to replace
+                      <strong class="text-text-primary">{{ pendingReplacementForSignup(s.id).old_character?.name ?? '?' }}</strong>
+                      with
+                      <strong class="text-accent-gold">{{ pendingReplacementForSignup(s.id).new_character?.name ?? '?' }}</strong>
+                      <span v-if="pendingReplacementForSignup(s.id).reason" class="italic"> — {{ pendingReplacementForSignup(s.id).reason }}</span>
+                    </p>
+                    <div class="flex gap-2">
+                      <button
+                        class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
+                        @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'confirm')"
+                      >Confirm</button>
+                      <button
+                        class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
+                        @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'decline')"
+                      >Decline</button>
+                      <button
+                        class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
+                        @click="leaveRaid(s)"
+                      >Leave Raid</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -118,21 +248,23 @@
               </button>
             </WowCard>
             <CompositionSummary
-              :signups="signups"
+              v-if="permissions.can('view_signups')"
+              :lineup-counts="lineupCounts"
               :max-size="event.raid_size ?? event.size"
-              :tank-slots="event.tank_slots ?? 0"
+              :melee-dps-slots="event.melee_dps_slots ?? 0"
               :main-tank-slots="event.main_tank_slots ?? 1"
               :off-tank-slots="event.off_tank_slots ?? 1"
               :healer-slots="event.healer_slots ?? 5"
-              :dps-slots="event.dps_slots ?? 18"
+              :range-dps-slots="event.range_dps_slots ?? 18"
             />
           </div>
 
-          <!-- Right columns: signup list + lineup -->
-          <div class="lg:col-span-2 space-y-6">
+          <!-- Right columns: signup list or composition summary -->
+          <div class="lg:col-span-2">
             <SignupList
+              v-if="permissions.can('view_signups')"
               :signups="signups"
-              :is-officer="permissions.isOfficer.value"
+              :can-manage="permissions.can('manage_signups') && event.status !== 'completed' && event.status !== 'cancelled'"
               :guild-id="guildId"
               :event-id="event.id"
               :available-roles="availableRoles"
@@ -140,18 +272,15 @@
               @signup-removed="onSignupRemoved"
               @signup-error="msg => uiStore.showToast(msg, 'error')"
             />
-
-            <LineupBoard
-              :signups="signups"
-              :event-id="event.id"
-              :guild-id="guildId"
-              :is-officer="permissions.isOfficer.value"
-              :tank-slots="event.tank_slots ?? 0"
+            <CompositionSummary
+              v-else
+              :lineup-counts="lineupCounts"
+              :max-size="event.raid_size ?? event.size"
+              :melee-dps-slots="event.melee_dps_slots ?? 0"
               :main-tank-slots="event.main_tank_slots ?? 1"
               :off-tank-slots="event.off_tank_slots ?? 1"
               :healer-slots="event.healer_slots ?? 5"
-              :dps-slots="event.dps_slots ?? 18"
-              @saved="onLineupSaved"
+              :range-dps-slots="event.range_dps_slots ?? 18"
             />
           </div>
         </div>
@@ -208,10 +337,14 @@
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
-            <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            <span class="text-[10px] text-text-muted">Must be before event start time</span>
+            <label class="block text-xs text-text-muted mb-1">Approx. Duration (minutes)</label>
+            <input v-model.number="editForm.duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+          <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <span class="text-[10px] text-text-muted">Must be before event start time</span>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">Instructions</label>
@@ -252,33 +385,46 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Attendance modal -->
+    <AttendanceModal
+      v-model="showAttendanceModal"
+      :signups="signups"
+      :guild-id="guildId"
+      :event-id="event?.id"
+      @saved="onAttendanceSaved"
+    />
   </AppShell>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
-import RealmBadge from '@/components/common/RealmBadge.vue'
-import LockBadge from '@/components/common/LockBadge.vue'
+import ClassBadge from '@/components/common/ClassBadge.vue'
+import RoleBadge from '@/components/common/RoleBadge.vue'
+import SpecBadge from '@/components/common/SpecBadge.vue'
 import SignupForm from '@/components/raids/SignupForm.vue'
 import SignupList from '@/components/raids/SignupList.vue'
 import CompositionSummary from '@/components/raids/CompositionSummary.vue'
 import LineupBoard from '@/components/raids/LineupBoard.vue'
+import AttendanceModal from '@/components/raids/AttendanceModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { RAID_TYPES } from '@/constants'
+import { useSocket } from '@/composables/useSocket'
+import { useTimezone } from '@/composables/useTimezone'
+import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as attendanceApi from '@/api/attendance'
 
 const route = useRoute()
 const router = useRouter()
@@ -286,24 +432,37 @@ const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
-const { getRaidIcon } = useWowIcons()
-const { getClassColor } = useWowIcons()
+const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
+const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
+const tz = useTimezone()
 
 const event = ref(null)
 const signups = ref([])
+const lineupCounts = ref(null)
 const loading = ref(true)
 const error = ref(null)
 const actionLoading = ref(false)
 const confirmCancel = ref(false)
 const showEditModal = ref(false)
 const showLeaveModal = ref(false)
+const showAttendanceModal = ref(false)
+const hasAttendance = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
+const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
+
+function mySignupProfessions(s) {
+  return (s.character?.metadata?.professions ?? []).slice(0, 2)
+}
+
 const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))
+
+// Character replacement requests
+const replacementRequests = ref([])
 
 const editForm = reactive({
   title: '',
@@ -313,6 +472,7 @@ const editForm = reactive({
   difficulty: 'normal',
   status: 'open',
   starts_at_utc: '',
+  duration_minutes: 180,
   close_signups_at: '',
   instructions: ''
 })
@@ -333,15 +493,39 @@ const mySignedUpCharacterIds = computed(() =>
   mySignups.value.map(s => s.character_id)
 )
 
+const bans = ref([])
+const bannedCharacterIds = computed(() =>
+  bans.value.map(b => b.character_id)
+)
+
 const availableRoles = computed(() => {
-  if (!event.value) return ['main_tank', 'off_tank', 'tank', 'healer', 'dps']
+  if (!event.value) return ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps']
   const roles = []
   if ((event.value.main_tank_slots ?? 1) > 0) roles.push('main_tank')
   if ((event.value.off_tank_slots ?? 1) > 0) roles.push('off_tank')
-  if ((event.value.tank_slots ?? 0) > 0) roles.push('tank')
+  if ((event.value.melee_dps_slots ?? 0) > 0) roles.push('melee_dps')
   if ((event.value.healer_slots ?? 5) > 0) roles.push('healer')
-  if ((event.value.dps_slots ?? 18) > 0) roles.push('dps')
+  if ((event.value.range_dps_slots ?? 18) > 0) roles.push('range_dps')
   return roles
+})
+
+// Live role slot info: max slots, current going count, and remaining for each role
+const roleSlotInfo = computed(() => {
+  if (!event.value) return {}
+  const slotMap = {
+    main_tank: event.value.main_tank_slots ?? 1,
+    off_tank:  event.value.off_tank_slots ?? 1,
+    melee_dps: event.value.melee_dps_slots ?? 0,
+    healer:    event.value.healer_slots ?? 5,
+    range_dps: event.value.range_dps_slots ?? 18,
+  }
+  const info = {}
+  for (const [role, max] of Object.entries(slotMap)) {
+    if (max <= 0) continue
+    const current = signups.value.filter(s => s.chosen_role === role && s.lineup_status !== 'declined').length
+    info[role] = { max, current, remaining: Math.max(0, max - current) }
+  }
+  return info
 })
 
 onMounted(async () => {
@@ -356,11 +540,119 @@ onMounted(async () => {
     ])
     event.value = ev
     signups.value = su
+    // Fetch bans for this event
+    try { bans.value = await signupsApi.getBans(guildId.value, route.params.id) } catch { bans.value = [] }
+    // Check if attendance has been recorded for this event
+    if (ev.status === 'completed') {
+      try {
+        const recs = await attendanceApi.getEventAttendance(guildId.value, route.params.id)
+        hasAttendance.value = recs.length > 0
+      } catch { hasAttendance.value = false }
+    }
+    // Fetch pending character replacement requests
+    await loadReplacementRequests()
   } catch (err) {
     error.value = err?.response?.data?.message ?? 'Failed to load raid details'
   } finally {
     loading.value = false
   }
+  // Join Socket.IO room for real-time updates
+  if (event.value) joinEvent(event.value.id)
+  socketOn('signups_changed', onSignupsChanged)
+  socketOn('lineup_changed', onLineupChanged)
+  // Fallback polling in case WebSocket disconnects
+  startPolling()
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+// ── Real-time: WebSocket handlers ──
+async function onSignupsChanged(data) {
+  if (!guildId.value || !event.value) return
+  if (data?.event_id !== event.value.id) return
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+    await loadReplacementRequests()
+  } catch {
+    // Silently ignore — next WS event or poll will retry
+  }
+}
+
+async function onLineupChanged(data) {
+  // LineupBoard manages its own state; just trigger a signups reload
+  // so role slot info and signup list stay in sync
+  if (!guildId.value || !event.value) return
+  if (data?.event_id !== event.value.id) return
+  try {
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+  } catch {
+    // Silently ignore
+  }
+}
+
+// ── Fallback polling: only active when tab is visible, longer interval ──
+const POLL_INTERVAL = 30_000 // 30 seconds (fallback only — WebSocket is primary)
+let pollTimer = null
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(pollSignups, POLL_INTERVAL)
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+function onVisibilityChange() {
+  if (document.hidden) {
+    stopPolling()
+  } else {
+    pollSignups()
+    startPolling()
+  }
+}
+
+async function pollSignups() {
+  if (!guildId.value || !event.value) return
+  try {
+    const su = await signupsApi.getSignups(guildId.value, event.value.id)
+    signups.value = su
+  } catch {
+    // Silently ignore polling errors
+  }
+}
+
+onUnmounted(() => {
+  socketOff('signups_changed', onSignupsChanged)
+  socketOff('lineup_changed', onLineupChanged)
+  if (event.value) leaveEvent(event.value.id)
+  stopPolling()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
+
+// Reload everything when navigating between events (same route, different id)
+watch(() => route.params.id, async (newId, oldId) => {
+  if (!newId || newId === oldId) return
+  // Leave old room, join new room
+  if (oldId) leaveEvent(oldId)
+  stopPolling()
+  loading.value = true
+  error.value = null
+  editingSignupId.value = null
+  lineupCounts.value = null
+  try {
+    const [ev, su] = await Promise.all([
+      eventsApi.getEvent(guildId.value, newId),
+      signupsApi.getSignups(guildId.value, newId),
+    ])
+    event.value = ev
+    signups.value = su
+  } catch (err) {
+    error.value = err?.response?.data?.message ?? 'Failed to load raid details'
+  } finally {
+    loading.value = false
+  }
+  if (event.value) joinEvent(event.value.id)
+  startPolling()
 })
 
 async function toggleLock() {
@@ -441,6 +733,7 @@ function openEditModal() {
     difficulty: event.value.difficulty ?? 'normal',
     status: event.value.status ?? 'open',
     starts_at_utc: toLocalDatetime(event.value.starts_at_utc ?? event.value.start_time),
+    duration_minutes: event.value.duration_minutes ?? 180,
     close_signups_at: toLocalDatetime(event.value.close_signups_at),
     instructions: event.value.instructions ?? event.value.description ?? ''
   })
@@ -457,6 +750,7 @@ function onEditRaidDefChange() {
   if (rd) {
     editForm.raid_type = rd.raid_type || rd.code || ''
     editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    if (rd.default_duration_minutes) editForm.duration_minutes = rd.default_duration_minutes
   }
 }
 
@@ -481,6 +775,7 @@ async function saveEvent() {
       difficulty: editForm.difficulty,
       status: editForm.status,
       starts_at_utc: editForm.starts_at_utc,
+      duration_minutes: editForm.duration_minutes,
       close_signups_at: editForm.close_signups_at || undefined,
       instructions: editForm.instructions
     }
@@ -552,6 +847,8 @@ async function onSignupRemoved(signupId) {
     console.warn('Failed to reload signups, using local filter', err)
     signups.value = signups.value.filter(s => s.id !== signupId)
   }
+  // Refresh bans in case a permanent kick was applied
+  try { bans.value = await signupsApi.getBans(guildId.value, event.value.id) } catch { /* ignore */ }
   uiStore.showToast('Signup removed', 'success')
 }
 
@@ -567,11 +864,54 @@ async function onLineupSaved(payload) {
   }
 }
 
+function onLineupUpdated(counts) {
+  lineupCounts.value = counts
+}
+
+function onAttendanceSaved() {
+  hasAttendance.value = true
+  uiStore.showToast('Attendance recorded!', 'success')
+}
+
+// --- Character replacement requests ---
+function pendingReplacementForSignup(signupId) {
+  return replacementRequests.value.find(r => r.signup_id === signupId) ?? null
+}
+
+async function loadReplacementRequests() {
+  if (!guildId.value || !event.value) return
+  try {
+    replacementRequests.value = await signupsApi.getMyReplacementRequests(guildId.value, event.value.id)
+  } catch {
+    replacementRequests.value = []
+  }
+}
+
+async function resolveReplacement(requestId, action) {
+  if (!guildId.value || !event.value) return
+  try {
+    await signupsApi.resolveReplaceRequest(guildId.value, event.value.id, requestId, { action })
+    // Reload signups and replacement requests
+    signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
+    await loadReplacementRequests()
+    uiStore.showToast(
+      action === 'confirm' ? 'Character swap confirmed!' : 'Character swap declined.',
+      action === 'confirm' ? 'success' : 'info'
+    )
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.message ?? 'Failed to process replacement', 'error')
+  }
+}
+
 function formatDateTime(d) {
   if (!d) return '?'
-  return new Date(d).toLocaleString('en-GB', {
+  return tz.formatDualTime(d, {
     weekday: 'long', day: '2-digit', month: 'long',
     year: 'numeric', hour: '2-digit', minute: '2-digit'
   })
+}
+
+function raidLabel(raidType) {
+  return raidTypeLabel(raidType)
 }
 </script>

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useGuildStore } from '@/stores/guild'
 
 const routes = [
   {
@@ -57,10 +58,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/admin/roles',
+    redirect: '/admin'
+  },
+  {
     path: '/guild/settings',
-    name: 'guild-settings',
-    component: () => import('@/views/GuildSettingsView.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/admin'
   },
   {
     path: '/guild/raid-definitions',
@@ -107,6 +110,11 @@ router.beforeEach(async (to) => {
     _authChecked = true
     try {
       await authStore.fetchMe()
+      // Bootstrap guild store so currentGuild & members are available for permissions
+      if (authStore.user) {
+        const guildStore = useGuildStore()
+        await guildStore.fetchGuilds()
+      }
     } catch {
       // Not authenticated – proceed to redirect logic below
     }

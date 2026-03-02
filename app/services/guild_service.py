@@ -6,7 +6,7 @@ from typing import Optional
 
 import sqlalchemy as sa
 
-from app.enums import GuildRole, MemberStatus
+from app.enums import MemberStatus
 from app.extensions import db
 from app.models.guild import Guild, GuildMembership
 
@@ -18,13 +18,27 @@ def create_guild(
     faction: Optional[str] = None,
     region: Optional[str] = None,
     allow_self_join: bool = True,
+    warmane_source: bool = False,
+    timezone: str = "Europe/Warsaw",
 ) -> Guild:
+    # Check for duplicate guild (case-insensitive name + realm)
+    existing = db.session.execute(
+        sa.select(Guild).where(
+            sa.func.lower(Guild.name) == name.strip().lower(),
+            sa.func.lower(Guild.realm_name) == realm_name.strip().lower(),
+        )
+    ).scalar_one_or_none()
+    if existing:
+        raise ValueError(f"Guild '{name}' on {realm_name} already exists")
+
     guild = Guild(
         name=name,
         realm_name=realm_name,
         faction=faction,
         region=region,
         allow_self_join=allow_self_join,
+        warmane_source=warmane_source,
+        timezone=timezone,
         created_by=created_by,
     )
     db.session.add(guild)
@@ -34,7 +48,7 @@ def create_guild(
     membership = GuildMembership(
         guild_id=guild.id,
         user_id=created_by,
-        role=GuildRole.GUILD_ADMIN.value,
+        role="guild_admin",
         status=MemberStatus.ACTIVE.value,
     )
     db.session.add(membership)
@@ -47,9 +61,12 @@ def get_guild(guild_id: int) -> Optional[Guild]:
 
 
 def update_guild(guild: Guild, data: dict) -> Guild:
-    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join"}
+    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "timezone"}
     for key, value in data.items():
         if key in allowed:
+            # Prevent changing name or realm on Warmane-sourced guilds
+            if key in ("realm_name", "name") and guild.warmane_source:
+                continue
             setattr(guild, key, value)
     db.session.commit()
     return guild
@@ -103,7 +120,7 @@ def list_members(guild_id: int) -> list[GuildMembership]:
 def add_member(
     guild_id: int,
     user_id: int,
-    role: str = GuildRole.MEMBER.value,
+    role: str = "member",
     status: str = MemberStatus.ACTIVE.value,
 ) -> GuildMembership:
     existing = db.session.execute(

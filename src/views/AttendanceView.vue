@@ -26,8 +26,8 @@
       </div>
 
       <template v-else>
-        <AttendanceSummary :records="records" :events="events" />
-        <AttendanceTable :records="records" :events="events" :signups="signups" />
+        <AttendanceSummary :records="records" />
+        <AttendanceTable :records="records" :events="events" />
       </template>
     </div>
   </AppShell>
@@ -39,17 +39,18 @@ import AppShell from '@/components/layout/AppShell.vue'
 import AttendanceSummary from '@/components/attendance/AttendanceSummary.vue'
 import AttendanceTable from '@/components/attendance/AttendanceTable.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import * as attendanceApi from '@/api/attendance'
 import * as eventsApi from '@/api/events'
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 
 const loading = ref(true)
 const error = ref(null)
 const period = ref('30')
 const records = ref([])
 const events = ref([])
-const signups = ref([])
 
 onMounted(() => fetchData())
 watch(period, fetchData)
@@ -63,9 +64,11 @@ async function fetchData() {
 
   try {
     const params = period.value !== 'all' ? { days: period.value } : {}
+    // Only fetch current user's attendance records
+    params.user_id = authStore.user?.id
     const [recs, evs] = await Promise.all([
       attendanceApi.getAttendance(guildId, params),
-      eventsApi.getEvents(guildId, { status: 'completed', ...params })
+      eventsApi.getEvents(guildId)
     ])
     records.value = recs
     events.value = evs

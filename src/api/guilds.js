@@ -25,3 +25,12 @@ export const updateMemberRole = (guildId, userId, role) =>
 
 export const removeMember = (guildId, userId) =>
   api.delete(`/guilds/${guildId}/members/${userId}`)
+
+export const getMemberCharacters = (guildId, userId) =>
+  api.get(`/guilds/${guildId}/members/${userId}/characters`)
+
+export const getWarmaneRoster = (guildId) =>
+  api.get(`/guilds/${guildId}/warmane-roster`)
+
+export const transferOwnership = (guildId, userId) =>
+  api.post(`/guilds/${guildId}/transfer-ownership`, { user_id: userId })

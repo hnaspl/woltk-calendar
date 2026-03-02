@@ -14,3 +14,6 @@ export const updateRaidDefinition = (guildId, defId, payload) =>
 
 export const deleteRaidDefinition = (guildId, defId) =>
   api.delete(`/guilds/${guildId}/raid-definitions/${defId}`)
+
+export const copyRaidDefinition = (guildId, defId) =>
+  api.post(`/guilds/${guildId}/raid-definitions/${defId}/copy`)

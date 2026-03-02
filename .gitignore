@@ -33,3 +33,11 @@ migrations/versions/*.pyc
 # SQLite test databases
 *.db
 instance/
+
+# Gunicorn
+gunicorn.ctl
+
+# Test caches
+.pytest_cache/
+dist/
+node_modules/
