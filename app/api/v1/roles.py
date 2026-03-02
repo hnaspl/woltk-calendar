@@ -30,7 +30,7 @@ def _require_manage_roles(guild_id: int | None = None):
     # For non-guild-scoped calls, only site admin can manage
     if has_permission(None, "manage_roles"):
         return None
-    return jsonify({"error": "Permission 'manage_roles' required"}), 403
+    return jsonify({"error": "You do not have the appropriate permissions"}), 403
 
 
 # ---------------------------------------------------------------------------

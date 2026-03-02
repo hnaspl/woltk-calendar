@@ -30,7 +30,7 @@ def list_templates(guild_id: int):
 def create_template(guild_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "Permission 'manage_templates' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("name") or not data.get("raid_definition_id"):
         return jsonify({"error": "name and raid_definition_id are required"}), 400
@@ -54,7 +54,7 @@ def get_template(guild_id: int, tmpl_id: int):
 def update_template(guild_id: int, tmpl_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "Permission 'manage_templates' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": "Template not found"}), 404
@@ -68,7 +68,7 @@ def update_template(guild_id: int, tmpl_id: int):
 def delete_template(guild_id: int, tmpl_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "Permission 'manage_templates' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": "Template not found"}), 404
@@ -82,7 +82,7 @@ def copy_template(guild_id: int, tmpl_id: int):
     """Copy a template into another guild."""
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "Permission 'manage_templates' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None:
         return jsonify({"error": "Template not found"}), 404
@@ -98,7 +98,7 @@ def copy_template(guild_id: int, tmpl_id: int):
 def apply_template(guild_id: int, tmpl_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_templates"):
-        return jsonify({"error": "Permission 'manage_templates' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     tmpl = event_service.get_template(tmpl_id)
     if tmpl is None or tmpl.guild_id != guild_id:
         return jsonify({"error": "Template not found"}), 404

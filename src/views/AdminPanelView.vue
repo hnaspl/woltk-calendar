@@ -23,7 +23,7 @@
 
       <!-- No permissions message -->
       <div v-else-if="!hasAnyAdminPermission" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have any administrative permissions.
+        You do not have the appropriate permissions to access this page.
       </div>
 
       <template v-else>

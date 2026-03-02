@@ -30,7 +30,7 @@ def list_series(guild_id: int):
 def create_series(guild_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_series"):
-        return jsonify({"error": "Permission 'manage_series' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("title") or not data.get("realm_name"):
         return jsonify({"error": "title and realm_name are required"}), 400
@@ -54,7 +54,7 @@ def get_series(guild_id: int, series_id: int):
 def update_series(guild_id: int, series_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_series"):
-        return jsonify({"error": "Permission 'manage_series' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": "Series not found"}), 404
@@ -68,7 +68,7 @@ def update_series(guild_id: int, series_id: int):
 def delete_series(guild_id: int, series_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_series"):
-        return jsonify({"error": "Permission 'manage_series' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": "Series not found"}), 404
@@ -82,7 +82,7 @@ def copy_series(guild_id: int, series_id: int):
     """Copy a recurring raid series into another guild."""
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_series"):
-        return jsonify({"error": "Permission 'manage_series' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     series = event_service.get_series(series_id)
     if series is None:
         return jsonify({"error": "Series not found"}), 404
@@ -98,7 +98,7 @@ def copy_series(guild_id: int, series_id: int):
 def generate_events(guild_id: int, series_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_series"):
-        return jsonify({"error": "Permission 'manage_series' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     series = event_service.get_series(series_id)
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": "Series not found"}), 404

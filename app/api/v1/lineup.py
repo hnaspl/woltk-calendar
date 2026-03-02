@@ -75,7 +75,7 @@ def get_lineup(guild_id: int, event_id: int):
 def update_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "update_lineup"):
-        return jsonify({"error": "Permission 'update_lineup' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -122,7 +122,7 @@ def update_lineup(guild_id: int, event_id: int):
 def confirm_lineup(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "confirm_lineup"):
-        return jsonify({"error": "Permission 'confirm_lineup' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -136,7 +136,7 @@ def reorder_bench(guild_id: int, event_id: int):
     """Reorder the bench queue. Officers/admins only."""
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "reorder_bench"):
-        return jsonify({"error": "Permission 'reorder_bench' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404

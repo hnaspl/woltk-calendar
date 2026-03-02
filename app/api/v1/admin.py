@@ -16,7 +16,7 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 def _require_permission(perm_code: str):
     """Return an error tuple if the current user lacks the permission, else None."""
     if not has_permission(None, perm_code):
-        return jsonify({"error": f"Permission '{perm_code}' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     return None
 
 

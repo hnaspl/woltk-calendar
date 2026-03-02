@@ -305,7 +305,7 @@ def get_signup_user_characters(guild_id: int, event_id: int, signup_id: int):
     """Return the characters available for replacement (officer only)."""
     membership = get_membership(guild_id, current_user.id)
     if membership is None or not has_permission(membership, "view_member_characters"):
-        return jsonify({"error": "Permission 'view_member_characters' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     _, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
@@ -322,7 +322,7 @@ def create_replace_request(guild_id: int, event_id: int, signup_id: int):
     """Create a character replacement request (officer only)."""
     membership = get_membership(guild_id, current_user.id)
     if membership is None or not has_permission(membership, "request_replacement"):
-        return jsonify({"error": "Permission 'request_replacement' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err

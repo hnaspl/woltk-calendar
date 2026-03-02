@@ -47,7 +47,7 @@ def list_events(guild_id: int):
 def create_event(guild_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "create_events"):
-        return jsonify({"error": "Permission 'create_events' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     required = {"title", "realm_name", "starts_at_utc"}
     missing = required - data.keys()
@@ -78,7 +78,7 @@ def get_event(guild_id: int, event_id: int):
 def update_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "edit_events"):
-        return jsonify({"error": "Permission 'edit_events' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -97,7 +97,7 @@ def update_event(guild_id: int, event_id: int):
 def delete_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "delete_events"):
-        return jsonify({"error": "Permission 'delete_events' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -111,7 +111,7 @@ def delete_event(guild_id: int, event_id: int):
 def lock_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "lock_signups"):
-        return jsonify({"error": "Permission 'lock_signups' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -126,7 +126,7 @@ def lock_event(guild_id: int, event_id: int):
 def unlock_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "lock_signups"):
-        return jsonify({"error": "Permission 'lock_signups' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -140,7 +140,7 @@ def unlock_event(guild_id: int, event_id: int):
 def cancel_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "cancel_events"):
-        return jsonify({"error": "Permission 'cancel_events' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -155,7 +155,7 @@ def cancel_event(guild_id: int, event_id: int):
 def complete_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "cancel_events"):
-        return jsonify({"error": "Permission 'cancel_events' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
@@ -170,7 +170,7 @@ def complete_event(guild_id: int, event_id: int):
 def duplicate_event(guild_id: int, event_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "duplicate_events"):
-        return jsonify({"error": "Permission 'duplicate_events' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404

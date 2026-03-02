@@ -72,7 +72,7 @@ def available_users(guild_id: int):
     """List users not already in this guild (officer-only, for adding members)."""
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "add_members"):
-        return jsonify({"error": "Permission 'add_members' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
 
     from app.models.user import User
 
@@ -96,7 +96,7 @@ def available_users(guild_id: int):
 @login_required
 def create_guild():
     if not has_any_guild_permission(current_user.id, "create_guild"):
-        return jsonify({"error": "Permission 'create_guild' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": "name and realm_name are required"}), 400
@@ -140,7 +140,7 @@ def update_guild(guild_id: int):
         return jsonify({"error": "Guild not found"}), 404
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "update_guild_settings"):
-        return jsonify({"error": "Permission 'update_guild_settings' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     guild = guild_service.update_guild(guild, data)
     emit_guild_changed(guild_id)
@@ -155,7 +155,7 @@ def delete_guild(guild_id: int):
         return jsonify({"error": "Guild not found"}), 404
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "delete_guild"):
-        return jsonify({"error": "Permission 'delete_guild' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": "Guild deleted"}), 200
@@ -179,7 +179,7 @@ def list_members(guild_id: int):
 def add_member(guild_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "add_members"):
-        return jsonify({"error": "Permission 'add_members' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
     if not user_id:
@@ -201,7 +201,7 @@ def add_member(guild_id: int):
 def update_member(guild_id: int, user_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "update_member_roles"):
-        return jsonify({"error": "Permission 'update_member_roles' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
 
     target = db.session.execute(
         sa.select(GuildMembership).where(
@@ -218,7 +218,7 @@ def update_member(guild_id: int, user_id: int):
     new_role = data.get("role")
     if new_role:
         if not can_grant_role(membership, new_role):
-            return jsonify({"error": f"You do not have permission to assign the '{new_role}' role"}), 403
+            return jsonify({"error": "You do not have the appropriate permissions"}), 403
         # Fetch guild once for creator checks
         role_change_guild = guild_service.get_guild(guild_id)
         is_global_admin = getattr(current_user, "is_admin", False)
@@ -226,7 +226,7 @@ def update_member(guild_id: int, user_id: int):
         # guild_admin can only be granted by guild creator or global admin
         if new_role == "guild_admin":
             if not is_creator and not is_global_admin:
-                return jsonify({"error": "Only the guild creator or a global admin can promote to Guild Admin"}), 403
+                return jsonify({"error": "You do not have the appropriate permissions"}), 403
         # Cannot change role of someone with a higher-level role
         from app.models.permission import SystemRole
         role_names = [membership.role, target.role] if membership else [target.role]
@@ -261,7 +261,7 @@ def transfer_ownership(guild_id: int):
     is_global_admin = getattr(current_user, "is_admin", False)
     is_creator = guild.created_by == current_user.id
     if not is_creator and not is_global_admin:
-        return jsonify({"error": "Only the guild creator or a global admin can transfer ownership"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
 
     data = request.get_json(silent=True) or {}
     target_user_id = data.get("user_id")
@@ -312,7 +312,7 @@ def transfer_ownership(guild_id: int):
 def remove_member(guild_id: int, user_id: int):
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "remove_members"):
-        return jsonify({"error": "Permission 'remove_members' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
 
     if user_id == current_user.id:
         return jsonify({"error": "Cannot remove yourself"}), 400
@@ -345,7 +345,7 @@ def list_member_characters(guild_id: int, user_id: int):
     """List all characters for a guild member.  Requires view_member_characters permission."""
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "view_member_characters"):
-        return jsonify({"error": "Permission 'view_member_characters' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
 
     from app.services import character_service
 
@@ -366,7 +366,7 @@ def get_warmane_roster(guild_id: int):
         return jsonify({"error": "Guild not found"}), 404
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "add_members"):
-        return jsonify({"error": "Permission 'add_members' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     if not guild.warmane_source:
         return jsonify({"error": "Guild is not sourced from Warmane"}), 400
 

@@ -851,7 +851,7 @@ class TestGuildAdminPromotion:
                     json={"role": "guild_admin"},
                 )
                 assert resp.status_code == 403
-                assert "creator" in resp.get_json()["error"].lower() or "global admin" in resp.get_json()["error"].lower()
+                assert resp.get_json()["error"] == "You do not have the appropriate permissions"
 
                 # Clean up
                 _db.session.delete(gm_extra)

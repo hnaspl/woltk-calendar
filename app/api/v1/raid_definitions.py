@@ -30,7 +30,7 @@ def list_raid_definitions(guild_id: int):
 def create_raid_definition(guild_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": "Permission 'manage_raid_definitions' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     if not data.get("name"):
         return jsonify({"error": "name is required"}), 400
@@ -50,7 +50,7 @@ def copy_raid_definition(guild_id: int, rd_id: int):
     """Copy a built-in (global) raid definition into the guild's own definitions."""
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": "Permission 'manage_raid_definitions' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
@@ -77,12 +77,12 @@ def get_raid_definition(guild_id: int, rd_id: int):
 def update_raid_definition(guild_id: int, rd_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": "Permission 'manage_raid_definitions' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
     if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
-        return jsonify({"error": "Permission 'manage_default_definitions' required to edit built-in definitions"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     data = request.get_json(silent=True) or {}
     try:
         rd = raid_service.update_raid_definition(rd, data)
@@ -96,11 +96,11 @@ def update_raid_definition(guild_id: int, rd_id: int):
 def delete_raid_definition(guild_id: int, rd_id: int):
     membership = _check_membership(guild_id)
     if not has_permission(membership, "manage_raid_definitions"):
-        return jsonify({"error": "Permission 'manage_raid_definitions' required"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     rd = raid_service.get_raid_definition(rd_id)
     if rd is None:
         return jsonify({"error": "Raid definition not found"}), 404
     if rd.is_builtin and not has_permission(membership, "manage_default_definitions"):
-        return jsonify({"error": "Permission 'manage_default_definitions' required to delete built-in definitions"}), 403
+        return jsonify({"error": "You do not have the appropriate permissions"}), 403
     raid_service.delete_raid_definition(rd)
     return jsonify({"message": "Raid definition deleted"}), 200

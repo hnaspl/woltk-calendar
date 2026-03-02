@@ -8,7 +8,7 @@
       </div>
       <!-- No permission -->
       <div v-else-if="!hasViewAccess" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have permission to manage raid definitions.
+        You do not have the appropriate permissions to access this page.
       </div>
       <template v-else>
       <div class="flex items-center justify-between">
