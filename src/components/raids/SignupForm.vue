@@ -6,7 +6,7 @@
       {{ error }}
     </div>
     <div v-if="success" class="mb-4 p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">
-      {{ t('signup.success') }}
+      {{ t('common.toasts.signedUp') }}
     </div>
 
     <form @submit.prevent="handleSubmit" class="space-y-4">
@@ -55,7 +55,7 @@
           >
             <RoleBadge :role="r.value" />
             <span v-if="roleSlotInfo[r.value]" class="text-[10px]" :class="isRoleFull(r.value) ? 'text-yellow-400' : 'text-text-muted'">
-              {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' ' + t('signup.full') : '' }}
+              {{ roleSlotInfo[r.value].current }}/{{ roleSlotInfo[r.value].max }}{{ isRoleFull(r.value) ? ' ' + t('common.labels.full') : '' }}
             </span>
           </button>
         </div>
@@ -89,11 +89,11 @@
 
       <!-- Note (hidden when character has no valid roles) -->
       <div v-if="!form.characterId || roles.length > 0">
-        <label class="block text-xs text-text-muted mb-1">{{ t('signup.note') }}</label>
+        <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.note') }}</label>
         <textarea
           v-model="form.note"
           rows="2"
-          :placeholder="t('signup.notePlaceholder')"
+          :placeholder="t('common.labels.optionalNote')"
           class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none placeholder:text-text-muted/50"
         />
       </div>

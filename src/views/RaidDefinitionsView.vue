@@ -91,7 +91,7 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.raidType') }}</label>
             <select v-model="form.raid_type" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">{{ t('raidDefinitions.select') }}</option>
+              <option value="">{{ t('common.fields.select') }}</option>
               <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
@@ -100,7 +100,7 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.sizeRequired') }}</label>
             <select v-model.number="form.size" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">{{ t('raidDefinitions.select') }}</option>
+              <option value="">{{ t('common.fields.select') }}</option>
               <option :value="10">{{ t('calendar.tenMan') }}</option>
               <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
@@ -428,7 +428,7 @@ async function doDelete() {
     definitions.value = definitions.value.filter(d => d.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
     uiStore.showToast(t('raidDefinitions.definitionDeleted'), 'success')
-  } catch { uiStore.showToast(t('raidDefinitions.failedToDelete'), 'error') }
+  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
   finally { saving.value = false }
 }
 

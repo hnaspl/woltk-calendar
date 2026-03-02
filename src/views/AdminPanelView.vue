@@ -117,10 +117,10 @@ const icons = {
 
 // Tab definitions with permission requirements
 const allTabs = [
-  { id: 'members', label: t('admin.tabs.members'), icon: icons.members, permission: 'update_member_roles' },
+  { id: 'members', label: t('common.labels.members'), icon: icons.members, permission: 'update_member_roles' },
   { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles, permission: 'manage_roles' },
   { id: 'guild', label: t('admin.tabs.guildSettings'), icon: icons.guild, permission: 'update_guild_settings' },
-  { id: 'system', label: t('admin.tabs.system'), icon: icons.system, permission: 'list_system_users' },
+  { id: 'system', label: t('common.labels.system'), icon: icons.system, permission: 'list_system_users' },
 ]
 
 const visibleTabs = computed(() =>

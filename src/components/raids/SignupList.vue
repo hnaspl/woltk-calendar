@@ -6,7 +6,7 @@
     </div>
 
     <div v-if="signups.length === 0" class="text-center py-6 text-text-muted text-sm">
-      {{ t('signupList.noSignups') }}
+      {{ t('common.labels.noSignups') }}
     </div>
 
     <!-- Side-by-side layout for In Lineup and Bench -->
@@ -225,7 +225,7 @@
       <p class="text-sm text-text-muted">
         {{ t('signupList.replaceDescription', { name: replaceTarget?.character?.name ?? t('signupList.thisPlayer') }) }}
       </p>
-      <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">{{ t('signupList.loadingCharacters') }}</div>
+      <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">{{ t('common.labels.loadingCharacters') }}</div>
       <div v-else-if="replaceChars.filter(ch => ch.id !== replaceTarget?.character_id).length === 0" class="text-center py-4 text-text-muted text-sm">
         {{ t('signupList.noReplacementChars') }}
       </div>
@@ -317,9 +317,9 @@ function openCharacterModal(character) {
 }
 
 const LINEUP_GROUPS = computed(() => [
-  { key: 'going',    label: t('signupList.inLineup'), cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
-  { key: 'bench',    label: t('signupList.bench'),     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
-  { key: 'declined', label: t('signupList.declined'),  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
+  { key: 'going',    label: t('common.labels.inLineup'), cls: 'text-green-300 bg-green-500/10 border-green-500/30',  dot: 'bg-green-400' },
+  { key: 'bench',    label: t('common.labels.bench'),     cls: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
+  { key: 'declined', label: t('common.labels.declined'),  cls: 'text-red-300 bg-red-500/10 border-red-500/30',        dot: 'bg-red-400' },
 ])
 
 const groups = computed(() =>

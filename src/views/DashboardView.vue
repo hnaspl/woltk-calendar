@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('dashboard.title') }}</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('common.labels.dashboard') }}</h1>
           <p class="text-text-muted text-sm mt-0.5">{{ t('dashboard.welcome', { name: authStore.user?.username }) }}</p>
         </div>
         <RouterLink to="/calendar">
@@ -12,7 +12,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            {{ t('dashboard.calendarBtn') }}
+            {{ t('common.labels.calendar') }}
           </WowButton>
         </RouterLink>
       </div>
@@ -30,7 +30,7 @@
         </WowCard>
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
-          <div class="text-xs text-text-muted mt-1">{{ t('dashboard.inLineup') }}</div>
+          <div class="text-xs text-text-muted mt-1">{{ t('common.labels.inLineup') }}</div>
         </WowCard>
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
@@ -78,7 +78,7 @@
                 <button
                   class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
                   @click="resolveReplacement(req, 'leave')"
-                >{{ t('dashboard.leaveRaid') }}</button>
+                >{{ t('common.labels.leaveRaid') }}</button>
               </div>
             </div>
           </WowCard>
@@ -113,8 +113,8 @@
                   <div v-if="tr.signup" class="flex items-center gap-1 mt-0.5">
                     <ClassBadge v-if="tr.signup.character?.class_name" :class-name="tr.signup.character.class_name" />
                     <span class="text-xs text-text-muted truncate">{{ tr.signup.character?.name ?? t('dashboard.signedUp') }}</span>
-                    <span v-if="tr.signup.lineup_status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1 py-0.5 rounded">{{ t('dashboard.bench') }}</span>
-                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">{{ t('dashboard.inLineup') }}</span>
+                    <span v-if="tr.signup.lineup_status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1 py-0.5 rounded">{{ t('common.labels.bench') }}</span>
+                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">{{ t('common.labels.inLineup') }}</span>
                   </div>
                 </div>
               </div>
@@ -192,7 +192,7 @@
             <div v-for="i in 3" :key="i" class="h-14 rounded bg-bg-secondary border border-border-default loading-pulse" />
           </div>
           <div v-else-if="sortedMySignups.length === 0" class="text-center py-8 text-text-muted text-sm">
-            {{ t('dashboard.noSignups') }}
+            {{ t('common.labels.noSignups') }}
           </div>
           <RouterLink
             v-else
@@ -217,8 +217,8 @@
                 <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
                   {{ t('dashboard.queue') }}{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}{{ su.bench_info?.waiting_for ? ' · ' + benchRoleLabel(su.bench_info.waiting_for) : '' }}
                 </span>
-                <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('dashboard.declined') }}</span>
-                <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('dashboard.inLineup') }}</span>
+                <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('common.labels.declined') }}</span>
+                <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('common.labels.inLineup') }}</span>
               </div>
             </WowCard>
           </RouterLink>
@@ -434,7 +434,7 @@ async function resolveReplacement(req, action) {
     // Refresh signups in case lineup status changed
     await refreshSignups()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('dashboard.failedToProcess'), 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToProcessReplacement'), 'error')
   }
 }
 </script>

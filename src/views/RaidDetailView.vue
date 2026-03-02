@@ -26,7 +26,7 @@
                 <h1 class="wow-heading text-lg sm:text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
                 <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.done') }}</span>
-                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.cancelled') }}</span>
+                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('common.status.cancelled') }}</span>
               </div>
 
               <!-- Completed/cancelled event locked banner -->
@@ -59,13 +59,13 @@
                       <span class="text-red-400 font-medium">{{ t('raidDetail.closed') }}</span>
                     </template>
                     <template v-else-if="event.status === 'cancelled'">
-                      <span class="text-red-400 font-medium">{{ t('raidDetail.cancelled') }}</span>
+                      <span class="text-red-400 font-medium">{{ t('common.status.cancelled') }}</span>
                     </template>
                     <template v-else-if="event.status === 'completed'">
-                      <span class="text-text-muted">{{ t('raidDetail.completed') }}</span>
+                      <span class="text-text-muted">{{ t('common.status.completed') }}</span>
                     </template>
                     <template v-else>
-                      <span class="text-green-400 font-medium">{{ t('raidDetail.open') }}</span>
+                      <span class="text-green-400 font-medium">{{ t('common.status.open') }}</span>
                     </template>
                     <span class="ml-1 text-text-muted"> ({{ signups.length }} {{ t('raidDetail.signedUp') }})</span>
                   </span>
@@ -76,7 +76,7 @@
                 </div>
                 <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">🌐</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.realmLabel') }}</strong> {{ event.realm_name ?? event.realm }}</span>
+                  <span><strong class="text-text-primary">{{ t('common.labels.realmColon') }}</strong> {{ event.realm_name ?? event.realm }}</span>
                 </div>
               </div>
 
@@ -100,7 +100,7 @@
                 variant="primary"
                 @click="showAttendanceModal = true"
               >
-                {{ hasAttendance ? t('raidDetail.updateAttendance') : t('raidDetail.recordAttendance') }}
+                {{ hasAttendance ? t('raidDetail.updateAttendance') : t('common.labels.recordAttendance') }}
               </WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">{{ t('raidDetail.cancelEvent') }}</WowButton>
             </div>
@@ -226,15 +226,15 @@
                       <button
                         class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
                         @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'confirm')"
-                      >{{ t('raidDetail.confirm') }}</button>
+                      >{{ t('common.buttons.confirm') }}</button>
                       <button
                         class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
                         @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'decline')"
-                      >{{ t('raidDetail.decline') }}</button>
+                      >{{ t('common.buttons.decline') }}</button>
                       <button
                         class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
                         @click="leaveRaid(s)"
-                      >{{ t('raidDetail.leaveRaid') }}</button>
+                      >{{ t('common.labels.leaveRaid') }}</button>
                     </div>
                   </div>
                 </div>
@@ -291,11 +291,11 @@
     <WowModal v-model="showEditModal" :title="t('raidDetail.editEvent')" size="md">
       <form @submit.prevent="saveEvent" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.title') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.titleRequired') }}</label>
           <input v-model="editForm.title" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.raidDefinition') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
             <option value="">{{ t('raidDetail.noneUseDefaults') }}</option>
             <optgroup :label="t('calendar.builtInRaids')">
@@ -323,7 +323,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.status') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.status') }}</label>
             <select v-model="editForm.status" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option value="draft">{{ t('common.status.draft') }}</option>
               <option value="open">{{ t('common.status.open') }}</option>
@@ -333,7 +333,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.startDateTime') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }}</label>
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
@@ -372,14 +372,14 @@
     </WowModal>
 
     <!-- Leave Raid confirmation modal -->
-    <WowModal v-model="showLeaveModal" :title="t('raidDetail.leaveRaid')" size="sm">
+    <WowModal v-model="showLeaveModal" :title="t('common.labels.leaveRaid')" size="sm">
       <p class="text-text-muted">
         {{ t('raidDetail.leaveRaidConfirm', { character: leaveSignup?.character?.name ?? t('raidDetail.thisCharacter') }) }}
       </p>
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showLeaveModal = false">{{ t('common.buttons.cancel') }}</WowButton>
-          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">{{ t('raidDetail.leaveRaid') }}</WowButton>
+          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">{{ t('common.labels.leaveRaid') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -789,7 +789,7 @@ async function saveEvent() {
 
 function onSignedUp(signup) {
   signups.value.push(signup)
-  uiStore.showToast(t('raidDetail.toasts.signedUp'), 'success')
+  uiStore.showToast(t('common.toasts.signedUp'), 'success')
 }
 
 function leaveRaid(signup) {
@@ -896,7 +896,7 @@ async function resolveReplacement(requestId, action) {
       action === 'confirm' ? 'success' : 'info'
     )
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('raidDetail.toasts.failedToProcess'), 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'), 'error')
   }
 }
 

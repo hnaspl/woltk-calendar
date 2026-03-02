@@ -15,7 +15,7 @@
 
     <!-- Guild Switcher -->
     <div class="px-4 py-3 border-b border-[#2a3450]">
-      <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('guild.label') }}</label>
+      <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('common.labels.guild') }}</label>
       <select
         :value="guildStore.currentGuild?.id ?? ''"
         class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
@@ -105,7 +105,7 @@
         <div v-if="!guildLookupDone" class="space-y-4">
           <p class="text-sm text-text-muted">{{ t('guild.createHelp') }}</p>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.guildName') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
             <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="lookupGuild" />
           </div>
           <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
@@ -158,18 +158,18 @@
             {{ t('guild.manualEntry') }}
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.guildName') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
             <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :readonly="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.realmRequired') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
-              <option value="">{{ t('guild.selectRealm') }}</option>
+              <option value="">{{ t('common.fields.selectRealm') }}</option>
               <option v-for="r in WARMANE_REALMS" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.faction') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.faction') }}</label>
             <select v-model="newGuild.faction" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">{{ t('guild.selectFaction') }}</option>
               <option value="Alliance">Alliance</option>
@@ -181,7 +181,7 @@
             <label for="allow-self-join" class="text-sm text-text-muted">{{ t('guild.allowSelfJoin') }}</label>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.timezone') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.timezone') }}</label>
             <select v-model="newGuild.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option v-for="tz in GUILD_TIMEZONES" :key="tz" :value="tz">{{ tz }}</option>
             </select>
@@ -323,10 +323,10 @@ const navGroups = computed(() => {
     {
       label: t('nav.overview'),
       items: [
-        { label: t('nav.dashboard'), to: '/dashboard', icon: icons.dashboard },
-        { label: t('nav.calendar'), to: '/calendar', icon: icons.calendar },
-        { label: t('nav.characters'), to: '/characters', icon: icons.chars },
-        { label: t('nav.attendance'), to: '/attendance', icon: icons.attendance }
+        { label: t('common.labels.dashboard'), to: '/dashboard', icon: icons.dashboard },
+        { label: t('common.labels.calendar'), to: '/calendar', icon: icons.calendar },
+        { label: t('common.labels.characters'), to: '/characters', icon: icons.chars },
+        { label: t('common.labels.attendance'), to: '/attendance', icon: icons.attendance }
       ]
     }
   ]

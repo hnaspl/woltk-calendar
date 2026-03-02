@@ -77,7 +77,7 @@
     <WowModal v-model="showModal" :title="editing ? t('series.editRecurringRaid') : t('series.newRecurringRaid')" size="md">
       <form @submit.prevent="saveSeries" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('series.titleRequired') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.titleRequired') }}</label>
           <input v-model="form.title" required :placeholder="t('series.titlePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div v-if="templates.length > 0">
@@ -98,7 +98,7 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('series.recurrence') }}</label>
             <select v-model="form.recurrence_rule" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">{{ t('series.selectRecurrence') }}</option>
+              <option value="">{{ t('common.fields.select') }}</option>
               <option value="weekly">{{ t('series.weekly') }}</option>
               <option value="biweekly">{{ t('series.biweekly') }}</option>
             </select>
@@ -110,7 +110,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('series.raidSize') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
             <select v-model.number="form.default_raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option :value="10">{{ t('calendar.tenMan') }}</option>
               <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
@@ -510,7 +510,7 @@ async function doDelete() {
     seriesList.value = seriesList.value.filter(s => s.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
     uiStore.showToast(t('series.seriesDeleted'), 'success')
-  } catch { uiStore.showToast(t('series.failedToDelete'), 'error') }
+  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
   finally { saving.value = false }
 }
 

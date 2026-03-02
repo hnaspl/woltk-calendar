@@ -118,7 +118,7 @@
                   <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-center text-accent-gold">→</td>
                   <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-text-primary">{{ roleDisplayName(rule.grantee_role_name) }}</td>
                   <td class="px-2 sm:px-4 py-2 sm:py-2.5 text-right">
-                    <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">{{ t('guildSettings.remove') }}</WowButton>
+                    <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">{{ t('common.buttons.remove') }}</WowButton>
                   </td>
                 </tr>
                 <tr v-if="!grantRules.length">
@@ -157,7 +157,7 @@
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('roles.description') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
           <input
             v-model="roleForm.description"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
@@ -166,7 +166,7 @@
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('roles.level') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.level') }}</label>
           <input
             v-model.number="roleForm.level"
             type="number"
@@ -211,7 +211,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showRoleModal = false">{{ t('common.buttons.cancel') }}</WowButton>
-          <WowButton :loading="savingRole" @click="saveRole">{{ editingRole ? t('roles.saveChanges') : t('roles.createRole') }}</WowButton>
+          <WowButton :loading="savingRole" @click="saveRole">{{ editingRole ? t('common.fields.saveChanges') : t('roles.createRole') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -236,14 +236,14 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterRole') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>{{ t('roles.selectRole') }}</option>
+            <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeRole') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>{{ t('roles.selectRole') }}</option>
+            <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
@@ -418,7 +418,7 @@ async function saveRole() {
 
     if (editingRole.value) {
       await rolesApi.updateRole(editingRole.value.id, data)
-      uiStore.showToast(t('roles.roleUpdated'), 'success')
+      uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
     } else {
       await rolesApi.createRole(data)
       uiStore.showToast(t('roles.roleCreated'), 'success')

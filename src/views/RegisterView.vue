@@ -20,7 +20,7 @@
 
         <form @submit.prevent="handleRegister" class="space-y-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('auth.username') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.username') }}</label>
             <input
               v-model="username"
               type="text"
@@ -33,7 +33,7 @@
           </div>
 
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('auth.email') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.email') }}</label>
             <input
               v-model="email"
               type="email"

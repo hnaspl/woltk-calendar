@@ -16,11 +16,11 @@
           <table class="w-full text-sm table-fixed">
             <thead>
               <tr class="bg-bg-tertiary border-b border-border-default">
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[28%]">{{ t('attendance.raidColumn') }}</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[22%]">{{ t('attendance.character') }}</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[15%]">{{ t('attendance.class') }}</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[12%]">{{ t('attendance.statusColumn') }}</th>
-                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[23%]">{{ t('attendance.note') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[28%]">{{ t('common.labels.raid') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[22%]">{{ t('common.fields.character') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[15%]">{{ t('common.labels.class') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[12%]">{{ t('common.fields.status') }}</th>
+                <th class="text-left px-4 py-3 text-xs text-text-muted uppercase tracking-wider w-[23%]">{{ t('common.fields.note') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border-default">

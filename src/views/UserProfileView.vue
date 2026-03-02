@@ -8,11 +8,11 @@
         <h2 class="wow-heading text-base mb-4">{{ t('profile.profileSettings') }}</h2>
         <form @submit.prevent="saveProfile" class="space-y-4 max-w-lg">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('auth.username') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.username') }}</label>
             <input :value="authStore.user?.username" disabled class="w-full bg-bg-tertiary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('auth.email') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.email') }}</label>
             <input :value="authStore.user?.email" disabled class="w-full bg-bg-tertiary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
           </div>
           <div>
@@ -20,7 +20,7 @@
             <input v-model="profileForm.display_name" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('profile.timezone') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.timezone') }}</label>
             <select v-model="profileForm.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
             </select>

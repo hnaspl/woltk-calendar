@@ -6,7 +6,7 @@
         <h2 class="wow-heading text-base">{{ t('calendar.filters') }}</h2>
 
         <div v-if="guildStore.currentGuild?.realm_name" class="text-xs text-text-muted">
-          <span class="text-accent-gold">🌐</span> {{ t('calendar.realm') }} <span class="text-text-primary font-medium">{{ guildStore.currentGuild.realm_name }}</span>
+          <span class="text-accent-gold">🌐</span> {{ t('common.labels.realmColon') }} <span class="text-text-primary font-medium">{{ guildStore.currentGuild.realm_name }}</span>
         </div>
 
         <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -45,7 +45,7 @@
         </div>
 
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.status') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.status') }}</label>
           <select
             :value="calStore.filters.status"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
@@ -96,7 +96,7 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.raidDefinition') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="eventForm.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
             <option value="">{{ t('calendar.selectRaidDef') }}</option>
             <optgroup :label="t('calendar.builtInRaids')">
@@ -109,7 +109,7 @@
           <p class="text-[10px] text-text-muted mt-1">{{ t('calendar.manageCustomRaids') }} <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">{{ t('nav.raidDefinitions') }}</router-link></p>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.title') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.titleRequired') }}</label>
           <input v-model="eventForm.title" required :placeholder="t('calendar.titlePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -130,7 +130,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.startDateTime') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }}</label>
             <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>

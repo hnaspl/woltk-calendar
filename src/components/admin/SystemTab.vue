@@ -14,9 +14,9 @@
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
               <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.id') }}</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.username') }}</th>
-              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.email') }}</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.status') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.username') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.email') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.status') }}</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.admin') }}</th>
               <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.registered') }}</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
@@ -32,7 +32,7 @@
                   class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
                   :class="u.is_active ? 'bg-green-900/50 text-green-300 border border-green-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
                 >
-                  {{ u.is_active ? t('admin.users.active') : t('admin.users.blocked') }}
+                  {{ u.is_active ? t('common.status.active') : t('admin.users.blocked') }}
                 </span>
               </td>
               <td class="px-4 py-2.5">

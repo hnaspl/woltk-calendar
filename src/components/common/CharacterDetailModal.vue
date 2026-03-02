@@ -142,14 +142,14 @@
                   <div v-if="meta.faction" class="flex items-center gap-2 px-3 py-2 bg-bg-secondary rounded-lg border border-border-default">
                     <span>{{ meta.faction === 'Alliance' ? '🔵' : '🔴' }}</span>
                     <div>
-                      <div class="text-[10px] text-text-muted">{{ t('characterDetail.faction') }}</div>
+                      <div class="text-[10px] text-text-muted">{{ t('common.fields.faction') }}</div>
                       <div class="text-sm text-text-primary">{{ meta.faction }}</div>
                     </div>
                   </div>
                   <div v-if="meta.guild" class="flex items-center gap-2 px-3 py-2 bg-green-500/10 rounded-lg border border-green-500/20">
                     <span class="text-green-400">🛡</span>
                     <div class="min-w-0">
-                      <div class="text-[10px] text-text-muted">{{ t('characterDetail.guild') }}</div>
+                      <div class="text-[10px] text-text-muted">{{ t('common.labels.guild') }}</div>
                       <div class="text-sm text-green-300 truncate">&lt;{{ meta.guild }}&gt;</div>
                     </div>
                   </div>

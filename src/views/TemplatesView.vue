@@ -72,7 +72,7 @@
           <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('templates.raidDefinition') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option value="">{{ t('templates.selectRaid') }}</option>
             <option v-for="d in raidDefinitions" :key="d.id" :value="d.id">{{ d.name }}</option>
@@ -81,7 +81,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('templates.raidSize') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
             <select v-model.number="form.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option :value="10">{{ t('calendar.tenMan') }}</option>
               <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
@@ -163,7 +163,7 @@
       <div class="space-y-4">
         <p class="text-text-muted text-sm">Schedule a new event from template <strong class="text-text-primary">{{ applyTarget?.name }}</strong>.</p>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.startDateTime') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }}</label>
           <input v-model="applyDate" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
       </div>
@@ -402,7 +402,7 @@ async function doDelete() {
     templates.value = templates.value.filter(t => t.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
     uiStore.showToast(t('templates.templateDeleted'), 'success')
-  } catch { uiStore.showToast(t('templates.failedToDelete'), 'error') }
+  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
   finally { saving.value = false }
 }
 

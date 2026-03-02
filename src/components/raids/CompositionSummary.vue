@@ -18,7 +18,7 @@
             class="text-xs font-semibold"
             :class="role.count >= role.target ? 'text-green-400' : 'text-yellow-400'"
           >
-            {{ role.count >= role.target ? '✓ ' + t('composition.full') : t('composition.needed', { count: role.target - role.count }) }}
+            {{ role.count >= role.target ? '✓ ' + t('common.labels.full') : t('composition.needed', { count: role.target - role.count }) }}
           </span>
         </div>
         <!-- Progress bar -->

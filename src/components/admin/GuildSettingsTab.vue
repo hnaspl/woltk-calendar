@@ -9,20 +9,20 @@
 
       <form v-else @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.nameRequired') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
           <input v-model="form.name" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
           <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.nameLocked') }}</p>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.realmRequired') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
           <select v-model="form.realm" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-            <option value="">{{ t('guild.settings.selectRealm') }}</option>
+            <option value="">{{ t('common.fields.selectRealm') }}</option>
             <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
           </select>
           <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.description') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
           <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div>
@@ -33,7 +33,7 @@
           <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.timezoneHelp') }}</p>
         </div>
         <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
-        <WowButton type="submit" :loading="saving">{{ t('guild.settings.saveChanges') }}</WowButton>
+        <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
       </form>
     </WowCard>
 
@@ -73,12 +73,12 @@
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.realmRequired').replace(' *', '') }}</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.realmRequired').replace(' *', '') }}</span>
               <span class="text-sm sm:text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.faction') }}</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.faction') }}</span>
               <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
                 :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >
@@ -89,7 +89,7 @@
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.members') }}</span>
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.labels.members') }}</span>
               <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
             </div>
           </div>
@@ -116,8 +116,8 @@
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10">
                 <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.character') }}</th>
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.level') }}</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.character') }}</th>
+                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.level') }}</th>
                   <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.race') }}</th>
                 </tr>
               </thead>

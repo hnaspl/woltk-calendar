@@ -14,8 +14,8 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.role') }}</th>
-              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.level') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.role') }}</th>
+              <th class="hidden sm:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.level') }}</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.permissions') }}</th>
               <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.canAssign') }}</th>
               <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.type') }}</th>
@@ -175,8 +175,8 @@
             <div v-for="cat in permissionCategories" :key="cat">
               <div class="flex items-center gap-2 mb-2">
                 <h4 class="text-xs text-accent-gold uppercase tracking-wider">{{ cat }}</h4>
-                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, true)">{{ t('roles.selectAll') }}</button>
-                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, false)">{{ t('roles.selectNone') }}</button>
+                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, true)">{{ t('common.labels.all') }}</button>
+                <button type="button" class="text-[10px] text-text-muted hover:text-accent-gold" @click="toggleCategory(cat, false)">{{ t('common.labels.none') }}</button>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
                 <label
@@ -203,7 +203,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showRoleModal = false">{{ t('common.buttons.cancel') }}</WowButton>
-          <WowButton :loading="savingRole" @click="saveRole">{{ editingRole ? t('roles.saveChanges') : t('roles.createRole') }}</WowButton>
+          <WowButton :loading="savingRole" @click="saveRole">{{ editingRole ? t('common.fields.saveChanges') : t('roles.createRole') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -227,14 +227,14 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterLabel') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>{{ t('roles.selectRole') }}</option>
+            <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeLabel') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>{{ t('roles.selectRole') }}</option>
+            <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
@@ -405,7 +405,7 @@ async function saveRole() {
 
     if (editingRole.value) {
       await rolesApi.updateRole(editingRole.value.id, data)
-      uiStore.showToast(t('roles.toasts.roleUpdated'), 'success')
+      uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
     } else {
       await rolesApi.createRole(data)
       uiStore.showToast(t('roles.toasts.roleCreated'), 'success')

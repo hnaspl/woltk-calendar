@@ -18,8 +18,8 @@
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-bg-tertiary border-b border-border-default">
-                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.username') }}</th>
-                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.role') }}</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.username') }}</th>
+                <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.role') }}</th>
                 <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.joined') }}</th>
                 <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
               </tr>
@@ -46,7 +46,7 @@
                     class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors"
                     @click="viewMemberChars(m)"
                   >
-                    📋 {{ t('members.characters') }}
+                    📋 {{ t('common.labels.characters') }}
                   </button>
                   <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
                     {{ t('common.buttons.remove') }}
@@ -83,7 +83,7 @@
               <button
                 class="flex-1 inline-flex items-center justify-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 transition-colors"
                 @click="viewMemberChars(m)"
-              >📋 {{ t('members.characters') }}</button>
+              >📋 {{ t('common.labels.characters') }}</button>
               <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">{{ t('common.buttons.remove') }}</WowButton>
             </div>
           </div>
@@ -187,18 +187,18 @@
 
     <!-- Member Characters modal -->
     <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="2xl">
-      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">{{ t('members.loadingCharacters') }}</div>
+      <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">{{ t('common.labels.loadingCharacters') }}</div>
       <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">{{ t('members.noCharacters') }}</div>
       <div v-else class="overflow-x-auto max-h-[70vh] overflow-y-auto">
         <table class="w-full text-sm">
           <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.character') }}</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.role') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.character') }}</th>
+              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.role') }}</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.primarySpec') }}</th>
-              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.secondarySpec') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.secondarySpec') }}</th>
               <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.type') }}</th>
-              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('members.status') }}</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.status') }}</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.details') }}</th>
             </tr>
           </thead>
@@ -417,9 +417,9 @@ async function updateRole(member, role) {
   try {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
-    uiStore.showToast(t('members.toasts.roleUpdated'), 'success')
+    uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.failedToUpdateRole'), 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'), 'error')
   }
 }
 
@@ -436,7 +436,7 @@ async function doKick() {
     showKickConfirm.value = false
     uiStore.showToast(t('members.toasts.memberRemoved'), 'success')
   } catch {
-    uiStore.showToast(t('members.toasts.failedToRemoveMember'), 'error')
+    uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
   } finally {
     saving.value = false
   }
@@ -466,7 +466,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.failedToLoadCharacters'), 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'), 'error')
   } finally {
     loadingMemberChars.value = false
   }
@@ -494,7 +494,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? t('members.toasts.failedToSearchUsers'), 'error')
+      uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToSearch'), 'error')
     } finally {
       searchingUsers.value = false
     }
@@ -511,7 +511,7 @@ async function doAddMember(user) {
     availableUsers.value = []
     uiStore.showToast(`${user.username} added to guild`, 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('members.toasts.failedToAddMember'), 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
   }
 }
 
@@ -569,7 +569,7 @@ async function doAddMemberByName(characterName) {
       uiStore.showToast(`No registered user found for "${characterName}". They need to create an account first.`, 'info')
     }
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('members.toasts.failedToAddMember'), 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
   }
 }
 

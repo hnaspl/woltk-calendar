@@ -48,7 +48,7 @@
           <table v-if="character.primary_spec || character.secondary_spec || character.default_role" class="w-full">
             <tbody>
               <tr v-if="character.default_role">
-                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">{{ t('characterDetail.role') }}</td>
+                <td class="text-text-muted pr-2 py-0.5 whitespace-nowrap">{{ t('common.fields.role') }}</td>
                 <td class="text-text-primary py-0.5 capitalize">{{ character.default_role?.replace('_', ' ') }}</td>
               </tr>
               <tr v-if="character.primary_spec">
@@ -127,11 +127,11 @@
                 <td class="text-text-primary text-right py-0.5">{{ meta.honorable_kills }}</td>
               </tr>
               <tr v-if="meta.faction">
-                <td class="text-text-muted py-0.5">{{ meta.faction === 'Alliance' ? '🔵' : '🔴' }} {{ t('characterDetail.faction') }}</td>
+                <td class="text-text-muted py-0.5">{{ meta.faction === 'Alliance' ? '🔵' : '🔴' }} {{ t('common.fields.faction') }}</td>
                 <td class="text-text-primary text-right py-0.5">{{ meta.faction }}</td>
               </tr>
               <tr v-if="meta.guild">
-                <td class="text-text-muted py-0.5"><span class="text-green-400">🛡</span> {{ t('characterDetail.guild') }}</td>
+                <td class="text-text-muted py-0.5"><span class="text-green-400">🛡</span> {{ t('common.labels.guild') }}</td>
                 <td class="text-text-primary text-right py-0.5 truncate max-w-[120px]">&lt;{{ meta.guild }}&gt;</td>
               </tr>
               <tr v-if="meta.gear_score">

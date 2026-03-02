@@ -17,12 +17,12 @@
           class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
           :class="activeTab === 'active' ? 'text-accent-gold border-accent-gold' : 'text-text-muted border-transparent hover:text-text-primary'"
           @click="activeTab = 'active'"
-        >{{ t('characters.active') }}</button>
+        >{{ t('common.status.active') }}</button>
         <button
           class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
           :class="activeTab === 'archived' ? 'text-accent-gold border-accent-gold' : 'text-text-muted border-transparent hover:text-text-primary'"
           @click="switchToArchived"
-        >{{ t('characters.archived') }} <span v-if="archivedCharacters.length" class="text-xs opacity-60">({{ archivedCharacters.length }})</span></button>
+        >{{ t('common.status.archived') }} <span v-if="archivedCharacters.length" class="text-xs opacity-60">({{ archivedCharacters.length }})</span></button>
       </div>
 
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -185,7 +185,7 @@
               <div>
                 <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
                 <select v-else v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                  <option value="">{{ t('characters.selectRealm') }}</option>
+                  <option value="">{{ t('common.fields.selectRealm') }}</option>
                   <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
                 </select>
                 <span v-if="guildStore.currentGuild?.realm_name" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
@@ -220,18 +220,18 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('characters.realmRequired') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="form.realm" required :disabled="isArmoryLocked || isRealmLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="">{{ t('characters.selectRealm') }}</option>
+              <option value="">{{ t('common.fields.selectRealm') }}</option>
               <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
             </select>
             <span v-if="isRealmLocked" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
             <span v-else-if="guildRealms.length" class="text-[10px] text-text-muted">{{ t('characters.onlyGuildRealms') }}</span>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('characters.role') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.role') }}</label>
             <select v-model="form.role" :disabled="isRoleLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="">{{ t('characters.selectRole') }}</option>
+              <option value="">{{ t('common.fields.selectRole') }}</option>
               <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
@@ -244,7 +244,7 @@
             <input v-else v-model="form.spec" :disabled="isArmoryLocked" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('characters.secondarySpec') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.secondarySpec') }}</label>
             <select v-if="filteredSpecs.length > 0" v-model="form.secondary_spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">{{ t('characters.selectSecondarySpec') }}</option>
               <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
@@ -263,7 +263,7 @@
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showModal = false">{{ t('common.buttons.cancel') }}</WowButton>
           <WowButton v-if="editingChar || manualEntry || lookupResult === 'found'" :loading="saving" @click="saveChar">
-            {{ editingChar ? t('characters.saveChanges') : t('characters.addCharacter') }}
+            {{ editingChar ? t('common.fields.saveChanges') : t('characters.addCharacter') }}
           </WowButton>
         </div>
       </template>
@@ -433,7 +433,7 @@ onMounted(async () => {
     const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
     characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
   } catch (err) {
-    error.value = t('characters.failedToLoad')
+    error.value = t('common.toasts.failedToLoadCharacters')
   } finally {
     loading.value = false
   }
@@ -452,7 +452,7 @@ watch(
         const raw = await charApi.getMyCharacters(newId)
         characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
       } catch {
-        error.value = t('characters.failedToLoad')
+        error.value = t('common.toasts.failedToLoadCharacters')
       } finally {
         loading.value = false
       }

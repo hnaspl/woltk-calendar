@@ -21,7 +21,7 @@
 
         <form @submit.prevent="handleLogin" class="space-y-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('auth.email') }}</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.email') }}</label>
             <input
               v-model="email"
               type="email"

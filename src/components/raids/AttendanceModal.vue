@@ -1,5 +1,5 @@
 <template>
-  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('attendance.modal.title')" size="lg">
+  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('common.labels.recordAttendance')" size="lg">
     <div class="space-y-4">
       <p class="text-text-muted text-sm">
         {{ t('attendance.modal.description') }}
@@ -13,11 +13,11 @@
         <table class="w-full text-sm">
           <thead class="sticky top-0 z-10">
             <tr class="bg-bg-tertiary border-b border-border-default">
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('attendance.modal.character') }}</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('attendance.modal.class') }}</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('attendance.modal.role') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('common.fields.character') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('common.labels.class') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('common.fields.role') }}</th>
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('attendance.modal.outcome') }}</th>
-              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('attendance.modal.note') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('common.fields.note') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -40,7 +40,7 @@
               <td class="px-3 py-2">
                 <input
                   v-model="p.note"
-                  :placeholder="t('attendance.modal.optionalNote')"
+                  :placeholder="t('common.labels.optionalNote')"
                   class="w-full bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
                 />
               </td>
