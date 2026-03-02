@@ -195,7 +195,7 @@
   <WowModal v-model="showRemoveModal" :title="t('signupList.removeTitle', { name: removeTarget?.character?.name ?? 'Player' })">
     <div class="space-y-4">
       <p class="text-sm text-text-muted">
-        {{ t('signupList.removeQuestion', { name: removeTarget?.character?.name ?? 'this player' }) }}
+        {{ t('signupList.removeQuestion', { name: removeTarget?.character?.name ?? t('signupList.thisPlayer') }) }}
       </p>
       <div class="space-y-2">
         <button
@@ -223,7 +223,7 @@
   <WowModal v-model="showReplaceModal" :title="t('signupList.replaceTitle', { name: replaceTarget?.character?.name ?? 'Player' })">
     <div class="space-y-4">
       <p class="text-sm text-text-muted">
-        {{ t('signupList.replaceDescription', { name: replaceTarget?.character?.name ?? 'this player' }) }}
+        {{ t('signupList.replaceDescription', { name: replaceTarget?.character?.name ?? t('signupList.thisPlayer') }) }}
       </p>
       <div v-if="replaceCharsLoading" class="text-center py-4 text-text-muted text-sm">{{ t('signupList.loadingCharacters') }}</div>
       <div v-else-if="replaceChars.filter(ch => ch.id !== replaceTarget?.character_id).length === 0" class="text-center py-4 text-text-muted text-sm">

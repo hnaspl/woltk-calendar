@@ -191,7 +191,7 @@
 
     <!-- Confirmation modal for no guilds selected -->
     <WowModal v-model="showNoGuildConfirm" :title="t('raidDefinitions.noAdditionalGuilds')" size="sm">
-      <p class="text-text-muted text-sm">{{ t('raidDefinitions.onlyCreatedIn') }} <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+      <p class="text-text-muted text-sm">{{ t('raidDefinitions.onlyCreatedIn') }} <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. {{ t('raidDefinitions.goBackQuestion') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="goBackToForm">{{ t('common.buttons.goBack') }}</WowButton>

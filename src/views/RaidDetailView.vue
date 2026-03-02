@@ -226,15 +226,15 @@
                       <button
                         class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
                         @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'confirm')"
-                      >Confirm</button>
+                      >{{ t('raidDetail.confirm') }}</button>
                       <button
                         class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
                         @click="resolveReplacement(pendingReplacementForSignup(s.id).id, 'decline')"
-                      >Decline</button>
+                      >{{ t('raidDetail.decline') }}</button>
                       <button
                         class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
                         @click="leaveRaid(s)"
-                      >Leave Raid</button>
+                      >{{ t('raidDetail.leaveRaid') }}</button>
                     </div>
                   </div>
                 </div>
@@ -295,17 +295,17 @@
           <input v-model="editForm.title" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Raid Definition</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.raidDefinition') }}</label>
           <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
-            <option value="">None (use defaults)</option>
-            <optgroup label="Built-in Raids">
+            <option value="">{{ t('raidDetail.noneUseDefaults') }}</option>
+            <optgroup :label="t('calendar.builtInRaids')">
               <option v-for="rd in editBuiltinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
-            <optgroup v-if="editCustomDefs.length" label="Custom Raids">
+            <optgroup v-if="editCustomDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in editCustomDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
           </select>
-          <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
+          <p class="text-[10px] text-text-muted mt-1">{{ t('calendar.manageCustomRaids') }} <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">{{ t('nav.raidDefinitions') }}</router-link></p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -323,11 +323,11 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Status</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.status') }}</label>
             <select v-model="editForm.status" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="draft">Draft</option>
-              <option value="open">Open</option>
-              <option value="locked">Locked</option>
+              <option value="draft">{{ t('common.status.draft') }}</option>
+              <option value="open">{{ t('common.status.open') }}</option>
+              <option value="locked">{{ t('common.status.locked') }}</option>
             </select>
           </div>
         </div>
@@ -361,27 +361,25 @@
     </WowModal>
 
     <!-- Cancel confirmation modal -->
-    <WowModal v-model="confirmCancel" title="Cancel Event" size="sm">
-      <p class="text-text-muted mb-4">Are you sure you want to cancel this event? This cannot be undone.</p>
+    <WowModal v-model="confirmCancel" :title="t('raidDetail.cancelEvent')" size="sm">
+      <p class="text-text-muted mb-4">{{ t('raidDetail.cancelEventConfirm') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="confirmCancel = false">Nevermind</WowButton>
-          <WowButton variant="danger" :loading="actionLoading" @click="cancelEvent">Cancel Event</WowButton>
+          <WowButton variant="secondary" @click="confirmCancel = false">{{ t('raidDetail.nevermind') }}</WowButton>
+          <WowButton variant="danger" :loading="actionLoading" @click="cancelEvent">{{ t('raidDetail.cancelEvent') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Leave Raid confirmation modal -->
-    <WowModal v-model="showLeaveModal" title="Leave Raid" size="sm">
+    <WowModal v-model="showLeaveModal" :title="t('raidDetail.leaveRaid')" size="sm">
       <p class="text-text-muted">
-        Are you sure you want to remove
-        <strong class="text-text-primary">{{ leaveSignup?.character?.name ?? 'this character' }}</strong>
-        from this raid? This will remove the character from the signup list and lineup.
+        {{ t('raidDetail.leaveRaidConfirm', { character: leaveSignup?.character?.name ?? t('raidDetail.thisCharacter') }) }}
       </p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showLeaveModal = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">Leave Raid</WowButton>
+          <WowButton variant="secondary" @click="showLeaveModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="actionLoading" @click="confirmLeaveRaid">{{ t('raidDetail.leaveRaid') }}</WowButton>
         </div>
       </template>
     </WowModal>

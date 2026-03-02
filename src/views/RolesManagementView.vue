@@ -236,14 +236,14 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterRole') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>Select role…</option>
+            <option :value="null" disabled>{{ t('roles.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeRole') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="null" disabled>Select role…</option>
+            <option :value="null" disabled>{{ t('roles.selectRole') }}</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
           </select>
         </div>

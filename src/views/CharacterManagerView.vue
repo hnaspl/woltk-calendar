@@ -172,7 +172,7 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
-          {{ t('characters.syncedFromWarmane') }}<template v-if="!isRoleLocked"> Role can still be changed.</template>
+          {{ t('characters.syncedFromWarmane') }}<template v-if="!isRoleLocked"> {{ t('characters.roleCanChange') }}</template>
         </div>
 
         <!-- STEP 1: Armory import (only when adding, not editing) -->
@@ -231,14 +231,14 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.role') }}</label>
             <select v-model="form.role" :disabled="isRoleLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="">Select role…</option>
+              <option value="">{{ t('characters.selectRole') }}</option>
               <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.spec') }}</label>
             <select v-if="filteredSpecs.length > 0" v-model="form.spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="">Select spec…</option>
+              <option value="">{{ t('characters.selectSpec') }}</option>
               <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
             </select>
             <input v-else v-model="form.spec" :disabled="isArmoryLocked" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
@@ -246,7 +246,7 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.secondarySpec') }}</label>
             <select v-if="filteredSpecs.length > 0" v-model="form.secondary_spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="">Select secondary spec…</option>
+              <option value="">{{ t('characters.selectSecondarySpec') }}</option>
               <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
             </select>
             <input v-else v-model="form.secondary_spec" :disabled="isArmoryLocked" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />

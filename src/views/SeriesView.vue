@@ -98,9 +98,9 @@
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('series.recurrence') }}</label>
             <select v-model="form.recurrence_rule" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="">Select…</option>
-              <option value="weekly">Weekly</option>
-              <option value="biweekly">Biweekly</option>
+              <option value="">{{ t('series.selectRecurrence') }}</option>
+              <option value="weekly">{{ t('series.weekly') }}</option>
+              <option value="biweekly">{{ t('series.biweekly') }}</option>
             </select>
           </div>
           <div>
@@ -178,7 +178,7 @@
 
     <!-- Confirmation modal for no guilds selected -->
     <WowModal v-model="showNoGuildConfirm" :title="t('series.noAdditionalGuilds')" size="sm">
-      <p class="text-text-muted text-sm">{{ t('series.onlyCreatedIn') }} <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+      <p class="text-text-muted text-sm">{{ t('series.onlyCreatedIn') }} <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. {{ t('series.goBackQuestion') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="goBackToForm">{{ t('common.buttons.goBack') }}</WowButton>

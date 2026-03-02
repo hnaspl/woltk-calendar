@@ -241,7 +241,16 @@
     "cancelEvent": "Anuluj wydarzenie",
     "done": "Ukończony",
     "completedLocked": "Ten rajd jest ukończony i frekwencja została zapisana. Wszystkie modyfikacje są zablokowane, aby zapobiec manipulacji danymi.",
-    "cancelledLocked": "Ten rajd został anulowany. Wszystkie modyfikacje są zablokowane."
+    "cancelledLocked": "Ten rajd został anulowany. Wszystkie modyfikacje są zablokowane.",
+    "confirm": "Potwierdź",
+    "decline": "Odrzuć",
+    "leaveRaid": "Opuść rajd",
+    "noneUseDefaults": "Brak (użyj domyślnych)",
+    "nevermind": "Nieważne",
+    "confirmLeave": "Opuść rajd",
+    "cancelEventConfirm": "Czy na pewno chcesz anulować to wydarzenie? Tego nie można cofnąć.",
+    "leaveRaidConfirm": "Czy na pewno chcesz usunąć {character} z tego rajdu? Postać zostanie usunięta z listy zapisów i składu.",
+    "thisCharacter": "tę postać"
   },
   "characters": {
     "title": "Moje postacie",
@@ -284,7 +293,11 @@
     "archive": "Archiwizuj",
     "permanentlyDelete": "Trwale usuń",
     "cannotBeUndone": "Tej operacji nie można cofnąć.",
-    "characterAdded": "Postać dodana!"
+    "characterAdded": "Postać dodana!",
+    "roleCanChange": "Rolę nadal można zmienić.",
+    "selectRole": "Wybierz rolę…",
+    "selectSpec": "Wybierz spec…",
+    "selectSecondarySpec": "Wybierz drugi spec…"
   },
   "attendance": {
     "title": "Frekwencja",
@@ -410,7 +423,10 @@
     "deleteRecurring": "Usuń rajd cykliczny",
     "existingNotAffected": "Istniejące wydarzenia utworzone z tej serii nie zostaną naruszone.",
     "seriesDeleted": "Seria usunięta",
-    "failedToDelete": "Nie udało się usunąć"
+    "failedToDelete": "Nie udało się usunąć",
+    "selectRecurrence": "Wybierz…",
+    "weekly": "Co tydzień",
+    "biweekly": "Co dwa tygodnie"
   },
   "roles": {
     "title": "Role i uprawnienia",
@@ -648,7 +664,8 @@
     "noReplacementChars": "Ten gracz nie ma innych postaci dostępnych do zamiany.",
     "reasonOptional": "Powód (opcjonalny)",
     "reasonPlaceholder": "np. Potrzebujemy tanka na ten fight…",
-    "requestReplacement": "Żądaj zamiany"
+    "requestReplacement": "Żądaj zamiany",
+    "thisPlayer": "tego gracza"
   },
   "lineup": {
     "title": "Tablica składu",

@@ -241,7 +241,16 @@
     "cancelEvent": "Cancel Event",
     "done": "Done",
     "completedLocked": "This raid is completed and attendance has been recorded. All modifications are locked to prevent data manipulation.",
-    "cancelledLocked": "This raid has been cancelled. All modifications are locked."
+    "cancelledLocked": "This raid has been cancelled. All modifications are locked.",
+    "confirm": "Confirm",
+    "decline": "Decline",
+    "leaveRaid": "Leave Raid",
+    "noneUseDefaults": "None (use defaults)",
+    "nevermind": "Nevermind",
+    "confirmLeave": "Leave Raid",
+    "cancelEventConfirm": "Are you sure you want to cancel this event? This cannot be undone.",
+    "leaveRaidConfirm": "Are you sure you want to remove {character} from this raid? This will remove the character from the signup list and lineup.",
+    "thisCharacter": "this character"
   },
   "characters": {
     "title": "My Characters",
@@ -284,7 +293,11 @@
     "archive": "Archive",
     "permanentlyDelete": "Permanently delete",
     "cannotBeUndone": "This cannot be undone.",
-    "characterAdded": "Character Added!"
+    "characterAdded": "Character Added!",
+    "roleCanChange": "Role can still be changed.",
+    "selectRole": "Select role…",
+    "selectSpec": "Select spec…",
+    "selectSecondarySpec": "Select secondary spec…"
   },
   "attendance": {
     "title": "Attendance",
@@ -410,7 +423,10 @@
     "deleteRecurring": "Delete recurring raid",
     "existingNotAffected": "Existing events created from this series won't be affected.",
     "seriesDeleted": "Series deleted",
-    "failedToDelete": "Failed to delete"
+    "failedToDelete": "Failed to delete",
+    "selectRecurrence": "Select…",
+    "weekly": "Weekly",
+    "biweekly": "Biweekly"
   },
   "roles": {
     "title": "Roles & Permissions",
@@ -648,7 +664,8 @@
     "noReplacementChars": "This player has no other characters available for replacement.",
     "reasonOptional": "Reason (optional)",
     "reasonPlaceholder": "e.g. Need a tank for this fight…",
-    "requestReplacement": "Request Replacement"
+    "requestReplacement": "Request Replacement",
+    "thisPlayer": "this player"
   },
   "lineup": {
     "title": "Lineup Board",
