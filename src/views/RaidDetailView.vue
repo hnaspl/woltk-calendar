@@ -307,7 +307,7 @@
           </select>
           <p class="text-[10px] text-text-muted mt-1">Manage custom raids in <router-link to="/guild/raid-definitions" class="text-accent-gold hover:underline">Raid Definitions</router-link></p>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Size</label>
             <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -331,7 +331,7 @@
             </select>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />

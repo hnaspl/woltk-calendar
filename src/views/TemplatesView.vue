@@ -36,7 +36,7 @@
       </div>
       <div v-else class="space-y-3">
         <WowCard v-for="tpl in templates" :key="tpl.id">
-          <div class="flex items-center gap-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <div class="w-12 h-12 rounded border border-border-default bg-bg-tertiary flex items-center justify-center text-xl flex-shrink-0">📋</div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
@@ -46,7 +46,7 @@
               </div>
               <div class="text-xs text-text-muted mt-1">{{ tpl.default_instructions ?? 'No instructions' }}</div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+            <div class="flex items-center gap-2 flex-wrap">
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(tpl)">
                 📋 Copy
               </WowButton>
@@ -79,7 +79,7 @@
           </select>
           <p v-if="raidDefinitions.length === 0" class="text-xs text-text-muted mt-1">No raid definitions found. Create one in Raid Definitions first.</p>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">Raid Size</label>
             <select v-model.number="form.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
