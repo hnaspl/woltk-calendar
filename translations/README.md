@@ -53,7 +53,7 @@ Below is a reference of every variable available for use in translations.
 "welcome": "Welcome back, {name}!",
 "copiedSuccess": "\"{name}\" copied to {count} guild(s)",
 "missingFields": "Missing fields: {fields}",
-"signupConfirmed": "Your character {character} is signed up as {role} in {eventTitle}."
+"signupConfirmed.body": "Your character {character} is signed up as {role} in {eventTitle}."
 ```
 
 ---
