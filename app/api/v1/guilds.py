@@ -250,6 +250,63 @@ def update_member(guild_id: int, user_id: int):
     return jsonify(target.to_dict()), 200
 
 
+@bp.post("/<int:guild_id>/transfer-ownership")
+@login_required
+def transfer_ownership(guild_id: int):
+    """Transfer guild ownership to another member."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": "Guild not found"}), 404
+
+    is_global_admin = getattr(current_user, "is_admin", False)
+    is_creator = guild.created_by == current_user.id
+    if not is_creator and not is_global_admin:
+        return jsonify({"error": "Only the guild creator or a global admin can transfer ownership"}), 403
+
+    data = request.get_json(silent=True) or {}
+    target_user_id = data.get("user_id")
+    if not target_user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    if target_user_id == guild.created_by:
+        return jsonify({"error": "Cannot transfer ownership to the current owner"}), 400
+
+    target_membership = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == target_user_id,
+            GuildMembership.status == "active",
+        )
+    ).scalar_one_or_none()
+    if target_membership is None:
+        return jsonify({"error": "Target user is not an active member of this guild"}), 404
+
+    old_owner_id = guild.created_by
+
+    # Update guild ownership
+    guild.created_by = target_user_id
+
+    # Set new owner to guild_admin
+    target_membership.role = "guild_admin"
+
+    # Demote old owner to member
+    old_owner_membership = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == old_owner_id,
+        )
+    ).scalar_one_or_none()
+    if old_owner_membership is not None:
+        old_owner_membership.role = "member"
+
+    db.session.commit()
+
+    notify.notify_ownership_transferred(guild, target_user_id, old_owner_id)
+    emit_guild_changed(guild_id)
+
+    return jsonify(guild.to_dict()), 200
+
+
 @bp.delete("/<int:guild_id>/members/<int:user_id>")
 @login_required
 def remove_member(guild_id: int, user_id: int):

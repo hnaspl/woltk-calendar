@@ -857,3 +857,135 @@ class TestGuildAdminPromotion:
                 _db.session.delete(gm_extra)
                 _db.session.delete(extra_ga)
                 _db.session.commit()
+
+
+class TestOwnershipTransfer:
+    """Guild ownership transfer endpoint tests."""
+
+    @staticmethod
+    def _login(app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+            from flask import session as flask_session
+            sess_data = dict(flask_session)
+        with client.session_transaction() as s:
+            s.update(sess_data)
+
+    def test_creator_can_transfer_ownership(self, seeded, app):
+        """The guild creator can transfer ownership to another member."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                json={"user_id": seeded["officer_user"].id},
+            )
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert data["created_by"] == seeded["officer_user"].id
+            # Restore original state
+            with app.app_context():
+                guild = seeded["guild"]
+                guild.created_by = seeded["guild_admin_user"].id
+                officer_m = _db.session.execute(
+                    _db.select(GuildMembership).where(
+                        GuildMembership.guild_id == guild.id,
+                        GuildMembership.user_id == seeded["officer_user"].id,
+                    )
+                ).scalar_one()
+                officer_m.role = "officer"
+                creator_m = _db.session.execute(
+                    _db.select(GuildMembership).where(
+                        GuildMembership.guild_id == guild.id,
+                        GuildMembership.user_id == seeded["guild_admin_user"].id,
+                    )
+                ).scalar_one()
+                creator_m.role = "guild_admin"
+                _db.session.commit()
+
+    def test_global_admin_can_transfer_ownership(self, seeded, app):
+        """A global admin can transfer ownership."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                json={"user_id": seeded["officer_user"].id},
+            )
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert data["created_by"] == seeded["officer_user"].id
+            # Restore original state
+            with app.app_context():
+                guild = seeded["guild"]
+                guild.created_by = seeded["guild_admin_user"].id
+                officer_m = _db.session.execute(
+                    _db.select(GuildMembership).where(
+                        GuildMembership.guild_id == guild.id,
+                        GuildMembership.user_id == seeded["officer_user"].id,
+                    )
+                ).scalar_one()
+                officer_m.role = "officer"
+                creator_m = _db.session.execute(
+                    _db.select(GuildMembership).where(
+                        GuildMembership.guild_id == guild.id,
+                        GuildMembership.user_id == seeded["guild_admin_user"].id,
+                    )
+                ).scalar_one()
+                creator_m.role = "guild_admin"
+                _db.session.commit()
+
+    def test_non_creator_guild_admin_cannot_transfer(self, seeded, app):
+        """A guild_admin who is NOT the creator cannot transfer ownership."""
+        with app.test_client() as client:
+            with app.app_context():
+                extra_ga = User(username="transfer_ga", email="tga@test.com",
+                                password_hash="x", is_active=True)
+                _db.session.add(extra_ga)
+                _db.session.flush()
+                gm_extra = GuildMembership(
+                    guild_id=seeded["guild"].id, user_id=extra_ga.id,
+                    role="guild_admin", status="active",
+                )
+                _db.session.add(gm_extra)
+                _db.session.commit()
+
+                self._login(app, client, extra_ga)
+                resp = client.post(
+                    f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                    json={"user_id": seeded["officer_user"].id},
+                )
+                assert resp.status_code == 403
+
+                _db.session.delete(gm_extra)
+                _db.session.delete(extra_ga)
+                _db.session.commit()
+
+    def test_regular_member_cannot_transfer(self, seeded, app):
+        """A regular member cannot transfer ownership."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["member_user"])
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                json={"user_id": seeded["officer_user"].id},
+            )
+            assert resp.status_code == 403
+
+    def test_cannot_transfer_to_self(self, seeded, app):
+        """Creator cannot transfer ownership to themselves."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                json={"user_id": seeded["guild_admin_user"].id},
+            )
+            assert resp.status_code == 400
+
+    def test_cannot_transfer_to_non_member(self, seeded, app):
+        """Cannot transfer ownership to a user who is not a guild member."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post(
+                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                json={"user_id": seeded["outsider"].id},
+            )
+            assert resp.status_code == 404

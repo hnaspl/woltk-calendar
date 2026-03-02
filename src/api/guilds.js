@@ -31,3 +31,6 @@ export const getMemberCharacters = (guildId, userId) =>
 
 export const getWarmaneRoster = (guildId) =>
   api.get(`/guilds/${guildId}/warmane-roster`)
+
+export const transferOwnership = (guildId, userId) =>
+  api.post(`/guilds/${guildId}/transfer-ownership`, { user_id: userId })

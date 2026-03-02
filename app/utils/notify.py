@@ -474,6 +474,25 @@ def notify_officers_lineup_changed(event, changed_by_user_id: int) -> None:
 # Character replacement notifications
 # ---------------------------------------------------------------------------
 
+def notify_ownership_transferred(guild, new_owner_id: int, old_owner_id: int) -> None:
+    """Notify both the new and old owners about guild ownership transfer."""
+    tag = _guild_tag(guild)
+    _notify(
+        user_id=new_owner_id,
+        notification_type="guild_ownership_transferred",
+        title=f"🏰 You are now the owner of {guild.name} {tag}",
+        body=f"You have been granted full ownership of {guild.name}. You now have all guild owner privileges and responsibilities.",
+        guild_id=guild.id,
+    )
+    _notify(
+        user_id=old_owner_id,
+        notification_type="guild_ownership_transferred",
+        title=f"Guild ownership transferred for {guild.name} {tag}",
+        body=f"You are no longer the owner of {guild.name}. Your role has been changed to member.",
+        guild_id=guild.id,
+    )
+
+
 def notify_character_replacement_requested(signup, event, officer_name: str, replacement) -> None:
     """Notify the player that an officer wants to replace their character."""
     old_name = replacement.old_character.name if replacement.old_character else "your character"

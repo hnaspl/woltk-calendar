@@ -218,11 +218,60 @@
       :character="charDetailTarget"
       :use-wowhead="systemSettings.wowheadEnabled()"
     />
+
+    <!-- Transfer Ownership button -->
+    <WowCard v-if="canTransferOwnership">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="wow-heading text-base">Guild Ownership</h2>
+          <p class="text-xs text-text-muted mt-1">Transfer ownership of this guild to another member.</p>
+        </div>
+        <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="showTransferModal = true">
+          👑 Transfer Ownership
+        </WowButton>
+      </div>
+    </WowCard>
+
+    <!-- Transfer Ownership modal -->
+    <WowModal v-model="showTransferModal" title="👑 Transfer Guild Ownership" size="sm" @update:modelValue="onTransferModalClose">
+      <div class="space-y-4">
+        <div class="p-3 rounded bg-red-900/30 border border-red-600">
+          <p class="text-red-400 font-bold text-sm">⚠️ WARNING: This action is IRREVERSIBLE!</p>
+          <p class="text-red-300 text-xs mt-2">The new owner will receive full control of the guild. You will be demoted to a regular member and lose all guild owner privileges.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">Select new owner</label>
+          <select
+            v-model="transferTargetId"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-3 py-2 focus:border-border-gold outline-none"
+          >
+            <option :value="null" disabled>Choose a member…</option>
+            <option v-for="m in transferableMembers" :key="m.user_id" :value="m.user_id">
+              {{ m.username ?? m.user?.username }}
+            </option>
+          </select>
+        </div>
+
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input v-model="transferConfirmed" type="checkbox" class="mt-0.5 accent-red-500" />
+          <span class="text-xs"><strong class="text-red-400">I understand that this action cannot be undone and I will lose all guild owner privileges</strong></span>
+        </label>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showTransferModal = false">Cancel</WowButton>
+          <WowButton variant="danger" :disabled="!canSubmitTransfer" :loading="transferring" @click="doTransferOwnership">
+            {{ transferButtonLabel }}
+          </WowButton>
+        </div>
+      </template>
+    </WowModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
@@ -477,6 +526,88 @@ async function doAddMemberByName(characterName) {
     }
   } catch (err) {
     uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+  }
+}
+
+// Transfer ownership
+const showTransferModal = ref(false)
+const transferTargetId = ref(null)
+const transferConfirmed = ref(false)
+const transferring = ref(false)
+const transferCountdown = ref(30)
+let transferTimer = null
+
+const canTransferOwnership = computed(() => {
+  const guild = guildStore.currentGuild
+  if (!guild) return false
+  const isCreator = guild.created_by === authStore.user?.id
+  const isGlobalAdmin = authStore.user?.is_admin
+  if (!isCreator && !isGlobalAdmin) return false
+  return members.value.filter(m => m.user_id !== guild.created_by).length > 0
+})
+
+const transferableMembers = computed(() => {
+  const guild = guildStore.currentGuild
+  if (!guild) return []
+  return members.value.filter(m => m.user_id !== guild.created_by)
+})
+
+const canSubmitTransfer = computed(() => {
+  return transferConfirmed.value && transferTargetId.value && transferCountdown.value <= 0
+})
+
+const transferButtonLabel = computed(() => {
+  if (transferCountdown.value > 0 && transferConfirmed.value) {
+    return `Transfer Ownership (${transferCountdown.value}s)`
+  }
+  return 'Transfer Ownership'
+})
+
+watch(transferConfirmed, (checked) => {
+  if (checked) {
+    transferCountdown.value = 30
+    transferTimer = setInterval(() => {
+      transferCountdown.value--
+      if (transferCountdown.value <= 0) {
+        clearInterval(transferTimer)
+        transferTimer = null
+      }
+    }, 1000)
+  } else {
+    clearInterval(transferTimer)
+    transferTimer = null
+    transferCountdown.value = 30
+  }
+})
+
+function onTransferModalClose(val) {
+  if (!val) {
+    clearInterval(transferTimer)
+    transferTimer = null
+    transferConfirmed.value = false
+    transferTargetId.value = null
+    transferCountdown.value = 30
+  }
+}
+
+onUnmounted(() => {
+  clearInterval(transferTimer)
+})
+
+async function doTransferOwnership() {
+  if (!canSubmitTransfer.value) return
+  transferring.value = true
+  try {
+    await guildsApi.transferOwnership(guildStore.currentGuild.id, transferTargetId.value)
+    showTransferModal.value = false
+    onTransferModalClose(false)
+    await guildStore.fetchGuild(guildStore.currentGuild.id)
+    await loadMembers()
+    uiStore.showToast('Guild ownership transferred successfully', 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to transfer ownership', 'error')
+  } finally {
+    transferring.value = false
   }
 }
 </script>
