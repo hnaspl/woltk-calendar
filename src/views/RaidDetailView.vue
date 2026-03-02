@@ -552,7 +552,7 @@ onMounted(async () => {
     // Fetch pending character replacement requests
     await loadReplacementRequests()
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load raid details'
+    error.value = err?.response?.data?.message ?? t('common.errors.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -647,7 +647,7 @@ watch(() => route.params.id, async (newId, oldId) => {
     event.value = ev
     signups.value = su
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load raid details'
+    error.value = err?.response?.data?.message ?? t('common.errors.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -668,9 +668,9 @@ async function toggleLock() {
       event.value = updated
     }
     const nowLocked = event.value.status === 'locked'
-    uiStore.showToast(`Event ${nowLocked ? 'locked' : 'unlocked'}`, 'success')
+    uiStore.showToast(t(nowLocked ? 'raidDetail.toasts.eventLocked' : 'raidDetail.toasts.eventUnlocked'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Action failed', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.actionFailed'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -681,9 +681,9 @@ async function markComplete() {
   try {
     await eventsApi.completeEvent(guildId.value, event.value.id)
     event.value.status = 'completed'
-    uiStore.showToast('Event marked as completed!', 'success')
+    uiStore.showToast(t('raidDetail.toasts.eventCompleted'), 'success')
   } catch {
-    uiStore.showToast('Failed to complete event', 'error')
+    uiStore.showToast(t('raidDetail.toasts.failedToComplete'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -695,9 +695,9 @@ async function cancelEvent() {
     await eventsApi.cancelEvent(guildId.value, event.value.id)
     event.value.status = 'cancelled'
     confirmCancel.value = false
-    uiStore.showToast('Event cancelled', 'warning')
+    uiStore.showToast(t('raidDetail.toasts.eventCancelled'), 'warning')
   } catch {
-    uiStore.showToast('Failed to cancel event', 'error')
+    uiStore.showToast(t('raidDetail.toasts.failedToCancel'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -707,10 +707,10 @@ async function doDuplicate() {
   actionLoading.value = true
   try {
     const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id)
-    uiStore.showToast('Event duplicated! Redirecting…', 'success')
+    uiStore.showToast(t('raidDetail.toasts.eventDuplicated'), 'success')
     router.push({ name: 'raid-detail', params: { id: newEvent.id } })
   } catch {
-    uiStore.showToast('Failed to duplicate event', 'error')
+    uiStore.showToast(t('raidDetail.toasts.failedToDuplicate'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -754,11 +754,11 @@ function onEditRaidDefChange() {
 async function saveEvent() {
   if (actionLoading.value) return
   if (!editForm.title || !editForm.starts_at_utc) {
-    editError.value = 'Title and date are required'
+    editError.value = t('raidDetail.toasts.titleDateRequired')
     return
   }
   if (editForm.close_signups_at && new Date(editForm.close_signups_at) >= new Date(editForm.starts_at_utc)) {
-    editError.value = 'Close signups time must be before the event start time'
+    editError.value = t('calendar.closeSignupsError')
     return
   }
   editError.value = null
@@ -779,9 +779,9 @@ async function saveEvent() {
     const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)
     event.value = updated
     showEditModal.value = false
-    uiStore.showToast('Event updated!', 'success')
+    uiStore.showToast(t('raidDetail.toasts.eventUpdated'), 'success')
   } catch (err) {
-    editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to update event'
+    editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('raidDetail.toasts.failedToUpdate')
   } finally {
     actionLoading.value = false
   }
@@ -789,7 +789,7 @@ async function saveEvent() {
 
 function onSignedUp(signup) {
   signups.value.push(signup)
-  uiStore.showToast('Signed up successfully!', 'success')
+  uiStore.showToast(t('raidDetail.toasts.signedUp'), 'success')
 }
 
 function leaveRaid(signup) {
@@ -815,9 +815,9 @@ async function confirmLeaveRaid() {
       console.warn('Failed to reload signups', err)
       signups.value = signups.value.filter(s => s.id !== signupId)
     }
-    uiStore.showToast('You have left the raid', 'success')
+    uiStore.showToast(t('raidDetail.toasts.leftRaid'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to leave raid', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('raidDetail.toasts.failedToLeave'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -832,7 +832,7 @@ async function onSignupUpdated(updated) {
     const idx = signups.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) signups.value[idx] = updated
   }
-  uiStore.showToast('Signup updated!', 'success')
+  uiStore.showToast(t('raidDetail.toasts.signupUpdated'), 'success')
   editingSignupId.value = null
 }
 
@@ -846,7 +846,7 @@ async function onSignupRemoved(signupId) {
   }
   // Refresh bans in case a permanent kick was applied
   try { bans.value = await signupsApi.getBans(guildId.value, event.value.id) } catch { /* ignore */ }
-  uiStore.showToast('Signup removed', 'success')
+  uiStore.showToast(t('raidDetail.toasts.signupRemoved'), 'success')
 }
 
 async function onLineupSaved(payload) {
@@ -857,7 +857,7 @@ async function onLineupSaved(payload) {
     console.warn('Failed to reload signups after lineup save', err)
   }
   if (!payload?.auto) {
-    uiStore.showToast('Lineup saved!', 'success')
+    uiStore.showToast(t('raidDetail.toasts.lineupSaved'), 'success')
   }
 }
 
@@ -867,7 +867,7 @@ function onLineupUpdated(counts) {
 
 function onAttendanceSaved() {
   hasAttendance.value = true
-  uiStore.showToast('Attendance recorded!', 'success')
+  uiStore.showToast(t('raidDetail.toasts.attendanceRecorded'), 'success')
 }
 
 // --- Character replacement requests ---
@@ -896,7 +896,7 @@ async function resolveReplacement(requestId, action) {
       action === 'confirm' ? 'success' : 'info'
     )
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to process replacement', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('raidDetail.toasts.failedToProcess'), 'error')
   }
 }
 

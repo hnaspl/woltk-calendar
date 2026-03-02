@@ -69,6 +69,16 @@
       "internalError": "Wewnętrzny błąd serwera",
       "permissionDenied": "Nie masz odpowiednich uprawnień",
       "failedToLoad": "Nie udało się załadować danych"
+    },
+    "toasts": {
+      "actionFailed": "Akcja nie powiodła się",
+      "failedToUpdate": "Nie udało się zaktualizować",
+      "failedToDelete": "Nie udało się usunąć",
+      "failedToSave": "Nie udało się zapisać",
+      "failedToLoad": "Nie udało się załadować",
+      "failedToAdd": "Nie udało się dodać członka",
+      "failedToSearch": "Nie udało się wyszukać użytkowników",
+      "failedToProcess": "Nie udało się przetworzyć"
     }
   },
   "nav": {
@@ -250,7 +260,28 @@
     "confirmLeave": "Opuść rajd",
     "cancelEventConfirm": "Czy na pewno chcesz anulować to wydarzenie? Tego nie można cofnąć.",
     "leaveRaidConfirm": "Czy na pewno chcesz usunąć {character} z tego rajdu? Postać zostanie usunięta z listy zapisów i składu.",
-    "thisCharacter": "tę postać"
+    "thisCharacter": "tę postać",
+    "toasts": {
+      "eventLocked": "Wydarzenie zablokowane",
+      "eventUnlocked": "Wydarzenie odblokowane",
+      "eventCompleted": "Wydarzenie oznaczone jako ukończone!",
+      "failedToComplete": "Nie udało się ukończyć wydarzenia",
+      "eventCancelled": "Wydarzenie anulowane",
+      "failedToCancel": "Nie udało się anulować wydarzenia",
+      "eventDuplicated": "Wydarzenie zduplikowane! Przekierowanie…",
+      "failedToDuplicate": "Nie udało się zduplikować wydarzenia",
+      "failedToUpdate": "Nie udało się zaktualizować wydarzenia",
+      "eventUpdated": "Wydarzenie zaktualizowane!",
+      "signedUp": "Zapisano pomyślnie!",
+      "leftRaid": "Opuściłeś rajd",
+      "failedToLeave": "Nie udało się opuścić rajdu",
+      "signupUpdated": "Zapis zaktualizowany!",
+      "signupRemoved": "Zapis usunięty",
+      "lineupSaved": "Skład zapisany!",
+      "attendanceRecorded": "Frekwencja zapisana!",
+      "failedToProcess": "Nie udało się przetworzyć zamiany",
+      "titleDateRequired": "Tytuł i data są wymagane"
+    }
   },
   "characters": {
     "title": "Moje postacie",
@@ -297,7 +328,25 @@
     "roleCanChange": "Rolę nadal można zmienić.",
     "selectRole": "Wybierz rolę…",
     "selectSpec": "Wybierz spec…",
-    "selectSecondarySpec": "Wybierz drugi spec…"
+    "selectSecondarySpec": "Wybierz drugi spec…",
+    "toasts": {
+      "characterUpdated": "Postać zaktualizowana",
+      "characterAdded": "Postać dodana",
+      "setAsMain": "{name} ustawiony jako główna",
+      "failedToSetMain": "Nie udało się ustawić głównej postaci",
+      "syncedFromWarmane": "{name} zsynchronizowany z Warmane",
+      "syncFailed": "Synchronizacja nie powiodła się — postać może nie istnieć na Warmane",
+      "characterArchived": "Postać zarchiwizowana",
+      "failedToArchive": "Nie udało się zarchiwizować postaci",
+      "characterDeleted": "Postać trwale usunięta",
+      "failedToDeleteChar": "Nie udało się usunąć postaci",
+      "characterRestored": "{name} przywrócona",
+      "failedToRestore": "Nie udało się przywrócić postaci",
+      "joinGuildFirst": "Musisz najpierw dołączyć do gildii, aby dodawać postacie",
+      "nameClassRealmRequired": "Nazwa, klasa i realm są wymagane",
+      "joinGuildFirstManage": "Musisz najpierw dołączyć do gildii, aby zarządzać postaciami"
+    },
+    "namePlaceholder": "Arthas"
   },
   "attendance": {
     "title": "Frekwencja",
@@ -324,7 +373,8 @@
       "outcome": "Wynik",
       "note": "Notatka",
       "optionalNote": "Opcjonalna notatka…",
-      "saveAttendance": "Zapisz frekwencję"
+      "saveAttendance": "Zapisz frekwencję",
+      "recorded": "Frekwencja zapisana pomyślnie!"
     }
   },
   "raidDefinitions": {
@@ -355,7 +405,15 @@
     "eventsNotAffected": "Wydarzenia używające tej definicji nie zostaną naruszone.",
     "definitionUpdated": "Definicja zaktualizowana",
     "definitionDeleted": "Definicja usunięta",
-    "failedToDelete": "Nie udało się usunąć"
+    "failedToDelete": "Nie udało się usunąć",
+    "toasts": {
+      "failedToCreateInGuilds": "Nie udało się utworzyć w {count} gildii/gildiach",
+      "definitionCreated": "Definicja utworzona w {guild}",
+      "copiedWithFailures": "Skopiowano do {succeeded} gildii, nie powiodło się w {failed}",
+      "copiedSuccess": "\"{name}\" skopiowano do {count} gildii",
+      "nameTypeSizeRequired": "Nazwa, typ i rozmiar są wymagane",
+      "selectGuild": "Proszę wybrać gildię"
+    }
   },
   "templates": {
     "title": "Szablony rajdów",
@@ -384,7 +442,13 @@
     "deleteTemplateConfirm": "Usuń szablon",
     "templateDeleted": "Szablon usunięty",
     "failedToDelete": "Nie udało się usunąć",
-    "eventScheduled": "Wydarzenie zaplanowane z szablonu!"
+    "eventScheduled": "Wydarzenie zaplanowane z szablonu!",
+    "toasts": {
+      "templateUpdated": "Szablon zaktualizowany",
+      "templateCreated": "Szablon utworzony w {guild}",
+      "failedToApply": "Nie udało się zastosować szablonu",
+      "nameRaidDefRequired": "Nazwa i definicja rajdu są wymagane"
+    }
   },
   "series": {
     "title": "Rajdy cykliczne",
@@ -426,7 +490,14 @@
     "failedToDelete": "Nie udało się usunąć",
     "selectRecurrence": "Wybierz…",
     "weekly": "Co tydzień",
-    "biweekly": "Co dwa tygodnie"
+    "biweekly": "Co dwa tygodnie",
+    "toasts": {
+      "seriesUpdated": "Seria zaktualizowana",
+      "seriesCreated": "Seria utworzona w {guild}",
+      "failedToGenerate": "Nie udało się wygenerować wydarzeń",
+      "titleRequired": "Tytuł jest wymagany",
+      "selectGuild": "Proszę wybrać gildię"
+    }
   },
   "roles": {
     "title": "Role i uprawnienia",
@@ -466,7 +537,18 @@
     "granteeLabel": "Rola przypisywana (co jest przypisywane)",
     "bothRequired": "Obie role są wymagane",
     "grantRuleAdded": "Reguła dodana",
-    "grantRuleDeleted": "Reguła usunięta"
+    "grantRuleDeleted": "Reguła usunięta",
+    "toasts": {
+      "roleUpdated": "Rola zaktualizowana",
+      "roleCreated": "Rola utworzona",
+      "roleDeleted": "Rola usunięta",
+      "failedToDeleteRole": "Nie udało się usunąć roli",
+      "grantRuleAdded": "Reguła przyznawania dodana",
+      "grantRuleRemoved": "Reguła przyznawania usunięta",
+      "failedToRemoveRule": "Nie udało się usunąć reguły",
+      "failedToLoadPermissions": "Nie udało się załadować uprawnień",
+      "failedToLoadRules": "Nie udało się załadować reguł przyznawania"
+    }
   },
   "guild": {
     "label": "Gildia",
@@ -521,6 +603,9 @@
       "race": "Rasa",
       "noRosterData": "Brak danych rostera.",
       "guildName": "Nazwa Gildii"
+    },
+    "toasts": {
+      "failedToJoin": "Nie udało się dołączyć do gildii"
     }
   },
   "members": {
@@ -563,6 +648,17 @@
       "chooseMember": "Wybierz członka…",
       "confirmText": "Rozumiem, że ta akcja nie może być cofnięta i stracę wszystkie uprawnienia właściciela gildii",
       "transferCountdown": "Przenieś własność ({countdown}s)"
+    },
+    "toasts": {
+      "roleUpdated": "Rola zaktualizowana",
+      "failedToUpdateRole": "Nie udało się zaktualizować roli",
+      "memberRemoved": "Członek usunięty",
+      "failedToRemoveMember": "Nie udało się usunąć członka",
+      "failedToLoadCharacters": "Nie udało się załadować postaci",
+      "failedToSearchUsers": "Nie udało się wyszukać użytkowników",
+      "failedToAddMember": "Nie udało się dodać członka",
+      "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
+      "failedToTransfer": "Nie udało się przenieść własności"
     }
   },
   "admin": {
@@ -613,7 +709,19 @@
       "every12hours": "Co 12 godzin",
       "every24hours": "Co 24 godziny",
       "saveSettings": "Zapisz ustawienia",
-      "syncNow": "Synchronizuj teraz"
+      "syncNow": "Synchronizuj teraz",
+      "toasts": {
+        "userBlocked": "Użytkownik zablokowany",
+        "userUnblocked": "Użytkownik odblokowany",
+        "failedToUpdateUser": "Nie udało się zaktualizować użytkownika",
+        "failedToUpdateAdmin": "Nie udało się zaktualizować statusu administratora",
+        "userDeleted": "Użytkownik usunięty",
+        "failedToDeleteUser": "Nie udało się usunąć użytkownika",
+        "settingsSaved": "Ustawienia systemowe zapisane",
+        "failedToSaveSettings": "Nie udało się zapisać ustawień systemowych",
+        "syncCompleted": "Synchronizacja postaci zakończona",
+        "syncFailed": "Synchronizacja nie powiodła się"
+      }
     }
   },
   "signup": {
@@ -678,7 +786,11 @@
     "changeRoleConfirm": "Czy chcesz zmienić ich rolę na {role} i umieścić w składzie?",
     "changeRoleNote": "To zaktualizuje rolę zapisu i przeniesie gracza do kolumny {role}.",
     "placeOnBench": "Przenieś na ławkę",
-    "changeAndPlace": "Zmień rolę i umieść"
+    "changeAndPlace": "Zmień rolę i umieść",
+    "toasts": {
+      "updatedByOfficer": "Skład został zaktualizowany przez innego oficera. Twoje zmiany zostały zresetowane.",
+      "failedToSave": "Nie udało się zapisać składu"
+    }
   },
   "composition": {
     "title": "Kompozycja",
@@ -942,5 +1054,16 @@
   "lockBadge": {
     "locked": "Skład zablokowany",
     "open": "Skład otwarty"
+  },
+  "guildSettings": {
+    "toasts": {
+      "settingsSaved": "Ustawienia gildii zapisane",
+      "failedToUpdateRole": "Nie udało się zaktualizować roli",
+      "failedToRemoveMember": "Nie udało się usunąć członka",
+      "failedToLoadCharacters": "Nie udało się załadować postaci",
+      "failedToSearchUsers": "Nie udało się wyszukać użytkowników",
+      "failedToAddMember": "Nie udało się dodać członka",
+      "memberAdded": "{username} dodany do gildii"
+    }
   }
 }

@@ -69,6 +69,16 @@
       "internalError": "Internal server error",
       "permissionDenied": "You do not have the appropriate permissions",
       "failedToLoad": "Failed to load data"
+    },
+    "toasts": {
+      "actionFailed": "Action failed",
+      "failedToUpdate": "Failed to update",
+      "failedToDelete": "Failed to delete",
+      "failedToSave": "Failed to save",
+      "failedToLoad": "Failed to load",
+      "failedToAdd": "Failed to add member",
+      "failedToSearch": "Failed to search users",
+      "failedToProcess": "Failed to process"
     }
   },
   "nav": {
@@ -250,7 +260,28 @@
     "confirmLeave": "Leave Raid",
     "cancelEventConfirm": "Are you sure you want to cancel this event? This cannot be undone.",
     "leaveRaidConfirm": "Are you sure you want to remove {character} from this raid? This will remove the character from the signup list and lineup.",
-    "thisCharacter": "this character"
+    "thisCharacter": "this character",
+    "toasts": {
+      "eventLocked": "Event locked",
+      "eventUnlocked": "Event unlocked",
+      "eventCompleted": "Event marked as completed!",
+      "failedToComplete": "Failed to complete event",
+      "eventCancelled": "Event cancelled",
+      "failedToCancel": "Failed to cancel event",
+      "eventDuplicated": "Event duplicated! Redirecting…",
+      "failedToDuplicate": "Failed to duplicate event",
+      "failedToUpdate": "Failed to update event",
+      "eventUpdated": "Event updated!",
+      "signedUp": "Signed up successfully!",
+      "leftRaid": "You have left the raid",
+      "failedToLeave": "Failed to leave raid",
+      "signupUpdated": "Signup updated!",
+      "signupRemoved": "Signup removed",
+      "lineupSaved": "Lineup saved!",
+      "attendanceRecorded": "Attendance recorded!",
+      "failedToProcess": "Failed to process replacement",
+      "titleDateRequired": "Title and date are required"
+    }
   },
   "characters": {
     "title": "My Characters",
@@ -297,7 +328,25 @@
     "roleCanChange": "Role can still be changed.",
     "selectRole": "Select role…",
     "selectSpec": "Select spec…",
-    "selectSecondarySpec": "Select secondary spec…"
+    "selectSecondarySpec": "Select secondary spec…",
+    "toasts": {
+      "characterUpdated": "Character updated",
+      "characterAdded": "Character added",
+      "setAsMain": "{name} set as main",
+      "failedToSetMain": "Failed to set main",
+      "syncedFromWarmane": "{name} synced from Warmane",
+      "syncFailed": "Sync failed — character may not exist on Warmane",
+      "characterArchived": "Character archived",
+      "failedToArchive": "Failed to archive character",
+      "characterDeleted": "Character permanently deleted",
+      "failedToDeleteChar": "Failed to delete character",
+      "characterRestored": "{name} restored",
+      "failedToRestore": "Failed to restore character",
+      "joinGuildFirst": "You need to join a guild first before adding characters",
+      "nameClassRealmRequired": "Name, class and realm are required",
+      "joinGuildFirstManage": "You need to join a guild first before managing characters"
+    },
+    "namePlaceholder": "Arthas"
   },
   "attendance": {
     "title": "Attendance",
@@ -324,7 +373,8 @@
       "outcome": "Outcome",
       "note": "Note",
       "optionalNote": "Optional note…",
-      "saveAttendance": "Save Attendance"
+      "saveAttendance": "Save Attendance",
+      "recorded": "Attendance recorded successfully!"
     }
   },
   "raidDefinitions": {
@@ -355,7 +405,15 @@
     "eventsNotAffected": "Events using this definition won't be affected.",
     "definitionUpdated": "Definition updated",
     "definitionDeleted": "Definition deleted",
-    "failedToDelete": "Failed to delete"
+    "failedToDelete": "Failed to delete",
+    "toasts": {
+      "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
+      "definitionCreated": "Definition created in {guild}",
+      "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
+      "copiedSuccess": "\"{name}\" copied to {count} guild(s)",
+      "nameTypeSizeRequired": "Name, type and size are required",
+      "selectGuild": "Please select a guild"
+    }
   },
   "templates": {
     "title": "Raid Templates",
@@ -384,7 +442,13 @@
     "deleteTemplateConfirm": "Delete template",
     "templateDeleted": "Template deleted",
     "failedToDelete": "Failed to delete",
-    "eventScheduled": "Event scheduled from template!"
+    "eventScheduled": "Event scheduled from template!",
+    "toasts": {
+      "templateUpdated": "Template updated",
+      "templateCreated": "Template created in {guild}",
+      "failedToApply": "Failed to apply template",
+      "nameRaidDefRequired": "Name and raid definition are required"
+    }
   },
   "series": {
     "title": "Recurring Raids",
@@ -426,7 +490,14 @@
     "failedToDelete": "Failed to delete",
     "selectRecurrence": "Select…",
     "weekly": "Weekly",
-    "biweekly": "Biweekly"
+    "biweekly": "Biweekly",
+    "toasts": {
+      "seriesUpdated": "Series updated",
+      "seriesCreated": "Series created in {guild}",
+      "failedToGenerate": "Failed to generate events",
+      "titleRequired": "Title is required",
+      "selectGuild": "Please select a guild"
+    }
   },
   "roles": {
     "title": "Roles & Permissions",
@@ -466,7 +537,18 @@
     "granteeLabel": "Grantee Role (role to be assigned)",
     "bothRequired": "Both roles are required",
     "grantRuleAdded": "Grant rule added",
-    "grantRuleDeleted": "Grant rule deleted"
+    "grantRuleDeleted": "Grant rule deleted",
+    "toasts": {
+      "roleUpdated": "Role updated",
+      "roleCreated": "Role created",
+      "roleDeleted": "Role deleted",
+      "failedToDeleteRole": "Failed to delete role",
+      "grantRuleAdded": "Grant rule added",
+      "grantRuleRemoved": "Grant rule removed",
+      "failedToRemoveRule": "Failed to remove grant rule",
+      "failedToLoadPermissions": "Failed to load permissions",
+      "failedToLoadRules": "Failed to load grant rules"
+    }
   },
   "guild": {
     "label": "Guild",
@@ -521,6 +603,9 @@
       "race": "Race",
       "noRosterData": "No roster data available.",
       "guildName": "Guild Name"
+    },
+    "toasts": {
+      "failedToJoin": "Failed to join guild"
     }
   },
   "members": {
@@ -563,6 +648,17 @@
       "chooseMember": "Choose a member…",
       "confirmText": "I understand that this action cannot be undone and I will lose all guild owner privileges",
       "transferCountdown": "Transfer Ownership ({countdown}s)"
+    },
+    "toasts": {
+      "roleUpdated": "Role updated",
+      "failedToUpdateRole": "Failed to update role",
+      "memberRemoved": "Member removed",
+      "failedToRemoveMember": "Failed to remove member",
+      "failedToLoadCharacters": "Failed to load characters",
+      "failedToSearchUsers": "Failed to search users",
+      "failedToAddMember": "Failed to add member",
+      "ownershipTransferred": "Guild ownership transferred successfully",
+      "failedToTransfer": "Failed to transfer ownership"
     }
   },
   "admin": {
@@ -613,7 +709,19 @@
       "every12hours": "Every 12 hours",
       "every24hours": "Every 24 hours",
       "saveSettings": "Save Settings",
-      "syncNow": "Sync Now"
+      "syncNow": "Sync Now",
+      "toasts": {
+        "userBlocked": "User blocked",
+        "userUnblocked": "User unblocked",
+        "failedToUpdateUser": "Failed to update user",
+        "failedToUpdateAdmin": "Failed to update admin status",
+        "userDeleted": "User deleted",
+        "failedToDeleteUser": "Failed to delete user",
+        "settingsSaved": "System settings saved",
+        "failedToSaveSettings": "Failed to save system settings",
+        "syncCompleted": "Character sync completed",
+        "syncFailed": "Sync failed"
+      }
     }
   },
   "signup": {
@@ -678,7 +786,11 @@
     "changeRoleConfirm": "Do you want to change their role to {role} and place them in the lineup?",
     "changeRoleNote": "This will update their signup role and move them into the {role} column.",
     "placeOnBench": "Place on Bench",
-    "changeAndPlace": "Change Role & Place"
+    "changeAndPlace": "Change Role & Place",
+    "toasts": {
+      "updatedByOfficer": "Lineup was updated by another officer. Your changes were reset.",
+      "failedToSave": "Failed to save lineup"
+    }
   },
   "composition": {
     "title": "Composition",
@@ -942,5 +1054,16 @@
   "lockBadge": {
     "locked": "Lineup Locked",
     "open": "Lineup Open"
+  },
+  "guildSettings": {
+    "toasts": {
+      "settingsSaved": "Guild settings saved",
+      "failedToUpdateRole": "Failed to update role",
+      "failedToRemoveMember": "Failed to remove member",
+      "failedToLoadCharacters": "Failed to load characters",
+      "failedToSearchUsers": "Failed to search users",
+      "failedToAddMember": "Failed to add member",
+      "memberAdded": "{username} added to guild"
+    }
   }
 }
