@@ -10,7 +10,6 @@ and one side needs to be updated to match the other.
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
@@ -28,9 +27,46 @@ from app.constants import (
 CONSTANTS_JS = Path(__file__).resolve().parent.parent / "src" / "constants.js"
 
 
-def _read_js_constants() -> str:
+def _read_js() -> str:
     """Read the frontend constants file."""
     return CONSTANTS_JS.read_text(encoding="utf-8")
+
+
+def _parse_js_array(name: str) -> list[str]:
+    """Extract a string-array constant from src/constants.js by *name*."""
+    js = _read_js()
+    m = re.search(
+        rf"export\s+const\s+{name}\s*=\s*\[(.*?)\]", js, re.DOTALL,
+    )
+    assert m, f"Could not find {name} in src/constants.js"
+    return re.findall(r"'([^']+)'", m.group(1))
+
+
+def _parse_js_object_of_arrays(name: str) -> dict[str, list[str]]:
+    """Extract a ``{ 'Key': ['a','b'], ... }`` constant from src/constants.js."""
+    js = _read_js()
+    m = re.search(
+        rf"export\s+const\s+{name}\s*=\s*\{{(.*?)\}}", js, re.DOTALL,
+    )
+    assert m, f"Could not find {name} in src/constants.js"
+    body = m.group(1)
+    result: dict[str, list[str]] = {}
+    for entry in re.finditer(r"'([^']+)':\s*\[([^\]]+)\]", body):
+        result[entry.group(1)] = re.findall(r"'([^']+)'", entry.group(2))
+    return result
+
+
+def _parse_js_raid_types() -> list[dict]:
+    """Extract RAID_TYPES ``[{value, label}, ...]`` from src/constants.js."""
+    js = _read_js()
+    m = re.search(
+        r"export\s+const\s+RAID_TYPES\s*=\s*\[(.*?)\]", js, re.DOTALL,
+    )
+    assert m, "Could not find RAID_TYPES in src/constants.js"
+    entries = re.findall(
+        r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", m.group(1),
+    )
+    return [{"code": code, "name": name} for code, name in entries]
 
 
 # ---------------------------------------------------------------------------
@@ -41,25 +77,8 @@ def _read_js_constants() -> str:
 class TestRaidTypesSync:
     """Ensure frontend RAID_TYPES matches backend WOTLK_RAIDS."""
 
-    def _parse_js_raid_types(self) -> list[dict]:
-        """Extract RAID_TYPES from src/constants.js."""
-        js = _read_js_constants()
-        # Capture the array between RAID_TYPES = [ ... ]
-        m = re.search(
-            r"export\s+const\s+RAID_TYPES\s*=\s*\[(.*?)\]",
-            js,
-            re.DOTALL,
-        )
-        assert m, "Could not find RAID_TYPES in src/constants.js"
-        body = m.group(1)
-        # Extract { value: '...', label: '...' } entries
-        entries = re.findall(
-            r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", body
-        )
-        return [{"code": code, "name": name} for code, name in entries]
-
     def test_raid_codes_match(self):
-        js_raids = self._parse_js_raid_types()
+        js_raids = _parse_js_raid_types()
         py_codes = [r["code"] for r in WOTLK_RAIDS]
         js_codes = [r["code"] for r in js_raids]
         assert js_codes == py_codes, (
@@ -67,7 +86,7 @@ class TestRaidTypesSync:
         )
 
     def test_raid_names_match(self):
-        js_raids = self._parse_js_raid_types()
+        js_raids = _parse_js_raid_types()
         py_names = {r["code"]: r["name"] for r in WOTLK_RAIDS}
         js_names = {r["code"]: r["name"] for r in js_raids}
         for code in py_names:
@@ -86,18 +105,8 @@ class TestRaidTypesSync:
 class TestWarmaneRealmsSync:
     """Ensure frontend WARMANE_REALMS matches backend."""
 
-    def _parse_js_realms(self) -> list[str]:
-        js = _read_js_constants()
-        m = re.search(
-            r"export\s+const\s+WARMANE_REALMS\s*=\s*\[(.*?)\]",
-            js,
-            re.DOTALL,
-        )
-        assert m, "Could not find WARMANE_REALMS in src/constants.js"
-        return re.findall(r"'([^']+)'", m.group(1))
-
     def test_realms_match(self):
-        js_realms = self._parse_js_realms()
+        js_realms = _parse_js_array("WARMANE_REALMS")
         assert js_realms == WARMANE_REALMS, (
             f"Realm lists differ.\n  Backend: {WARMANE_REALMS}\n  Frontend: {js_realms}"
         )
@@ -111,27 +120,8 @@ class TestWarmaneRealmsSync:
 class TestClassSpecsSync:
     """Ensure frontend CLASS_SPECS matches backend."""
 
-    def _parse_js_class_specs(self) -> dict[str, list[str]]:
-        js = _read_js_constants()
-        m = re.search(
-            r"export\s+const\s+CLASS_SPECS\s*=\s*\{(.*?)\}",
-            js,
-            re.DOTALL,
-        )
-        assert m, "Could not find CLASS_SPECS in src/constants.js"
-        body = m.group(1)
-        result = {}
-        for class_match in re.finditer(
-            r"'([^']+)':\s*\[([^\]]+)\]", body
-        ):
-            cls_name = class_match.group(1)
-            specs = re.findall(r"'([^']+)'", class_match.group(2))
-            result[cls_name] = specs
-        return result
-
     def test_class_specs_match(self):
-        js_specs = self._parse_js_class_specs()
-        # Convert backend enum keys to class name strings
+        js_specs = _parse_js_object_of_arrays("CLASS_SPECS")
         py_specs = {cls.value: specs for cls, specs in CLASS_SPECS.items()}
         assert set(js_specs.keys()) == set(py_specs.keys()), (
             f"Class names differ.\n  Backend: {sorted(py_specs.keys())}\n"
@@ -152,27 +142,8 @@ class TestClassSpecsSync:
 class TestClassRolesSync:
     """Ensure frontend CLASS_ROLES matches backend."""
 
-    def _parse_js_class_roles(self) -> dict[str, list[str]]:
-        js = _read_js_constants()
-        m = re.search(
-            r"export\s+const\s+CLASS_ROLES\s*=\s*\{(.*?)\}",
-            js,
-            re.DOTALL,
-        )
-        assert m, "Could not find CLASS_ROLES in src/constants.js"
-        body = m.group(1)
-        result = {}
-        for class_match in re.finditer(
-            r"'([^']+)':\s*\[([^\]]+)\]", body
-        ):
-            cls_name = class_match.group(1)
-            roles = re.findall(r"'([^']+)'", class_match.group(2))
-            result[cls_name] = roles
-        return result
-
     def test_class_roles_match(self):
-        js_roles = self._parse_js_class_roles()
-        # Convert backend enum keys/values to strings
+        js_roles = _parse_js_object_of_arrays("CLASS_ROLES")
         py_roles = {
             cls.value: [r.value for r in roles]
             for cls, roles in CLASS_ROLES.items()
