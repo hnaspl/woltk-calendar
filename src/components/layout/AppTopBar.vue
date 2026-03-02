@@ -81,8 +81,8 @@
                     class="mt-1.5 w-2 h-2 rounded-full bg-accent-gold flex-shrink-0"
                   />
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm text-text-primary font-medium">{{ n.title }}</p>
-                    <p v-if="n.body" class="text-xs text-text-muted mt-0.5 whitespace-pre-line">{{ n.body }}</p>
+                    <p class="text-sm text-text-primary font-medium">{{ notifTitle(n) }}</p>
+                    <p v-if="notifBody(n)" class="text-xs text-text-muted mt-0.5 whitespace-pre-line">{{ notifBody(n) }}</p>
                     <p class="text-[10px] text-text-muted mt-1">{{ formatTime(n.created_at) }}</p>
                   </div>
                   <button
@@ -244,11 +244,39 @@ function formatTime(iso) {
   const now = new Date()
   const diffMs = now - d
   const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
+  if (diffMin < 1) return t('common.time.justNow')
+  if (diffMin < 60) return t('common.time.minutesAgo', { n: diffMin })
   const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH}h ago`
+  if (diffH < 24) return t('common.time.hoursAgo', { n: diffH })
   return tzHelper.formatGuildDate(d.toISOString())
+}
+
+/**
+ * Render notification title using i18n key when available, falling back to
+ * pre-rendered English title.
+ */
+function notifTitle(n) {
+  if (n.title_key && n.title_params) {
+    return t(n.title_key, n.title_params)
+  }
+  if (n.title_key) {
+    return t(n.title_key)
+  }
+  return n.title ?? ''
+}
+
+/**
+ * Render notification body using i18n key when available, falling back to
+ * pre-rendered English body.
+ */
+function notifBody(n) {
+  if (n.body_key && n.body_params) {
+    return t(n.body_key, n.body_params)
+  }
+  if (n.body_key) {
+    return t(n.body_key)
+  }
+  return n.body ?? ''
 }
 
 function handleNotificationPush() {

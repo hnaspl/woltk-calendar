@@ -77,7 +77,11 @@
       "last30Days": "Ostatnie 30 dni",
       "last60Days": "Ostatnie 60 dni",
       "last90Days": "Ostatnie 90 dni",
-      "allTime": "Cały czas"
+      "allTime": "Cały czas",
+      "justNow": "przed chwilą",
+      "minutesAgo": "{n} min temu",
+      "hoursAgo": "{n} godz. temu",
+      "yourTime": "twój czas"
     },
     "errors": {
       "forbidden": "Brak dostępu",
@@ -520,7 +524,10 @@
       "grantRuleRemoved": "Reguła przyznawania usunięta",
       "failedToRemoveRule": "Nie udało się usunąć reguły",
       "failedToLoadPermissions": "Nie udało się załadować uprawnień",
-      "failedToLoadRules": "Nie udało się załadować reguł przyznawania"
+      "failedToLoadRules": "Nie udało się załadować reguł przyznawania",
+      "failedToLoadRoles": "Nie udało się załadować ról",
+      "failedToSaveRole": "Nie udało się zapisać roli",
+      "failedToAddRule": "Nie udało się dodać reguły przypisania"
     }
   },
   "guild": {
@@ -601,7 +608,8 @@
     },
     "toasts": {
       "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
-      "failedToTransfer": "Nie udało się przenieść własności"
+      "failedToTransfer": "Nie udało się przenieść własności",
+      "failedToFetchRoster": "Nie udało się pobrać składu gildii z Warmane"
     },
     "failedToLoad": "Nie udało się załadować członków"
   },

@@ -174,7 +174,7 @@
                   <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <span v-if="raidLabel(ev.raid_type)" class="text-[10px] text-amber-300">⚔️ {{ raidLabel(ev.raid_type) }}</span>
                     <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" />
-                    <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 Signups close {{ formatDateTime(ev.close_signups_at) }}</span>
+                    <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 {{ t('dashboard.signupsClose', { time: formatDateTime(ev.close_signups_at) }) }}</span>
                   </div>
                 </div>
                 <svg class="w-5 h-5 text-text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

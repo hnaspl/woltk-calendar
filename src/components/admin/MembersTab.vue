@@ -541,7 +541,7 @@ async function fetchWarmaneRoster() {
     const data = await guildsApi.getWarmaneRoster(g.id)
     warmaneRoster.value = data.roster || []
   } catch (err) {
-    warmaneRosterError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to fetch guild roster from Warmane'
+    warmaneRosterError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('members.toasts.failedToFetchRoster')
   } finally {
     fetchingRoster.value = false
   }

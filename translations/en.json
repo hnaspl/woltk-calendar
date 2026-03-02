@@ -77,7 +77,11 @@
       "last30Days": "Last 30 days",
       "last60Days": "Last 60 days",
       "last90Days": "Last 90 days",
-      "allTime": "All time"
+      "allTime": "All time",
+      "justNow": "just now",
+      "minutesAgo": "{n}m ago",
+      "hoursAgo": "{n}h ago",
+      "yourTime": "your time"
     },
     "errors": {
       "forbidden": "Forbidden",
@@ -520,7 +524,10 @@
       "grantRuleRemoved": "Grant rule removed",
       "failedToRemoveRule": "Failed to remove grant rule",
       "failedToLoadPermissions": "Failed to load permissions",
-      "failedToLoadRules": "Failed to load grant rules"
+      "failedToLoadRules": "Failed to load grant rules",
+      "failedToLoadRoles": "Failed to load roles",
+      "failedToSaveRole": "Failed to save role",
+      "failedToAddRule": "Failed to add grant rule"
     }
   },
   "guild": {
@@ -601,7 +608,8 @@
     },
     "toasts": {
       "ownershipTransferred": "Guild ownership transferred successfully",
-      "failedToTransfer": "Failed to transfer ownership"
+      "failedToTransfer": "Failed to transfer ownership",
+      "failedToFetchRoster": "Failed to fetch guild roster from Warmane"
     },
     "failedToLoad": "Failed to load members"
   },

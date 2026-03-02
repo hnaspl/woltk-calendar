@@ -87,8 +87,8 @@
       </div>
     </WowCard>
 
-    <!-- Grant Rules -->
-    <WowCard>
+    <!-- Grant Rules — only visible to global admins -->
+    <WowCard v-if="isGlobalAdmin">
       <div class="flex items-center justify-between mb-4">
         <h2 class="wow-heading text-base">{{ t('roles.grantRules') }}</h2>
         <WowButton @click="showGrantRuleModal = true">{{ t('roles.addRule') }}</WowButton>
@@ -229,14 +229,14 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterLabel') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
+            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeLabel') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} (level {{ r.level }})</option>
+            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div v-if="grantRuleError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ grantRuleError }}</div>
@@ -259,10 +259,14 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useUiStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import * as rolesApi from '@/api/roles'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
+const authStore = useAuthStore()
+
+const isGlobalAdmin = computed(() => !!authStore.user?.is_admin)
 
 // Roles state
 const roles = ref([])
@@ -359,7 +363,7 @@ async function loadRoles() {
   try {
     roles.value = await rolesApi.getRoles()
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load roles'
+    error.value = err?.response?.data?.message ?? t('roles.toasts.failedToLoadRoles')
   } finally {
     loading.value = false
   }
@@ -433,7 +437,7 @@ async function saveRole() {
     showRoleModal.value = false
     await loadRoles()
   } catch (err) {
-    roleFormError.value = err?.response?.data?.message ?? 'Failed to save role'
+    roleFormError.value = err?.response?.data?.message ?? t('roles.toasts.failedToSaveRole')
   } finally {
     savingRole.value = false
   }
@@ -461,7 +465,7 @@ async function doDeleteRole() {
 // Grant rules
 async function doCreateGrantRule() {
   if (!grantRuleForm.granter_role_id || !grantRuleForm.grantee_role_id) {
-    grantRuleError.value = 'Both roles are required'
+    grantRuleError.value = t('roles.bothRequired')
     return
   }
   grantRuleError.value = null
@@ -477,7 +481,7 @@ async function doCreateGrantRule() {
     grantRuleForm.grantee_role_id = null
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
-    grantRuleError.value = err?.response?.data?.message ?? 'Failed to add grant rule'
+    grantRuleError.value = err?.response?.data?.message ?? t('roles.toasts.failedToAddRule')
   } finally {
     creatingGrantRule.value = false
   }
