@@ -196,9 +196,9 @@
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Character</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Role</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Primary Spec</th>
-              <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">Secondary Spec</th>
-              <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
-              <th class="text-center px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">Secondary Spec</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">Type</th>
+              <th class="hidden sm:table-cell text-center px-4 py-2.5 text-xs text-text-muted uppercase">Status</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">Details</th>
             </tr>
           </thead>
@@ -221,18 +221,18 @@
                 </div>
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
-              <td class="px-4 py-2.5">
+              <td class="hidden md:table-cell px-4 py-2.5">
                 <div v-if="c.secondary_spec" class="flex items-center gap-1.5">
                   <img v-if="getSpecIcon(c.secondary_spec, c.class_name)" :src="getSpecIcon(c.secondary_spec, c.class_name)" class="w-4 h-4 rounded" />
                   <span class="text-text-muted text-xs">{{ c.secondary_spec }}</span>
                 </div>
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
-              <td class="px-4 py-2.5 text-center">
+              <td class="hidden sm:table-cell px-4 py-2.5 text-center">
                 <span v-if="c.is_main" class="text-accent-gold text-[10px] font-bold uppercase px-1.5 py-0.5 bg-accent-gold/10 rounded">Main</span>
                 <span v-else class="text-text-muted text-[10px] px-1.5 py-0.5 bg-bg-secondary rounded">Alt</span>
               </td>
-              <td class="px-4 py-2.5 text-center">
+              <td class="hidden sm:table-cell px-4 py-2.5 text-center">
                 <span v-if="c.is_active !== false && !c.archived_at" class="text-green-400 text-[10px] font-medium px-1.5 py-0.5 bg-green-400/10 rounded">Active</span>
                 <span v-else class="text-red-400 text-[10px] font-medium px-1.5 py-0.5 bg-red-400/10 rounded">Archived</span>
               </td>
@@ -256,12 +256,12 @@
 
     <!-- Transfer Ownership button -->
     <WowCard v-if="canTransferOwnership">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 class="wow-heading text-base">Guild Ownership</h2>
           <p class="text-xs text-text-muted mt-1">Transfer ownership of this guild to another member.</p>
         </div>
-        <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="showTransferModal = true">
+        <WowButton variant="danger" class="text-xs py-1.5 px-3 flex-shrink-0" @click="showTransferModal = true">
           👑 Transfer Ownership
         </WowButton>
       </div>

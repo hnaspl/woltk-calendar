@@ -39,19 +39,19 @@
 
     <!-- Warmane Guild Info (only for Warmane-sourced guilds) -->
     <WowCard v-if="isWarmaneSource">
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div class="flex items-center gap-3">
           <img :src="getGuildIcon()" alt="Guild" class="w-8 h-8 rounded" />
           <h2 class="wow-heading text-lg">Warmane Guild Info</h2>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3 sm:gap-4">
           <span v-if="lastRefreshed" class="text-xs text-text-muted">
             Last refreshed: {{ lastRefreshed }}
           </span>
           <WowButton
             v-if="canManualRefresh"
             variant="secondary"
-            class="text-sm py-1.5 px-4"
+            class="text-sm py-1.5 px-4 flex-shrink-0"
             :loading="fetchingWarmane"
             @click="fetchWarmaneRoster"
           >Refresh</WowButton>
@@ -67,30 +67,30 @@
           <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">Guild Details</h3>
 
           <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-5 space-y-4">
-            <div class="flex items-center gap-4">
-              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Guild Name</span>
-              <span class="text-base text-text-primary font-semibold">{{ warmaneGuildData.name }}</span>
+            <div class="flex items-center gap-3 sm:gap-4">
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Guild Name</span>
+              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.name }}</span>
             </div>
             <div class="border-t border-border-default/50" />
-            <div class="flex items-center gap-4">
-              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Realm</span>
-              <span class="text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
+            <div class="flex items-center gap-3 sm:gap-4">
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Realm</span>
+              <span class="text-sm sm:text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
             </div>
             <div class="border-t border-border-default/50" />
-            <div class="flex items-center gap-4">
-              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Faction</span>
+            <div class="flex items-center gap-3 sm:gap-4">
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Faction</span>
               <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
                 :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >
                 <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-6 h-6 rounded" />
                 {{ warmaneGuildData.faction }}
               </span>
-              <span v-else class="text-base text-text-muted">Unknown</span>
+              <span v-else class="text-sm sm:text-base text-text-muted">Unknown</span>
             </div>
             <div class="border-t border-border-default/50" />
-            <div class="flex items-center gap-4">
-              <span class="text-sm text-text-muted w-28 flex-shrink-0 font-medium">Members</span>
-              <span class="text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
+            <div class="flex items-center gap-3 sm:gap-4">
+              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">Members</span>
+              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
             </div>
           </div>
 
@@ -118,7 +118,7 @@
                 <tr class="bg-bg-tertiary border-b border-border-default">
                   <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Character</th>
                   <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Level</th>
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Race</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">Race</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-default/60">
@@ -130,7 +130,7 @@
                     </div>
                   </td>
                   <td class="px-4 py-2.5 text-text-muted font-medium">{{ ch.level }}</td>
-                  <td class="px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
+                  <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
                 </tr>
               </tbody>
             </table>
