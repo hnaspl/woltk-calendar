@@ -16,7 +16,7 @@ primarily mechanical extraction of hardcoded strings into translation catalogs.
 
 **Estimated scope:**
 - ~195 hardcoded message strings across 14 backend API files
-- ~27 notification message templates in `app/utils/notify.py`
+- ~54 notification strings in `app/utils/notify.py` (27 notification types × title + body each)
 - ~44 Vue component files with hardcoded UI text (labels, headings, statuses, error messages)
 - ~29 JS files (constants, stores, composables) with hardcoded labels
 - Enum display labels in `app/enums.py` and `src/constants.js`
@@ -522,7 +522,7 @@ Add to `UserProfileView.vue`:
 
 ### 7.2 Medium Risk
 - **String interpolation** — f-strings with variables need conversion to parameterized translations
-  - Example: `f"All {role} slots are full"` → `_("All %(role)s slots are full")`
+  - Example: `f"All {role} slots are full"` → `_("All {role} slots are full").format(role=role)`
 - **Notification text with emojis** — emojis are language-neutral, but the surrounding text needs translation
 - **Pluralization** — "1 raid" vs "2 raids" (Polish has complex plural rules: 1, 2-4, 5+)
 - **Text length** — Polish strings are typically 20-30% longer than English; UI may need layout adjustments
