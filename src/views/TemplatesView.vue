@@ -104,12 +104,12 @@
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
           <label class="flex items-center gap-2 cursor-pointer">
             <input v-model="applyToOtherGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-            <span class="text-sm text-text-primary">{{ t('templates.copyToOther') }}</span>
+            <span class="text-sm text-text-primary">{{ t('common.copy.copyToOther') }}</span>
           </label>
           <div v-if="applyToOtherGuilds" class="mt-2 space-y-1 pl-6">
             <label class="flex items-center gap-2 cursor-pointer mb-1">
               <input type="checkbox" :checked="allOtherGuildsSelected" @change="toggleAllOtherGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-              <span class="text-xs text-accent-gold font-semibold">{{ t('templates.copyToAll') }}</span>
+              <span class="text-xs text-accent-gold font-semibold">{{ t('common.copy.copyToAll') }}</span>
             </label>
             <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
               <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -132,7 +132,7 @@
       <div class="space-y-1">
         <label class="flex items-center gap-2 cursor-pointer mb-1">
           <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-          <span class="text-xs text-accent-gold font-semibold">{{ t('templates.copyToAll') }}</span>
+          <span class="text-xs text-accent-gold font-semibold">{{ t('common.copy.copyToAll') }}</span>
         </label>
         <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
           <input v-model="copyGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -148,8 +148,8 @@
     </WowModal>
 
     <!-- Confirmation modal for no guilds selected -->
-    <WowModal v-model="showNoGuildConfirm" :title="t('templates.noAdditionalGuilds')" size="sm">
-      <p class="text-text-muted text-sm">{{ t('templates.onlyCreatedIn') }} <strong class="text-text-primary">{{ currentGuildLabel }}</strong>. {{ t('templates.goBackQuestion') }}</p>
+    <WowModal v-model="showNoGuildConfirm" :title="t('common.copy.noAdditionalGuilds')" size="sm">
+      <p class="text-text-muted text-sm">{{ t('common.copy.onlyCreatedIn') }} <strong class="text-text-primary">{{ currentGuildLabel }}</strong>. {{ t('common.copy.goBackQuestion') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="goBackToForm">{{ t('common.buttons.goBack') }}</WowButton>
@@ -372,7 +372,7 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await templatesApi.createTemplate(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(t('templates.toasts.failedToCreateInGuilds', { count: failed }), 'warning')
+        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
       }
     }
     showModal.value = false
@@ -418,9 +418,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(t('templates.toasts.copiedWithFailures', { succeeded, failed }), 'warning')
+    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
   } else {
-    uiStore.showToast(t('templates.toasts.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
+    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
 }

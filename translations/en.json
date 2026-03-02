@@ -79,6 +79,36 @@
       "failedToAdd": "Failed to add member",
       "failedToSearch": "Failed to search users",
       "failedToProcess": "Failed to process"
+    },
+    "copy": {
+      "copyToOther": "Also create in my other guilds",
+      "copyToAll": "Copy to all",
+      "noAdditionalGuilds": "No additional guilds selected",
+      "goBackQuestion": "Would you like to go back and select guilds to copy to?",
+      "selectGuild": "Please select a guild",
+      "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
+      "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
+      "copiedSuccess": "\"{name}\" copied to {count} guild(s)",
+      "copyToSelected": "Copy to selected guilds:",
+      "onlyCreatedIn": "This will only be created in"
+    },
+    "fields": {
+      "role": "Role",
+      "status": "Status",
+      "character": "Character",
+      "note": "Note",
+      "description": "Description",
+      "faction": "Faction",
+      "realm": "Realm",
+      "realmRequired": "Realm *",
+      "selectRealm": "Select realm…",
+      "saveChanges": "Save Changes",
+      "raidSize": "Raid Size",
+      "select": "Select…",
+      "username": "Username",
+      "email": "Email",
+      "timezone": "Timezone",
+      "level": "Level"
     }
   },
   "nav": {

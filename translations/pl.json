@@ -79,6 +79,36 @@
       "failedToAdd": "Nie udało się dodać członka",
       "failedToSearch": "Nie udało się wyszukać użytkowników",
       "failedToProcess": "Nie udało się przetworzyć"
+    },
+    "copy": {
+      "copyToOther": "Utwórz także w moich innych gildiach",
+      "copyToAll": "Kopiuj do wszystkich",
+      "noAdditionalGuilds": "Nie wybrano dodatkowych gildii",
+      "goBackQuestion": "Czy chcesz wrócić i wybrać gildie do skopiowania?",
+      "selectGuild": "Proszę wybrać gildię",
+      "failedToCreateInGuilds": "Nie udało się utworzyć w {count} gildii/gildiach",
+      "copiedWithFailures": "Skopiowano do {succeeded} gildii, nie powiodło się w {failed}",
+      "copiedSuccess": "\"{name}\" skopiowano do {count} gildii",
+      "copyToSelected": "Kopiuj do wybranych gildii:",
+      "onlyCreatedIn": "Zostanie utworzone tylko w"
+    },
+    "fields": {
+      "role": "Rola",
+      "status": "Status",
+      "character": "Postać",
+      "note": "Notatka",
+      "description": "Opis",
+      "faction": "Frakcja",
+      "realm": "Realm",
+      "realmRequired": "Realm *",
+      "selectRealm": "Wybierz realm…",
+      "saveChanges": "Zapisz zmiany",
+      "raidSize": "Rozmiar rajdu",
+      "select": "Wybierz…",
+      "username": "Nazwa użytkownika",
+      "email": "E-mail",
+      "timezone": "Strefa czasowa",
+      "level": "Poziom"
     }
   },
   "nav": {
