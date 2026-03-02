@@ -16,6 +16,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { ROLE_LABEL_MAP } from '@/constants'
 
 const props = defineProps({
   role: { type: String, required: true }
@@ -25,15 +26,7 @@ const { getRoleIcon } = useWowIcons()
 
 const iconUrl = computed(() => getRoleIcon(props.role))
 
-const ROLE_LABELS = {
-  melee_dps: 'Melee DPS',
-  main_tank: 'Main Tank',
-  off_tank: 'Off Tank',
-  healer: 'Heal',
-  range_dps: 'Range DPS'
-}
-
-const roleLabel = computed(() => ROLE_LABELS[props.role?.toLowerCase()] ?? props.role)
+const roleLabel = computed(() => ROLE_LABEL_MAP[props.role?.toLowerCase()] ?? props.role)
 
 const roleClass = computed(() => {
   switch (props.role?.toLowerCase()) {

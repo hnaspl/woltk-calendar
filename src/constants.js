@@ -44,6 +44,17 @@ export const ROLE_OPTIONS = [
   { value: 'range_dps', label: 'Range DPS' },
 ]
 
+/** Role value → display label map. Derived from ROLE_OPTIONS to stay in sync. */
+export const ROLE_LABEL_MAP = Object.fromEntries(
+  ROLE_OPTIONS.map(r => [r.value, r.label])
+)
+
+/** Valid event status values. Keep in sync with app/enums.py EventStatus. */
+export const EVENT_STATUSES = ['draft', 'open', 'locked', 'completed', 'cancelled']
+
+/** Valid attendance outcome values. Keep in sync with app/enums.py AttendanceOutcome. */
+export const ATTENDANCE_OUTCOMES = ['attended', 'late', 'no_show', 'benched', 'backup']
+
 export const CLASS_SPECS = {
   'Warrior':       ['Arms', 'Fury', 'Protection'],
   'Paladin':       ['Holy', 'Protection', 'Retribution'],

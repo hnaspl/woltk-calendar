@@ -172,7 +172,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
-import { CLASS_ROLES } from '@/constants'
+import { CLASS_ROLES, ROLE_LABEL_MAP } from '@/constants'
 
 const { t } = useI18n()
 
@@ -204,8 +204,6 @@ const benchQueue = ref([]) // Ordered list of bench signup objects from API
 // Role change confirmation modal state
 const showRoleChangeModal = ref(false)
 const roleChangePending = ref(null) // { signup, targetKey, targetCol }
-
-const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 const allColumns = computed(() => [
   { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },

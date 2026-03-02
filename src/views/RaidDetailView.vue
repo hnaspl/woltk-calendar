@@ -418,7 +418,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
-import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
+import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
@@ -451,7 +451,6 @@ const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
 const raidTypes = RAID_TYPES
-const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 function mySignupProfessions(s) {
   return (s.character?.metadata?.professions ?? []).slice(0, 2)

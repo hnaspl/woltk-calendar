@@ -246,7 +246,7 @@ import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
 import { useSocket } from '@/composables/useSocket'
-import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
+import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import { useI18n } from 'vue-i18n'
@@ -416,9 +416,8 @@ function raidLabel(raidType) {
   return raidTypeLabel(raidType)
 }
 
-const BENCH_ROLE_LABELS = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 function benchRoleLabel(role) {
-  return BENCH_ROLE_LABELS[role] || role
+  return ROLE_LABEL_MAP[role] || role
 }
 
 async function resolveReplacement(req, action) {

@@ -149,11 +149,9 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, CLASS_ROLES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, CLASS_ROLES } from '@/constants'
 
 const { t } = useI18n()
-
-const ROLE_LABEL_MAP = { melee_dps: 'Melee DPS', main_tank: 'Main Tank', off_tank: 'Off Tank', healer: 'Heal', range_dps: 'Range DPS' }
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
