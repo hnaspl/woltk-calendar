@@ -1,4 +1,11 @@
-"""Application configuration loaded from environment variables."""
+"""Application configuration loaded from environment variables.
+
+All session/cookie security settings are driven by FLASK_ENV:
+  - "development" / "dev"  → HTTP-friendly (no Secure flag on cookies)
+  - "production"           → HTTPS-enforced (Secure flag on cookies)
+
+Only SECRET_KEY and FLASK_ENV are required to configure the app.
+"""
 
 from __future__ import annotations
 
@@ -26,9 +33,9 @@ class Config:
     }
 
     # --------------------------------------------------------------- Session
-    SESSION_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    SESSION_COOKIE_SECURE: bool = False
     SESSION_COOKIE_HTTPONLY: bool = True
-    SESSION_COOKIE_SAMESITE: str = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
+    SESSION_COOKIE_SAMESITE: str = "Lax"
     PERMANENT_SESSION_LIFETIME: timedelta = timedelta(
         seconds=int(os.environ.get("PERMANENT_SESSION_LIFETIME", "86400"))
     )
@@ -36,7 +43,7 @@ class Config:
     # --------------------------------------------------------- Remember cookie
     REMEMBER_COOKIE_HTTPONLY: bool = True
     REMEMBER_COOKIE_SAMESITE: str = "Lax"
-    REMEMBER_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"  # mirrors session cookie
+    REMEMBER_COOKIE_SECURE: bool = False
 
     # ------------------------------------------------------------------ CORS
     CORS_ORIGINS: list[str] = [
@@ -59,6 +66,8 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG: bool = True
+    SESSION_COOKIE_SECURE: bool = False
+    REMEMBER_COOKIE_SECURE: bool = False
 
 
 class TestingConfig(Config):
@@ -85,6 +94,7 @@ class ProductionConfig(Config):
 
 _config_map: dict[str, type[Config]] = {
     "development": DevelopmentConfig,
+    "dev": DevelopmentConfig,
     "testing": TestingConfig,
     "production": ProductionConfig,
 }

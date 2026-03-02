@@ -7,12 +7,12 @@ services:
     restart: unless-stopped
     environment:
       FLASK_APP: wsgi.py
-      FLASK_ENV: production
+      # Set FLASK_ENV to control all security settings:
+      #   "development" / "dev" → HTTP-friendly (cookies without Secure flag)
+      #   "production"          → HTTPS-enforced (cookies with Secure flag)
+      FLASK_ENV: "${FLASK_ENV:-development}"
       # REQUIRED: set a strong random secret key (e.g. `python -c "import secrets; print(secrets.token_hex(32))"`)
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY environment variable}"
-      CORS_ORIGINS: "${CORS_ORIGINS:-}"
-      SESSION_COOKIE_SECURE: "true"
-      SESSION_COOKIE_SAMESITE: Lax
     ports:
       - "5000:5000"
     volumes:

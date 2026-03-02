@@ -421,6 +421,18 @@ class TestProductionConfig:
             if old is not None:
                 os.environ["CORS_ORIGINS"] = old
 
+    def test_development_config_allows_http(self):
+        """DevelopmentConfig has Secure=False so cookies work over HTTP."""
+        from config import DevelopmentConfig
+        assert DevelopmentConfig.SESSION_COOKIE_SECURE is False
+        assert DevelopmentConfig.REMEMBER_COOKIE_SECURE is False
+        assert DevelopmentConfig.DEBUG is True
+
+    def test_dev_alias_maps_to_development(self):
+        """'dev' is accepted as alias for 'development' in FLASK_ENV."""
+        from config import _config_map, DevelopmentConfig
+        assert _config_map["dev"] is DevelopmentConfig
+
     def test_base_config_cookie_settings(self):
         """Base config has httponly and samesite on all cookies."""
         from config import Config
