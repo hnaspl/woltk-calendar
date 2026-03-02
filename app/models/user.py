@@ -9,6 +9,8 @@ import sqlalchemy as sa
 from flask_login import UserMixin
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.utils.dt import utc_iso
+
 from app.extensions import db
 
 if TYPE_CHECKING:
@@ -52,8 +54,8 @@ class User(UserMixin, db.Model):
             "timezone": self.timezone,
             "is_active": self.is_active,
             "is_admin": self.is_admin,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
 
     def __repr__(self) -> str:

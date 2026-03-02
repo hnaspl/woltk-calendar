@@ -232,12 +232,12 @@ async function clearAllNotifications() {
 
 function formatTime(iso) {
   if (!iso) return ''
-  // Server stores UTC but SQLite may strip timezone suffix — ensure it's parsed as UTC
-  let utcStr = iso
-  if (!utcStr.endsWith('Z') && !utcStr.includes('+') && !/\d{2}:\d{2}$/.test(utcStr.slice(-5))) {
-    utcStr += 'Z'
-  }
-  const d = new Date(utcStr)
+  // Backend always sends UTC with +00:00 suffix via utc_iso().
+  // Safety: if the suffix is missing (e.g. different DB driver), treat as UTC.
+  const normalized = iso.endsWith('Z') || iso.includes('+') || iso.includes('-', 10)
+    ? iso
+    : iso + 'Z'
+  const d = new Date(normalized)
   if (isNaN(d.getTime())) return ''
   const now = new Date()
   const diffMs = now - d

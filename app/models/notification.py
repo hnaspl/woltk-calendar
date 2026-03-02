@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.utils.dt import utc_iso
+
 from app.enums import JobStatus
 from app.extensions import db
 
@@ -51,8 +53,8 @@ class Notification(db.Model):
             "type": self.type,
             "title": self.title,
             "body": self.body,
-            "read_at": self.read_at.isoformat() if self.read_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "read_at": utc_iso(self.read_at),
+            "created_at": utc_iso(self.created_at),
         }
 
     def __repr__(self) -> str:
@@ -110,12 +112,12 @@ class JobQueue(db.Model):
             "type": self.type,
             "payload": self.payload,
             "status": self.status,
-            "available_at": self.available_at.isoformat() if self.available_at else None,
-            "locked_at": self.locked_at.isoformat() if self.locked_at else None,
+            "available_at": utc_iso(self.available_at),
+            "locked_at": utc_iso(self.locked_at),
             "attempts": self.attempts,
             "last_error": self.last_error,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
 
     def __repr__(self) -> str:

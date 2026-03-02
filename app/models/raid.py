@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.utils.dt import utc_iso
+
 from app.enums import EventStatus
 from app.extensions import db
 
@@ -80,7 +82,7 @@ class RaidDefinition(db.Model):
             "range_dps_slots": self.range_dps_slots,
             "notes": self.notes,
             "created_by": self.created_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": utc_iso(self.created_at),
         }
 
     def __repr__(self) -> str:
@@ -143,8 +145,8 @@ class RaidTemplate(db.Model):
             "default_instructions": self.default_instructions,
             "is_active": self.is_active,
             "created_by": self.created_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
 
     def __repr__(self) -> str:
@@ -202,8 +204,8 @@ class EventSeries(db.Model):
             "default_difficulty": self.default_difficulty,
             "active": self.active,
             "created_by": self.created_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
 
     def __repr__(self) -> str:
@@ -283,24 +285,24 @@ class RaidEvent(db.Model):
             "raid_definition_id": self.raid_definition_id,
             "title": self.title,
             "realm_name": self.realm_name,
-            "starts_at_utc": self.starts_at_utc.isoformat() if self.starts_at_utc else None,
-            "ends_at_utc": self.ends_at_utc.isoformat() if self.ends_at_utc else None,
+            "starts_at_utc": utc_iso(self.starts_at_utc),
+            "ends_at_utc": utc_iso(self.ends_at_utc),
             "duration_minutes": self.duration_minutes,
             "raid_size": self.raid_size,
             "difficulty": self.difficulty,
             "status": self.status,
             "raid_type": self.raid_type,
             "instructions": self.instructions,
-            "close_signups_at": self.close_signups_at.isoformat() if self.close_signups_at else None,
+            "close_signups_at": utc_iso(self.close_signups_at),
             "melee_dps_slots": melee_dps_slots,
             "main_tank_slots": main_tank_slots,
             "off_tank_slots": off_tank_slots,
             "healer_slots": healer_slots,
             "range_dps_slots": range_dps_slots,
             "created_by": self.created_by,
-            "locked_at": self.locked_at.isoformat() if self.locked_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "locked_at": utc_iso(self.locked_at),
+            "created_at": utc_iso(self.created_at),
+            "updated_at": utc_iso(self.updated_at),
         }
         if include_signup_count:
             from app.models.signup import LineupSlot

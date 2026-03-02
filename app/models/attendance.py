@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.enums import AttendanceOutcome
+from app.utils.dt import utc_iso
 from app.extensions import db
 
 
@@ -52,7 +53,7 @@ class AttendanceRecord(db.Model):
             "attended": self.outcome in ("attended", "late"),
             "note": self.note,
             "recorded_by": self.recorded_by,
-            "recorded_at": self.recorded_at.isoformat() if self.recorded_at else None,
+            "recorded_at": utc_iso(self.recorded_at),
         }
         if self.character is not None:
             result["character"] = self.character.to_dict()

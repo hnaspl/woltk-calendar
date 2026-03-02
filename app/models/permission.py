@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
+from app.utils.dt import utc_iso
 
 
 class SystemRole(db.Model):
@@ -52,7 +53,7 @@ class SystemRole(db.Model):
             "description": self.description,
             "level": self.level,
             "is_system": self.is_system,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": utc_iso(self.created_at),
             "permissions": [rp.permission.code for rp in self.role_permissions],
             "can_grant": [r.grantee_role.name for r in self.grant_rules_as_granter],
         }
