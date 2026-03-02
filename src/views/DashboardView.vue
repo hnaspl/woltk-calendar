@@ -172,7 +172,7 @@
                     <span v-if="ev.duration_minutes" class="text-text-muted">· ⏱️ ~{{ formatDuration(ev.duration_minutes) }}</span>
                   </div>
                   <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span v-if="raidLabel(ev.raid_type)" class="text-[10px] text-amber-300">⚔️ {{ raidLabel(ev.raid_type) }}</span>
+                    <span v-if="raidTypeLabel(ev.raid_type)" class="text-[10px] text-amber-300">⚔️ {{ raidTypeLabel(ev.raid_type) }}</span>
                     <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" />
                     <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 {{ t('dashboard.signupsClose', { time: formatDateTime(ev.close_signups_at) }) }}</span>
                   </div>
@@ -206,7 +206,7 @@
                 <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
                 <div class="flex-1 min-w-0">
                   <span class="text-sm text-text-primary truncate block">{{ su.event_title ?? 'Raid' }}</span>
-                  <span v-if="raidLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidLabel(su.raid_type) }}</span>
+                  <span v-if="raidTypeLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidTypeLabel(su.raid_type) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">
                     {{ su.character.name }}
                   </span>
@@ -245,6 +245,7 @@ import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
+import { useFormatting } from '@/composables/useFormatting'
 import { useSocket } from '@/composables/useSocket'
 import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
@@ -257,6 +258,7 @@ const calStore = useCalendarStore()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 const tzHelper = useTimezone()
+const { formatDateTime, formatTimeOnly } = useFormatting()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const { t } = useI18n()
 
@@ -396,25 +398,6 @@ const todaysRaids = computed(() => {
     .sort((a, b) => new Date(a.starts_at_utc ?? a.start_time ?? a.date) - new Date(b.starts_at_utc ?? b.start_time ?? b.date))
     .map(ev => ({ event: ev, signup: signupMap.get(ev.id) }))
 })
-
-function formatDateTime(d) {
-  if (!d) return '?'
-  return tzHelper.formatDualTime(d, {
-    weekday: 'short', day: '2-digit', month: 'short',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
-
-function formatTimeOnly(d) {
-  if (!d) return '?'
-  return tzHelper.formatGuildTime(d, {
-    hour: '2-digit', minute: '2-digit', hour12: false
-  })
-}
-
-function raidLabel(raidType) {
-  return raidTypeLabel(raidType)
-}
 
 function benchRoleLabel(role) {
   return ROLE_LABEL_MAP[role] || role
