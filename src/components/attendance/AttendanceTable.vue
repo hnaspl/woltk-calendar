@@ -36,7 +36,7 @@
                       :alt="row.raidTitle"
                       class="w-6 h-6 rounded border border-border-default flex-shrink-0"
                     />
-                    <span class="font-medium truncate text-text-primary group-hover:text-accent-gold">{{ row.raidTitle }}</span>
+                    <span class="font-medium truncate text-accent-gold">{{ row.raidTitle }}</span>
                   </router-link>
                 </td>
                 <td class="px-4 py-2.5">
@@ -60,21 +60,6 @@
                 </td>
                 <td class="px-4 py-2.5 text-text-muted text-xs truncate">{{ row.note || '—' }}</td>
               </tr>
-              <!-- View Raid Details row(s) at the end -->
-              <tr v-for="evt in section.events" :key="`link-${evt.eventId}`" class="bg-bg-tertiary/30">
-                <td colspan="5" class="px-4 py-2 text-right">
-                  <router-link
-                    :to="`/raids/${evt.eventId}`"
-                    class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded border border-accent-gold/40 bg-accent-gold/10 text-accent-gold hover:bg-accent-gold/20 hover:border-accent-gold transition-colors whitespace-nowrap"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                    View Raid Details — {{ evt.title }}
-                  </router-link>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -93,7 +78,7 @@
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-medium text-sm truncate text-text-primary">{{ row.raidTitle }}</span>
+                <router-link :to="`/raids/${row.eventId}`" class="font-medium text-sm truncate text-accent-gold">{{ row.raidTitle }}</router-link>
                 <span
                   class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
                   :class="outcomeClasses(row.outcome)"
@@ -107,19 +92,6 @@
               </div>
               <div v-if="row.note" class="text-text-muted text-[10px] italic mt-0.5">{{ row.note }}</div>
             </div>
-          </div>
-          <!-- View Raid Details button(s) for mobile -->
-          <div v-for="evt in section.events" :key="`mlink-${evt.eventId}`" class="px-4 py-3 bg-bg-tertiary/30 text-right">
-            <router-link
-              :to="`/raids/${evt.eventId}`"
-              class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded border border-accent-gold/40 bg-accent-gold/10 text-accent-gold hover:bg-accent-gold/20 hover:border-accent-gold transition-colors"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-              </svg>
-              View Raid Details — {{ evt.title }}
-            </router-link>
           </div>
         </div>
       </WowCard>
@@ -202,21 +174,10 @@ const dateSections = computed(() => {
 
   return Array.from(grouped.entries())
     .map(([dateKey, dateRows]) => {
-      // Collect unique events for "View Raid Details" links
-      const eventIds = new Set()
-      const events = []
-      dateRows.forEach(r => {
-        if (!eventIds.has(r.eventId)) {
-          eventIds.add(r.eventId)
-          events.push({ eventId: r.eventId, title: r.raidTitle })
-        }
-      })
-
       return {
         dateKey,
         dateLabel: dateRows[0]?.dateUtc ? formatDate(dateRows[0].dateUtc) : 'Unknown Date',
         rows: dateRows,
-        events,
       }
     })
     .sort((a, b) => {
