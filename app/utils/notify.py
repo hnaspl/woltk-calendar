@@ -544,7 +544,10 @@ _OUTCOME_LABELS = {
 
 def notify_attendance_recorded(record, event) -> None:
     """Notify a player about their attendance status for a raid."""
-    char_name = record.character.name if record.character else "your character"
+    try:
+        char_name = record.character.name if record.character else "your character"
+    except Exception:
+        char_name = "your character"
     outcome_label = _OUTCOME_LABELS.get(record.outcome, record.outcome)
     note_text = f" Note: {record.note}" if record.note else ""
     _notify(
