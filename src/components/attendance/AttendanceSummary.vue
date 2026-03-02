@@ -17,18 +17,29 @@ const props = defineProps({
 })
 
 const stats = computed(() => {
-  // Count unique events where the user has attendance records
-  const eventIds = new Set(props.records.map(r => r.raid_event_id ?? r.event_id))
-  const total = eventIds.size
-  const attended = props.records.filter(r => r.outcome === 'attended' || r.outcome === 'late').length
-  const absent = props.records.filter(r => r.outcome === 'no_show').length
-  const rate = total > 0 ? Math.round((attended / total) * 100) : 0
+  // Group records by event to get per-event attendance status
+  const eventMap = new Map()
+  props.records.forEach(r => {
+    const eid = r.raid_event_id ?? r.event_id
+    if (!eventMap.has(eid)) eventMap.set(eid, [])
+    eventMap.get(eid).push(r)
+  })
+
+  const total = eventMap.size
+  let attendedCount = 0
+  let absentCount = 0
+  eventMap.forEach(records => {
+    const anyAttended = records.some(r => r.outcome === 'attended' || r.outcome === 'late')
+    if (anyAttended) attendedCount++
+    else absentCount++
+  })
+  const rate = total > 0 ? Math.round((attendedCount / total) * 100) : 0
 
   return [
-    { label: 'Total Raids',       value: total,    color: 'text-accent-blue' },
-    { label: 'Attended',          value: attended, color: 'text-green-400' },
-    { label: 'Absent',            value: absent,   color: 'text-red-400' },
-    { label: 'Attendance Rate',   value: `${rate}%`,   color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
+    { label: 'Total Raids',       value: total,         color: 'text-accent-blue' },
+    { label: 'Attended',          value: attendedCount,  color: 'text-green-400' },
+    { label: 'Absent',            value: absentCount,    color: 'text-red-400' },
+    { label: 'Attendance Rate',   value: `${rate}%`,     color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
   ]
 })
 </script>
