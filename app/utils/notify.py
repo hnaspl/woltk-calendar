@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import sqlalchemy as sa
 
@@ -274,7 +275,10 @@ def notify_event_created(event, guild_id: int) -> None:
     guild_tag = _guild_tag(guild) if guild else ""
     starts = ""
     try:
-        starts = f" on {event.starts_at_utc.strftime('%b %d at %H:%M UTC')}"
+        guild_tz = ZoneInfo(guild.timezone) if guild and guild.timezone else ZoneInfo("UTC")
+        local_dt = event.starts_at_utc.astimezone(guild_tz)
+        tz_abbrev = local_dt.strftime('%Z')
+        starts = f" on {local_dt.strftime(f'%b %d at %H:%M')} {tz_abbrev}"
     except Exception:
         pass
 
