@@ -26,6 +26,10 @@ def create_app(config_override: dict | None = None) -> Flask:
     # -------------------------------------------------------------- Logging
     logging.basicConfig(level=app.config.get("LOG_LEVEL", "INFO"))
 
+    # -------------------------------------------------------------- i18n
+    from app.i18n import init_i18n
+    init_i18n(app)
+
     # ----------------------------------------------------------- Extensions
     db.init_app(app)
     bcrypt.init_app(app)
@@ -65,7 +69,8 @@ def create_app(config_override: dict | None = None) -> Flask:
 
     @login_manager.unauthorized_handler
     def unauthorized():
-        return jsonify({"error": "Authentication required"}), 401
+        from app.i18n import _t
+        return jsonify({"error": _t("common.errors.authRequired")}), 401
 
     # --------------------------------------------------------- Blueprints
     from app.api.v1 import register_blueprints
@@ -74,21 +79,25 @@ def create_app(config_override: dict | None = None) -> Flask:
     # ------------------------------------------------- Error handlers
     @app.errorhandler(400)
     def bad_request(e):
-        return jsonify({"error": str(e.description) if hasattr(e, "description") else "Bad request"}), 400
+        from app.i18n import _t
+        return jsonify({"error": str(e.description) if hasattr(e, "description") else _t("common.errors.badRequest")}), 400
 
     @app.errorhandler(405)
     def method_not_allowed(e):
-        return jsonify({"error": "Method not allowed"}), 405
+        from app.i18n import _t
+        return jsonify({"error": _t("common.errors.methodNotAllowed")}), 405
 
     @app.errorhandler(500)
     def internal_error(e):
+        from app.i18n import _t
         app.logger.exception("Unhandled 500 error: %s", e)
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": _t("common.errors.internalError")}), 500
 
     @app.errorhandler(Exception)
     def handle_exception(e):
+        from app.i18n import _t
         app.logger.exception("Unhandled exception: %s", e)
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": _t("common.errors.internalError")}), 500
 
     # ---------------------------------------- API health endpoint
     @app.route("/api/v1/health")
@@ -104,10 +113,11 @@ def create_app(config_override: dict | None = None) -> Flask:
 
     @app.errorhandler(404)
     def not_found(e):
+        from app.i18n import _t
         # API routes return JSON 404
         from flask import request
         if request.path.startswith("/api/"):
-            return jsonify({"error": "Not found"}), 404
+            return jsonify({"error": _t("common.errors.notFound")}), 404
         # SPA client-side routing: serve index.html for non-API routes
         if os.path.isfile(os.path.join(DIST_DIR, "index.html")):
             return send_from_directory(DIST_DIR, "index.html")

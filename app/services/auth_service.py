@@ -48,7 +48,7 @@ def change_password(user: User, new_password: str) -> None:
 
 def update_profile(user: User, data: dict) -> User:
     """Update user profile fields."""
-    allowed = {"display_name", "timezone"}
+    allowed = {"display_name", "timezone", "language"}
     for key, value in data.items():
         if key in allowed and value is not None:
             setattr(user, key, value)

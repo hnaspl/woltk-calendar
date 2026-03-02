@@ -32,6 +32,10 @@ class Notification(db.Model):
     type: Mapped[str] = mapped_column(sa.String(60), nullable=False)
     title: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     body: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    title_key: Mapped[str | None] = mapped_column(sa.String(200), nullable=True)
+    body_key: Mapped[str | None] = mapped_column(sa.String(200), nullable=True)
+    title_params: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    body_params: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
@@ -45,7 +49,7 @@ class Notification(db.Model):
     raid_event = relationship("RaidEvent", foreign_keys=[raid_event_id], lazy="select")
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "id": self.id,
             "user_id": self.user_id,
             "guild_id": self.guild_id,
@@ -56,6 +60,21 @@ class Notification(db.Model):
             "read_at": utc_iso(self.read_at),
             "created_at": utc_iso(self.created_at),
         }
+        if self.title_key:
+            d["title_key"] = self.title_key
+        if self.body_key:
+            d["body_key"] = self.body_key
+        if self.title_params:
+            try:
+                d["title_params"] = json.loads(self.title_params)
+            except (json.JSONDecodeError, TypeError):
+                d["title_params"] = {}
+        if self.body_params:
+            try:
+                d["body_params"] = json.loads(self.body_params)
+            except (json.JSONDecodeError, TypeError):
+                d["body_params"] = {}
+        return d
 
     def __repr__(self) -> str:
         return f"<Notification id={self.id} user={self.user_id} type={self.type!r}>"
