@@ -9,7 +9,7 @@
       />
       <div>
         <div class="text-sm font-bold text-accent-gold font-wow leading-tight">{{ t('auth.appTitle') }}</div>
-        <div class="text-xs text-text-muted">WotLK Warmane</div>
+        <div class="text-xs text-text-muted">{{ t('auth.appSubtitle') }}</div>
       </div>
     </div>
 
@@ -124,7 +124,7 @@
                 <span v-if="m.faction" class="ml-2 px-2 py-0.5 rounded text-xs font-medium"
                   :class="m.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
                 >{{ m.faction }}</span>
-                <span class="text-text-muted text-xs ml-2">{{ m.member_count ?? 0 }} members</span>
+                <span class="text-text-muted text-xs ml-2">{{ t('guild.memberCount', { count: m.member_count ?? 0 }) }}</span>
               </div>
               <span v-if="m.alreadyAdded" class="text-xs text-yellow-400">{{ t('guild.alreadyAdded') }}</span>
               <span v-else class="text-xs text-accent-gold">{{ t('guild.select') }}</span>
@@ -149,7 +149,7 @@
                 :class="guildLookupMatch.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >{{ guildLookupMatch.faction }}</span>
             </div>
-            <span class="text-text-muted text-xs">{{ guildLookupMatch.member_count ?? 0 }} members on {{ newGuild.realm_name }}</span>
+            <span class="text-text-muted text-xs">{{ t('guild.membersOnRealm', { count: guildLookupMatch.member_count ?? 0, realm: newGuild.realm_name }) }}</span>
           </div>
           <div v-if="guildLookupMatch?.alreadyAdded" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
             ⚠ {{ t('guild.alreadyAddedWarning') }}
@@ -268,7 +268,7 @@ async function doJoinGuild(guild) {
     await guildStore.fetchGuilds()
     await guildStore.fetchAllGuilds()
     if (!guildStore.currentGuild) guildStore.setCurrentGuild(guild)
-    uiStore.showToast(`Joined ${guild.name}!`, 'success')
+    uiStore.showToast(t('guild.toasts.joined', { name: guild.name }), 'success')
   } catch (err) {
     uiStore.showToast(err?.response?.data?.message ?? t('guild.toasts.failedToJoin'), 'error')
   } finally {
@@ -450,7 +450,7 @@ async function lookupGuild() {
       // 404 = not found on this realm, try next; other errors are real failures
       if (err?.response?.status && err.response.status !== 404) {
         lookingUpGuild.value = false
-        guildLookupError.value = err?.response?.data?.message ?? 'Failed to search Warmane API'
+        guildLookupError.value = err?.response?.data?.message ?? t('guild.toasts.failedToSearchWarmane')
         return
       }
     }
@@ -508,7 +508,7 @@ async function doCreateGuild() {
     guildLookupNotFound.value = false
     uiStore.showToast(t('guild.guildCreated'), 'success')
   } catch (err) {
-    createGuildError.value = err?.response?.data?.message ?? 'Failed to create guild'
+    createGuildError.value = err?.response?.data?.message ?? t('guild.toasts.failedToCreate')
   } finally {
     creatingGuild.value = false
   }

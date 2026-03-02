@@ -586,8 +586,13 @@
       "guildName": "Nazwa Gildii"
     },
     "toasts": {
-      "failedToJoin": "Nie udało się dołączyć do gildii"
-    }
+      "failedToJoin": "Nie udało się dołączyć do gildii",
+      "joined": "Dołączono do {name}!",
+      "failedToSearchWarmane": "Nie udało się przeszukać API Warmane",
+      "failedToCreate": "Nie udało się utworzyć gildii"
+    },
+    "memberCount": "{count} członków",
+    "membersOnRealm": "{count} członków na {realm}"
   },
   "members": {
     "title": "Członkowie ({count})",

@@ -586,8 +586,13 @@
       "guildName": "Guild Name"
     },
     "toasts": {
-      "failedToJoin": "Failed to join guild"
-    }
+      "failedToJoin": "Failed to join guild",
+      "joined": "Joined {name}!",
+      "failedToSearchWarmane": "Failed to search Warmane API",
+      "failedToCreate": "Failed to create guild"
+    },
+    "memberCount": "{count} members",
+    "membersOnRealm": "{count} members on {realm}"
   },
   "members": {
     "title": "Members ({count})",
