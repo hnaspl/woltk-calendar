@@ -45,6 +45,13 @@ class Config:
         if o.strip()
     ]
 
+    # ---------------------------------------------------------- Proxy Fix
+    # Enable when running behind a reverse proxy (nginx, Vite dev-server,
+    # Docker network, etc.) so Flask sees the real client IP via
+    # X-Forwarded-For. Required for session_protection="strong".
+    PROXY_FIX_ENABLED: bool = os.environ.get("PROXY_FIX_ENABLED", "true").lower() == "true"
+    PROXY_FIX_NUM_PROXIES: int = int(os.environ.get("PROXY_FIX_NUM_PROXIES", "1"))
+
     # ----------------------------------------------------------- APScheduler
     SCHEDULER_ENABLED: bool = os.environ.get("SCHEDULER_ENABLED", "true").lower() == "true"
     SCHEDULER_TIMEZONE: str = os.environ.get("SCHEDULER_TIMEZONE", "UTC")

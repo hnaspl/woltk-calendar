@@ -435,16 +435,35 @@ class TestProductionConfig:
 # ---------------------------------------------------------------------------
 
 class TestSessionProtection:
-    """Verify that Flask-Login session protection is set to 'basic'.
+    """Verify that Flask-Login session protection is set to 'strong'.
 
-    'basic' checks user-agent only (prevents trivial session theft).
-    'strong' also fingerprints by IP, which breaks sessions behind
-    proxies, load balancers, and Docker networking.
+    With ProxyFix middleware enabled (default), Flask sees the real client
+    IP from X-Forwarded-For headers, so 'strong' mode (IP + user-agent
+    fingerprint) works reliably behind proxies, containers, and Vite.
     """
 
-    def test_session_protection_is_basic(self, app):
+    def test_session_protection_is_strong(self, app):
         from app.extensions import login_manager
-        assert login_manager.session_protection == "basic"
+        assert login_manager.session_protection == "strong"
+
+    def test_proxy_fix_applied(self, app):
+        """ProxyFix wraps wsgi_app so Flask reads X-Forwarded-For headers."""
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        assert isinstance(app.wsgi_app, ProxyFix)
+
+    def test_session_survives_with_forwarded_ip(self, client, user):
+        """Strong session protection works when proxy sets X-Forwarded-For."""
+        proxy_headers = {"X-Forwarded-For": "203.0.113.50"}
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={"email": "test@example.com", "password": "testpass123"},
+            headers=proxy_headers,
+        )
+        assert resp.status_code == 200
+
+        # Subsequent request with same forwarded IP keeps the session alive
+        resp = client.get("/api/v1/auth/me", headers=proxy_headers)
+        assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------

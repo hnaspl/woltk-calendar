@@ -49,6 +49,20 @@ def create_app(config_override: dict | None = None) -> Flask:
     socketio.init_app(app, cors_allowed_origins=app.config["CORS_ORIGINS"],
                       async_mode="gevent", logger=False, engineio_logger=False)
 
+    # ------------------------------------------------------------ ProxyFix
+    # Werkzeug ProxyFix reads X-Forwarded-For/Proto/Host headers set by
+    # reverse proxies (nginx, Vite dev-server, Docker) so Flask sees the
+    # real client IP.  This makes session_protection="strong" safe behind
+    # proxies — without it, the perceived IP changes and sessions break.
+    # Applied *after* socketio.init_app so it wraps the SocketIO middleware.
+    if app.config.get("PROXY_FIX_ENABLED", True):
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        num_proxies = app.config.get("PROXY_FIX_NUM_PROXIES", 1)
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=num_proxies,
+        )
+
     # Enable WAL mode for SQLite (better concurrent read/write performance)
     if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
         from sqlalchemy import event as sa_event
@@ -79,7 +93,7 @@ def create_app(config_override: dict | None = None) -> Flask:
         )
 
     # ------------------------------------------------------- Flask-Login
-    login_manager.session_protection = "basic"
+    login_manager.session_protection = "strong"
 
     @app.before_request
     def make_session_permanent():
