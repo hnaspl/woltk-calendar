@@ -2,12 +2,24 @@
 
 Keep in sync with src/constants.js (frontend JavaScript equivalent).
 Shared data: WARMANE_REALMS, CLASS_ROLES, CLASS_SPECS, WOTLK_RAIDS,
-             normalize_spec_name().
+             ROLE_LABELS, normalize_spec_name().
 """
 
 from __future__ import annotations
 
 from app.enums import WowClass, Role
+
+# ---------------------------------------------------------------------------
+# Role → display label mapping
+# Keep in sync with ROLE_LABEL_MAP / ROLE_OPTIONS in src/constants.js.
+# ---------------------------------------------------------------------------
+ROLE_LABELS: dict[str, str] = {
+    Role.MELEE_DPS.value: "Melee DPS",
+    Role.MAIN_TANK.value: "Main Tank",
+    Role.OFF_TANK.value: "Off Tank",
+    Role.HEALER.value: "Heal",
+    Role.RANGE_DPS.value: "Range DPS",
+}
 
 # ---------------------------------------------------------------------------
 # Class → available roles mapping

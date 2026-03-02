@@ -22,6 +22,7 @@ import pytest
 from app.constants import (
     CLASS_ROLES,
     CLASS_SPECS,
+    ROLE_LABELS,
     WARMANE_REALMS,
     WOTLK_RAIDS,
     normalize_spec_name,
@@ -70,6 +71,19 @@ def _parse_js_raid_types() -> list[dict]:
         r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", m.group(1),
     )
     return [{"code": code, "name": name} for code, name in entries]
+
+
+def _parse_js_role_options() -> dict[str, str]:
+    """Extract ROLE_OPTIONS ``[{value, label}, ...]`` as a value→label map."""
+    js = _read_js()
+    m = re.search(
+        r"export\s+const\s+ROLE_OPTIONS\s*=\s*\[(.*?)\]", js, re.DOTALL,
+    )
+    assert m, "Could not find ROLE_OPTIONS in src/constants.js"
+    entries = re.findall(
+        r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", m.group(1),
+    )
+    return {value: label for value, label in entries}
 
 
 # ---------------------------------------------------------------------------
@@ -219,3 +233,34 @@ class TestApiVsFrontendSync:
         api = self._api_data(app)
         js_roles = _parse_js_object_of_arrays("CLASS_ROLES")
         assert api["class_roles"] == js_roles
+
+    def test_api_role_labels_match_frontend(self, app):
+        api = self._api_data(app)
+        api_labels = {r["value"]: r["label"] for r in api["roles"]}
+        js_labels = _parse_js_role_options()
+        assert api_labels == js_labels, (
+            f"Role labels differ.\n  API: {api_labels}\n  Frontend: {js_labels}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# ROLE_LABELS sync (backend constant ↔ frontend ROLE_OPTIONS)
+# ---------------------------------------------------------------------------
+
+
+class TestRoleLabelsSync:
+    """Ensure backend ROLE_LABELS matches frontend ROLE_OPTIONS labels."""
+
+    def test_role_labels_match_frontend(self):
+        js_labels = _parse_js_role_options()
+        assert ROLE_LABELS == js_labels, (
+            f"Role labels differ.\n  Backend: {ROLE_LABELS}\n  Frontend: {js_labels}"
+        )
+
+    def test_role_labels_covers_all_roles(self):
+        """Every Role enum value must have a label."""
+        from app.enums import Role
+        for r in Role:
+            assert r.value in ROLE_LABELS, (
+                f"Role '{r.value}' missing from ROLE_LABELS"
+            )

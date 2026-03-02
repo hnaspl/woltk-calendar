@@ -423,15 +423,16 @@ The bench/queue system spans:
 
 | Test File | Count | Coverage |
 |-----------|-------|----------|
-| `test_bench_comprehensive.py` | ~11 | Bench mechanics |
-| `test_bench_e2e.py` | ~11 | Auto-promotion |
-| `test_full_lineup_e2e.py` | ~12 | Multi-role scenarios |
-| `test_bench_reorder_e2e.py` | ~10+ | Queue ordering |
+| `test_bench_comprehensive.py` | 30 | Bench mechanics |
+| `test_bench_e2e.py` | 11 | Auto-promotion |
+| `test_full_lineup_e2e.py` | 59 | Multi-role scenarios |
+| `test_bench_reorder_e2e.py` | 22 | Queue ordering |
 | `test_timezone.py` | ~31 | Timezone utils |
 | `test_timezone_e2e.py` | ~44+ | E2E timezone |
 | Other test files | ~280+ | Various |
 | `test_meta_constants.py` | 15 | Meta/constants API endpoint |
-| **Total** | **~444** | |
+| `test_constants_sync.py` | 14 | Backend ↔ frontend ↔ API constants sync |
+| **Total** | **~447** | |
 
 ### 8.2 New Tests to Add
 
@@ -505,11 +506,50 @@ The bench/queue system spans:
 - [x] Run full test suite — all 444 tests pass
 - [x] Frontend build succeeds
 
-### Phase 6 – Bench/Queue (Audit Only)
-- [ ] Verify all 63 bench/queue tests pass before any changes
-- [ ] Apply only display-constant changes to LineupBoard.vue and SignupForm.vue
-- [ ] Re-run all 63 bench/queue tests after changes
-- [ ] Document bench/queue architecture for future developers
+### Phase 6 – Bench/Queue (Secure Approach — COMPLETE)
+- [x] Verify all 122 bench/queue tests pass before any changes
+- [x] Replace hardcoded label strings in `LineupBoard.vue` column definitions with `ROLE_LABEL_MAP[role]` lookups — display-only, no logic change
+- [x] Extract `ROLE_LABELS` constant to `app/constants.py` — moved from inline dict in `meta.py`
+- [x] Update `app/api/v1/meta.py` — import `ROLE_LABELS` from `app/constants.py`
+- [x] Add 3 new sync tests: backend `ROLE_LABELS` ↔ frontend `ROLE_OPTIONS`, API role labels ↔ frontend, and enum coverage
+- [x] Re-run all 122 bench/queue tests — all pass
+- [x] Run full test suite — all 447 tests pass
+- [x] Frontend build succeeds
+
+#### Unsafe Approach — Additional Changes NOT Applied (Risk: 🔴 High)
+
+The following changes were identified but **deliberately not applied** because they
+would touch bench/queue logic or service layers. These require individual PRs with
+manual QA and careful review:
+
+1. **Replace hardcoded role key strings in `SignupForm.vue` props** (line 162)
+   - `availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] }`
+   - Could use `ROLE_OPTIONS.map(r => r.value)` but this changes the prop default behavior
+   - Risk: could affect how parent components pass roles to the signup form
+
+2. **Replace `lineup` ref key strings in `LineupBoard.vue`** (line 227)
+   - `const lineup = ref({ main_tanks: [], off_tanks: [], melee_dps: [], healers: [], range_dps: [] })`
+   - These keys are structural (used for drag-drop, API payload) — NOT display labels
+   - Risk: backend lineup API expects these exact keys; changing would break serialization
+
+3. **Replace `SlotGroup` enum in `app/enums.py`** (lines 59-65)
+   - `SlotGroup` mirrors `Role` but adds `BENCH` — used in lineup models
+   - Could potentially derive from `Role` + BENCH, but the enum is used in DB column constraints
+   - Risk: altering enum values could corrupt existing data
+
+4. **Consolidate `ROLE_SLOTS` default values**
+   - `app/constants.py:ROLE_SLOTS` uses hardcoded role keys in its dict
+   - These match `Role` enum values by design — changing to enum references is safe in theory
+   - Risk: low but touches lineup initialization, needs full regression
+
+5. **Move `_validate_class_role()` from `signup_service.py` to `app/utils/class_roles.py`**
+   - Already a shared utility exists at `app/utils/class_roles.py` but the signup service
+     has its own inline version
+   - Risk: function signature differences could break auto-bench promotion flow
+
+6. **Use constants store reactively in `LineupBoard.vue` and `SignupForm.vue`**
+   - Could replace static `ROLE_LABEL_MAP` import with `useConstantsStore().roleLabelMap`
+   - Risk: introduces reactive dependency into computed columns, could affect render timing
 
 ---
 

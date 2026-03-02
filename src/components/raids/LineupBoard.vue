@@ -206,11 +206,11 @@ const showRoleChangeModal = ref(false)
 const roleChangePending = ref(null) // { signup, targetKey, targetCol }
 
 const allColumns = computed(() => [
-  { key: 'main_tanks', role: 'main_tank', label: 'Main Tank',  labelClass: 'text-blue-200', slots: props.mainTankSlots },
-  { key: 'off_tanks',  role: 'off_tank',  label: 'Off Tank',   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
-  { key: 'melee_dps',  role: 'melee_dps', label: 'Melee DPS',  labelClass: 'text-blue-300',  slots: props.meleeDpsSlots },
-  { key: 'healers',    role: 'healer',    label: 'Heal',       labelClass: 'text-green-300', slots: props.healerSlots },
-  { key: 'range_dps',  role: 'range_dps', label: 'Range DPS',  labelClass: 'text-red-300',   slots: props.rangeDpsSlots },
+  { key: 'main_tanks', role: 'main_tank', label: ROLE_LABEL_MAP.main_tank,  labelClass: 'text-blue-200', slots: props.mainTankSlots },
+  { key: 'off_tanks',  role: 'off_tank',  label: ROLE_LABEL_MAP.off_tank,   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
+  { key: 'melee_dps',  role: 'melee_dps', label: ROLE_LABEL_MAP.melee_dps,  labelClass: 'text-blue-300',  slots: props.meleeDpsSlots },
+  { key: 'healers',    role: 'healer',    label: ROLE_LABEL_MAP.healer,     labelClass: 'text-green-300', slots: props.healerSlots },
+  { key: 'range_dps',  role: 'range_dps', label: ROLE_LABEL_MAP.range_dps,  labelClass: 'text-red-300',   slots: props.rangeDpsSlots },
 ])
 
 /** Only show columns that have at least 1 slot configured */

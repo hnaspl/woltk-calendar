@@ -13,6 +13,7 @@ from flask import Blueprint, jsonify
 from app.constants import (
     CLASS_ROLES,
     CLASS_SPECS,
+    ROLE_LABELS,
     ROLE_SLOTS,
     WARMANE_REALMS,
     WOTLK_RAIDS,
@@ -25,16 +26,6 @@ from app.enums import (
 )
 
 bp = Blueprint("meta", __name__)
-
-# Pre-compute the role options (value → label).
-# Mirrors the ROLE_OPTIONS array in the frontend.
-_ROLE_LABELS: dict[str, str] = {
-    Role.MELEE_DPS.value: "Melee DPS",
-    Role.MAIN_TANK.value: "Main Tank",
-    Role.OFF_TANK.value: "Off Tank",
-    Role.HEALER.value: "Heal",
-    Role.RANGE_DPS.value: "Range DPS",
-}
 
 
 @bp.route("/constants", methods=["GET"])
@@ -51,7 +42,7 @@ def get_constants():
                 {"code": r["code"], "name": r["name"]} for r in WOTLK_RAIDS
             ],
             "roles": [
-                {"value": r.value, "label": _ROLE_LABELS.get(r.value, r.value)}
+                {"value": r.value, "label": ROLE_LABELS.get(r.value, r.value)}
                 for r in Role
             ],
             "event_statuses": [s.value for s in EventStatus],
