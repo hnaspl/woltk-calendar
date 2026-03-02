@@ -333,7 +333,7 @@ async function updateRole(member, role) {
     member.role = role
     uiStore.showToast(t('guildSettings.roleUpdated'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update role', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('guildSettings.toasts.failedToUpdateRole'), 'error')
   }
 }
 
@@ -364,7 +364,7 @@ async function doKick() {
     showKickConfirm.value = false
     uiStore.showToast(t('guildSettings.memberRemoved'), 'success')
   } catch {
-    uiStore.showToast('Failed to remove member', 'error')
+    uiStore.showToast(t('guildSettings.toasts.failedToRemoveMember'), 'error')
   } finally {
     saving.value = false
   }
@@ -392,7 +392,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to load characters', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('guildSettings.toasts.failedToLoadCharacters'), 'error')
   } finally {
     loadingMemberChars.value = false
   }
@@ -420,7 +420,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? 'Failed to search users', 'error')
+      uiStore.showToast(err?.response?.data?.message ?? t('guildSettings.toasts.failedToSearchUsers'), 'error')
     } finally {
       searchingUsers.value = false
     }
@@ -435,9 +435,9 @@ async function doAddMember(user) {
     showAddMember.value = false
     addMemberQuery.value = ''
     availableUsers.value = []
-    uiStore.showToast(`${user.username} added to guild`, 'success')
+    uiStore.showToast(t('guildSettings.toasts.memberAdded', { username: user.username }), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to add member', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('guildSettings.toasts.failedToAddMember'), 'error')
   }
 }
 

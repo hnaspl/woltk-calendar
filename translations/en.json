@@ -412,7 +412,8 @@
       "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
       "copiedSuccess": "\"{name}\" copied to {count} guild(s)",
       "nameTypeSizeRequired": "Name, type and size are required",
-      "selectGuild": "Please select a guild"
+      "selectGuild": "Please select a guild",
+      "slotsExceedSize": "Total slots ({total}) cannot exceed raid size ({size})"
     }
   },
   "templates": {
@@ -447,7 +448,10 @@
       "templateUpdated": "Template updated",
       "templateCreated": "Template created in {guild}",
       "failedToApply": "Failed to apply template",
-      "nameRaidDefRequired": "Name and raid definition are required"
+      "nameRaidDefRequired": "Name and raid definition are required",
+      "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
+      "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
+      "copiedSuccess": "\"{name}\" copied to {count} guild(s)"
     }
   },
   "series": {
@@ -496,7 +500,10 @@
       "seriesCreated": "Series created in {guild}",
       "failedToGenerate": "Failed to generate events",
       "titleRequired": "Title is required",
-      "selectGuild": "Please select a guild"
+      "selectGuild": "Please select a guild",
+      "failedToCreateInGuilds": "Failed to create in {count} guild(s)",
+      "copiedWithFailures": "Copied to {succeeded} guild(s), failed in {failed}",
+      "copiedSuccess": "\"{name}\" copied to {count} guild(s)"
     }
   },
   "roles": {

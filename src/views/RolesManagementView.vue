@@ -161,7 +161,7 @@
           <input
             v-model="roleForm.description"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-            placeholder="Brief description of this role"
+            :placeholder="t('roles.descriptionPlaceholder')"
           />
         </div>
 
@@ -364,7 +364,7 @@ async function loadPermissions() {
   try {
     allPermissions.value = await rolesApi.getPermissions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load permissions', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToLoadPermissions'), 'error')
   } finally {
     permissionsLoading.value = false
   }
@@ -375,7 +375,7 @@ async function loadGrantRules() {
   try {
     grantRules.value = await rolesApi.getGrantRules()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to load grant rules', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToLoadRules'), 'error')
   } finally {
     grantRulesLoading.value = false
   }
@@ -446,7 +446,7 @@ async function doDeleteRole() {
     showDeleteConfirm.value = false
     await loadRoles()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to delete role', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToDeleteRole'), 'error')
   } finally {
     deletingRole.value = false
   }
@@ -483,7 +483,7 @@ async function doDeleteGrantRule(rule) {
     uiStore.showToast(t('roles.grantRuleRemoved'), 'success')
     await Promise.all([loadRoles(), loadGrantRules()])
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to remove grant rule', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('roles.toasts.failedToRemoveRule'), 'error')
   }
 }
 </script>

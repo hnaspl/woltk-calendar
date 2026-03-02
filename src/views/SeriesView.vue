@@ -429,7 +429,7 @@ function openCopyModal(s) {
 
 async function saveSeries() {
   formError.value = null
-  if (!form.title) { formError.value = 'Title is required'; return }
+  if (!form.title) { formError.value = t('series.toasts.titleRequired'); return }
 
   // Check if multi-guild is checked but no guilds selected
   if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
@@ -453,7 +453,7 @@ async function confirmSaveCurrentOnly() {
 async function doSave() {
   const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
   const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
-  if (!targetGuild) { formError.value = 'Please select a guild'; return }
+  if (!targetGuild) { formError.value = t('series.toasts.selectGuild'); return }
   saving.value = true
   // Derive realm_name from selected guild
   const payload = { ...form, realm_name: targetGuild.realm_name ?? '' }
@@ -475,12 +475,12 @@ async function doSave() {
           const otherPayload = { ...form, realm_name: otherGuild?.realm_name ?? '' }
           try { await seriesApi.createSeries(guildId, otherPayload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
+        if (failed > 0) uiStore.showToast(t('series.toasts.failedToCreateInGuilds', { count: failed }), 'warning')
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? 'Series updated' : `Series created in ${guildLabel}`, 'success')
+    uiStore.showToast(editing.value ? t('series.toasts.seriesUpdated') : t('series.toasts.seriesCreated', { guild: guildLabel }), 'success')
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -499,7 +499,7 @@ async function doGenerate() {
     generateResult.value = Array.isArray(events) ? events.length : generateCount.value
     uiStore.showToast(`${generateResult.value} event(s) generated!`, 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to generate events', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'), 'error')
   } finally { saving.value = false }
 }
 
@@ -526,9 +526,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+    uiStore.showToast(t('series.toasts.copiedWithFailures', { succeeded, failed }), 'warning')
   } else {
-    uiStore.showToast(`"${copySource.value.title}" copied to ${succeeded} guild(s)`, 'success')
+    uiStore.showToast(t('series.toasts.copiedSuccess', { name: copySource.value.title, count: succeeded }), 'success')
   }
   saving.value = false
 }

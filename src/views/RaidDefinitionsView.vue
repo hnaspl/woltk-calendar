@@ -86,7 +86,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.nameRequired') }}</label>
-            <input v-model="form.name" required placeholder="ICC 25 Heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            <input v-model="form.name" required :placeholder="t('raidDefinitions.namePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.raidType') }}</label>
@@ -359,9 +359,9 @@ function openCopyModal(def) {
 
 async function saveDef() {
   formError.value = null
-  if (!form.name || !form.raid_type || !form.size) { formError.value = 'Name, type and size are required'; return }
+  if (!form.name || !form.raid_type || !form.size) { formError.value = t('raidDefinitions.toasts.nameTypeSizeRequired'); return }
   const totalSlots = (form.main_tank_slots || 0) + (form.off_tank_slots || 0) + (form.melee_dps_slots || 0) + (form.healer_slots || 0) + (form.range_dps_slots || 0)
-  if (totalSlots > form.size) { formError.value = `Total slots (${totalSlots}) cannot exceed raid size (${form.size})`; return }
+  if (totalSlots > form.size) { formError.value = t('raidDefinitions.toasts.slotsExceedSize', { total: totalSlots, size: form.size }); return }
 
   // Check if multi-guild is checked but no guilds selected
   if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
@@ -385,7 +385,7 @@ async function confirmSaveCurrentOnly() {
 async function doSave() {
   const targetGuildId = selectedGuildId.value || guildStore.currentGuild.id
   const targetGuild = guildStore.guilds.find(g => g.id === targetGuildId)
-  if (!targetGuild) { formError.value = 'Please select a guild'; return }
+  if (!targetGuild) { formError.value = t('raidDefinitions.toasts.selectGuild'); return }
   saving.value = true
   // Set realm from selected guild
   const payload = { ...form, realm: targetGuild.realm_name ?? '' }
@@ -406,12 +406,12 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await raidDefsApi.createRaidDefinition(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
+        if (failed > 0) uiStore.showToast(t('raidDefinitions.toasts.failedToCreateInGuilds', { count: failed }), 'warning')
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? t('raidDefinitions.definitionUpdated') : `Definition created in ${guildLabel}`, 'success')
+    uiStore.showToast(editing.value ? t('raidDefinitions.definitionUpdated') : t('raidDefinitions.toasts.definitionCreated', { guild: guildLabel }), 'success')
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -444,9 +444,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+    uiStore.showToast(t('raidDefinitions.toasts.copiedWithFailures', { succeeded, failed }), 'warning')
   } else {
-    uiStore.showToast(`"${copySource.value.name}" copied to ${succeeded} guild(s)`, 'success')
+    uiStore.showToast(t('raidDefinitions.toasts.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
 }

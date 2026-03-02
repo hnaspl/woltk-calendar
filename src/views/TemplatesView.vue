@@ -329,7 +329,7 @@ function openCopyModal(tpl) {
 
 async function saveTemplate() {
   formError.value = null
-  if (!form.name || !form.raid_definition_id) { formError.value = 'Name and raid definition are required'; return }
+  if (!form.name || !form.raid_definition_id) { formError.value = t('templates.toasts.nameRaidDefRequired'); return }
 
   // Check if multi-guild is checked but no guilds selected
   if (!editing.value && applyToOtherGuilds.value && selectedGuildIds.value.length === 0) {
@@ -372,12 +372,12 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await templatesApi.createTemplate(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(`Failed to create in ${failed} guild(s)`, 'warning')
+        if (failed > 0) uiStore.showToast(t('templates.toasts.failedToCreateInGuilds', { count: failed }), 'warning')
       }
     }
     showModal.value = false
     const guildLabel = currentGuildLabel.value
-    uiStore.showToast(editing.value ? 'Template updated' : `Template created in ${guildLabel}`, 'success')
+    uiStore.showToast(editing.value ? t('templates.toasts.templateUpdated') : t('templates.toasts.templateCreated', { guild: guildLabel }), 'success')
   } catch (err) {
     formError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally { saving.value = false }
@@ -391,7 +391,7 @@ async function doApply() {
     showApply.value = false
     uiStore.showToast(t('templates.eventScheduled'), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? 'Failed to apply template', 'error')
+    uiStore.showToast(err?.response?.data?.message ?? t('templates.toasts.failedToApply'), 'error')
   } finally { saving.value = false }
 }
 
@@ -418,9 +418,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(`Copied to ${succeeded} guild(s), failed in ${failed}`, 'warning')
+    uiStore.showToast(t('templates.toasts.copiedWithFailures', { succeeded, failed }), 'warning')
   } else {
-    uiStore.showToast(`"${copySource.value.name}" copied to ${succeeded} guild(s)`, 'success')
+    uiStore.showToast(t('templates.toasts.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
 }
