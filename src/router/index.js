@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+import { useConstantsStore } from '@/stores/constants'
 
 const routes = [
   {
@@ -109,7 +110,11 @@ router.beforeEach(async (to) => {
   if (!_authChecked) {
     _authChecked = true
     try {
-      await authStore.fetchMe()
+      // Fetch constants (public) in parallel with session restore
+      const constantsStore = useConstantsStore()
+      const authPromise = authStore.fetchMe()
+      constantsStore.fetchConstants()  // fire-and-forget, non-blocking
+      await authPromise
       // Bootstrap guild store so currentGuild & members are available for permissions
       if (authStore.user) {
         const guildStore = useGuildStore()

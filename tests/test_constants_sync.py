@@ -4,6 +4,9 @@ These tests parse src/constants.js to extract RAID_TYPES, WARMANE_REALMS,
 CLASS_SPECS, and CLASS_ROLES, then compare them against the Python equivalents
 in app/constants.py and app/enums.py.
 
+Additionally, tests validate the ``/api/v1/meta/constants`` endpoint returns
+the same values, ensuring the API is the true single source of truth.
+
 If a test here fails, it means the backend and frontend have drifted apart
 and one side needs to be updated to match the other.
 """
@@ -181,3 +184,38 @@ class TestNormalizeSpecNameSync:
         """Warmane sends 'Feral' for Druids; should normalize to 'Feral Combat'."""
         result = normalize_spec_name("Feral", "Druid")
         assert result == "Feral Combat"
+
+
+# ---------------------------------------------------------------------------
+# API endpoint ↔ frontend sync
+# ---------------------------------------------------------------------------
+
+
+class TestApiVsFrontendSync:
+    """Verify the meta/constants API returns data matching frontend statics."""
+
+    def _api_data(self, app):
+        with app.test_client() as client:
+            return client.get("/api/v1/meta/constants").get_json()
+
+    def test_api_realms_match_frontend(self, app):
+        api = self._api_data(app)
+        js_realms = _parse_js_array("WARMANE_REALMS")
+        assert api["warmane_realms"] == js_realms
+
+    def test_api_raid_names_match_frontend(self, app):
+        api = self._api_data(app)
+        js_raids = _parse_js_raid_types()
+        api_map = {r["code"]: r["name"] for r in api["raid_types"]}
+        js_map = {r["code"]: r["name"] for r in js_raids}
+        assert api_map == js_map
+
+    def test_api_class_specs_match_frontend(self, app):
+        api = self._api_data(app)
+        js_specs = _parse_js_object_of_arrays("CLASS_SPECS")
+        assert api["class_specs"] == js_specs
+
+    def test_api_class_roles_match_frontend(self, app):
+        api = self._api_data(app)
+        js_roles = _parse_js_object_of_arrays("CLASS_ROLES")
+        assert api["class_roles"] == js_roles

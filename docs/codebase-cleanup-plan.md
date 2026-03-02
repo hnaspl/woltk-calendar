@@ -321,43 +321,34 @@ Both handle the same Warmane API quirks (e.g. "Feral" → "Feral Combat" for Dru
 
 ## 6. Phase 5 – Cross-Stack Single Source of Truth
 
-**Goal:** Establish a strategy for data that must be identical in both frontend and backend.
+**Goal:** Establish the backend as the single source of truth for data that must
+be identical in both frontend and backend.
 
-### 6.1 Shared Data Candidates
+### 6.1 Implemented: Option A (API Endpoint)
 
-| Data | Backend | Frontend | Strategy |
-|------|---------|----------|----------|
-| `WARMANE_REALMS` | `app/constants.py` | `src/constants.js` | API endpoint or build-time sync |
-| `WOW_CLASSES` | `app/enums.py` | `src/constants.js` | API endpoint or build-time sync |
-| `CLASS_ROLES` | `app/constants.py` | `src/constants.js` | API endpoint or build-time sync |
-| `CLASS_SPECS` | `app/constants.py` | `src/constants.js` | API endpoint or build-time sync |
-| `RAID_TYPES` | `app/constants.py` | `src/constants.js` | API endpoint or build-time sync |
-| Role enum values | `app/enums.py` | hardcoded strings | API endpoint |
-| Event status values | `app/enums.py` | hardcoded strings | API endpoint |
+A public `GET /api/v1/meta/constants` endpoint serves all shared constants:
 
-### 6.2 Recommended Approach: Shared JSON + Build-Time Sync
+| Key | Source |
+|-----|--------|
+| `warmane_realms` | `app/constants.WARMANE_REALMS` |
+| `wow_classes` | `app/enums.WowClass` |
+| `raid_types` | `app/constants.WOTLK_RAIDS` (code + name) |
+| `roles` | `app/enums.Role` + labels |
+| `event_statuses` | `app/enums.EventStatus` |
+| `attendance_outcomes` | `app/enums.AttendanceOutcome` |
+| `class_specs` | `app/constants.CLASS_SPECS` |
+| `class_roles` | `app/constants.CLASS_ROLES` |
+| `role_slots` | `app/constants.ROLE_SLOTS` |
 
-**Option A: API Endpoint (Dynamic)**
-- Create `GET /api/v1/meta/constants` that returns all shared constants
-- Frontend fetches on app init and stores in a Pinia store
-- **Pros:** True single source of truth, always in sync
-- **Cons:** Extra API call on every page load, frontend can't use constants at import time
+The frontend stores these in `src/stores/constants.js` (Pinia store):
+- Initialised with static defaults from `src/constants.js` (available at import time)
+- On app init, `fetchConstants()` replaces defaults with authoritative backend values
+- Components can use either static imports or the reactive store
 
-**Option B: Shared JSON File (Build-Time)**
-- Create `shared/constants.json` with all shared data
-- Backend: `import json; SHARED = json.load(open("shared/constants.json"))`
-- Frontend: `import SHARED from '../../shared/constants.json'` (Vite supports JSON imports)
-- **Pros:** No runtime cost, works at import time, true single source
-- **Cons:** Need to keep one file up to date (but that's the point)
+### 6.2 Dead Code Removed
 
-**Option C: Keep Separate with Cross-Reference Comments (Minimal)**
-- Add `// Keep in sync with app/constants.py` comments
-- Add tests that validate both sides have the same values
-- **Pros:** Minimal change, no new infrastructure
-- **Cons:** Still duplicate, relies on discipline
-
-**Recommendation:** Start with **Option C** (comments + validation tests) as it's the lowest
-risk. Plan for **Option B** in a future iteration when adding more shared data.
+- `Realm` enum (`app/enums.py`) — never imported anywhere, replaced by `WARMANE_REALMS` list
+- `app/utils/pagination.py` — `paginate()` helper never called by any endpoint
 
 ---
 
@@ -439,7 +430,8 @@ The bench/queue system spans:
 | `test_timezone.py` | ~31 | Timezone utils |
 | `test_timezone_e2e.py` | ~44+ | E2E timezone |
 | Other test files | ~280+ | Various |
-| **Total** | **~403** | |
+| `test_meta_constants.py` | 15 | Meta/constants API endpoint |
+| **Total** | **~444** | |
 
 ### 8.2 New Tests to Add
 
@@ -500,12 +492,18 @@ The bench/queue system spans:
 - [x] Align raid name discrepancies ("The" prefix) — official WoW names
 - [x] Add validation test for constants sync (`tests/test_constants_sync.py` — 7 tests)
 
-### Phase 5 – Cross-Stack (Future, Higher Risk)
-- [ ] Evaluate shared JSON approach
-- [ ] Create `shared/constants.json` if approved
-- [ ] Update backend to import from shared JSON
-- [ ] Update frontend to import from shared JSON
-- [ ] Add CI check for constants sync
+### Phase 5 – Cross-Stack (Option A: API Endpoint)
+- [x] Create `GET /api/v1/meta/constants` endpoint (`app/api/v1/meta.py`)
+- [x] Register `meta` blueprint in `app/api/v1/__init__.py`
+- [x] Create `src/api/meta.js` — frontend API module
+- [x] Create `src/stores/constants.js` — Pinia store (fetches on app init, static defaults)
+- [x] Fetch constants in router bootstrap (`src/router/index.js`) — fire-and-forget, non-blocking
+- [x] Remove dead code: unused `Realm` enum from `app/enums.py`
+- [x] Remove dead code: unused `app/utils/pagination.py`
+- [x] Add 15 backend tests for meta endpoint (`tests/test_meta_constants.py`)
+- [x] Add 4 API-vs-frontend sync tests in `tests/test_constants_sync.py`
+- [x] Run full test suite — all 444 tests pass
+- [x] Frontend build succeeds
 
 ### Phase 6 – Bench/Queue (Audit Only)
 - [ ] Verify all 63 bench/queue tests pass before any changes
@@ -523,7 +521,7 @@ The bench/queue system spans:
 | Phase 2 (Frontend Utilities) | 🟢 Low | Formatting functions only, no logic changes |
 | Phase 3 (Backend API Helpers) | 🟡 Medium | Incremental rollout, test after each file |
 | Phase 4 (Backend Utilities) | 🟢 Low | Comments and name alignment only |
-| Phase 5 (Cross-Stack) | 🟡 Medium | Deferred to future iteration |
+| Phase 5 (Cross-Stack) | 🟢 Low | API endpoint + Pinia store, static fallbacks preserved |
 | Phase 6 (Bench/Queue) | 🔴 High (if logic touched) | Audit-only approach, 63-test gate, display changes only |
 
 ### Key Risk: Bench/Queue System
@@ -550,7 +548,11 @@ The bench/queue system is the most interconnected feature in the codebase:
 | `src/composables/useFormatting.js` | Shared date/time formatting |
 | `app/utils/api_helpers.py` | API response helpers, get_or_404, validate_required |
 | `app/utils/decorators.py` | @require_guild_permission decorator |
+| `app/api/v1/meta.py` | GET /api/v1/meta/constants — shared constants endpoint |
+| `src/api/meta.js` | Frontend API module for meta endpoint |
+| `src/stores/constants.js` | Pinia store for shared constants |
 | `tests/test_api_helpers.py` | Tests for new API helpers |
+| `tests/test_meta_constants.py` | Tests for meta constants endpoint |
 
 ### Files to Modify (Frontend)
 | File | Change |
