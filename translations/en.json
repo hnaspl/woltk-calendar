@@ -173,7 +173,7 @@
     "passwordsDoNotMatch": "Passwords do not match",
     "newPasswordsDoNotMatch": "New passwords do not match",
     "placeholders": {
-      "email": "you@example.com",
+      "email": "you{'@'}example.com",
       "password": "••••••••",
       "username": "YourUsername",
       "minChars": "Min. 8 characters",

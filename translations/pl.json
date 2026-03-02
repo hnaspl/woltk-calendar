@@ -173,7 +173,7 @@
     "passwordsDoNotMatch": "Hasła nie są identyczne",
     "newPasswordsDoNotMatch": "Nowe hasła nie są identyczne",
     "placeholders": {
-      "email": "ty@example.com",
+      "email": "ty{'@'}example.com",
       "password": "••••••••",
       "username": "TwojaNazwa",
       "minChars": "Min. 8 znaków",
