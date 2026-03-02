@@ -1,11 +1,14 @@
-"""Auth API: register, login, logout, me, profile, change-password."""
+"""Auth API: register, login, logout, me, profile, change-password, Discord OAuth."""
 
 from __future__ import annotations
 
-from flask import Blueprint, current_app, jsonify
+import secrets
+
+from flask import Blueprint, current_app, jsonify, redirect, session
 from flask_login import current_user, login_user, logout_user
 
 from app.services import auth_service
+from app.services import discord_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
 from app.utils.rate_limit import rate_limit
@@ -65,7 +68,13 @@ def login():
         return jsonify({"error": _t("auth.errors.loginRequired")}), 400
 
     user = auth_service.get_user_by_email(email)
-    if user is None or not auth_service.verify_password(user, password):
+    if user is None:
+        return jsonify({"error": _t("auth.errors.invalidCredentials")}), 401
+
+    if getattr(user, "auth_provider", "local") != "local":
+        return jsonify({"error": _t("auth.errors.useDiscordLogin")}), 400
+
+    if not auth_service.verify_password(user, password):
         return jsonify({"error": _t("auth.errors.invalidCredentials")}), 401
 
     if not user.is_active:
@@ -114,3 +123,51 @@ def change_password():
 
     auth_service.change_password(current_user, new_password)
     return jsonify({"message": _t("auth.messages.passwordChanged")}), 200
+
+
+# ---------------------------------------------------------------------------
+# Discord OAuth2
+# ---------------------------------------------------------------------------
+
+@bp.get("/discord/enabled")
+def discord_enabled():
+    """Return whether Discord login is configured."""
+    return jsonify({"enabled": discord_service.is_discord_enabled()}), 200
+
+
+@bp.get("/discord/login")
+def discord_login():
+    """Redirect the user to Discord's authorization page."""
+    state = secrets.token_urlsafe(32)
+    session["discord_oauth_state"] = state
+    url = discord_service.get_authorize_url(state)
+    if not url:
+        return jsonify({"error": _t("auth.errors.discordNotConfigured")}), 400
+    return jsonify({"url": url}), 200
+
+
+@bp.get("/discord/callback")
+def discord_callback():
+    """Handle the OAuth2 callback from Discord."""
+    from flask import request
+
+    code = request.args.get("code")
+    state = request.args.get("state")
+
+    if not code or not state:
+        return redirect("/login?error=discord_failed")
+
+    expected_state = session.pop("discord_oauth_state", None)
+    if state != expected_state:
+        return redirect("/login?error=discord_failed")
+
+    discord_info = discord_service.exchange_code(code)
+    if not discord_info:
+        return redirect("/login?error=discord_failed")
+
+    user = discord_service.get_or_create_discord_user(discord_info)
+    if not user.is_active:
+        return redirect("/login?error=account_disabled")
+
+    login_user(user, remember=True)
+    return redirect("/dashboard")

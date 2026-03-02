@@ -147,6 +147,49 @@
       </div>
     </WowCard>
 
+    <!-- Discord OAuth Settings (Global Admin only) -->
+    <WowCard v-if="authStore.user?.is_admin">
+      <h2 class="wow-heading text-base mb-2">{{ t('admin.system.discord.title') }}</h2>
+      <p class="text-text-muted text-xs mb-4">{{ t('admin.system.discord.help') }}</p>
+
+      <div v-if="discordLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else class="space-y-4 max-w-lg">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.discord.clientId') }}</label>
+          <input
+            v-model="discordForm.discord_client_id"
+            type="text"
+            :placeholder="t('admin.system.discord.clientIdPlaceholder')"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.discord.clientSecret') }}</label>
+          <input
+            v-model="discordForm.discord_client_secret"
+            type="password"
+            :placeholder="t('admin.system.discord.clientSecretPlaceholder')"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.discord.redirectUri') }}</label>
+          <input
+            v-model="discordForm.discord_redirect_uri"
+            type="text"
+            :placeholder="t('admin.system.discord.redirectUriPlaceholder')"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+          />
+        </div>
+
+        <div class="pt-2">
+          <WowButton :loading="discordSaving" @click="saveDiscordSettings">{{ t('admin.system.discord.saveSettings') }}</WowButton>
+        </div>
+      </div>
+    </WowCard>
+
     <!-- Delete confirmation -->
     <WowModal v-model="showDeleteConfirm" :title="t('admin.users.deleteUser')" size="sm">
       <p class="text-text-muted">{{ t('admin.users.deleteConfirm', { name: deleteTarget?.username }) }}</p>
@@ -193,6 +236,15 @@ const settingsForm = ref({
   autosync_interval_minutes: 60,
 })
 
+// Discord OAuth settings state
+const discordLoading = ref(true)
+const discordSaving = ref(false)
+const discordForm = ref({
+  discord_client_id: '',
+  discord_client_secret: '',
+  discord_redirect_uri: '',
+})
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -216,6 +268,25 @@ onMounted(async () => {
     // ignore – defaults are fine
   } finally {
     sysSettingsLoading.value = false
+  }
+
+  // Load Discord OAuth settings (global admin only)
+  if (authStore.user?.is_admin) {
+    discordLoading.value = true
+    try {
+      const discord = await adminApi.getDiscordSettings()
+      discordForm.value = {
+        discord_client_id: discord.discord_client_id || '',
+        discord_client_secret: discord.discord_client_secret || '',
+        discord_redirect_uri: discord.discord_redirect_uri || '',
+      }
+    } catch {
+      // ignore – defaults are fine
+    } finally {
+      discordLoading.value = false
+    }
+  } else {
+    discordLoading.value = false
   }
 })
 
@@ -293,6 +364,18 @@ async function triggerManualSync() {
     uiStore.showToast(t('admin.system.toasts.syncFailed'), 'error')
   } finally {
     syncing.value = false
+  }
+}
+
+async function saveDiscordSettings() {
+  discordSaving.value = true
+  try {
+    await adminApi.updateDiscordSettings(discordForm.value)
+    uiStore.showToast(t('admin.system.toasts.discordSettingsSaved'), 'success')
+  } catch {
+    uiStore.showToast(t('admin.system.toasts.failedToSaveDiscord'), 'error')
+  } finally {
+    discordSaving.value = false
   }
 }
 </script>

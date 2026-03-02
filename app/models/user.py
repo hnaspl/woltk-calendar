@@ -29,6 +29,8 @@ class User(UserMixin, db.Model):
     language: Mapped[str] = mapped_column(sa.String(5), nullable=False, default="en")
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     is_admin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    auth_provider: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="local")
+    discord_id: Mapped[str | None] = mapped_column(sa.String(64), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
@@ -56,6 +58,7 @@ class User(UserMixin, db.Model):
             "language": self.language,
             "is_active": self.is_active,
             "is_admin": self.is_admin,
+            "auth_provider": self.auth_provider,
             "created_at": utc_iso(self.created_at),
             "updated_at": utc_iso(self.updated_at),
         }
@@ -73,6 +76,7 @@ class User(UserMixin, db.Model):
             "language": self.language,
             "is_active": self.is_active,
             "is_admin": self.is_admin,
+            "auth_provider": self.auth_provider,
             "created_at": utc_iso(self.created_at),
             "updated_at": utc_iso(self.updated_at),
         }

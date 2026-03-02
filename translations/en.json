@@ -200,12 +200,17 @@
       "emailDisposable": "Disposable or temporary email addresses are not allowed",
       "emailInvalidDomain": "Email domain does not appear to be valid",
       "usernameLengthInvalid": "Username must be between 2 and 80 characters",
-      "displayNameTooLong": "Display name must be at most 100 characters"
+      "displayNameTooLong": "Display name must be at most 100 characters",
+      "useDiscordLogin": "This account uses Discord login. Please sign in with Discord.",
+      "discordNotConfigured": "Discord login is not configured. Please contact the administrator.",
+      "discordLoginFailed": "Discord login failed. Please try again."
     },
     "messages": {
       "loggedOut": "Logged out",
       "passwordChanged": "Password changed successfully"
-    }
+    },
+    "orSeparator": "or",
+    "signInWithDiscord": "Sign in with Discord"
   },
   "profile": {
     "title": "User Profile",
@@ -687,7 +692,20 @@
         "settingsSaved": "System settings saved",
         "failedToSaveSettings": "Failed to save system settings",
         "syncCompleted": "Character sync completed",
-        "syncFailed": "Sync failed"
+        "syncFailed": "Sync failed",
+        "discordSettingsSaved": "Discord settings saved",
+        "failedToSaveDiscord": "Failed to save Discord settings"
+      },
+      "discord": {
+        "title": "Discord Login",
+        "help": "Configure Discord OAuth2 to allow users to sign in with their Discord account.",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "redirectUri": "Redirect URI",
+        "clientIdPlaceholder": "Discord Application Client ID",
+        "clientSecretPlaceholder": "Discord Application Client Secret",
+        "redirectUriPlaceholder": "https://your-domain.com/api/v1/auth/discord/callback",
+        "saveSettings": "Save Discord Settings"
       }
     }
   },
@@ -845,7 +863,8 @@
       "cannotDeletePrimary": "Cannot delete the primary site admin",
       "userDeleted": "User deleted",
       "syncCompleted": "Sync completed",
-      "invalidInteger": "Invalid integer value for '{key}'"
+      "invalidInteger": "Invalid integer value for '{key}'",
+      "discordSettingsSaved": "Discord settings saved"
     },
     "attendance": {
       "benchCannotRecord": "Bench characters cannot have attendance recorded"
