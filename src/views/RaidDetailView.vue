@@ -25,58 +25,58 @@
               <div class="flex items-center gap-2 flex-wrap mb-2">
                 <h1 class="wow-heading text-lg sm:text-xl">{{ event.title }}</h1>
                 <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
-                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Done</span>
-                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">Cancelled</span>
+                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.done') }}</span>
+                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.cancelled') }}</span>
               </div>
 
               <!-- Completed/cancelled event locked banner -->
               <div v-if="event.status === 'completed' && hasAttendance" class="mt-2 px-3 py-2 rounded bg-green-900/20 border border-green-700/40 text-green-300 text-xs">
-                🔒 This raid is <strong>completed</strong> and attendance has been recorded. All modifications are locked to prevent data manipulation.
+                🔒 {{ t('raidDetail.completedLocked') }}
               </div>
               <div v-else-if="event.status === 'cancelled'" class="mt-2 px-3 py-2 rounded bg-red-900/20 border border-red-700/40 text-red-300 text-xs">
-                🔒 This raid has been <strong>cancelled</strong>. All modifications are locked.
+                🔒 {{ t('raidDetail.cancelledLocked') }}
               </div>
 
               <!-- Informative details grid -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-6 gap-y-1.5 text-sm mt-2">
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📅</span>
-                  <span><strong class="text-text-primary">Starts:</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.starts') }}</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
                 </div>
                 <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⏱️</span>
-                  <span><strong class="text-text-primary">Duration:</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.duration') }}</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
                 </div>
                 <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⚔️</span>
-                  <span><strong class="text-text-primary">Raid:</strong> {{ raidLabel(event.raid_type) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidLabel(event.raid_type) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📝</span>
                   <span>
-                    <strong class="text-text-primary">Signups:</strong>{{ ' ' }}
+                    <strong class="text-text-primary">{{ t('raidDetail.signups') }}</strong>{{ ' ' }}
                     <template v-if="event.status === 'locked' || event.is_locked">
-                      <span class="text-red-400 font-medium">Closed</span>
+                      <span class="text-red-400 font-medium">{{ t('raidDetail.closed') }}</span>
                     </template>
                     <template v-else-if="event.status === 'cancelled'">
-                      <span class="text-red-400 font-medium">Cancelled</span>
+                      <span class="text-red-400 font-medium">{{ t('raidDetail.cancelled') }}</span>
                     </template>
                     <template v-else-if="event.status === 'completed'">
-                      <span class="text-text-muted">Completed</span>
+                      <span class="text-text-muted">{{ t('raidDetail.completed') }}</span>
                     </template>
                     <template v-else>
-                      <span class="text-green-400 font-medium">Open</span>
+                      <span class="text-green-400 font-medium">{{ t('raidDetail.open') }}</span>
                     </template>
-                    <span class="ml-1 text-text-muted"> ({{ signups.length }} signed up)</span>
+                    <span class="ml-1 text-text-muted"> ({{ signups.length }} {{ t('raidDetail.signedUp') }})</span>
                   </span>
                 </div>
                 <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">🔒</span>
-                  <span><strong class="text-text-primary">Signups Close:</strong> {{ formatDateTime(event.close_signups_at) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.signupsClose') }}</strong> {{ formatDateTime(event.close_signups_at) }}</span>
                 </div>
                 <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">🌐</span>
-                  <span><strong class="text-text-primary">Realm:</strong> {{ event.realm_name ?? event.realm }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.realmLabel') }}</strong> {{ event.realm_name ?? event.realm }}</span>
                 </div>
               </div>
 
@@ -87,22 +87,22 @@
 
             <!-- Officer actions -->
             <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-1.5 sm:gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
-              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">Edit</WowButton>
+              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">{{ t('common.buttons.edit') }}</WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
-                {{ (event.status === 'locked' || event.is_locked) ? 'Unlock' : 'Lock' }}
+                {{ (event.status === 'locked' || event.is_locked) ? t('raidDetail.unlock') : t('raidDetail.lock') }}
               </WowButton>
-              <WowButton variant="secondary" @click="doDuplicate">Duplicate</WowButton>
+              <WowButton variant="secondary" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
-                Mark Done
+                {{ t('raidDetail.markDone') }}
               </WowButton>
               <WowButton
                 v-if="event.status === 'completed' && permissions.can('record_attendance')"
                 variant="primary"
                 @click="showAttendanceModal = true"
               >
-                {{ hasAttendance ? 'Update Attendance' : 'Record Attendance' }}
+                {{ hasAttendance ? t('raidDetail.updateAttendance') : t('raidDetail.recordAttendance') }}
               </WowButton>
-              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
+              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">{{ t('raidDetail.cancelEvent') }}</WowButton>
             </div>
           </div>
         </WowCard>
@@ -288,10 +288,10 @@
     </div>
 
     <!-- Edit Event modal -->
-    <WowModal v-model="showEditModal" title="Edit Event" size="md">
+    <WowModal v-model="showEditModal" :title="t('raidDetail.editEvent')" size="md">
       <form @submit.prevent="saveEvent" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Title *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.title') }}</label>
           <input v-model="editForm.title" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div>
@@ -309,17 +309,17 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Size</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
             <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">10-man</option>
-              <option :value="25">25-man</option>
+              <option :value="10">{{ t('calendar.tenMan') }}</option>
+              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
             <select v-model="editForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="normal">Normal</option>
-              <option value="heroic">Heroic</option>
+              <option value="normal">{{ t('calendar.normal') }}</option>
+              <option value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
           <div>
@@ -333,29 +333,29 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.startDateTime') }}</label>
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Approx. Duration (minutes)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.durationMinutes') }}</label>
             <input v-model.number="editForm.duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Close Signups At</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.closeSignupsAt') }}</label>
           <input v-model="editForm.close_signups_at" type="datetime-local" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           <span class="text-[10px] text-text-muted">Must be before event start time</span>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Instructions</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.instructions') }}</label>
           <textarea v-model="editForm.instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
         <div v-if="editError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ editError }}</div>
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showEditModal = false">Cancel</WowButton>
-          <WowButton :loading="actionLoading" @click="saveEvent">Save</WowButton>
+          <WowButton variant="secondary" @click="showEditModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="actionLoading" @click="saveEvent">{{ t('common.buttons.save') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -425,6 +425,7 @@ import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as attendanceApi from '@/api/attendance'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -435,6 +436,7 @@ const permissions = usePermissions()
 const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
+const { t } = useI18n()
 
 const event = ref(null)
 const signups = ref([])

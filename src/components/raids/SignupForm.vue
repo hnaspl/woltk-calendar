@@ -32,7 +32,7 @@
           {{ t('signup.alreadySignedUp') }}
         </span>
         <div v-if="bannedCharacterIds.length > 0" class="text-[10px] text-red-400 mt-1">
-          {{ t('signup.kickedWarning') }}
+          ⛔ {{ t('signup.kickedWarning') }}
         </div>
       </div>
 
@@ -40,7 +40,7 @@
       <div v-if="form.characterId">
         <label class="text-xs text-text-muted mb-1 block">{{ t('signup.roleRequired') }}</label>
         <div v-if="roles.length === 0" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
-          {{ t('signup.noRoleSlots') }}
+          ⚠ {{ t('signup.noRoleSlots') }}
         </div>
         <div v-else class="flex flex-wrap gap-2">
           <button
@@ -60,7 +60,7 @@
           </button>
         </div>
         <p v-if="form.chosenRole && isRoleFull(form.chosenRole)" class="mt-1.5 text-xs text-yellow-400/90">
-          {{ t('signup.roleFull', { role: ROLE_LABEL_MAP[form.chosenRole] || form.chosenRole }) }}
+          ⚠ {{ t('signup.roleFull', { role: ROLE_LABEL_MAP[form.chosenRole] || form.chosenRole }) }}
         </p>
       </div>
 

@@ -154,13 +154,13 @@
     "inLineup": "W składzie",
     "onBench": "Na ławce",
     "noResponse": "Brak odpowiedzi",
-    "pendingSwaps": "⚡ Oczekujące zamiany postaci",
+    "pendingSwaps": "Oczekujące zamiany postaci",
     "swapRequested": "Zamiana postaci żądana",
     "raid": "Rajd",
     "wantsToReplace": "chce zamienić",
     "with": "na",
     "leaveRaid": "Opuść rajd",
-    "todaysRaids": "⚔️ Dzisiejsze rajdy",
+    "todaysRaids": "Dzisiejsze rajdy",
     "bench": "Ławka",
     "signedUp": "Zapisany",
     "mySignups": "Moje zapisy",
@@ -239,8 +239,8 @@
     "updateAttendance": "Aktualizuj frekwencję",
     "cancelEvent": "Anuluj wydarzenie",
     "done": "Ukończony",
-    "completedLocked": "🔒 Ten rajd jest ukończony i frekwencja została zapisana. Wszystkie modyfikacje są zablokowane, aby zapobiec manipulacji danymi.",
-    "cancelledLocked": "🔒 Ten rajd został anulowany. Wszystkie modyfikacje są zablokowane."
+    "completedLocked": "Ten rajd jest ukończony i frekwencja została zapisana. Wszystkie modyfikacje są zablokowane, aby zapobiec manipulacji danymi.",
+    "cancelledLocked": "Ten rajd został anulowany. Wszystkie modyfikacje są zablokowane."
   },
   "characters": {
     "title": "Moje postacie",
@@ -263,7 +263,7 @@
     "selectRealm": "Wybierz realm…",
     "realmFromGuild": "Realm z aktualnej gildii",
     "lookupOnWarmane": "Wyszukaj na Warmane",
-    "foundOnArmory": "✓ Znaleziono — pola uzupełnione z armory",
+    "foundOnArmory": "Znaleziono — pola uzupełnione z armory",
     "notFoundOnArmory": "Nie znaleziono — spróbuj ponownie lub uzupełnij ręcznie",
     "fillManually": "lub uzupełnij ręcznie bez armory",
     "nameRequired": "Nazwa postaci *",
@@ -319,7 +319,7 @@
     "noGuild": "Musisz najpierw utworzyć lub dołączyć do gildii, zanim będziesz zarządzać definicjami rajdów. Użyj paska bocznego, aby utworzyć gildię.",
     "noDefinitions": "Brak definicji rajdów. Utwórz jedną, aby zacząć planować rajdy.",
     "default": "Domyślna",
-    "copyToGuild": "📋 Kopiuj do gildii",
+    "copyToGuild": "Kopiuj do gildii",
     "editDefinition": "Edytuj definicję rajdu",
     "newRaidDefinition": "Nowa definicja rajdu",
     "nameRequired": "Nazwa *",
@@ -403,7 +403,7 @@
     "twoEvents": "2 wydarzenia",
     "fourEvents": "4 wydarzenia",
     "eightEvents": "8 wydarzeń",
-    "created": "✅ Utworzono",
+    "created": "Utworzono",
     "eventsCreated": "wydarzeń! Sprawdź kalendarz.",
     "deleteSeries": "Usuń serię",
     "deleteRecurring": "Usuń rajd cykliczny",
@@ -468,8 +468,8 @@
     "foundOnRealms": "Znaleziono na {count} realmach — wybierz jeden:",
     "enterManually": "Wprowadź ręcznie",
     "searchOnWarmane": "Szukaj na Warmane",
-    "foundOnWarmane": "✓ Znaleziono na Warmane",
-    "alreadyAddedWarning": "⚠ Ta gildia jest już dodana. Możesz do niej dołączyć z listy dostępnych gildii.",
+    "foundOnWarmane": "Znaleziono na Warmane",
+    "alreadyAddedWarning": "Ta gildia jest już dodana. Możesz do niej dołączyć z listy dostępnych gildii.",
     "manualEntry": "Tryb ręczny — gildia nie zweryfikowana na Warmane.",
     "realmRequired": "Realm *",
     "selectRealm": "Wybierz realm…",
@@ -511,7 +511,7 @@
     "username": "Nazwa użytkownika",
     "role": "Rola",
     "joined": "Dołączył",
-    "characters": "📋 Postacie",
+    "characters": "Postacie",
     "removeMember": "Usuń członka",
     "removeConfirm": "Usunąć {name} z gildii?",
     "memberRemoved": "Członek usunięty",
@@ -533,13 +533,13 @@
     "status": "Status",
     "mainChar": "Główna",
     "altChar": "Alt",
-    "view": "🔍 Zobacz",
+    "view": "Zobacz",
     "ownership": {
       "title": "Własność gildii",
       "description": "Przenieś własność gildii na innego członka.",
-      "transferBtn": "👑 Przenieś własność",
-      "modalTitle": "👑 Przeniesienie własności gildii",
-      "warning": "⚠️ UWAGA: Ta akcja jest NIEODWRACALNA!",
+      "transferBtn": "Przenieś własność",
+      "modalTitle": "Przeniesienie własności gildii",
+      "warning": "UWAGA: Ta akcja jest NIEODWRACALNA!",
       "warningDesc": "Nowy właściciel otrzyma pełną kontrolę nad gildią. Zostaniesz zdegradowany do zwykłego członka i stracisz wszystkie uprawnienia właściciela.",
       "selectOwner": "Wybierz nowego właściciela",
       "chooseMember": "Wybierz członka…",
@@ -604,11 +604,11 @@
     "characterRequired": "Postać *",
     "selectCharacter": "Wybierz postać…",
     "alreadySignedUp": "Już zapisane postacie są ukryte. Wybierz inną postać, aby dodać.",
-    "kickedWarning": "⛔ Niektóre postacie są ukryte, ponieważ zostały trwale wyrzucone z tego rajdu.",
+    "kickedWarning": "Niektóre postacie są ukryte, ponieważ zostały trwale wyrzucone z tego rajdu.",
     "roleRequired": "Rola *",
-    "noRoleSlots": "⚠ Brak dostępnych miejsc dla klasy tej postaci w tym rajdzie. Ta postać nie może się zapisać na to wydarzenie.",
+    "noRoleSlots": "Brak dostępnych miejsc dla klasy tej postaci w tym rajdzie. Ta postać nie może się zapisać na to wydarzenie.",
     "full": "Pełne",
-    "roleFull": "⚠ Wszystkie miejsca {role} są pełne. Zostaniesz umieszczony na ławce jako następny kandydat, gdy miejsce się zwolni.",
+    "roleFull": "Wszystkie miejsca {role} są pełne. Zostaniesz umieszczony na ławce jako następny kandydat, gdy miejsce się zwolni.",
     "spec": "Spec (wybierz jeden lub więcej)",
     "specPlaceholder": "np. Holy, Frost, Balance…",
     "note": "Notatka",
@@ -796,7 +796,7 @@
       "body": "Twoja postać {character} ({role}) jest w kolejce na ławce w {eventTitle}. Zostaniesz automatycznie przeniesiony, gdy miejsce się zwolni."
     },
     "signupPromoted": {
-      "title": "🎉 {character} przeniesiony do składu w {event}",
+      "title": "{character} przeniesiony do składu w {event}",
       "body": "Miejsce {role} się zwolniło i {character} został przeniesiony z ławki do aktywnego składu!"
     },
     "signupDeclined": {
@@ -808,7 +808,7 @@
       "body": "Twoja postać {character} została usunięta z {eventTitle} przez {officer}."
     },
     "signupKicked": {
-      "title": "⛔ {character} trwale wyrzucony z {event}",
+      "title": "{character} trwale wyrzucony z {event}",
       "body": "Twoja postać {character} została trwale wyrzucona z {eventTitle} przez {officer}. Nie możesz się zapisać tą postacią ponownie na ten rajd."
     },
     "roleChanged": {
@@ -820,27 +820,27 @@
       "body": "{character} jest teraz #{position} w kolejce {role} na ławce w {eventTitle}."
     },
     "eventCreated": {
-      "title": "📅 Nowy rajd zaplanowany: {eventTitle} {guildTag}",
+      "title": "Nowy rajd zaplanowany: {eventTitle} {guildTag}",
       "body": "Nowy rajd został zaplanowany{starts}. Zapisz się teraz!"
     },
     "eventCancelled": {
-      "title": "❌ Rajd anulowany: {event}",
+      "title": "Rajd anulowany: {event}",
       "body": "Rajd \"{eventTitle}\" został anulowany."
     },
     "eventLocked": {
-      "title": "🔒 Zapisy zamknięte: {event}",
+      "title": "Zapisy zamknięte: {event}",
       "body": "Zapisy na \"{eventTitle}\" są teraz zamknięte. Skład jest finalizowany."
     },
     "eventUpdated": {
-      "title": "✏️ Rajd zaktualizowany: {event}",
+      "title": "Rajd zaktualizowany: {event}",
       "body": "Szczegóły wydarzenia \"{eventTitle}\" zostały zaktualizowane. Sprawdź zmiany harmonogramu lub składu."
     },
     "eventCompleted": {
-      "title": "✅ Rajd ukończony: {event}",
+      "title": "Rajd ukończony: {event}",
       "body": "Rajd \"{eventTitle}\" został oznaczony jako ukończony. GG!"
     },
     "memberJoined": {
-      "title": "👤 Nowy członek dołączył do {guildName} {guildTag}",
+      "title": "Nowy członek dołączył do {guildName} {guildTag}",
       "body": "Nowy członek dołączył do twojej gildii."
     },
     "removedFromGuild": {
@@ -848,7 +848,7 @@
       "body": "Zostałeś usunięty z tej gildii."
     },
     "guildRoleChanged": {
-      "title": "🏅 Ranga zmieniona na {role} w {guildName} {guildTag}",
+      "title": "Ranga zmieniona na {role} w {guildName} {guildTag}",
       "body": "Twoja ranga została zmieniona na {role}."
     },
     "officerNewSignup": {
@@ -868,7 +868,7 @@
     },
     "ownershipTransferred": {
       "newOwner": {
-        "title": "🏰 Jesteś teraz właścicielem {guildName} {guildTag}",
+        "title": "Jesteś teraz właścicielem {guildName} {guildTag}",
         "body": "Otrzymałeś pełną własność {guildName}. Masz teraz wszystkie uprawnienia i obowiązki właściciela gildii."
       },
       "oldOwner": {
@@ -877,19 +877,19 @@
       }
     },
     "replacementRequested": {
-      "title": "🔄 Żądanie zamiany postaci w {event}",
+      "title": "Żądanie zamiany postaci w {event}",
       "body": "{officer} chce zamienić {oldCharacter} na {newCharacter} w {eventTitle}.{reason} Proszę potwierdź, odrzuć lub opuść rajd."
     },
     "replacementConfirmed": {
-      "title": "✅ Zamiana postaci zaakceptowana w {event}",
+      "title": "Zamiana postaci zaakceptowana w {event}",
       "body": "Gracz zaakceptował zamianę postaci z {oldCharacter} na {newCharacter} w {eventTitle}."
     },
     "replacementDeclined": {
-      "title": "❌ Zamiana postaci odrzucona w {event}",
+      "title": "Zamiana postaci odrzucona w {event}",
       "body": "Gracz odrzucił zamianę postaci {character} w {eventTitle}."
     },
     "attendanceRecorded": {
-      "title": "📋 Frekwencja zapisana dla {event}",
+      "title": "Frekwencja zapisana dla {event}",
       "body": "{character}: {outcome}.{note}"
     },
     "outcomeLabels": {

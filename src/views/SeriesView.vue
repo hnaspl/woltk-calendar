@@ -13,14 +13,14 @@
       <template v-else>
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-xl sm:text-2xl">Recurring Raids</h1>
-          <p class="text-text-muted text-sm mt-0.5">Set up weekly or biweekly raid schedules and bulk-generate events</p>
+          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('series.title') }}</h1>
+          <p class="text-text-muted text-sm mt-0.5">{{ t('series.subtitle') }}</p>
         </div>
         <WowButton @click="openAddModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          New Series
+          {{ t('series.newSeries') }}
         </WowButton>
       </div>
 
@@ -28,11 +28,11 @@
         <div v-for="i in 3" :key="i" class="h-24 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
       <div v-else-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
-        You need to create or join a guild first before managing recurring raids. Use the sidebar to create a guild.
+        {{ t('series.noGuild') }}
       </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
       <div v-else-if="seriesList.length === 0" class="text-center py-12 text-text-muted">
-        No recurring raids yet. Create a series to auto-generate weekly or biweekly events.
+        {{ t('series.noSeries') }}
       </div>
       <div v-else class="space-y-3">
         <WowCard v-for="s in seriesList" :key="s.id">
@@ -44,7 +44,7 @@
                 <RaidSizeBadge v-if="s.default_raid_size" :size="s.default_raid_size" />
                 <span v-if="s.default_difficulty === 'heroic'" class="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-600">Heroic</span>
                 <span class="text-xs px-1.5 py-0.5 rounded border" :class="s.active ? 'bg-green-500/20 text-green-300 border-green-600' : 'bg-red-500/20 text-red-300 border-red-600'">
-                  {{ s.active ? 'Active' : 'Inactive' }}
+                  {{ s.active ? t('common.status.active') : t('common.status.inactive') }}
                 </span>
               </div>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
@@ -57,13 +57,13 @@
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(s)">
-                📋 Copy
+                📋 {{ t('common.buttons.copy') }}
               </WowButton>
               <WowButton variant="primary" class="text-xs py-1.5" @click="openGenerate(s)">
-                Generate Events
+                {{ t('series.generateEvents') }}
               </WowButton>
               <WowButton variant="secondary" class="text-xs py-1.5" @click="openEditModal(s)">
-                Edit
+                {{ t('common.buttons.edit') }}
               </WowButton>
               <WowButton variant="danger" class="text-xs py-1.5 px-2" @click="confirmDelete(s)">✕</WowButton>
             </div>
@@ -74,29 +74,29 @@
     </div>
 
     <!-- Add/Edit series modal -->
-    <WowModal v-model="showModal" :title="editing ? 'Edit Recurring Raid' : 'New Recurring Raid'" size="md">
+    <WowModal v-model="showModal" :title="editing ? t('series.editRecurringRaid') : t('series.newRecurringRaid')" size="md">
       <form @submit.prevent="saveSeries" class="space-y-4">
         <div>
-          <label class="block text-xs text-text-muted mb-1">Title *</label>
-          <input v-model="form.title" required placeholder="e.g. Weekly ICC 25" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          <label class="block text-xs text-text-muted mb-1">{{ t('series.titleRequired') }}</label>
+          <input v-model="form.title" required :placeholder="t('series.titlePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
         <div v-if="templates.length > 0">
-          <label class="block text-xs text-text-muted mb-1">Template (optional)</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('series.templateOptional') }}</label>
           <select v-model="form.template_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onTemplateChange">
-            <option :value="null">No template — configure manually</option>
+            <option :value="null">{{ t('series.noTemplate') }}</option>
             <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }} ({{ t.raid_size }}-man {{ t.difficulty }})</option>
           </select>
-          <span class="text-[10px] text-text-muted">Selecting a template auto-fills size, difficulty &amp; duration</span>
+          <span class="text-[10px] text-text-muted">{{ t('series.templateHelp') }}</span>
         </div>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Guild (Realm) *</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('series.guildRealm') }}</label>
           <select v-model.number="selectedGuildId" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option v-for="g in guildStore.guilds" :key="g.id" :value="g.id">{{ g.name }} ({{ g.realm_name }})</option>
           </select>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Recurrence *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.recurrence') }}</label>
             <select v-model="form.recurrence_rule" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option value="">Select…</option>
               <option value="weekly">Weekly</option>
@@ -104,27 +104,27 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Start Time (server)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.startTime') }}</label>
             <input v-model="form.start_time_local" type="time" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Raid Size</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.raidSize') }}</label>
             <select v-model.number="form.default_raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">10-man</option>
-              <option :value="25">25-man</option>
+              <option :value="10">{{ t('calendar.tenMan') }}</option>
+              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Difficulty</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
             <select v-model="form.default_difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option value="normal">Normal</option>
-              <option value="heroic">Heroic</option>
+              <option value="normal">{{ t('calendar.normal') }}</option>
+              <option value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Duration (min)</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.durationMin') }}</label>
             <input v-model.number="form.duration_minutes" type="number" min="30" max="600" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
@@ -133,12 +133,12 @@
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
           <label class="flex items-center gap-2 cursor-pointer">
             <input v-model="applyToOtherGuilds" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-            <span class="text-sm text-text-primary">Also create in my other guilds</span>
+            <span class="text-sm text-text-primary">{{ t('series.copyToOther') }}</span>
           </label>
           <div v-if="applyToOtherGuilds" class="mt-2 space-y-1 pl-6">
             <label class="flex items-center gap-2 cursor-pointer mb-1">
               <input type="checkbox" :checked="allOtherGuildsSelected" @change="toggleAllOtherGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-              <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+              <span class="text-xs text-accent-gold font-semibold">{{ t('series.copyToAll') }}</span>
             </label>
             <label v-for="g in copyTargetGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
               <input v-model="selectedGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -149,19 +149,19 @@
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="saveSeries">{{ editing ? 'Save' : 'Create' }}</WowButton>
+          <WowButton variant="secondary" @click="showModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="saveSeries">{{ editing ? t('common.buttons.save') : t('common.buttons.create') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Copy to Guild modal -->
-    <WowModal v-model="showCopyModal" title="Copy Series to Guilds" size="sm">
+    <WowModal v-model="showCopyModal" :title="t('series.copySeriesToGuilds')" size="sm">
       <p class="text-text-muted text-sm mb-3">Copy <strong class="text-text-primary">{{ copySource?.title }}</strong> to selected guilds:</p>
       <div class="space-y-1">
         <label class="flex items-center gap-2 cursor-pointer mb-1">
           <input type="checkbox" :checked="allCopyGuildsSelected" @change="toggleAllCopyGuilds" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-          <span class="text-xs text-accent-gold font-semibold">Copy to all</span>
+          <span class="text-xs text-accent-gold font-semibold">{{ t('series.copyToAll') }}</span>
         </label>
         <label v-for="g in otherGuilds" :key="g.id" class="flex items-center gap-2 cursor-pointer">
           <input v-model="copyGuildIds" :value="g.id" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
@@ -170,55 +170,55 @@
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showCopyModal = false">Cancel</WowButton>
-          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">Copy</WowButton>
+          <WowButton variant="secondary" @click="showCopyModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="saving" @click="doCopy" :disabled="copyGuildIds.length === 0">{{ t('common.buttons.copy') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Confirmation modal for no guilds selected -->
-    <WowModal v-model="showNoGuildConfirm" title="No additional guilds selected" size="sm">
-      <p class="text-text-muted text-sm">This series will only be created in <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
+    <WowModal v-model="showNoGuildConfirm" :title="t('series.noAdditionalGuilds')" size="sm">
+      <p class="text-text-muted text-sm">{{ t('series.onlyCreatedIn') }} <strong class="text-text-primary">{{ selectedGuildLabel }}</strong>. Would you like to go back and select guilds to copy to?</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="goBackToForm">Go Back</WowButton>
-          <WowButton @click="confirmSaveCurrentOnly">Continue</WowButton>
+          <WowButton variant="secondary" @click="goBackToForm">{{ t('common.buttons.goBack') }}</WowButton>
+          <WowButton @click="confirmSaveCurrentOnly">{{ t('common.buttons.continue') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Generate events modal -->
-    <WowModal v-model="showGenerate" title="Generate Events" size="sm">
+    <WowModal v-model="showGenerate" :title="t('series.generateEventsTitle')" size="sm">
       <div class="space-y-4">
         <p class="text-text-muted text-sm">Generate upcoming events from <strong class="text-text-primary">{{ generateTarget?.title }}</strong>.</p>
         <div>
-          <label class="block text-xs text-text-muted mb-1">How many events to create?</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('series.howManyEvents') }}</label>
           <select v-model.number="generateCount" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="1">1 event</option>
-            <option :value="2">2 events</option>
-            <option :value="4">4 events</option>
-            <option :value="8">8 events</option>
+            <option :value="1">{{ t('series.oneEvent') }}</option>
+            <option :value="2">{{ t('series.twoEvents') }}</option>
+            <option :value="4">{{ t('series.fourEvents') }}</option>
+            <option :value="8">{{ t('series.eightEvents') }}</option>
           </select>
         </div>
         <div v-if="generateResult" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">
-          ✅ Created {{ generateResult }} event(s)! Check the calendar.
+          ✅ {{ t('series.created') }} {{ generateResult }} {{ t('series.eventsCreated') }}
         </div>
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showGenerate = false">Close</WowButton>
-          <WowButton :loading="saving" @click="doGenerate">Generate</WowButton>
+          <WowButton variant="secondary" @click="showGenerate = false">{{ t('common.buttons.close') }}</WowButton>
+          <WowButton :loading="saving" @click="doGenerate">{{ t('common.buttons.generate') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Delete confirmation -->
-    <WowModal v-model="showDeleteConfirm" title="Delete Series" size="sm">
-      <p class="text-text-muted">Delete recurring raid <strong class="text-text-primary">{{ deleteTarget?.title }}</strong>? Existing events created from this series won't be affected.</p>
+    <WowModal v-model="showDeleteConfirm" :title="t('series.deleteSeries')" size="sm">
+      <p class="text-text-muted">{{ t('series.deleteRecurring') }} <strong class="text-text-primary">{{ deleteTarget?.title }}</strong>? {{ t('series.existingNotAffected') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doDelete">Delete</WowButton>
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDelete">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -239,11 +239,13 @@ import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import * as seriesApi from '@/api/series'
 import * as templatesApi from '@/api/templates'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
+const { t } = useI18n()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_series'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
@@ -360,8 +362,8 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
 
 function formatRecurrence(rule) {
   if (!rule) return ''
-  if (rule.toLowerCase().includes('biweekly')) return 'Every 2 weeks'
-  if (rule.toLowerCase().includes('weekly')) return 'Every week'
+  if (rule.toLowerCase().includes('biweekly')) return t('series.everyTwoWeeks')
+  if (rule.toLowerCase().includes('weekly')) return t('series.everyWeek')
   return rule
 }
 
@@ -507,8 +509,8 @@ async function doDelete() {
     await seriesApi.deleteSeries(guildStore.currentGuild.id, deleteTarget.value.id)
     seriesList.value = seriesList.value.filter(s => s.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast('Series deleted', 'success')
-  } catch { uiStore.showToast('Failed to delete', 'error') }
+    uiStore.showToast(t('series.seriesDeleted'), 'success')
+  } catch { uiStore.showToast(t('series.failedToDelete'), 'error') }
   finally { saving.value = false }
 }
 

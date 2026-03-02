@@ -4,15 +4,15 @@
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-xl sm:text-2xl">Dashboard</h1>
-          <p class="text-text-muted text-sm mt-0.5">Welcome back, {{ authStore.user?.username }}!</p>
+          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('dashboard.title') }}</h1>
+          <p class="text-text-muted text-sm mt-0.5">{{ t('dashboard.welcome', { name: authStore.user?.username }) }}</p>
         </div>
         <RouterLink to="/calendar">
           <WowButton variant="secondary">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            Calendar
+            {{ t('dashboard.calendarBtn') }}
           </WowButton>
         </RouterLink>
       </div>
@@ -26,30 +26,30 @@
       <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-accent-gold">{{ upcomingEvents.length }}</div>
-          <div class="text-xs text-text-muted mt-1">Upcoming Raids</div>
+          <div class="text-xs text-text-muted mt-1">{{ t('dashboard.upcomingRaids') }}</div>
         </WowCard>
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-green-400">{{ myGoingCount }}</div>
-          <div class="text-xs text-text-muted mt-1">In Lineup</div>
+          <div class="text-xs text-text-muted mt-1">{{ t('dashboard.inLineup') }}</div>
         </WowCard>
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-yellow-400">{{ myBenchCount }}</div>
-          <div class="text-xs text-text-muted mt-1">On Bench</div>
+          <div class="text-xs text-text-muted mt-1">{{ t('dashboard.onBench') }}</div>
         </WowCard>
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
-          <div class="text-xs text-text-muted mt-1">No Response</div>
+          <div class="text-xs text-text-muted mt-1">{{ t('dashboard.noResponse') }}</div>
         </WowCard>
       </div>
 
       <!-- Pending Replacement Requests -->
       <div v-if="replacementRequests.length > 0" class="space-y-3">
-        <h2 class="wow-heading text-lg">⚡ Pending Character Swaps</h2>
+        <h2 class="wow-heading text-lg">⚡ {{ t('dashboard.pendingSwaps') }}</h2>
         <div v-for="req in replacementRequests" :key="req.id">
           <WowCard class="border-blue-700 bg-blue-900/10">
             <div class="space-y-2">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-blue-300 text-xs font-semibold">Character Swap Requested</span>
+                <span class="text-blue-300 text-xs font-semibold">{{ t('dashboard.swapRequested') }}</span>
                 <span v-if="req.event_title" class="text-xs text-text-muted">·</span>
                 <RouterLink
                   v-if="req.event_id && req.guild_id"
@@ -60,9 +60,9 @@
               </div>
               <p class="text-text-muted text-xs">
                 <strong class="text-text-primary">{{ req.requester_name }}</strong>
-                wants to replace
+                {{ t('dashboard.wantsToReplace') }}
                 <strong class="text-text-primary">{{ req.old_character?.name ?? '?' }}</strong>
-                with
+                {{ t('dashboard.with') }}
                 <strong class="text-accent-gold">{{ req.new_character?.name ?? '?' }}</strong>
                 <span v-if="req.reason" class="italic"> — {{ req.reason }}</span>
               </p>
@@ -70,15 +70,15 @@
                 <button
                   class="text-xs px-3 py-1 rounded border border-green-700 bg-green-900/20 hover:border-green-500 text-green-400 hover:text-green-300 transition-colors"
                   @click="resolveReplacement(req, 'confirm')"
-                >Confirm</button>
+                >{{ t('common.buttons.confirm') }}</button>
                 <button
                   class="text-xs px-3 py-1 rounded border border-red-700 bg-red-900/20 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
                   @click="resolveReplacement(req, 'decline')"
-                >Decline</button>
+                >{{ t('common.buttons.decline') }}</button>
                 <button
                   class="text-xs px-3 py-1 rounded border border-border-default hover:border-red-500 text-text-muted hover:text-red-300 transition-colors"
                   @click="resolveReplacement(req, 'leave')"
-                >Leave Raid</button>
+                >{{ t('dashboard.leaveRaid') }}</button>
               </div>
             </div>
           </WowCard>
@@ -87,7 +87,7 @@
 
       <!-- Today's Raids (raids today that the player is signed up for) -->
       <div v-if="!loading && todaysRaids.length > 0" class="space-y-3">
-        <h2 class="wow-heading text-lg">⚔️ Today's Raids</h2>
+        <h2 class="wow-heading text-lg">⚔️ {{ t('dashboard.todaysRaids') }}</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <RouterLink
             v-for="tr in todaysRaids"
@@ -112,9 +112,9 @@
                   </div>
                   <div v-if="tr.signup" class="flex items-center gap-1 mt-0.5">
                     <ClassBadge v-if="tr.signup.character?.class_name" :class-name="tr.signup.character.class_name" />
-                    <span class="text-xs text-text-muted truncate">{{ tr.signup.character?.name ?? 'Signed up' }}</span>
-                    <span v-if="tr.signup.lineup_status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1 py-0.5 rounded">Bench</span>
-                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">In Lineup</span>
+                    <span class="text-xs text-text-muted truncate">{{ tr.signup.character?.name ?? t('dashboard.signedUp') }}</span>
+                    <span v-if="tr.signup.lineup_status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1 py-0.5 rounded">{{ t('dashboard.bench') }}</span>
+                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">{{ t('dashboard.inLineup') }}</span>
                   </div>
                 </div>
               </div>
@@ -128,24 +128,24 @@
         <!-- Upcoming raids (2/3 width) -->
         <div class="lg:col-span-2 space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
-            <h2 class="wow-heading text-lg">Upcoming Raids</h2>
+            <h2 class="wow-heading text-lg">{{ t('dashboard.upcomingRaids') }}</h2>
             <select
               v-model.number="filterDays"
               class="text-xs bg-bg-secondary border border-border-default rounded px-2 py-1 text-text-primary focus:border-accent-gold focus:outline-none"
             >
-              <option :value="1">Next 1 day</option>
-              <option :value="3">Next 3 days</option>
-              <option :value="7">Next 7 days</option>
-              <option :value="14">Next 14 days</option>
-              <option :value="30">Next 30 days</option>
-              <option :value="60">Next 60 days</option>
+              <option :value="1">{{ t('dashboard.filterDays.1') }}</option>
+              <option :value="3">{{ t('dashboard.filterDays.3') }}</option>
+              <option :value="7">{{ t('dashboard.filterDays.7') }}</option>
+              <option :value="14">{{ t('dashboard.filterDays.14') }}</option>
+              <option :value="30">{{ t('dashboard.filterDays.30') }}</option>
+              <option :value="60">{{ t('dashboard.filterDays.60') }}</option>
             </select>
           </div>
           <div v-if="loading" class="space-y-2">
             <div v-for="i in 3" :key="i" class="h-16 rounded bg-bg-secondary border border-border-default loading-pulse" />
           </div>
           <div v-else-if="upcomingEvents.length === 0" class="text-center py-8 text-text-muted">
-            No upcoming raids scheduled.
+            {{ t('dashboard.noUpcomingRaids') }}
           </div>
           <RouterLink
             v-else
@@ -187,12 +187,12 @@
 
         <!-- My signups sidebar (1/3 width) -->
         <div class="space-y-3">
-          <h2 class="wow-heading text-lg">My Signups</h2>
+          <h2 class="wow-heading text-lg">{{ t('dashboard.mySignups') }}</h2>
           <div v-if="loading" class="space-y-2">
             <div v-for="i in 3" :key="i" class="h-14 rounded bg-bg-secondary border border-border-default loading-pulse" />
           </div>
           <div v-else-if="sortedMySignups.length === 0" class="text-center py-8 text-text-muted text-sm">
-            No signups yet.
+            {{ t('dashboard.noSignups') }}
           </div>
           <RouterLink
             v-else
@@ -215,10 +215,10 @@
                   </span>
                 </div>
                 <span v-if="su.lineup_status === 'bench' || su.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                  Queue{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}{{ su.bench_info?.waiting_for ? ' · ' + benchRoleLabel(su.bench_info.waiting_for) : '' }}
+                  {{ t('dashboard.queue') }}{{ su.bench_info ? ' #' + su.bench_info.queue_position : '' }}{{ su.bench_info?.waiting_for ? ' · ' + benchRoleLabel(su.bench_info.waiting_for) : '' }}
                 </span>
-                <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">Declined</span>
-                <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">In Lineup</span>
+                <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('dashboard.declined') }}</span>
+                <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('dashboard.inLineup') }}</span>
               </div>
             </WowCard>
           </RouterLink>
@@ -249,6 +249,7 @@ import { useSocket } from '@/composables/useSocket'
 import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
+import { useI18n } from 'vue-i18n'
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
@@ -257,6 +258,7 @@ const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { joinGuild, leaveGuild, on, off } = useSocket()
+const { t } = useI18n()
 
 let isActive = true
 const loading = ref(true)
@@ -426,13 +428,13 @@ async function resolveReplacement(req, action) {
     // Remove from local list
     replacementRequests.value = replacementRequests.value.filter(r => r.id !== req.id)
     uiStore.showToast(
-      action === 'confirm' ? 'Character swap confirmed!' : action === 'leave' ? 'Left the raid.' : 'Character swap declined.',
+      action === 'confirm' ? t('dashboard.swapConfirmed') : action === 'leave' ? t('dashboard.leftRaid') : t('dashboard.swapDeclined'),
       action === 'confirm' ? 'success' : 'info'
     )
     // Refresh signups in case lineup status changed
     await refreshSignups()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to process replacement', 'error')
+    uiStore.showToast(err?.response?.data?.error ?? t('dashboard.failedToProcess'), 'error')
   }
 }
 </script>

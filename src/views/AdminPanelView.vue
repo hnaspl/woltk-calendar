@@ -4,13 +4,13 @@
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="wow-heading text-xl sm:text-2xl">Admin Panel</h1>
+          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('admin.title') }}</h1>
           <p class="text-text-muted text-sm mt-0.5">
-            {{ guildStore.currentGuild?.name ? `Managing ${guildStore.currentGuild.name}` : 'Manage your guild and system settings' }}
+            {{ guildStore.currentGuild?.name ? `${t('admin.managing')} ${guildStore.currentGuild.name}` : t('admin.subtitle') }}
           </p>
         </div>
         <div v-if="permissions.role.value" class="px-3 py-1.5 rounded-lg bg-bg-tertiary border border-border-default">
-          <span class="text-xs text-text-muted">Your role: </span>
+          <span class="text-xs text-text-muted">{{ t('admin.yourRole') }} </span>
           <span class="text-xs text-accent-gold font-medium">{{ currentRoleDisplay }}</span>
         </div>
       </div>
@@ -18,12 +18,12 @@
       <!-- Loading state while permissions are being fetched -->
       <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
-        Loading admin panel…
+        {{ t('admin.loading') }}
       </div>
 
       <!-- No permissions message -->
       <div v-else-if="!hasAnyAdminPermission" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
-        You do not have the appropriate permissions to access this page.
+        {{ t('admin.noPermission') }}
       </div>
 
       <template v-else>
@@ -71,10 +71,12 @@ import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import api from '@/api'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const permissions = usePermissions()
+const { t } = useI18n()
 
 const allRoles = ref([])
 
@@ -91,7 +93,7 @@ onMounted(fetchRoles)
 
 const currentRoleDisplay = computed(() => {
   const roleName = permissions.role.value
-  if (!roleName) return 'Global Admin'
+  if (!roleName) return t('admin.tabs.globalAdmin')
   const roleDef = allRoles.value.find(r => r.name === roleName)
   return roleDef?.display_name ?? roleName
 })
@@ -115,10 +117,10 @@ const icons = {
 
 // Tab definitions with permission requirements
 const allTabs = [
-  { id: 'members', label: 'Members', icon: icons.members, permission: 'update_member_roles' },
-  { id: 'roles', label: 'Roles & Permissions', icon: icons.roles, permission: 'manage_roles' },
-  { id: 'guild', label: 'Guild Settings', icon: icons.guild, permission: 'update_guild_settings' },
-  { id: 'system', label: 'System', icon: icons.system, permission: 'list_system_users' },
+  { id: 'members', label: t('admin.tabs.members'), icon: icons.members, permission: 'update_member_roles' },
+  { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles, permission: 'manage_roles' },
+  { id: 'guild', label: t('admin.tabs.guildSettings'), icon: icons.guild, permission: 'update_guild_settings' },
+  { id: 'system', label: t('admin.tabs.system'), icon: icons.system, permission: 'list_system_users' },
 ]
 
 const visibleTabs = computed(() =>

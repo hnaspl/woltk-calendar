@@ -154,13 +154,13 @@
     "inLineup": "In Lineup",
     "onBench": "On Bench",
     "noResponse": "No Response",
-    "pendingSwaps": "⚡ Pending Character Swaps",
+    "pendingSwaps": "Pending Character Swaps",
     "swapRequested": "Character Swap Requested",
     "raid": "Raid",
     "wantsToReplace": "wants to replace",
     "with": "with",
     "leaveRaid": "Leave Raid",
-    "todaysRaids": "⚔️ Today's Raids",
+    "todaysRaids": "Today's Raids",
     "bench": "Bench",
     "signedUp": "Signed up",
     "mySignups": "My Signups",
@@ -239,8 +239,8 @@
     "updateAttendance": "Update Attendance",
     "cancelEvent": "Cancel Event",
     "done": "Done",
-    "completedLocked": "🔒 This raid is completed and attendance has been recorded. All modifications are locked to prevent data manipulation.",
-    "cancelledLocked": "🔒 This raid has been cancelled. All modifications are locked."
+    "completedLocked": "This raid is completed and attendance has been recorded. All modifications are locked to prevent data manipulation.",
+    "cancelledLocked": "This raid has been cancelled. All modifications are locked."
   },
   "characters": {
     "title": "My Characters",
@@ -263,7 +263,7 @@
     "selectRealm": "Select realm…",
     "realmFromGuild": "Realm from current guild",
     "lookupOnWarmane": "Lookup on Warmane",
-    "foundOnArmory": "✓ Found — fields populated from armory",
+    "foundOnArmory": "Found — fields populated from armory",
     "notFoundOnArmory": "Not found — try again or fill manually",
     "fillManually": "or fill in manually without armory",
     "nameRequired": "Character Name *",
@@ -319,7 +319,7 @@
     "noGuild": "You need to create or join a guild first before managing raid definitions. Use the sidebar to create a guild.",
     "noDefinitions": "No raid definitions yet. Create one to start scheduling raids.",
     "default": "Default",
-    "copyToGuild": "📋 Copy to Guild",
+    "copyToGuild": "Copy to Guild",
     "editDefinition": "Edit Raid Definition",
     "newRaidDefinition": "New Raid Definition",
     "nameRequired": "Name *",
@@ -403,7 +403,7 @@
     "twoEvents": "2 events",
     "fourEvents": "4 events",
     "eightEvents": "8 events",
-    "created": "✅ Created",
+    "created": "Created",
     "eventsCreated": "event(s)! Check the calendar.",
     "deleteSeries": "Delete Series",
     "deleteRecurring": "Delete recurring raid",
@@ -468,8 +468,8 @@
     "foundOnRealms": "Found on {count} realms — select one:",
     "enterManually": "Enter Manually",
     "searchOnWarmane": "Search on Warmane",
-    "foundOnWarmane": "✓ Found on Warmane",
-    "alreadyAddedWarning": "⚠ This guild is already added. You can join it from the available guilds list instead.",
+    "foundOnWarmane": "Found on Warmane",
+    "alreadyAddedWarning": "This guild is already added. You can join it from the available guilds list instead.",
     "manualEntry": "Manual entry mode — guild not verified on Warmane.",
     "realmRequired": "Realm *",
     "selectRealm": "Select realm…",
@@ -511,7 +511,7 @@
     "username": "Username",
     "role": "Role",
     "joined": "Joined",
-    "characters": "📋 Characters",
+    "characters": "Characters",
     "removeMember": "Remove Member",
     "removeConfirm": "Remove {name} from the guild?",
     "memberRemoved": "Member removed",
@@ -533,13 +533,13 @@
     "status": "Status",
     "mainChar": "Main",
     "altChar": "Alt",
-    "view": "🔍 View",
+    "view": "View",
     "ownership": {
       "title": "Guild Ownership",
       "description": "Transfer ownership of this guild to another member.",
-      "transferBtn": "👑 Transfer Ownership",
-      "modalTitle": "👑 Transfer Guild Ownership",
-      "warning": "⚠️ WARNING: This action is IRREVERSIBLE!",
+      "transferBtn": "Transfer Ownership",
+      "modalTitle": "Transfer Guild Ownership",
+      "warning": "WARNING: This action is IRREVERSIBLE!",
       "warningDesc": "The new owner will receive full control of the guild. You will be demoted to a regular member and lose all guild owner privileges.",
       "selectOwner": "Select new owner",
       "chooseMember": "Choose a member…",
@@ -604,11 +604,11 @@
     "characterRequired": "Character *",
     "selectCharacter": "Select character…",
     "alreadySignedUp": "Already signed up characters are hidden. Select another character to add.",
-    "kickedWarning": "⛔ Some characters are hidden because they have been permanently kicked from this raid.",
+    "kickedWarning": "Some characters are hidden because they have been permanently kicked from this raid.",
     "roleRequired": "Role *",
-    "noRoleSlots": "⚠ There are no available role slots for this character's class in this raid. This character cannot sign up for this event.",
+    "noRoleSlots": "There are no available role slots for this character's class in this raid. This character cannot sign up for this event.",
     "full": "Full",
-    "roleFull": "⚠ All {role} slots are full. You will be placed on the bench as the next candidate when a slot opens up.",
+    "roleFull": "All {role} slots are full. You will be placed on the bench as the next candidate when a slot opens up.",
     "spec": "Spec (select one or more)",
     "specPlaceholder": "e.g. Holy, Frost, Balance…",
     "note": "Note",
@@ -796,7 +796,7 @@
       "body": "Your character {character} ({role}) is on the bench queue for {eventTitle}. You'll be auto-promoted if a spot opens up."
     },
     "signupPromoted": {
-      "title": "🎉 {character} promoted to roster for {event}",
+      "title": "{character} promoted to roster for {event}",
       "body": "A {role} slot opened up and {character} has been moved from the bench to the active roster!"
     },
     "signupDeclined": {
@@ -808,7 +808,7 @@
       "body": "Your character {character} was removed from {eventTitle} by {officer}."
     },
     "signupKicked": {
-      "title": "⛔ {character} permanently kicked from {event}",
+      "title": "{character} permanently kicked from {event}",
       "body": "Your character {character} has been permanently kicked from {eventTitle} by {officer}. You cannot sign up with this character again for this raid."
     },
     "roleChanged": {
@@ -820,27 +820,27 @@
       "body": "{character} is now #{position} in the {role} bench queue for {eventTitle}."
     },
     "eventCreated": {
-      "title": "📅 New raid scheduled: {eventTitle} {guildTag}",
+      "title": "New raid scheduled: {eventTitle} {guildTag}",
       "body": "A new raid has been scheduled{starts}. Sign up now!"
     },
     "eventCancelled": {
-      "title": "❌ Raid cancelled: {event}",
+      "title": "Raid cancelled: {event}",
       "body": "The raid \"{eventTitle}\" has been cancelled."
     },
     "eventLocked": {
-      "title": "🔒 Signups closed: {event}",
+      "title": "Signups closed: {event}",
       "body": "Signups are now closed for \"{eventTitle}\". The roster is being finalized."
     },
     "eventUpdated": {
-      "title": "✏️ Raid updated: {event}",
+      "title": "Raid updated: {event}",
       "body": "Event details for \"{eventTitle}\" have been updated. Check for any schedule or roster changes."
     },
     "eventCompleted": {
-      "title": "✅ Raid completed: {event}",
+      "title": "Raid completed: {event}",
       "body": "The raid \"{eventTitle}\" has been marked as completed. GG!"
     },
     "memberJoined": {
-      "title": "👤 New member joined {guildName} {guildTag}",
+      "title": "New member joined {guildName} {guildTag}",
       "body": "A new member has joined your guild."
     },
     "removedFromGuild": {
@@ -848,7 +848,7 @@
       "body": "You have been removed from this guild."
     },
     "guildRoleChanged": {
-      "title": "🏅 Rank changed to {role} in {guildName} {guildTag}",
+      "title": "Rank changed to {role} in {guildName} {guildTag}",
       "body": "Your rank has been changed to {role}."
     },
     "officerNewSignup": {
@@ -868,7 +868,7 @@
     },
     "ownershipTransferred": {
       "newOwner": {
-        "title": "🏰 You are now the owner of {guildName} {guildTag}",
+        "title": "You are now the owner of {guildName} {guildTag}",
         "body": "You have been granted full ownership of {guildName}. You now have all guild owner privileges and responsibilities."
       },
       "oldOwner": {
@@ -877,19 +877,19 @@
       }
     },
     "replacementRequested": {
-      "title": "🔄 Character swap requested for {event}",
+      "title": "Character swap requested for {event}",
       "body": "{officer} wants to replace {oldCharacter} with {newCharacter} in {eventTitle}.{reason} Please confirm, decline, or leave the raid."
     },
     "replacementConfirmed": {
-      "title": "✅ Character swap accepted for {event}",
+      "title": "Character swap accepted for {event}",
       "body": "The player accepted the character swap from {oldCharacter} to {newCharacter} in {eventTitle}."
     },
     "replacementDeclined": {
-      "title": "❌ Character swap declined for {event}",
+      "title": "Character swap declined for {event}",
       "body": "The player declined the character swap for {character} in {eventTitle}."
     },
     "attendanceRecorded": {
-      "title": "📋 Attendance recorded for {event}",
+      "title": "Attendance recorded for {event}",
       "body": "{character}: {outcome}.{note}"
     },
     "outcomeLabels": {

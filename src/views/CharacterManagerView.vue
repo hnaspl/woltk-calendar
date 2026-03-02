@@ -2,12 +2,12 @@
   <AppShell>
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 class="wow-heading text-xl sm:text-2xl">My Characters</h1>
+        <h1 class="wow-heading text-xl sm:text-2xl">{{ t('characters.title') }}</h1>
         <WowButton @click="openAddModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          Add Character
+          {{ t('characters.addCharacter') }}
         </WowButton>
       </div>
 
@@ -17,12 +17,12 @@
           class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
           :class="activeTab === 'active' ? 'text-accent-gold border-accent-gold' : 'text-text-muted border-transparent hover:text-text-primary'"
           @click="activeTab = 'active'"
-        >Active</button>
+        >{{ t('characters.active') }}</button>
         <button
           class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
           :class="activeTab === 'archived' ? 'text-accent-gold border-accent-gold' : 'text-text-muted border-transparent hover:text-text-primary'"
           @click="switchToArchived"
-        >Archived <span v-if="archivedCharacters.length" class="text-xs opacity-60">({{ archivedCharacters.length }})</span></button>
+        >{{ t('characters.archived') }} <span v-if="archivedCharacters.length" class="text-xs opacity-60">({{ archivedCharacters.length }})</span></button>
       </div>
 
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -36,8 +36,8 @@
       <!-- Active characters -->
       <template v-else-if="activeTab === 'active'">
         <div v-if="characters.length === 0" class="text-center py-12 text-text-muted">
-          <p class="mb-4">You haven't added any characters yet.</p>
-          <WowButton @click="openAddModal">Add your first character</WowButton>
+          <p class="mb-4">{{ t('characters.noCharacters') }}</p>
+          <WowButton @click="openAddModal">{{ t('characters.addFirst') }}</WowButton>
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -51,7 +51,7 @@
             <span
               v-if="char.is_main"
               class="absolute top-3 right-3 text-[10px] font-bold text-accent-gold bg-accent-gold/10 border border-accent-gold/30 px-1.5 py-0.5 rounded"
-            >MAIN</span>
+            >{{ t('characters.main') }}</span>
 
             <CharacterTooltip :character="charToTooltip(char)" position="right">
               <div class="flex items-center gap-3 mb-3 cursor-pointer">
@@ -91,18 +91,18 @@
                 variant="secondary"
                 class="flex-1 text-xs py-1.5"
                 @click="setMain(char)"
-              >Set Main</WowButton>
+              >{{ t('characters.setMain') }}</WowButton>
               <WowButton
                 variant="secondary"
                 class="flex-1 text-xs py-1.5"
                 @click="syncFromWarmane(char)"
                 :loading="syncing === char.id"
-              >Sync</WowButton>
+              >{{ t('characters.sync') }}</WowButton>
               <WowButton
                 variant="secondary"
                 class="flex-1 text-xs py-1.5"
                 @click="openEditModal(char)"
-              >Edit</WowButton>
+              >{{ t('common.buttons.edit') }}</WowButton>
               <WowButton
                 variant="danger"
                 class="text-xs py-1.5 px-3"
@@ -116,7 +116,7 @@
       <!-- Archived characters -->
       <template v-else>
         <div v-if="archivedCharacters.length === 0" class="text-center py-12 text-text-muted">
-          <p>No archived characters.</p>
+          <p>{{ t('characters.noArchived') }}</p>
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -125,7 +125,7 @@
             :key="char.id"
             class="relative opacity-70"
           >
-            <span class="absolute top-3 right-3 text-[10px] font-bold text-red-400 bg-red-900/20 border border-red-600/30 px-1.5 py-0.5 rounded">ARCHIVED</span>
+            <span class="absolute top-3 right-3 text-[10px] font-bold text-red-400 bg-red-900/20 border border-red-600/30 px-1.5 py-0.5 rounded">{{ t('characters.archivedLabel') }}</span>
 
             <div class="flex items-center gap-3 mb-3">
               <img
@@ -151,12 +151,12 @@
                 class="flex-1 text-xs py-1.5"
                 @click="doUnarchive(char)"
                 :loading="saving"
-              >Unarchive</WowButton>
+              >{{ t('characters.unarchive') }}</WowButton>
               <WowButton
                 variant="danger"
                 class="text-xs py-1.5 px-3"
                 @click="confirmDelete(char)"
-              >Delete</WowButton>
+              >{{ t('common.buttons.delete') }}</WowButton>
             </div>
           </WowCard>
         </div>
@@ -164,7 +164,7 @@
     </div>
 
     <!-- Add / Edit modal -->
-    <WowModal v-model="showModal" :title="editingChar ? 'Edit Character' : 'Add Character'" size="md">
+    <WowModal v-model="showModal" :title="editingChar ? t('characters.editCharacter') : t('characters.addCharacter')" size="md">
       <form @submit.prevent="saveChar" class="space-y-4">
 
         <!-- Armory lock banner (editing an armory-imported character) -->
@@ -172,36 +172,36 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
-          This character is synced from Warmane armory. Fields are locked. Use <strong class="mx-1">Sync</strong> to update from armory.<template v-if="!isRoleLocked"> Role can still be changed.</template>
+          {{ t('characters.syncedFromWarmane') }}<template v-if="!isRoleLocked"> Role can still be changed.</template>
         </div>
 
         <!-- STEP 1: Armory import (only when adding, not editing) -->
         <div v-if="!editingChar && !manualEntry" class="space-y-4">
           <div class="p-4 rounded bg-accent-gold/5 border border-accent-gold/30 space-y-3">
-            <div class="text-sm font-semibold text-accent-gold">Import from Warmane Armory</div>
-            <p class="text-xs text-text-muted">Enter your character name and realm to auto-fill all details from the Warmane armory.</p>
+            <div class="text-sm font-semibold text-accent-gold">{{ t('characters.importFromWarmane') }}</div>
+            <p class="text-xs text-text-muted">{{ t('characters.importHelp') }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input v-model="form.name" placeholder="Character name" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              <input v-model="form.name" :placeholder="t('characters.characterName')" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
               <div>
                 <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
                 <select v-else v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                  <option value="">Select realm…</option>
+                  <option value="">{{ t('characters.selectRealm') }}</option>
                   <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
                 </select>
-                <span v-if="guildStore.currentGuild?.realm_name" class="text-[10px] text-text-muted">Realm from current guild</span>
+                <span v-if="guildStore.currentGuild?.realm_name" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
               </div>
             </div>
             <div class="flex items-center gap-3">
               <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
-                Lookup on Warmane
+                {{ t('characters.lookupOnWarmane') }}
               </WowButton>
-              <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ Found — fields populated from armory</span>
-              <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">Not found — try again or fill manually</span>
+              <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ {{ t('characters.foundOnArmory') }}</span>
+              <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">{{ t('characters.notFoundOnArmory') }}</span>
             </div>
           </div>
           <div class="text-center">
             <button type="button" class="text-xs text-text-muted hover:text-accent-gold transition-colors underline" @click="manualEntry = true">
-              or fill in manually without armory
+              {{ t('characters.fillManually') }}
             </button>
           </div>
         </div>
@@ -209,34 +209,34 @@
         <!-- STEP 2: Manual form fields (shown after lookup or manual choice) -->
         <template v-if="editingChar || manualEntry || lookupResult === 'found'">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Character Name *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.nameRequired') }}</label>
             <input v-model="form.name" required placeholder="Arthas" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Class *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.classRequired') }}</label>
             <select v-model="form.class" required :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" @change="onClassChange">
-              <option value="">Select class…</option>
+              <option value="">{{ t('characters.selectClass') }}</option>
               <option v-for="c in wowClasses" :key="c" :value="c">{{ c }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Realm *</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.realmRequired') }}</label>
             <select v-model="form.realm" required :disabled="isArmoryLocked || isRealmLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="">Select realm…</option>
+              <option value="">{{ t('characters.selectRealm') }}</option>
               <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
             </select>
-            <span v-if="isRealmLocked" class="text-[10px] text-text-muted">Realm from current guild</span>
-            <span v-else-if="guildRealms.length" class="text-[10px] text-text-muted">Only realms from your guilds</span>
+            <span v-if="isRealmLocked" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
+            <span v-else-if="guildRealms.length" class="text-[10px] text-text-muted">{{ t('characters.onlyGuildRealms') }}</span>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Role</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.role') }}</label>
             <select v-model="form.role" :disabled="isRoleLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">Select role…</option>
               <option v-for="r in filteredRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Spec</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.spec') }}</label>
             <select v-if="filteredSpecs.length > 0" v-model="form.spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">Select spec…</option>
               <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
@@ -244,7 +244,7 @@
             <input v-else v-model="form.spec" :disabled="isArmoryLocked" placeholder="e.g. Frost, Holy…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Secondary Spec</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.secondarySpec') }}</label>
             <select v-if="filteredSpecs.length > 0" v-model="form.secondary_spec" :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">Select secondary spec…</option>
               <option v-for="s in filteredSpecs" :key="s" :value="s">{{ s }}</option>
@@ -252,7 +252,7 @@
             <input v-else v-model="form.secondary_spec" :disabled="isArmoryLocked" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">Warmane Armory URL</label>
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.warmaneUrl') }}</label>
             <input v-model="form.armory_url" :disabled="isArmoryLocked" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
         </template>
@@ -261,43 +261,43 @@
       </form>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showModal = false">Cancel</WowButton>
+          <WowButton variant="secondary" @click="showModal = false">{{ t('common.buttons.cancel') }}</WowButton>
           <WowButton v-if="editingChar || manualEntry || lookupResult === 'found'" :loading="saving" @click="saveChar">
-            {{ editingChar ? 'Save Changes' : 'Add Character' }}
+            {{ editingChar ? t('characters.saveChanges') : t('characters.addCharacter') }}
           </WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Remove confirmation (Archive or Delete) -->
-    <WowModal v-model="showRemoveConfirm" title="Remove Character" size="sm">
-      <p class="text-text-muted mb-4">What would you like to do with <strong class="text-text-primary">{{ removeTarget?.name }}</strong>?</p>
+    <WowModal v-model="showRemoveConfirm" :title="t('characters.removeCharacter')" size="sm">
+      <p class="text-text-muted mb-4">{{ t('characters.whatToDo') }} <strong class="text-text-primary">{{ removeTarget?.name }}</strong>?</p>
       <div class="space-y-2">
-        <p class="text-xs text-text-muted"><strong class="text-text-primary">Archive</strong> — hide from signups; can be restored later.</p>
-        <p class="text-xs text-text-muted"><strong class="text-red-400">Delete</strong> — permanently remove. This cannot be undone.</p>
+        <p class="text-xs text-text-muted"><strong class="text-text-primary">{{ t('characters.archive') }}</strong> — hide from signups; can be restored later.</p>
+        <p class="text-xs text-text-muted"><strong class="text-red-400">{{ t('common.buttons.delete') }}</strong> — {{ t('characters.permanentlyDelete') }} {{ t('characters.cannotBeUndone') }}</p>
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showRemoveConfirm = false">Cancel</WowButton>
-          <WowButton variant="secondary" :loading="saving" @click="doArchive">Archive</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doDelete">Delete</WowButton>
+          <WowButton variant="secondary" @click="showRemoveConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="secondary" :loading="saving" @click="doArchive">{{ t('characters.archive') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDelete">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Delete confirmation for archived chars -->
-    <WowModal v-model="showDeleteConfirm" title="Delete Character" size="sm">
-      <p class="text-text-muted">Permanently delete <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>? This cannot be undone.</p>
+    <WowModal v-model="showDeleteConfirm" :title="t('characters.deleteCharacter')" size="sm">
+      <p class="text-text-muted">{{ t('characters.permanentlyDelete') }} <strong class="text-text-primary">{{ deleteTarget?.name }}</strong>? {{ t('characters.cannotBeUndone') }}</p>
       <template #footer>
         <div class="flex justify-end gap-3">
-          <WowButton variant="secondary" @click="showDeleteConfirm = false">Cancel</WowButton>
-          <WowButton variant="danger" :loading="saving" @click="doDeleteArchived">Delete</WowButton>
+          <WowButton variant="secondary" @click="showDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="saving" @click="doDeleteArchived">{{ t('common.buttons.delete') }}</WowButton>
         </div>
       </template>
     </WowModal>
 
     <!-- Add another character prompt -->
-    <WowModal v-model="showAddAnother" title="Character Added!" size="sm">
+    <WowModal v-model="showAddAnother" :title="t('characters.characterAdded')" size="sm">
       <div class="text-center space-y-3">
         <div class="text-3xl">✅</div>
         <p class="text-text-primary font-medium">{{ lastAddedName }} has been added successfully.</p>
@@ -330,11 +330,13 @@ import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS, no
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
 import { useTimezone } from '@/composables/useTimezone'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const { getClassIcon } = useWowIcons()
 const tzHelper = useTimezone()
+const { t } = useI18n()
 
 /** Map display char to CharacterTooltip format */
 function charToTooltip(char) {

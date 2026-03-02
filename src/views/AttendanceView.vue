@@ -2,16 +2,16 @@
   <AppShell>
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 class="wow-heading text-xl sm:text-2xl">Attendance</h1>
+        <h1 class="wow-heading text-xl sm:text-2xl">{{ t('attendance.title') }}</h1>
         <div class="flex items-center gap-3">
           <select
             v-model="period"
             class="bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
           >
-            <option value="30">Last 30 days</option>
-            <option value="60">Last 60 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="all">All time</option>
+            <option value="30">{{ t('common.time.last30Days') }}</option>
+            <option value="60">{{ t('common.time.last60Days') }}</option>
+            <option value="90">{{ t('common.time.last90Days') }}</option>
+            <option value="all">{{ t('common.time.allTime') }}</option>
           </select>
         </div>
       </div>
@@ -42,9 +42,11 @@ import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import * as attendanceApi from '@/api/attendance'
 import * as eventsApi from '@/api/events'
+import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const loading = ref(true)
 const error = ref(null)
@@ -73,7 +75,7 @@ async function fetchData() {
     records.value = recs
     events.value = evs
   } catch (err) {
-    error.value = err?.response?.data?.message ?? 'Failed to load attendance data'
+    error.value = err?.response?.data?.message ?? t('attendance.failedToLoad')
   } finally {
     loading.value = false
   }

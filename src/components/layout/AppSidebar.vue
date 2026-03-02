@@ -144,7 +144,7 @@
           <!-- Show Warmane match info -->
           <div v-if="guildLookupMatch" class="p-3 rounded bg-green-900/20 border border-green-700 text-sm">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-green-300 font-medium">{{ t('guild.foundOnWarmane') }}</span>
+              <span class="text-green-300 font-medium">✓ {{ t('guild.foundOnWarmane') }}</span>
               <span v-if="guildLookupMatch.faction" class="px-2 py-0.5 rounded text-xs font-medium"
                 :class="guildLookupMatch.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >{{ guildLookupMatch.faction }}</span>
@@ -152,7 +152,7 @@
             <span class="text-text-muted text-xs">{{ guildLookupMatch.member_count ?? 0 }} members on {{ newGuild.realm_name }}</span>
           </div>
           <div v-if="guildLookupMatch?.alreadyAdded" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
-            {{ t('guild.alreadyAddedWarning') }}
+            ⚠ {{ t('guild.alreadyAddedWarning') }}
           </div>
           <div v-if="guildManualMode" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
             {{ t('guild.manualEntry') }}
