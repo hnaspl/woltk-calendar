@@ -87,7 +87,7 @@
           {{ userInitial }}
         </div>
         <div class="flex-1 min-w-0">
-          <div class="text-sm text-text-primary truncate">{{ authStore.user?.username ?? 'Unknown' }}</div>
+          <div class="text-sm text-text-primary truncate">{{ authStore.user?.username ?? t('common.labels.unknown') }}</div>
           <div class="text-xs text-text-muted truncate">{{ authStore.user?.email ?? '' }}</div>
         </div>
       </div>

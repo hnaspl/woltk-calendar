@@ -101,10 +101,10 @@
               <div v-if="talents.length > 0">
                 <div class="text-[10px] uppercase tracking-wider text-text-muted mb-2 font-semibold">{{ t('characterDetail.talentTrees') }}</div>
                 <div class="space-y-1.5">
-                  <div v-for="(t, i) in talents" :key="i" class="flex items-center gap-2">
-                    <img v-if="getSpecIcon(t.tree, character.class_name)" :src="getSpecIcon(t.tree, character.class_name)" class="w-5 h-5 rounded" />
-                    <span class="text-sm text-text-primary">{{ t.tree ?? 'Unknown' }}</span>
-                    <span v-if="t.points" class="text-sm text-text-muted ml-auto">{{ formatPoints(t.points) }}</span>
+                  <div v-for="(tal, i) in talents" :key="i" class="flex items-center gap-2">
+                    <img v-if="getSpecIcon(tal.tree, character.class_name)" :src="getSpecIcon(tal.tree, character.class_name)" class="w-5 h-5 rounded" />
+                    <span class="text-sm text-text-primary">{{ tal.tree ?? t('common.labels.unknown') }}</span>
+                    <span v-if="tal.points" class="text-sm text-text-muted ml-auto">{{ formatPoints(tal.points) }}</span>
                   </div>
                 </div>
               </div>
@@ -246,7 +246,7 @@
 import { computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { normalizeSpecName } from '@/constants'
+import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLabel } from '@/constants'
 import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
 import { useFormatting } from '@/composables/useFormatting'
 
@@ -320,37 +320,17 @@ function equipSlotLabel(index) {
   return EQUIP_SLOTS[index]?.label ?? `Slot ${index + 1}`
 }
 
-// Quality colors matching WoW item quality system
-const QUALITY_COLORS = {
-  0: { text: 'text-gray-500',   border: 'border-gray-600/40',   bg: 'bg-gray-900/40' },   // Poor
-  1: { text: 'text-gray-300',   border: 'border-gray-500/40',   bg: 'bg-gray-800/30' },   // Common
-  2: { text: 'text-green-400',  border: 'border-green-500/40',  bg: 'bg-green-900/20' },   // Uncommon
-  3: { text: 'text-blue-400',   border: 'border-blue-500/40',   bg: 'bg-blue-900/20' },    // Rare
-  4: { text: 'text-purple-400', border: 'border-purple-500/50', bg: 'bg-purple-900/20' },   // Epic
-  5: { text: 'text-orange-400', border: 'border-orange-500/50', bg: 'bg-orange-900/20' },   // Legendary
-  6: { text: 'text-red-400',    border: 'border-red-500/50',    bg: 'bg-red-900/20' },      // Artifact
-}
-
-function getQuality(item) {
-  if (item.quality != null) return QUALITY_COLORS[item.quality] ?? QUALITY_COLORS[4]
-  // Fallback: items with an ID but no quality field default to Rare (blue)
-  if (item.item) return QUALITY_COLORS[3]
-  return QUALITY_COLORS[1]
-}
-
 function slotIconClasses(item) {
-  const q = getQuality(item)
+  const q = getItemQuality(item)
   return `${q.border} ${q.bg} border`
 }
 
 function itemQualityText(item) {
-  return getQuality(item).text
+  return getItemQualityText(item)
 }
 
-const QUALITY_LABELS = { 0: 'Poor', 1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary', 6: 'Artifact' }
-
 function qualityLabel(q) {
-  return QUALITY_LABELS[q] ?? ''
+  return getItemQualityLabel(q)
 }
 
 function formatPoints(points) {

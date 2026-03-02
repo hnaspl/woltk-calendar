@@ -77,14 +77,14 @@
             <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">{{ t('characterDetail.talentTrees') }}</div>
             <table class="w-full">
               <tbody>
-                <tr v-for="(t, i) in talents" :key="i">
+                <tr v-for="(tal, i) in talents" :key="i">
                   <td class="py-0.5">
                     <span class="inline-flex items-center gap-1 text-text-primary">
-                      <img v-if="getSpecIcon(t.tree, character.class_name)" :src="getSpecIcon(t.tree, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
-                      {{ t.tree ?? 'Unknown' }}
+                      <img v-if="getSpecIcon(tal.tree, character.class_name)" :src="getSpecIcon(tal.tree, character.class_name)" class="w-3.5 h-3.5 rounded-sm" />
+                      {{ tal.tree ?? t('common.labels.unknown') }}
                     </span>
                   </td>
-                  <td v-if="t.points" class="text-text-muted text-right py-0.5">{{ formatPoints(t.points) }}</td>
+                  <td v-if="tal.points" class="text-text-muted text-right py-0.5">{{ formatPoints(tal.points) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -144,7 +144,7 @@
           <!-- Equipment summary -->
           <div v-if="equipment.length > 0">
             <div class="text-[10px] uppercase tracking-wider text-text-muted mb-1">
-              Equipment ({{ equipment.length }} slots)
+              {{ t('characterDetail.equipment', { count: equipment.length }) }}
             </div>
             <div class="max-h-28 overflow-y-auto space-y-0.5 pr-1 scrollbar-thin">
               <div
@@ -152,14 +152,14 @@
                 :key="i"
                 class="text-[11px] text-text-muted truncate"
               >
-                <span class="text-text-primary">{{ item.name }}</span>
+                <span :class="itemQualityText(item)">{{ item.name }}</span>
               </div>
             </div>
           </div>
 
           <!-- Last synced -->
           <div v-if="meta.last_synced" class="text-[10px] text-text-muted pt-1 border-t border-[#2a3450]">
-            Synced: {{ formatDate(meta.last_synced) }}
+            {{ t('characterDetail.lastSynced') }} {{ formatDate(meta.last_synced) }}
           </div>
         </div>
       </div>
@@ -171,7 +171,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { normalizeSpecName } from '@/constants'
+import { normalizeSpecName, getItemQualityText } from '@/constants'
 import { useFormatting } from '@/composables/useFormatting'
 
 const { t } = useI18n()
@@ -231,6 +231,10 @@ const equipment = computed(() => (meta.value.equipment ?? []).filter(e => e?.nam
 const hasStats = computed(() =>
   meta.value.achievement_points || meta.value.honorable_kills || meta.value.faction || meta.value.guild || meta.value.gear_score
 )
+
+function itemQualityText(item) {
+  return getItemQualityText(item)
+}
 
 function formatPoints(points) {
   if (Array.isArray(points)) return points.join('/')
