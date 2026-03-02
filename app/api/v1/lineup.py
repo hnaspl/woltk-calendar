@@ -79,6 +79,8 @@ def update_lineup(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify lineup on a completed or cancelled event"}), 403
 
     data = request.get_json(silent=True) or {}
 
@@ -126,6 +128,8 @@ def confirm_lineup(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify lineup on a completed or cancelled event"}), 403
     slots = lineup_service.confirm_lineup(event_id, current_user.id)
     return jsonify([s.to_dict() for s in slots]), 200
 
@@ -140,6 +144,8 @@ def reorder_bench(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return jsonify({"error": "Event not found"}), 404
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify lineup on a completed or cancelled event"}), 403
 
     data = request.get_json(silent=True) or {}
     ordered_ids = data.get("ordered_signup_ids", [])

@@ -84,7 +84,7 @@ def create_signup(guild_id: int, event_id: int):
     if err:
         return err
 
-    if event.status == "locked":
+    if event.status in ("locked", "completed", "cancelled"):
         return jsonify({"error": "Event is locked"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -144,9 +144,11 @@ def create_signup(guild_id: int, event_id: int):
 def update_signup(guild_id: int, event_id: int, signup_id: int):
     if get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": "Forbidden"}), 403
-    _, err = _get_event_or_404(guild_id, event_id)
+    event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
 
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
@@ -164,7 +166,6 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
     emit_lineup_changed(event_id)
 
     # Notify player if an officer changed their role
-    event = event_service.get_event(event_id)
     if signup.user_id != current_user.id and event:
         if data.get("chosen_role") and data["chosen_role"] != old_role:
             notify.notify_role_changed(signup, event, old_role, signup.chosen_role)
@@ -177,9 +178,11 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
 def delete_signup(guild_id: int, event_id: int, signup_id: int):
     if get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": "Forbidden"}), 403
-    _, err = _get_event_or_404(guild_id, event_id)
+    event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
 
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
@@ -190,7 +193,6 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
         return jsonify({"error": "Forbidden"}), 403
 
     # Capture info before deletion for notifications
-    event = event_service.get_event(event_id)
     signup_user_id = signup.user_id
     signup_role = signup.chosen_role
     char_name = signup.character.name if signup.character else "Unknown"
@@ -236,9 +238,11 @@ def decline_signup(guild_id: int, event_id: int, signup_id: int):
     """Decline a signup — removes lineup/bench slots and auto-promotes."""
     if get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": "Forbidden"}), 403
-    _, err = _get_event_or_404(guild_id, event_id)
+    event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
 
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
@@ -247,8 +251,6 @@ def decline_signup(guild_id: int, event_id: int, signup_id: int):
     membership = get_membership(guild_id, current_user.id)
     if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
         return jsonify({"error": "Forbidden"}), 403
-
-    event = event_service.get_event(event_id)
 
     signup = signup_service.decline_signup(signup)
     emit_signups_changed(event_id)
@@ -326,6 +328,8 @@ def create_replace_request(guild_id: int, event_id: int, signup_id: int):
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
+    if event.status in ("completed", "cancelled"):
+        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
         return jsonify({"error": "Signup not found"}), 404

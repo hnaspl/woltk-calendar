@@ -151,7 +151,7 @@
     </WowModal>
 
     <!-- Member Characters modal -->
-    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="xl">
+    <WowModal v-model="showMemberChars" :title="memberCharsTitle" size="2xl">
       <div v-if="loadingMemberChars" class="py-6 text-center text-text-muted">Loading characters…</div>
       <div v-else-if="memberChars.length === 0" class="py-6 text-center text-text-muted">No characters found for this member.</div>
       <div v-else class="overflow-x-auto max-h-[70vh] overflow-y-auto">

@@ -55,7 +55,7 @@ import { computed } from 'vue'
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
   title: { type: String, default: '' },
-  size: { type: String, default: 'md', validator: v => ['sm', 'md', 'lg', 'xl'].includes(v) },
+  size: { type: String, default: 'md', validator: v => ['sm', 'md', 'lg', 'xl', '2xl'].includes(v) },
   closeOnBackdrop: { type: Boolean, default: true }
 })
 
@@ -65,7 +65,8 @@ const widthClass = computed(() => ({
   sm: 'max-w-sm',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
-  xl: 'max-w-4xl'
+  xl: 'max-w-4xl',
+  '2xl': 'max-w-6xl'
 }[props.size]))
 
 function onBackdropClick() {

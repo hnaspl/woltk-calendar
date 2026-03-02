@@ -220,3 +220,168 @@ class TestTimezoneFields:
         assert guild.timezone == "America/Chicago"
         assert user.timezone == "Europe/London"
         assert guild.timezone != user.timezone
+
+
+class TestCompletedEventSignupProtection:
+    """Completed/cancelled events should block signup create/update/delete via API."""
+
+    def _login(self, app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+    def test_create_signup_on_completed_event_blocked(self, app, event_seed):
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        char = event_seed["char"]
+        self._login(app, client, user)
+
+        event_service.complete_event(event)
+
+        resp = client.post(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups",
+            json={"character_id": char.id, "chosen_role": "main_tank"},
+        )
+        assert resp.status_code == 403
+
+    def test_create_signup_on_cancelled_event_blocked(self, app, event_seed):
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        char = event_seed["char"]
+        self._login(app, client, user)
+
+        event_service.cancel_event(event)
+
+        resp = client.post(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups",
+            json={"character_id": char.id, "chosen_role": "main_tank"},
+        )
+        assert resp.status_code == 403
+
+    def test_update_signup_on_completed_event_blocked(self, app, event_seed):
+        from app.services import signup_service
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        char = event_seed["char"]
+        self._login(app, client, user)
+
+        signup = signup_service.create_signup(
+            raid_event_id=event.id, user_id=user.id,
+            character_id=char.id, chosen_role="main_tank",
+            chosen_spec=None, note=None,
+            raid_size=25, event=event,
+        )
+        event_service.complete_event(event)
+
+        resp = client.put(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups/{signup.id}",
+            json={"note": "changed"},
+        )
+        assert resp.status_code == 403
+
+    def test_delete_signup_on_completed_event_blocked(self, app, event_seed):
+        from app.services import signup_service
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        char = event_seed["char"]
+        self._login(app, client, user)
+
+        signup = signup_service.create_signup(
+            raid_event_id=event.id, user_id=user.id,
+            character_id=char.id, chosen_role="main_tank",
+            chosen_spec=None, note=None,
+            raid_size=25, event=event,
+        )
+        event_service.complete_event(event)
+
+        resp = client.delete(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups/{signup.id}",
+        )
+        assert resp.status_code == 403
+
+    def test_decline_signup_on_completed_event_blocked(self, app, event_seed):
+        from app.services import signup_service
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        char = event_seed["char"]
+        self._login(app, client, user)
+
+        signup = signup_service.create_signup(
+            raid_event_id=event.id, user_id=user.id,
+            character_id=char.id, chosen_role="main_tank",
+            chosen_spec=None, note=None,
+            raid_size=25, event=event,
+        )
+        event_service.complete_event(event)
+
+        resp = client.post(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups/{signup.id}/decline",
+        )
+        assert resp.status_code == 403
+
+
+class TestCompletedEventLineupProtection:
+    """Completed/cancelled events should block lineup modifications via API."""
+
+    def _login(self, app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+    def test_update_lineup_on_completed_event_blocked(self, app, event_seed):
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        self._login(app, client, user)
+
+        event_service.complete_event(event)
+
+        resp = client.put(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/lineup",
+            json={"melee_dps": [], "healers": [], "range_dps": []},
+        )
+        assert resp.status_code == 403
+
+    def test_bench_reorder_on_completed_event_blocked(self, app, event_seed):
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        self._login(app, client, user)
+
+        event_service.complete_event(event)
+
+        resp = client.put(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/lineup/bench-reorder",
+            json={"ordered_signup_ids": []},
+        )
+        assert resp.status_code == 403
+
+    def test_confirm_lineup_on_completed_event_blocked(self, app, event_seed):
+        client = app.test_client()
+        event = event_seed["event"]
+        guild = event_seed["guild"]
+        user = event_seed["user"]
+        self._login(app, client, user)
+
+        event_service.complete_event(event)
+
+        resp = client.post(
+            f"/api/v1/guilds/{guild.id}/events/{event.id}/lineup/confirm",
+        )
+        assert resp.status_code == 403
