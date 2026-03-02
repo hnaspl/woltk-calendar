@@ -1,6 +1,16 @@
 <template>
   <AppShell>
     <div class="p-4 md:p-6 space-y-6">
+      <!-- Loading permissions -->
+      <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
+        <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+        Loading…
+      </div>
+      <!-- No permission -->
+      <div v-else-if="!hasViewAccess" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
+        You do not have permission to manage recurring raids.
+      </div>
+      <template v-else>
       <div class="flex items-center justify-between">
         <div>
           <h1 class="wow-heading text-2xl">Recurring Raids</h1>
@@ -60,6 +70,7 @@
           </div>
         </WowCard>
       </div>
+      </template>
     </div>
 
     <!-- Add/Edit series modal -->
@@ -223,13 +234,18 @@ import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import { usePermissions } from '@/composables/usePermissions'
 import * as seriesApi from '@/api/series'
 import * as templatesApi from '@/api/templates'
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 const uiStore = useUiStore()
+const permissions = usePermissions()
 
+const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_series'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
 
 const seriesList = ref([])

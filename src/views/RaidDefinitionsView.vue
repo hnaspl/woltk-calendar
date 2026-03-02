@@ -1,6 +1,16 @@
 <template>
   <AppShell>
     <div class="p-4 md:p-6 space-y-6">
+      <!-- Loading permissions -->
+      <div v-if="!permissions.permissionsLoaded.value && !authStore.user?.is_admin" class="p-4 rounded-lg bg-bg-tertiary border border-border-default text-text-muted flex items-center gap-3">
+        <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+        Loading…
+      </div>
+      <!-- No permission -->
+      <div v-else-if="!hasViewAccess" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">
+        You do not have permission to manage raid definitions.
+      </div>
+      <template v-else>
       <div class="flex items-center justify-between">
         <h1 class="wow-heading text-2xl">Raid Definitions</h1>
         <WowButton @click="openAddModal">
@@ -67,6 +77,7 @@
           </div>
         </WowCard>
       </div>
+      </template>
     </div>
 
     <!-- Add/Edit modal -->
@@ -211,6 +222,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -218,10 +230,12 @@ import { RAID_TYPES } from '@/constants'
 import * as raidDefsApi from '@/api/raidDefinitions'
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
 
+const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_raid_definitions'))
 const canManageDefaults = computed(() => permissions.can('manage_default_definitions'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
 
