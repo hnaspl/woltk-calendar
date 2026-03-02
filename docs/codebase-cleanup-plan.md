@@ -496,9 +496,9 @@ The bench/queue system spans:
 - [x] Run full test suite — all 418 tests pass
 
 ### Phase 4 – Backend Utilities (Low Risk)
-- [ ] Add cross-reference comments to `app/constants.py` and `src/constants.js`
-- [ ] Align raid name discrepancies ("The" prefix)
-- [ ] Add validation test for constants sync
+- [x] Add cross-reference comments to `app/constants.py` and `src/constants.js`
+- [x] Align raid name discrepancies ("The" prefix) — official WoW names
+- [x] Add validation test for constants sync (`tests/test_constants_sync.py` — 7 tests)
 
 ### Phase 5 – Cross-Stack (Future, Higher Risk)
 - [ ] Evaluate shared JSON approach

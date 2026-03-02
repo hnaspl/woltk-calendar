@@ -138,7 +138,7 @@ wotlk-calendar/
 ### Core WotLK Features
 - **Realm support**: Icecrown, Lordaeron, Onyxia, Frostmourne, Neltharion
 - **Character management**: main/alt distinction, dual spec, role assignments
-- **Built-in WotLK raids**: Naxxramas, OS, EoE, VoA, Ulduar, ToC, ICC, Ruby Sanctum
+- **Built-in WotLK raids**: Naxxramas, The Obsidian Sanctum, The Eye of Eternity, Vault of Archavon, Ulduar, Trial of the Crusader, Icecrown Citadel, The Ruby Sanctum
 - **Custom raid definitions**: Guild admins can create non-standard raids
 - **Raid sizes**: 10-man and 25-man
 - **Signup statuses**: going, tentative, late, declined, standby, bench

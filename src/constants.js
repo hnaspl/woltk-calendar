@@ -1,5 +1,9 @@
 /**
  * Shared constants for the WotLK Calendar frontend.
+ *
+ * Keep in sync with app/constants.py (backend Python equivalent).
+ * Shared data: WARMANE_REALMS, CLASS_ROLES, CLASS_SPECS, RAID_TYPES,
+ *              normalizeSpecName().
  */
 
 export const WARMANE_REALMS = [
@@ -27,13 +31,13 @@ export const WOW_CLASSES = [
 
 export const RAID_TYPES = [
   { value: 'naxx', label: 'Naxxramas' },
-  { value: 'os', label: 'Obsidian Sanctum' },
-  { value: 'eoe', label: 'Eye of Eternity' },
+  { value: 'os', label: 'The Obsidian Sanctum' },
+  { value: 'eoe', label: 'The Eye of Eternity' },
   { value: 'voa', label: 'Vault of Archavon' },
   { value: 'ulduar', label: 'Ulduar' },
   { value: 'toc', label: 'Trial of the Crusader' },
   { value: 'icc', label: 'Icecrown Citadel' },
-  { value: 'rs', label: 'Ruby Sanctum' },
+  { value: 'rs', label: 'The Ruby Sanctum' },
 ]
 
 export const ROLE_OPTIONS = [
@@ -85,6 +89,8 @@ export const CLASS_ROLES = {
 /**
  * Map a Warmane talent-tree name to the canonical CLASS_SPECS name.
  * Handles quirks like "Feral" → "Feral Combat".
+ *
+ * Keep in sync with app/constants.py normalize_spec_name().
  */
 export function normalizeSpecName(treeName, className) {
   if (!treeName) return treeName
