@@ -163,7 +163,7 @@
       <div class="space-y-4">
         <p class="text-text-muted text-sm">Schedule a new event from template <strong class="text-text-primary">{{ applyTarget?.name }}</strong>.</p>
         <div>
-          <label class="block text-xs text-text-muted mb-1">Event Date & Time *</label>
+          <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
           <input v-model="applyDate" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
         </div>
       </div>
@@ -199,6 +199,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
+import { useTimezone } from '@/composables/useTimezone'
 import * as templatesApi from '@/api/templates'
 import * as raidDefsApi from '@/api/raidDefinitions'
 
@@ -206,6 +207,7 @@ const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
+const tzHelper = useTimezone()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_templates'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
@@ -383,7 +385,7 @@ async function doApply() {
   if (!applyDate.value) return
   saving.value = true
   try {
-    await templatesApi.applyTemplate(guildStore.currentGuild.id, applyTarget.value.id, { start_time: applyDate.value })
+    await templatesApi.applyTemplate(guildStore.currentGuild.id, applyTarget.value.id, { start_time: tzHelper.guildLocalToUtc(applyDate.value) })
     showApply.value = false
     uiStore.showToast('Event scheduled from template!', 'success')
   } catch (err) {

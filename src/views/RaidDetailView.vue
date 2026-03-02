@@ -333,7 +333,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
+            <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
             <input v-model="editForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
@@ -717,10 +717,7 @@ async function doDuplicate() {
 }
 
 function toLocalDatetime(utcStr) {
-  if (!utcStr) return ''
-  const d = new Date(utcStr)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return tz.utcToGuildLocal(utcStr)
 }
 
 function openEditModal() {
@@ -774,9 +771,9 @@ async function saveEvent() {
       raid_size: editForm.raid_size,
       difficulty: editForm.difficulty,
       status: editForm.status,
-      starts_at_utc: editForm.starts_at_utc,
+      starts_at_utc: tz.guildLocalToUtc(editForm.starts_at_utc),
       duration_minutes: editForm.duration_minutes,
-      close_signups_at: editForm.close_signups_at || undefined,
+      close_signups_at: editForm.close_signups_at ? tz.guildLocalToUtc(editForm.close_signups_at) : undefined,
       instructions: editForm.instructions
     }
     const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)

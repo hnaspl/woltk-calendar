@@ -130,7 +130,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-text-muted mb-1">Date &amp; Time *</label>
+            <label class="block text-xs text-text-muted mb-1">Start date and time *</label>
             <input v-model="eventForm.starts_at_utc" type="datetime-local" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
           <div>
@@ -171,6 +171,7 @@ import { useGuildStore } from '@/stores/guild'
 import { usePermissions } from '@/composables/usePermissions'
 import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
+import { useTimezone } from '@/composables/useTimezone'
 import { RAID_TYPES } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
@@ -181,6 +182,7 @@ const uiStore = useUiStore()
 const permissions = usePermissions()
 const router = useRouter()
 const { joinGuild, leaveGuild, on, off } = useSocket()
+const tzHelper = useTimezone()
 
 const raidTypes = RAID_TYPES
 
@@ -282,12 +284,12 @@ async function createEvent() {
       title: eventForm.title,
       realm_name: eventForm.realm_name,
       raid_size: eventForm.raid_size,
-      starts_at_utc: eventForm.starts_at_utc,
+      starts_at_utc: tzHelper.guildLocalToUtc(eventForm.starts_at_utc),
       duration_minutes: eventForm.duration_minutes,
       difficulty: eventForm.difficulty,
       raid_type: eventForm.raid_type || undefined,
       raid_definition_id: eventForm.raid_definition_id || undefined,
-      close_signups_at: eventForm.close_signups_at || undefined,
+      close_signups_at: eventForm.close_signups_at ? tzHelper.guildLocalToUtc(eventForm.close_signups_at) : undefined,
       instructions: eventForm.instructions,
       status: 'open'
     }

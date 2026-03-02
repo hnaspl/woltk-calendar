@@ -88,7 +88,7 @@
       <!-- Today's Raids (raids today that the player is signed up for) -->
       <div v-if="!loading && todaysRaids.length > 0" class="space-y-3">
         <h2 class="wow-heading text-lg">⚔️ Today's Raids</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <RouterLink
             v-for="tr in todaysRaids"
             :key="tr.event.id"
@@ -114,7 +114,7 @@
                     <ClassBadge v-if="tr.signup.character?.class_name" :class-name="tr.signup.character.class_name" />
                     <span class="text-xs text-text-muted truncate">{{ tr.signup.character?.name ?? 'Signed up' }}</span>
                     <span v-if="tr.signup.lineup_status === 'bench'" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1 py-0.5 rounded">Bench</span>
-                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">Roster</span>
+                    <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">In Lineup</span>
                   </div>
                 </div>
               </div>
