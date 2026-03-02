@@ -13,6 +13,7 @@ from app.extensions import db
 from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission, get_user_permissions
+from app.i18n import _t
 
 bp = Blueprint("roles", __name__, url_prefix="/roles")
 
@@ -30,7 +31,7 @@ def _require_manage_roles(guild_id: int | None = None):
     # For non-guild-scoped calls, only site admin can manage
     if has_permission(None, "manage_roles"):
         return None
-    return jsonify({"error": "You do not have the appropriate permissions"}), 403
+    return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +78,7 @@ def get_role(role_id: int):
     """Get a single role with full details."""
     role = db.session.get(SystemRole, role_id)
     if role is None:
-        return jsonify({"error": "Role not found"}), 404
+        return jsonify({"error": _t("api.roles.notFound")}), 404
     return jsonify(role.to_dict()), 200
 
 
@@ -94,17 +95,17 @@ def create_role():
     display_name = data.get("display_name", "").strip()
 
     if not name or not display_name:
-        return jsonify({"error": "name and display_name are required"}), 400
+        return jsonify({"error": _t("api.roles.nameDisplayRequired")}), 400
 
     if not re.match(r"^[a-z0-9_-]+$", name):
-        return jsonify({"error": "Role name may only contain lowercase letters, digits, underscores, and hyphens"}), 400
+        return jsonify({"error": _t("api.roles.invalidName")}), 400
 
     # Check uniqueness
     existing = db.session.execute(
         sa.select(SystemRole).where(SystemRole.name == name)
     ).scalar_one_or_none()
     if existing:
-        return jsonify({"error": f"Role '{name}' already exists"}), 409
+        return jsonify({"error": _t("api.roles.alreadyExists", name=name)}), 409
 
     role = SystemRole(
         name=name,
@@ -140,7 +141,7 @@ def update_role(role_id: int):
 
     role = db.session.get(SystemRole, role_id)
     if role is None:
-        return jsonify({"error": "Role not found"}), 404
+        return jsonify({"error": _t("api.roles.notFound")}), 404
 
     data = request.get_json(silent=True) or {}
 
@@ -158,7 +159,7 @@ def update_role(role_id: int):
             sa.select(SystemRole).where(SystemRole.name == new_name, SystemRole.id != role_id)
         ).scalar_one_or_none()
         if existing:
-            return jsonify({"error": f"Role name '{new_name}' already exists"}), 409
+            return jsonify({"error": _t("api.roles.nameConflict", name=new_name)}), 409
         role.name = new_name
 
     # Update permissions if provided
@@ -191,13 +192,13 @@ def delete_role(role_id: int):
 
     role = db.session.get(SystemRole, role_id)
     if role is None:
-        return jsonify({"error": "Role not found"}), 404
+        return jsonify({"error": _t("api.roles.notFound")}), 404
     if role.is_system:
-        return jsonify({"error": "Cannot delete a system role"}), 403
+        return jsonify({"error": _t("api.roles.cannotDeleteSystem")}), 403
 
     db.session.delete(role)
     db.session.commit()
-    return jsonify({"message": f"Role '{role.name}' deleted"}), 200
+    return jsonify({"message": _t("api.roles.deleted", name=role.name)}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -239,13 +240,13 @@ def create_grant_rule():
     grantee_id = data.get("grantee_role_id")
 
     if not granter_id or not grantee_id:
-        return jsonify({"error": "granter_role_id and grantee_role_id are required"}), 400
+        return jsonify({"error": _t("api.roles.grantRequired")}), 400
 
     # Validate roles exist
     granter = db.session.get(SystemRole, granter_id)
     grantee = db.session.get(SystemRole, grantee_id)
     if not granter or not grantee:
-        return jsonify({"error": "One or both roles not found"}), 404
+        return jsonify({"error": _t("api.roles.grantRolesNotFound")}), 404
 
     # Check uniqueness
     existing = db.session.execute(
@@ -255,7 +256,7 @@ def create_grant_rule():
         )
     ).scalar_one_or_none()
     if existing:
-        return jsonify({"error": "Grant rule already exists"}), 409
+        return jsonify({"error": _t("api.roles.grantAlreadyExists")}), 409
 
     rule = RoleGrantRule(granter_role_id=granter_id, grantee_role_id=grantee_id)
     db.session.add(rule)
@@ -274,8 +275,8 @@ def delete_grant_rule(rule_id: int):
 
     rule = db.session.get(RoleGrantRule, rule_id)
     if rule is None:
-        return jsonify({"error": "Grant rule not found"}), 404
+        return jsonify({"error": _t("api.roles.grantNotFound")}), 404
 
     db.session.delete(rule)
     db.session.commit()
-    return jsonify({"message": "Grant rule deleted"}), 200
+    return jsonify({"message": _t("api.roles.grantDeleted")}), 200

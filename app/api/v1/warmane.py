@@ -12,6 +12,7 @@ from app.constants import normalize_spec_name
 from app.services import character_service, warmane_service
 from app.services.character_service import _default_role_for_class
 from app.utils.auth import login_required
+from app.i18n import _t
 
 bp = Blueprint("warmane", __name__, url_prefix="/warmane")
 
@@ -26,7 +27,7 @@ def lookup_character(realm: str, name: str):
     """
     data = warmane_service.fetch_character(realm, name)
     if data is None:
-        return jsonify({"error": "Character not found on Warmane armory"}), 404
+        return jsonify({"error": _t("warmane.characterNotFound")}), 404
 
     return jsonify(warmane_service.build_character_dict(data, realm)), 200
 
@@ -41,7 +42,7 @@ def lookup_guild(realm: str, guild_name: str):
     """
     data = warmane_service.fetch_guild(realm, guild_name)
     if data is None:
-        return jsonify({"error": "Guild not found on Warmane armory"}), 404
+        return jsonify({"error": _t("warmane.guildNotFound")}), 404
 
     roster = [
         warmane_service.build_character_dict(m, realm)
@@ -70,17 +71,17 @@ def sync_character():
     char_id = body.get("character_id")
 
     if not char_id:
-        return jsonify({"error": "character_id is required"}), 400
+        return jsonify({"error": _t("warmane.characterIdRequired")}), 400
 
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": "Character not found"}), 404
+        return jsonify({"error": _t("warmane.characterNotFoundGeneric")}), 404
     if char.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
 
     data = warmane_service.fetch_character(char.realm_name, char.name)
     if data is None or (isinstance(data, dict) and "error" in data):
-        return jsonify({"error": "Could not fetch data from Warmane. The character may not exist or the API may be unavailable."}), 404
+        return jsonify({"error": _t("warmane.fetchFailed")}), 404
 
     char_data = warmane_service.build_character_dict(data, char.realm_name)
 

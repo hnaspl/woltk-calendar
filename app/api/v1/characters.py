@@ -7,6 +7,7 @@ from flask_login import current_user
 
 from app.services import character_service
 from app.utils.auth import login_required
+from app.i18n import _t
 
 bp = Blueprint("characters", __name__, url_prefix="/characters")
 
@@ -29,7 +30,7 @@ def create_character():
     required = {"guild_id", "realm_name", "name", "class_name"}
     missing = required - data.keys()
     if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+        return jsonify({"error": _t("api.characters.missingFields", fields=", ".join(missing))}), 400
 
     try:
         char = character_service.create_character(
@@ -48,9 +49,9 @@ def create_character():
 def get_character(char_id: int):
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": "Character not found"}), 404
+        return jsonify({"error": _t("api.characters.notFound")}), 404
     if char.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     return jsonify(char.to_dict()), 200
 
 
@@ -59,9 +60,9 @@ def get_character(char_id: int):
 def update_character(char_id: int):
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": "Character not found"}), 404
+        return jsonify({"error": _t("api.characters.notFound")}), 404
     if char.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     data = request.get_json(silent=True) or {}
     char = character_service.update_character(char, data)
     return jsonify(char.to_dict()), 200
@@ -72,11 +73,11 @@ def update_character(char_id: int):
 def delete_character(char_id: int):
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": "Character not found"}), 404
+        return jsonify({"error": _t("api.characters.notFound")}), 404
     if char.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     character_service.delete_character(char)
-    return jsonify({"message": "Character deleted"}), 200
+    return jsonify({"message": _t("api.characters.deleted")}), 200
 
 
 @bp.post("/<int:char_id>/archive")
@@ -84,9 +85,9 @@ def delete_character(char_id: int):
 def archive_character(char_id: int):
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": "Character not found"}), 404
+        return jsonify({"error": _t("api.characters.notFound")}), 404
     if char.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     char = character_service.archive_character(char)
     return jsonify(char.to_dict()), 200
 
@@ -96,8 +97,8 @@ def archive_character(char_id: int):
 def unarchive_character(char_id: int):
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": "Character not found"}), 404
+        return jsonify({"error": _t("api.characters.notFound")}), 404
     if char.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     char = character_service.unarchive_character(char)
     return jsonify(char.to_dict()), 200

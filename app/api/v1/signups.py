@@ -10,6 +10,7 @@ from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission
 from app.utils.realtime import emit_signups_changed, emit_lineup_changed
 from app.utils import notify
+from app.i18n import _t
 
 bp = Blueprint("signups", __name__)
 
@@ -58,7 +59,7 @@ def _build_guild_role_map(guild_id: int, user_ids: list[int]) -> dict:
 def _get_event_or_404(guild_id: int, event_id: int):
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
-        return None, (jsonify({"error": "Event not found"}), 404)
+        return None, (jsonify({"error": _t("api.events.notFound")}), 404)
     return event, None
 
 
@@ -66,7 +67,7 @@ def _get_event_or_404(guild_id: int, event_id: int):
 @login_required
 def list_signups(guild_id: int, event_id: int):
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
@@ -79,19 +80,19 @@ def list_signups(guild_id: int, event_id: int):
 @login_required
 def create_signup(guild_id: int, event_id: int):
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
 
     if event.status in ("locked", "completed", "cancelled"):
-        return jsonify({"error": "Cannot sign up for a locked, completed, or cancelled event"}), 403
+        return jsonify({"error": _t("api.signups.cannotSignupLocked")}), 403
 
     data = request.get_json(silent=True) or {}
     required = {"character_id", "chosen_role"}
     missing = required - data.keys()
     if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+        return jsonify({"error": _t("api.signups.missingFields", fields=", ".join(missing))}), 400
 
     membership = get_membership(guild_id, current_user.id)
     is_officer = has_permission(membership, "manage_signups")
@@ -114,7 +115,7 @@ def create_signup(guild_id: int, event_id: int):
         role_counts = signup_service.get_role_counts(event_id, role_slots)
         return jsonify({
             "error": "role_full",
-            "message": f"All {exc.role} slots are full",
+            "message": _t("api.signups.roleFull", role=exc.role),
             "role": exc.role,
             "role_slots": role_slots,
             "role_counts": role_counts,
@@ -143,21 +144,21 @@ def create_signup(guild_id: int, event_id: int):
 @login_required
 def update_signup(guild_id: int, event_id: int, signup_id: int):
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.signups.cannotModifyCompleted")}), 403
 
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
-        return jsonify({"error": "Signup not found"}), 404
+        return jsonify({"error": _t("api.signups.signupNotFound")}), 404
 
     # Users may update their own signup; officers can update any
     membership = get_membership(guild_id, current_user.id)
     if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
 
     data = request.get_json(silent=True) or {}
     old_role = signup.chosen_role
@@ -177,20 +178,20 @@ def update_signup(guild_id: int, event_id: int, signup_id: int):
 @login_required
 def delete_signup(guild_id: int, event_id: int, signup_id: int):
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.signups.cannotModifyCompleted")}), 403
 
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
-        return jsonify({"error": "Signup not found"}), 404
+        return jsonify({"error": _t("api.signups.signupNotFound")}), 404
 
     membership = get_membership(guild_id, current_user.id)
     if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
 
     # Capture info before deletion for notifications
     signup_user_id = signup.user_id
@@ -229,7 +230,7 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
                 event, signup_user_id, char_name, signup_role
             )
 
-    return jsonify({"message": "Signup deleted"}), 200
+    return jsonify({"message": _t("api.signups.deleted")}), 200
 
 
 @bp.post("/<int:signup_id>/decline")
@@ -237,20 +238,20 @@ def delete_signup(guild_id: int, event_id: int, signup_id: int):
 def decline_signup(guild_id: int, event_id: int, signup_id: int):
     """Decline a signup — removes lineup/bench slots and auto-promotes."""
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.signups.cannotModifyCompleted")}), 403
 
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
-        return jsonify({"error": "Signup not found"}), 404
+        return jsonify({"error": _t("api.signups.signupNotFound")}), 404
 
     membership = get_membership(guild_id, current_user.id)
     if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
 
     signup = signup_service.decline_signup(signup)
     emit_signups_changed(event_id)
@@ -274,7 +275,7 @@ def decline_signup(guild_id: int, event_id: int, signup_id: int):
 def list_bans(guild_id: int, event_id: int):
     membership = get_membership(guild_id, current_user.id)
     if membership is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     _, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
@@ -287,14 +288,14 @@ def list_bans(guild_id: int, event_id: int):
 def remove_ban(guild_id: int, event_id: int, character_id: int):
     membership = get_membership(guild_id, current_user.id)
     if membership is None or not has_permission(membership, "unban_characters"):
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     _, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
     removed = signup_service.remove_ban(event_id, character_id)
     if not removed:
-        return jsonify({"error": "Ban not found"}), 404
-    return jsonify({"message": "Ban removed"}), 200
+        return jsonify({"error": _t("api.signups.banNotFound")}), 404
+    return jsonify({"message": _t("api.signups.banRemoved")}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -307,13 +308,13 @@ def get_signup_user_characters(guild_id: int, event_id: int, signup_id: int):
     """Return the characters available for replacement (officer only)."""
     membership = get_membership(guild_id, current_user.id)
     if membership is None or not has_permission(membership, "view_member_characters"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     _, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
-        return jsonify({"error": "Signup not found"}), 404
+        return jsonify({"error": _t("api.signups.signupNotFound")}), 404
     chars = signup_service.list_user_characters_for_event(signup.user_id, guild_id)
     return jsonify([c.to_dict() for c in chars]), 200
 
@@ -324,20 +325,20 @@ def create_replace_request(guild_id: int, event_id: int, signup_id: int):
     """Create a character replacement request (officer only)."""
     membership = get_membership(guild_id, current_user.id)
     if membership is None or not has_permission(membership, "request_replacement"):
-        return jsonify({"error": "You do not have the appropriate permissions"}), 403
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
     if event.status in ("completed", "cancelled"):
-        return jsonify({"error": "Cannot modify signups on a completed or cancelled event"}), 403
+        return jsonify({"error": _t("api.signups.cannotModifyCompleted")}), 403
     signup = signup_service.get_signup(signup_id)
     if signup is None or signup.raid_event_id != event_id:
-        return jsonify({"error": "Signup not found"}), 404
+        return jsonify({"error": _t("api.signups.signupNotFound")}), 404
 
     data = request.get_json(silent=True) or {}
     new_character_id = data.get("new_character_id")
     if not new_character_id:
-        return jsonify({"error": "new_character_id is required"}), 400
+        return jsonify({"error": _t("api.signups.newCharRequired")}), 400
 
     try:
         req = signup_service.create_replacement_request(
@@ -364,7 +365,7 @@ def create_replace_request(guild_id: int, event_id: int, signup_id: int):
 def list_my_replacement_requests(guild_id: int, event_id: int):
     """Return pending replacement requests for the current user's signups in this event."""
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     requests = signup_service.get_pending_replacements_for_user(current_user.id)
     # Filter to this event only
     result = [r.to_dict() for r in requests if r.signup and r.signup.raid_event_id == event_id]
@@ -376,7 +377,7 @@ def list_my_replacement_requests(guild_id: int, event_id: int):
 def resolve_replace_request(guild_id: int, event_id: int, request_id: int):
     """Resolve a character replacement request (confirm or decline)."""
     if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
     event, err = _get_event_or_404(guild_id, event_id)
     if err:
         return err
@@ -384,7 +385,7 @@ def resolve_replace_request(guild_id: int, event_id: int, request_id: int):
     data = request.get_json(silent=True) or {}
     action = data.get("action")
     if action not in ("confirm", "decline", "leave"):
-        return jsonify({"error": "action must be 'confirm', 'decline', or 'leave'"}), 400
+        return jsonify({"error": _t("api.signups.invalidAction")}), 400
 
     try:
         req = signup_service.resolve_replacement(request_id, action)

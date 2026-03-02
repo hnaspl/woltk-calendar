@@ -7,6 +7,7 @@ from flask_login import current_user, login_user, logout_user
 
 from app.services import auth_service
 from app.utils.auth import login_required
+from app.i18n import _t
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -20,7 +21,7 @@ def register():
     display_name = data.get("display_name")
 
     if not email or not username or not password:
-        return jsonify({"error": "email, username and password are required"}), 400
+        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
 
     try:
         user = auth_service.register_user(email, username, password, display_name)
@@ -38,14 +39,14 @@ def login():
     password = data.get("password") or ""
 
     if not email or not password:
-        return jsonify({"error": "email and password are required"}), 400
+        return jsonify({"error": _t("auth.errors.loginRequired")}), 400
 
     user = auth_service.get_user_by_email(email)
     if user is None or not auth_service.verify_password(user, password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify({"error": _t("auth.errors.invalidCredentials")}), 401
 
     if not user.is_active:
-        return jsonify({"error": "Account is disabled"}), 403
+        return jsonify({"error": _t("auth.errors.accountDisabled")}), 403
 
     login_user(user, remember=True)
     return jsonify(user.to_dict()), 200
@@ -55,7 +56,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return jsonify({"message": "Logged out"}), 200
+    return jsonify({"message": _t("auth.messages.loggedOut")}), 200
 
 
 @bp.get("/me")
@@ -80,13 +81,13 @@ def change_password():
     new_password = data.get("new_password") or ""
 
     if not current_password or not new_password:
-        return jsonify({"error": "current_password and new_password are required"}), 400
+        return jsonify({"error": _t("auth.errors.passwordRequired")}), 400
 
     if len(new_password) < 4:
-        return jsonify({"error": "Password must be at least 4 characters"}), 400
+        return jsonify({"error": _t("auth.errors.passwordTooShort")}), 400
 
     if not auth_service.verify_password(current_user, current_password):
-        return jsonify({"error": "Current password is incorrect"}), 400
+        return jsonify({"error": _t("auth.errors.currentPasswordWrong")}), 400
 
     auth_service.change_password(current_user, new_password)
-    return jsonify({"message": "Password changed successfully"}), 200
+    return jsonify({"message": _t("auth.messages.passwordChanged")}), 200
