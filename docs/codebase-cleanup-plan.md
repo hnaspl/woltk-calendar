@@ -577,6 +577,11 @@ A final sweep after all 6 phases were completed. Findings documented below.
 | Unused imports (`wraps`, `Callable`, `jsonify`) | `app/utils/permissions.py:9-12` | Removed — only used by the deleted decorator |
 | `request.get_json(silent=True) or {}` pattern | `app/api/v1/auth.py:17,37,71,79` | Replaced with shared `get_json()` from `app/utils/api_helpers.py` |
 | Unused `request` import | `app/api/v1/auth.py:5` | Removed — no longer needed after `get_json()` migration |
+| Local `formatDateTime()` | `src/views/RaidDetailView.vue:902-910` | Extracted to `useFormatting.js` composable with unified format |
+| Local `formatDateTime()` | `src/views/DashboardView.vue:400-407` | Extracted to `useFormatting.js` composable with unified format |
+| Local `formatTimeOnly()` | `src/views/DashboardView.vue:408-414` | Extracted to `useFormatting.js` composable |
+| `raidLabel()` wrapper | `src/views/RaidDetailView.vue:910-913` | Removed — template now calls `raidTypeLabel()` directly (already imported) |
+| `raidLabel()` wrapper | `src/views/DashboardView.vue:415-418` | Removed — template now calls `raidTypeLabel()` directly (already imported) |
 
 ### Verified Clean — No Action Needed
 
@@ -592,29 +597,73 @@ A final sweep after all 6 phases were completed. Findings documented below.
 | Frontend components | ✅ | No duplicate or abandoned component files |
 | Role label maps | ✅ | No local ROLE_LABEL_MAP/ROLE_LABELS definitions remain in any .vue file |
 | Local `formatDate()` | ✅ | No local `formatDate()` wrappers remain (all use `useFormatting` composable) |
+| Local `formatDateTime()` | ✅ | No local `formatDateTime()` wrappers remain (all use `useFormatting` composable) |
+| Local `formatTimeOnly()` | ✅ | No local `formatTimeOnly()` wrappers remain (all use `useFormatting` composable) |
+| `raidLabel()` wrappers | ✅ | No local `raidLabel()` wrappers remain — templates call `raidTypeLabel()` directly |
 
-### Observations (Not Bugs, No Action Required)
+### Remaining Observations (Intentional Design, No Action Required)
 
-1. **`formatDateTime()` in `RaidDetailView.vue` and `DashboardView.vue`** — Both views define
-   local `formatDateTime()` functions, but these are NOT duplicates of `useFormatting.formatDate()`.
-   They call `formatDualTime()` (shows both guild + local time) rather than `formatGuildDate()`,
-   and each uses different formatting options:
-   - `RaidDetailView`: long weekday, long month, includes year
-   - `DashboardView`: short weekday, short month, no year
-   These are intentional view-specific display choices. Extracting them would add complexity
-   (parameterised options) without reducing duplication.
-
-2. **`formatTimeOnly()` in `DashboardView.vue`** — Single-use helper calling
-   `formatGuildTime()` with `hour12: false`. Used once in the template. Not worth extracting.
-
-3. **`raidLabel()` wrapper in both views** — One-liner `return raidTypeLabel(raidType)`.
-   This exists so the template can call `raidLabel(x)` instead of importing and calling
-   `raidTypeLabel(x)` directly. Minor stylistic choice, not dead code.
-
-4. **Inline `has_permission()` calls in `attendance.py`, `signups.py`, `raid_definitions.py`** —
+1. **Inline `has_permission()` calls in `attendance.py`, `signups.py`, `raid_definitions.py`** —
    These are fine-grained authorization checks inside handlers (e.g. "is this user the signup
    owner OR an officer?"), NOT duplicates of the decorator's gate check. Intentional.
 
-5. **`_build_guild_role_map_for_event()` wrapper in `lineup.py`** — Thin wrapper around the
+2. **`_build_guild_role_map_for_event()` wrapper in `lineup.py`** — Thin wrapper around the
    shared `build_guild_role_map()` that first queries signup user IDs scoped to an event.
    This is event-specific logic, not a duplicate.
+
+3. **`benchRoleLabel()` in `DashboardView.vue`** — One-liner `return ROLE_LABEL_MAP[role] || role`.
+   Used in the template for bench signups display. This adds a fallback that `ROLE_LABEL_MAP`
+   itself doesn't provide, so it's a legitimate helper, not dead code.
+
+---
+
+## Appendix C: Final Sweep Summary
+
+### What Was Done
+
+All 6 cleanup phases plus two post-cleanup sweeps have been completed. The codebase
+is now free of dead, duplicated, or unused code across both backend and frontend.
+
+#### Formatting Functions Unified
+
+The `useFormatting.js` composable now provides three shared formatting functions:
+
+| Function | Purpose | Format |
+|----------|---------|--------|
+| `formatDate(dateString, options)` | Date-only in guild timezone | `02 Mar 2026` |
+| `formatDateTime(dateString)` | Date+time with dual timezone display | `Mon, 02 Mar 2026, 19:00` (+ local time if different) |
+| `formatTimeOnly(dateString)` | Time-only in guild timezone (24h) | `19:00` |
+
+All three functions wrap `useTimezone()` internally. Components should import from
+`useFormatting` instead of defining local formatting helpers.
+
+#### `raidLabel()` Wrappers Eliminated
+
+Both `RaidDetailView.vue` and `DashboardView.vue` had identical one-liner wrappers:
+```javascript
+function raidLabel(raidType) { return raidTypeLabel(raidType) }
+```
+These were removed. Templates now call `raidTypeLabel()` directly — the function is
+already imported from `@/constants` in both files.
+
+### Current State
+
+| Metric | Value |
+|--------|-------|
+| Backend tests | 465 passing |
+| Bench/queue tests | 122 passing (no regressions) |
+| Frontend build | ✅ Succeeds (`npx vite build`) |
+| Dead code remaining | None identified |
+| Duplicated helpers | None identified |
+| Unused exports | None identified |
+
+### Bench/Queue System Integrity
+
+The bench/queue system was NOT modified during any sweep. All changes were limited to:
+- Display constants (`ROLE_LABEL_MAP`) — Phase 1
+- Shared helpers (`get_event_or_404`, `build_guild_role_map`) — Phase 3
+- Permission decorator (`@require_guild_permission`) — Phase 3
+- Structural audit tests — Phase 6
+
+Service layer logic (`_auto_promote_bench`, `update_lineup_grouped`, `reorder_bench_queue`,
+`create_signup`) remains untouched. All 122 bench/queue tests pass.
