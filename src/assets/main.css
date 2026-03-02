@@ -123,6 +123,19 @@ html, body {
   background-color: var(--color-bg-tertiary);
 }
 
+/* ── Dark-themed datetime-local / date / time inputs ─────────── */
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(2) hue-rotate(10deg);
+  cursor: pointer;
+}
+
 /* ── Utility classes ─────────────────────────────────────────── */
 .wow-heading {
   font-family: 'Cinzel', serif;
