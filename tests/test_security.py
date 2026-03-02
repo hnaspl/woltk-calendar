@@ -435,11 +435,16 @@ class TestProductionConfig:
 # ---------------------------------------------------------------------------
 
 class TestSessionProtection:
-    """Verify that Flask-Login session protection is set to 'strong'."""
+    """Verify that Flask-Login session protection is set to 'basic'.
 
-    def test_session_protection_is_strong(self, app):
+    'basic' checks user-agent only (prevents trivial session theft).
+    'strong' also fingerprints by IP, which breaks sessions behind
+    proxies, load balancers, and Docker networking.
+    """
+
+    def test_session_protection_is_basic(self, app):
         from app.extensions import login_manager
-        assert login_manager.session_protection == "strong"
+        assert login_manager.session_protection == "basic"
 
 
 # ---------------------------------------------------------------------------
