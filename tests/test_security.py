@@ -465,6 +465,28 @@ class TestSessionProtection:
         resp = client.get("/api/v1/auth/me", headers=proxy_headers)
         assert resp.status_code == 200
 
+    def test_session_not_fresh_on_ip_change(self, client, user):
+        """Strong mode marks session as not-fresh when forwarded IP changes.
+
+        With permanent sessions, 'strong' does not destroy the session but
+        degrades it to non-fresh (same as 'basic'), which would block any
+        future @fresh_login_required endpoints.
+        """
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={"email": "test@example.com", "password": "testpass123"},
+            headers={"X-Forwarded-For": "203.0.113.50"},
+        )
+        assert resp.status_code == 200
+
+        # Different IP → session is kept (permanent) but marked non-fresh
+        resp = client.get(
+            "/api/v1/auth/me",
+            headers={"X-Forwarded-For": "198.51.100.99"},
+        )
+        # Session survives (permanent), user stays authenticated
+        assert resp.status_code == 200
+
 
 # ---------------------------------------------------------------------------
 # #12: Email Exposure / to_safe_dict
