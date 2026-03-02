@@ -301,6 +301,7 @@ function handleGuildChanged() { if (isActive) refreshDashboard() }
 
 onMounted(async () => {
   loading.value = true
+  nowTimer = setInterval(() => { now.value = new Date() }, 60000)
   try {
     await guildStore.fetchGuilds()
     if (guildStore.currentGuild) joinGuild(guildStore.currentGuild.id)
@@ -317,6 +318,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   isActive = false
+  if (nowTimer) clearInterval(nowTimer)
   if (guildStore.currentGuild) leaveGuild(guildStore.currentGuild.id)
   off('events_changed', handleEventsChanged)
   off('guilds_changed', handleGuildsChanged)
@@ -336,6 +338,7 @@ watch(
 )
 
 const now = ref(new Date())
+let nowTimer = null
 
 const upcomingEvents = computed(() => {
   const nowMs = now.value.getTime()
@@ -376,7 +379,7 @@ const sortedMySignups = computed(() => {
 // Today's raids that the player is signed up for
 const todaysRaids = computed(() => {
   const guildTz = tzHelper.guildTimezone.value
-  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: guildTz })
+  const todayStr = now.value.toLocaleDateString('en-CA', { timeZone: guildTz })
   const signupMap = new Map()
   for (const su of mySignups.value) {
     signupMap.set(su.raid_event_id, su)
