@@ -3,6 +3,9 @@ import api from './index'
 export const getAttendance = (guildId, params = {}) =>
   api.get(`/guilds/${guildId}/attendance`, { params })
 
+export const getEventAttendance = (guildId, eventId) =>
+  api.get(`/guilds/${guildId}/events/${eventId}/attendance`)
+
 export const getCharacterAttendance = (guildId, charId, params = {}) =>
   api.get(`/guilds/${guildId}/attendance/characters/${charId}`, { params })
 

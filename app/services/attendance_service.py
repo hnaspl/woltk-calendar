@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 import sqlalchemy as sa
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.attendance import AttendanceRecord
@@ -49,19 +51,27 @@ def record_attendance(
 def list_attendance_for_event(raid_event_id: int) -> list[AttendanceRecord]:
     return list(
         db.session.execute(
-            sa.select(AttendanceRecord).where(AttendanceRecord.raid_event_id == raid_event_id)
-        ).scalars().all()
+            sa.select(AttendanceRecord)
+            .options(joinedload(AttendanceRecord.character))
+            .where(AttendanceRecord.raid_event_id == raid_event_id)
+        ).scalars().unique().all()
     )
 
 
-def list_attendance_for_guild(guild_id: int) -> list[AttendanceRecord]:
+def list_attendance_for_guild(
+    guild_id: int,
+    since: Optional[datetime] = None,
+) -> list[AttendanceRecord]:
     from app.models.raid import RaidEvent
 
-    return list(
-        db.session.execute(
-            sa.select(AttendanceRecord)
-            .join(RaidEvent, RaidEvent.id == AttendanceRecord.raid_event_id)
-            .where(RaidEvent.guild_id == guild_id)
-            .order_by(AttendanceRecord.recorded_at.desc())
-        ).scalars().all()
+    stmt = (
+        sa.select(AttendanceRecord)
+        .options(joinedload(AttendanceRecord.character))
+        .join(RaidEvent, RaidEvent.id == AttendanceRecord.raid_event_id)
+        .where(RaidEvent.guild_id == guild_id)
     )
+    if since is not None:
+        stmt = stmt.where(AttendanceRecord.recorded_at >= since)
+    stmt = stmt.order_by(AttendanceRecord.recorded_at.desc())
+
+    return list(db.session.execute(stmt).scalars().unique().all())

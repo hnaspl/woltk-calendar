@@ -90,7 +90,7 @@
                 variant="primary"
                 @click="showAttendanceModal = true"
               >
-                Record Attendance
+                {{ hasAttendance ? 'Update Attendance' : 'Record Attendance' }}
               </WowButton>
               <WowButton variant="danger" @click="confirmCancel = true">Cancel Event</WowButton>
             </div>
@@ -414,6 +414,7 @@ import { RAID_TYPES, formatDuration, raidTypeLabel } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as attendanceApi from '@/api/attendance'
 
 const route = useRoute()
 const router = useRouter()
@@ -435,6 +436,7 @@ const confirmCancel = ref(false)
 const showEditModal = ref(false)
 const showLeaveModal = ref(false)
 const showAttendanceModal = ref(false)
+const hasAttendance = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
@@ -530,6 +532,13 @@ onMounted(async () => {
     signups.value = su
     // Fetch bans for this event
     try { bans.value = await signupsApi.getBans(guildId.value, route.params.id) } catch { bans.value = [] }
+    // Check if attendance has been recorded for this event
+    if (ev.status === 'completed') {
+      try {
+        const recs = await attendanceApi.getEventAttendance(guildId.value, route.params.id)
+        hasAttendance.value = recs.length > 0
+      } catch { hasAttendance.value = false }
+    }
     // Fetch pending character replacement requests
     await loadReplacementRequests()
   } catch (err) {
@@ -850,6 +859,7 @@ function onLineupUpdated(counts) {
 }
 
 function onAttendanceSaved() {
+  hasAttendance.value = true
   uiStore.showToast('Attendance recorded!', 'success')
 }
 

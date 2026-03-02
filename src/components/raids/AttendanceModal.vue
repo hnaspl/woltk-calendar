@@ -35,9 +35,7 @@
                 >
                   <option value="attended">Attended</option>
                   <option value="late">Late</option>
-                  <option value="no_show">No Show</option>
-                  <option value="benched">Benched</option>
-                  <option value="backup">Backup</option>
+                  <option value="no_show">Unattended</option>
                 </select>
               </td>
               <td class="px-3 py-2">
@@ -103,7 +101,7 @@ watch(
     if (!props.modelValue) return
     players.value = props.signups.map(s => ({
       signup: s,
-      outcome: s.lineup_status === 'bench' ? 'benched' : 'attended',
+      outcome: 'attended',
       note: ''
     }))
   },

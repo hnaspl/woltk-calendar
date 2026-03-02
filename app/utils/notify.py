@@ -529,3 +529,29 @@ def notify_character_replacement_resolved(replacement, event, signup, action: st
             guild_id=event.guild_id,
             raid_event_id=event.id,
         )
+
+
+# ---------------------------------------------------------------------------
+# Attendance notifications
+# ---------------------------------------------------------------------------
+
+_OUTCOME_LABELS = {
+    "attended": "Attended",
+    "late": "Late",
+    "no_show": "Unattended",
+}
+
+
+def notify_attendance_recorded(record, event) -> None:
+    """Notify a player about their attendance status for a raid."""
+    char_name = record.character.name if record.character else "your character"
+    outcome_label = _OUTCOME_LABELS.get(record.outcome, record.outcome)
+    note_text = f" Note: {record.note}" if record.note else ""
+    _notify(
+        user_id=record.user_id,
+        notification_type="attendance_recorded",
+        title=f"📋 Attendance recorded for {_event_tag(event)}",
+        body=f"{char_name}: {outcome_label}.{note_text}",
+        guild_id=event.guild_id,
+        raid_event_id=event.id,
+    )

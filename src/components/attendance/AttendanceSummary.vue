@@ -18,17 +18,14 @@ const props = defineProps({
 
 const stats = computed(() => {
   const total = props.events.length
-  const attended = props.records.filter(r => r.attended).length
+  const attended = props.records.filter(r => r.outcome === 'attended' || r.outcome === 'late').length
+  const absent = props.records.filter(r => r.outcome === 'no_show').length
   const rate = total > 0 ? Math.round((attended / total) * 100) : 0
 
-  const presentCount   = props.records.filter(r => r.attended).length
-  const absentCount    = props.records.filter(r => !r.attended).length
-  const benchCount     = props.records.filter(r => r.bench).length
-
   return [
-    { label: 'Total Raids',       value: total,        color: 'text-accent-blue' },
-    { label: 'Attended',          value: presentCount, color: 'text-green-400' },
-    { label: 'Absent',            value: absentCount,  color: 'text-red-400' },
+    { label: 'Total Raids',       value: total,    color: 'text-accent-blue' },
+    { label: 'Attended',          value: attended, color: 'text-green-400' },
+    { label: 'Absent',            value: absent,   color: 'text-red-400' },
     { label: 'Attendance Rate',   value: `${rate}%`,   color: rate >= 75 ? 'text-green-400' : rate >= 50 ? 'text-yellow-400' : 'text-red-400' }
   ]
 })

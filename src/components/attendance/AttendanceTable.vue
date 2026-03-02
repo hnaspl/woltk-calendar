@@ -84,6 +84,7 @@ const tableRows = computed(() => {
   // Build a map: characterId → { name, class, attended: Set<eventId>, signedUp: Set<eventId> }
   const charMap = new Map()
 
+  // Populate from signups (if available)
   props.signups.forEach(su => {
     const cid = su.character_id ?? su.character?.id
     if (!cid) return
@@ -96,12 +97,14 @@ const tableRows = computed(() => {
         signedUp: new Set()
       })
     }
-    charMap.get(cid).signedUp.add(su.event_id)
+    charMap.get(cid).signedUp.add(su.raid_event_id ?? su.event_id)
   })
 
+  // Populate from attendance records
   props.records.forEach(r => {
     const cid = r.character_id
     if (!cid) return
+    const eventId = r.raid_event_id ?? r.event_id
     if (!charMap.has(cid)) {
       charMap.set(cid, {
         characterId: cid,
@@ -111,7 +114,20 @@ const tableRows = computed(() => {
         signedUp: new Set()
       })
     }
-    if (r.attended) charMap.get(cid).attended.add(r.event_id)
+    const entry = charMap.get(cid)
+    // Update character info from records if it was missing
+    if (entry.characterName === '?' && r.character?.name) {
+      entry.characterName = r.character.name
+    }
+    if (!entry.class && r.character?.class_name) {
+      entry.class = r.character.class_name
+    }
+    // Mark as signed up (they were in the raid)
+    entry.signedUp.add(eventId)
+    // Mark as attended if outcome is attended or late
+    if (r.outcome === 'attended' || r.outcome === 'late') {
+      entry.attended.add(eventId)
+    }
   })
 
   return Array.from(charMap.values()).map(row => {

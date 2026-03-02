@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.services import attendance_service, event_service
 from app.utils.auth import login_required
 from app.utils.permissions import get_membership, has_permission
+from app.utils import notify
 
 bp = Blueprint("attendance", __name__)
 
@@ -49,6 +52,10 @@ def record_attendance(guild_id: int, event_id: int):
         )
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+
+    # Notify the player about their attendance status
+    notify.notify_attendance_recorded(record, event)
+
     return jsonify(record.to_dict()), 201
 
 
@@ -57,5 +64,9 @@ def record_attendance(guild_id: int, event_id: int):
 def list_guild_attendance(guild_id: int):
     if get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": "Forbidden"}), 403
-    records = attendance_service.list_attendance_for_guild(guild_id)
+    days = request.args.get("days", type=int)
+    since = None
+    if days:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+    records = attendance_service.list_attendance_for_guild(guild_id, since=since)
     return jsonify([r.to_dict() for r in records]), 200
