@@ -176,12 +176,12 @@
                     :href="item.item ? `https://www.wowhead.com/wotlk/item=${item.item}` : undefined"
                     :data-wowhead="item.item ? `item=${item.item}&domain=wotlk` : undefined"
                     target="_blank"
-                    class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
+                    class="equip-link flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
                     @click.stop
                   >
-                    <!-- WoW-themed slot icon -->
+                    <!-- Default slot icon — hidden once Wowhead injects its own item icon -->
                     <div
-                      class="w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
+                      class="slot-icon-fallback w-8 h-8 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold"
                       :class="slotIconClasses(item)"
                     >
                       <svg v-if="EQUIP_SLOTS[i]?.svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -360,3 +360,14 @@ function formatDate(iso) {
   return tzHelper.formatGuildDate(iso, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 </script>
+
+<style>
+/*
+ * Hide default equipment slot icons when Wowhead has injected its own item icons.
+ * Wowhead's iconizeLinks adds elements with class 'iconsmall' / 'iconmedium' / 'iconlarge'.
+ * The :has() selector detects their presence and hides our fallback icon.
+ */
+.equip-link:has(.iconsmall, .iconmedium, .iconlarge) > .slot-icon-fallback {
+  display: none;
+}
+</style>
