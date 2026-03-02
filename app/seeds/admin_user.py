@@ -33,6 +33,15 @@ def seed_admin_user(
     username = (username or os.environ.get("ADMIN_USERNAME", "admin")).strip()
     password = password or os.environ.get("ADMIN_PASSWORD")
 
+    # Check if admin already exists BEFORE generating a password to avoid
+    # logging a random password that will never be used.
+    existing = db.session.execute(
+        sa.select(User).where((User.email == email) | (User.username == username))
+    ).scalars().first()
+
+    if existing is not None:
+        return False
+
     if not password:
         password = secrets.token_urlsafe(16)
         logger.warning(
@@ -40,13 +49,6 @@ def seed_admin_user(
             "Set ADMIN_PASSWORD env var to use a fixed password.",
             password,
         )
-
-    existing = db.session.execute(
-        sa.select(User).where((User.email == email) | (User.username == username))
-    ).scalars().first()
-
-    if existing is not None:
-        return False
 
     user = User(
         email=email,

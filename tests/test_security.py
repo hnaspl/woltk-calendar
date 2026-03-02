@@ -21,6 +21,8 @@ Validates all 18 security improvements:
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from app import create_app
@@ -582,6 +584,24 @@ class TestAdminCredentials:
         ).scalar_one_or_none()
         assert user is not None
         assert bcrypt.check_password_hash(user.password_hash, "mysecurepassword123")
+
+    def test_seed_skips_silently_when_admin_exists(self, ctx, caplog):
+        """When admin already exists, no password is generated or logged."""
+        import os
+        old = os.environ.get("ADMIN_PASSWORD")
+        os.environ.pop("ADMIN_PASSWORD", None)
+        try:
+            from app.seeds.admin_user import seed_admin_user
+            # First call creates the admin
+            assert seed_admin_user() is True
+            # Second call should skip silently — no password in logs
+            with caplog.at_level(logging.WARNING, logger="app.seeds.admin_user"):
+                caplog.clear()
+                assert seed_admin_user() is False
+                assert "Generated random admin password" not in caplog.text
+        finally:
+            if old is not None:
+                os.environ["ADMIN_PASSWORD"] = old
 
 
 # ---------------------------------------------------------------------------
