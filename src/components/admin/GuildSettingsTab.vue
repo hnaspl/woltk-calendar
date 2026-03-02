@@ -272,7 +272,7 @@ async function fetchWarmaneRoster() {
     } catch (err) {
       if (attempt < maxAttempts) {
         // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 3000))
+        await new Promise(resolve => setTimeout(resolve, 2000))
         continue
       }
       warmaneError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from Warmane'
