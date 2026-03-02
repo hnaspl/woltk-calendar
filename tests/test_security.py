@@ -604,3 +604,131 @@ class TestLikeWildcardEscaping:
         # A literal '_' search should not match usernames like 'testuser'
         assert len(data) == 0 or all("_" in u["username"] for u in data)
 
+
+# ---------------------------------------------------------------------------
+# Email Validation
+# ---------------------------------------------------------------------------
+
+class TestEmailValidation:
+    """Verify email format, disposable domain blocking, and MX check."""
+
+    def test_validate_email_valid(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user@example.com", check_mx=False) is None
+
+    def test_validate_email_valid_with_dots(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("first.last@domain.org", check_mx=False) is None
+
+    def test_validate_email_valid_with_plus(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user+tag@example.com", check_mx=False) is None
+
+    def test_validate_email_valid_subdomain(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user@mail.example.co.uk", check_mx=False) is None
+
+    def test_validate_email_missing_at(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("noatsign.com", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    def test_validate_email_missing_domain(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user@", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    def test_validate_email_missing_local_part(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("@example.com", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    def test_validate_email_double_at(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user@@example.com", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    def test_validate_email_spaces(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user @example.com", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    def test_validate_email_no_tld(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("user@localhost", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    def test_validate_email_empty(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("", check_mx=False) == "auth.errors.emailInvalidFormat"
+
+    # --- Disposable domain blocking ---
+
+    def test_validate_email_mailinator(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@mailinator.com", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_guerrillamail(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@guerrillamail.com", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_tempmail(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@temp-mail.org", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_yopmail(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@yopmail.com", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_throwaway(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@throwaway.email", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_trashmail(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@trashmail.com", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_10minutemail(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@10minutemail.com", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_maildrop(self):
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@maildrop.cc", check_mx=False) == "auth.errors.emailDisposable"
+
+    def test_validate_email_disposable_case_insensitive(self):
+        """Domain matching should be case-insensitive."""
+        from app.utils.email_validator import validate_email
+        assert validate_email("test@Mailinator.COM", check_mx=False) == "auth.errors.emailDisposable"
+
+    # --- MX record check ---
+
+    def test_validate_email_mx_check_fake_domain(self):
+        from app.utils.email_validator import validate_email
+        result = validate_email(
+            "user@thisdomain-does-not-exist-xyz123.com", check_mx=True,
+        )
+        assert result == "auth.errors.emailInvalidDomain"
+
+    # --- API integration ---
+
+    def test_register_rejects_disposable_email(self, client):
+        resp = client.post("/api/v1/auth/register", json={
+            "email": "user@mailinator.com",
+            "username": "dispuser",
+            "password": "securepass123",
+        })
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert "disposable" in data["error"].lower() or "temporary" in data["error"].lower()
+
+    def test_register_rejects_invalid_format(self, client):
+        resp = client.post("/api/v1/auth/register", json={
+            "email": "not-an-email",
+            "username": "badformat",
+            "password": "securepass123",
+        })
+        assert resp.status_code == 400
+
+    def test_register_accepts_valid_email(self, client):
+        resp = client.post("/api/v1/auth/register", json={
+            "email": "valid@example.com",
+            "username": "validuser",
+            "password": "securepass123",
+        })
+        assert resp.status_code == 201
+

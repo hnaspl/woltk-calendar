@@ -196,6 +196,9 @@
       "emailTaken": "Email already registered",
       "usernameTaken": "Username already taken",
       "emailTooLong": "Email must be at most 255 characters",
+      "emailInvalidFormat": "Please enter a valid email address",
+      "emailDisposable": "Disposable or temporary email addresses are not allowed",
+      "emailInvalidDomain": "Email domain does not appear to be valid",
       "usernameLengthInvalid": "Username must be between 2 and 80 characters",
       "displayNameTooLong": "Display name must be at most 100 characters"
     },

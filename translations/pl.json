@@ -196,6 +196,9 @@
       "emailTaken": "Email jest już zarejestrowany",
       "usernameTaken": "Nazwa użytkownika jest już zajęta",
       "emailTooLong": "Email może mieć maksymalnie 255 znaków",
+      "emailInvalidFormat": "Podaj prawidłowy adres email",
+      "emailDisposable": "Jednorazowe lub tymczasowe adresy email nie są dozwolone",
+      "emailInvalidDomain": "Domena email nie wydaje się prawidłowa",
       "usernameLengthInvalid": "Nazwa użytkownika musi mieć od 2 do 80 znaków",
       "displayNameTooLong": "Nazwa wyświetlana może mieć maksymalnie 100 znaków"
     },

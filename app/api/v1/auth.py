@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 from flask_login import current_user, login_user, logout_user
 
 from app.services import auth_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
 from app.utils.rate_limit import rate_limit
+from app.utils.email_validator import validate_email
 from app.i18n import _t
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -28,6 +29,12 @@ def register():
 
     if len(email) > 255:
         return jsonify({"error": _t("auth.errors.emailTooLong")}), 400
+
+    email_err = validate_email(
+        email, check_mx=not current_app.config.get("TESTING", False),
+    )
+    if email_err:
+        return jsonify({"error": _t(email_err)}), 400
 
     if len(username) < 2 or len(username) > 80:
         return jsonify({"error": _t("auth.errors.usernameLengthInvalid")}), 400
