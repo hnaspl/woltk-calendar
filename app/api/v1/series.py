@@ -13,6 +13,9 @@ from app.i18n import _t
 
 bp = Blueprint("series", __name__)
 
+MIN_SERIES_COUNT = 1
+MAX_SERIES_COUNT = 52
+
 
 @bp.get("")
 @login_required
@@ -89,6 +92,6 @@ def generate_events(guild_id: int, series_id: int, membership):
     if series is None or series.guild_id != guild_id:
         return jsonify({"error": _t("api.series.notFound")}), 404
     data = get_json()
-    count = min(max(int(data.get("count", 4)), 1), 52)
+    count = min(max(int(data.get("count", 4)), MIN_SERIES_COUNT), MAX_SERIES_COUNT)
     events = event_service.generate_events_from_series(series, count=count)
     return jsonify([e.to_dict() for e in events]), 201

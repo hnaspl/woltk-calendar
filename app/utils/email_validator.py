@@ -109,7 +109,6 @@ DISPOSABLE_DOMAINS: frozenset[str] = frozenset({
     "bobmail.info",
     "chammy.info",
     "devnullmail.com",
-    "disposableemailaddresses.emailmiser.com",
     "disposeamail.com",
     "dodgeit.com",
     "e4ward.com",
