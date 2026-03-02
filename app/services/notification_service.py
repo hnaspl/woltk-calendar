@@ -18,7 +18,13 @@ def create_notification(
     body: Optional[str] = None,
     guild_id: Optional[int] = None,
     raid_event_id: Optional[int] = None,
+    *,
+    title_key: Optional[str] = None,
+    body_key: Optional[str] = None,
+    title_params: Optional[dict] = None,
+    body_params: Optional[dict] = None,
 ) -> Notification:
+    import json as _json
     notif = Notification(
         user_id=user_id,
         type=notification_type,
@@ -26,6 +32,10 @@ def create_notification(
         body=body,
         guild_id=guild_id,
         raid_event_id=raid_event_id,
+        title_key=title_key,
+        body_key=body_key,
+        title_params=_json.dumps(title_params) if title_params else None,
+        body_params=_json.dumps(body_params) if body_params else None,
     )
     db.session.add(notif)
     db.session.commit()
