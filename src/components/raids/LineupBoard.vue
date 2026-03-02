@@ -14,7 +14,7 @@
       <div
         v-for="col in columns"
         :key="col.key"
-        class="bg-bg-secondary p-2 sm:p-3 md:p-4 transition-colors"
+        class="bg-bg-secondary p-3 sm:p-4 transition-colors"
         :class="{ 'bg-accent-gold/5 ring-1 ring-inset ring-accent-gold/30': canManage && dragOverTarget === col.key }"
         @dragover.prevent="canManage && handleDragOver($event, col.key)"
         @dragenter.prevent="canManage && (dragOverTarget = col.key)"
