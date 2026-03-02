@@ -573,20 +573,34 @@ class TestLikeWildcardEscaping:
             "email": "test@example.com",
             "password": "testpass123",
         })
-        # Seed permissions so the user has add_members permission
         from app.seeds.permissions import seed_permissions
         seed_permissions()
-        # Promote user to officer to have add_members
         guild_and_event["membership"].role = "officer"
         _db.session.commit()
 
-        # Search with a percent sign should not match everything
         guild_id = guild_and_event["guild"].id
         resp = client.get(f"/api/v1/guilds/{guild_id}/available-users?q=%25")
         assert resp.status_code == 200
-        # The percent sign search should NOT match the user 'testuser'
         data = resp.get_json()
-        # All returned users should have '%' in their name (none do)
-        for u in data:
-            assert "%" in u["username"] or len(data) == 0
+        # A literal '%' search should match nobody (no usernames contain '%')
+        assert len(data) == 0 or all("%" in u["username"] for u in data)
+
+    def test_available_users_search_escapes_underscore(self, client, user, guild_and_event):
+        """The _ character should not act as a single-char wildcard."""
+        client.post("/api/v1/auth/login", json={
+            "email": "test@example.com",
+            "password": "testpass123",
+        })
+        from app.seeds.permissions import seed_permissions
+        seed_permissions()
+        guild_and_event["membership"].role = "officer"
+        _db.session.commit()
+
+        guild_id = guild_and_event["guild"].id
+        # '_' is a LIKE wildcard matching any single char; it should be escaped
+        resp = client.get(f"/api/v1/guilds/{guild_id}/available-users?q=_")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        # A literal '_' search should not match usernames like 'testuser'
+        assert len(data) == 0 or all("_" in u["username"] for u in data)
 

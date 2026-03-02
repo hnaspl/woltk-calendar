@@ -19,7 +19,8 @@ from flask import jsonify, request
 
 from app.i18n import _t
 
-# lock protects _hits from concurrent gevent greenlets
+# threading.Lock is monkey-patched by gevent, so it works correctly
+# with cooperative greenlets in the single-worker deployment.
 _lock = threading.Lock()
 _hits: dict[str, list[float]] = {}
 

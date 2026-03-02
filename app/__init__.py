@@ -211,6 +211,7 @@ def _register_socketio_handlers() -> None:
         if event is None:
             return
         membership = _get_socket_membership(event.guild_id, current_user.id)
+        # getattr guards against AnonymousUser proxy in edge cases
         if membership is None and not getattr(current_user, "is_admin", False):
             return
         join_room(f"event_{event_id}")
@@ -232,6 +233,7 @@ def _register_socketio_handlers() -> None:
             return
         # Validate user is a member of this guild
         membership = _get_socket_membership(guild_id, current_user.id)
+        # getattr guards against AnonymousUser proxy in edge cases
         if membership is None and not getattr(current_user, "is_admin", False):
             return
         join_room(f"guild_{guild_id}")

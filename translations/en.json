@@ -186,15 +186,18 @@
       "repeatPassword": "Repeat password"
     },
     "errors": {
-      "emailRequired": "email, username and password are required",
-      "loginRequired": "email and password are required",
+      "emailRequired": "Email, username and password are required",
+      "loginRequired": "Email and password are required",
       "invalidCredentials": "Invalid credentials",
       "accountDisabled": "Account is disabled",
       "passwordRequired": "current_password and new_password are required",
-      "passwordTooShort": "Password must be at least 4 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
       "currentPasswordWrong": "Current password is incorrect",
       "emailTaken": "Email already registered",
-      "usernameTaken": "Username already taken"
+      "usernameTaken": "Username already taken",
+      "emailTooLong": "Email must be at most 255 characters",
+      "usernameLengthInvalid": "Username must be between 2 and 80 characters",
+      "displayNameTooLong": "Display name must be at most 100 characters"
     },
     "messages": {
       "loggedOut": "Logged out",

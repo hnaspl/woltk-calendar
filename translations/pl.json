@@ -191,10 +191,13 @@
       "invalidCredentials": "Nieprawidłowe dane logowania",
       "accountDisabled": "Konto jest wyłączone",
       "passwordRequired": "Aktualne i nowe hasło są wymagane",
-      "passwordTooShort": "Hasło musi mieć co najmniej 4 znaki",
+      "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków",
       "currentPasswordWrong": "Aktualne hasło jest nieprawidłowe",
       "emailTaken": "Email jest już zarejestrowany",
-      "usernameTaken": "Nazwa użytkownika jest już zajęta"
+      "usernameTaken": "Nazwa użytkownika jest już zajęta",
+      "emailTooLong": "Email może mieć maksymalnie 255 znaków",
+      "usernameLengthInvalid": "Nazwa użytkownika musi mieć od 2 do 80 znaków",
+      "displayNameTooLong": "Nazwa wyświetlana może mieć maksymalnie 100 znaków"
     },
     "messages": {
       "loggedOut": "Wylogowano",

@@ -27,13 +27,13 @@ def register():
         return jsonify({"error": _t("auth.errors.emailRequired")}), 400
 
     if len(email) > 255:
-        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+        return jsonify({"error": _t("auth.errors.emailTooLong")}), 400
 
     if len(username) < 2 or len(username) > 80:
-        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+        return jsonify({"error": _t("auth.errors.usernameLengthInvalid")}), 400
 
     if display_name is not None and len(display_name) > 100:
-        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+        return jsonify({"error": _t("auth.errors.displayNameTooLong")}), 400
 
     if len(password) < 8:
         return jsonify({"error": _t("auth.errors.passwordTooShort")}), 400
