@@ -427,12 +427,13 @@ The bench/queue system spans:
 | `test_bench_e2e.py` | 11 | Auto-promotion |
 | `test_full_lineup_e2e.py` | 59 | Multi-role scenarios |
 | `test_bench_reorder_e2e.py` | 22 | Queue ordering |
+| `test_bench_audit.py` | 18 | Bench/queue structural audit |
 | `test_timezone.py` | ~31 | Timezone utils |
 | `test_timezone_e2e.py` | ~44+ | E2E timezone |
 | Other test files | ~280+ | Various |
 | `test_meta_constants.py` | 15 | Meta/constants API endpoint |
 | `test_constants_sync.py` | 14 | Backend ↔ frontend ↔ API constants sync |
-| **Total** | **~447** | |
+| **Total** | **~465** | |
 
 ### 8.2 New Tests to Add
 
@@ -506,50 +507,36 @@ The bench/queue system spans:
 - [x] Run full test suite — all 444 tests pass
 - [x] Frontend build succeeds
 
-### Phase 6 – Bench/Queue (Secure Approach — COMPLETE)
-- [x] Verify all 122 bench/queue tests pass before any changes
-- [x] Replace hardcoded label strings in `LineupBoard.vue` column definitions with `ROLE_LABEL_MAP[role]` lookups — display-only, no logic change
-- [x] Extract `ROLE_LABELS` constant to `app/constants.py` — moved from inline dict in `meta.py`
-- [x] Update `app/api/v1/meta.py` — import `ROLE_LABELS` from `app/constants.py`
-- [x] Add 3 new sync tests: backend `ROLE_LABELS` ↔ frontend `ROLE_OPTIONS`, API role labels ↔ frontend, and enum coverage
-- [x] Re-run all 122 bench/queue tests — all pass
-- [x] Run full test suite — all 447 tests pass
+### Phase 6 – Bench/Queue (All Safe Changes — COMPLETE)
+
+All 4 items from section 7.2 "What CAN Be Safely Changed" are implemented:
+
+- [x] **Item 1 – ROLE_LABEL_MAP**: `LineupBoard.vue` column labels replaced with `ROLE_LABEL_MAP[role]` lookups (display-only). `SignupForm.vue` already uses imported `ROLE_LABEL_MAP`. No local role-label definitions remain in either file.
+- [x] **Item 2 – `_get_event_or_404()`**: Moved to `app/utils/api_helpers.py` (Phase 3). Both `signups.py` and `lineup.py` import from the shared location. No local copies remain.
+- [x] **Item 3 – `_build_guild_role_map()`**: Moved to `app/utils/api_helpers.py` (Phase 3). Both files import the shared function. `lineup.py` has a unique wrapper `_build_guild_role_map_for_event()` (not a duplicate — adds event-scoped user ID query).
+- [x] **Item 4 – Permission decorator**: `@require_guild_permission()` applied to ALL endpoints in both `signups.py` (12 routes) and `lineup.py` (4 routes). No inline `get_membership()` gate patterns remain. Remaining `has_permission()` calls are owner-vs-officer authorization checks inside handlers (correct to keep inline).
+- [x] Extract `ROLE_LABELS` constant to `app/constants.py` — removed duplicate from `meta.py`
+- [x] 18 structural audit tests in `tests/test_bench_audit.py` — validates no regressions
+- [x] 3 sync tests: backend `ROLE_LABELS` ↔ frontend `ROLE_OPTIONS` labels
+- [x] All 122 bench/queue tests pass before AND after changes
+- [x] Full test suite: 465 tests pass
 - [x] Frontend build succeeds
 
-#### Unsafe Approach — Additional Changes NOT Applied (Risk: 🔴 High)
+#### Future Considerations (Not Part of Phase 6)
 
-The following changes were identified but **deliberately not applied** because they
-would touch bench/queue logic or service layers. These require individual PRs with
-manual QA and careful review:
+The following are structural observations — NOT considered safe to change without
+individual PRs and manual QA:
 
-1. **Replace hardcoded role key strings in `SignupForm.vue` props** (line 162)
-   - `availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] }`
-   - Could use `ROLE_OPTIONS.map(r => r.value)` but this changes the prop default behavior
-   - Risk: could affect how parent components pass roles to the signup form
+1. **`SignupForm.vue` prop default** (line 162) — hardcoded role key array in prop default.
+   These are role *keys* (not labels), and changing the default could affect parent components.
 
-2. **Replace `lineup` ref key strings in `LineupBoard.vue`** (line 227)
-   - `const lineup = ref({ main_tanks: [], off_tanks: [], melee_dps: [], healers: [], range_dps: [] })`
-   - These keys are structural (used for drag-drop, API payload) — NOT display labels
-   - Risk: backend lineup API expects these exact keys; changing would break serialization
+2. **`LineupBoard.vue` lineup ref keys** (line 227) — structural keys matching API payload
+   format. These are NOT display labels and must stay as-is.
 
-3. **Replace `SlotGroup` enum in `app/enums.py`** (lines 59-65)
-   - `SlotGroup` mirrors `Role` but adds `BENCH` — used in lineup models
-   - Could potentially derive from `Role` + BENCH, but the enum is used in DB column constraints
-   - Risk: altering enum values could corrupt existing data
+3. **`SlotGroup` enum** (`app/enums.py`) — mirrors `Role` + `BENCH`. Used in DB constraints.
 
-4. **Consolidate `ROLE_SLOTS` default values**
-   - `app/constants.py:ROLE_SLOTS` uses hardcoded role keys in its dict
-   - These match `Role` enum values by design — changing to enum references is safe in theory
-   - Risk: low but touches lineup initialization, needs full regression
-
-5. **Move `_validate_class_role()` from `signup_service.py` to `app/utils/class_roles.py`**
-   - Already a shared utility exists at `app/utils/class_roles.py` but the signup service
-     has its own inline version
-   - Risk: function signature differences could break auto-bench promotion flow
-
-6. **Use constants store reactively in `LineupBoard.vue` and `SignupForm.vue`**
-   - Could replace static `ROLE_LABEL_MAP` import with `useConstantsStore().roleLabelMap`
-   - Risk: introduces reactive dependency into computed columns, could affect render timing
+4. **`_validate_class_role()`** in signup_service — inline helper with service-specific
+   behavior. Moving could affect auto-bench promotion flow.
 
 ---
 
@@ -562,7 +549,7 @@ manual QA and careful review:
 | Phase 3 (Backend API Helpers) | 🟡 Medium | Incremental rollout, test after each file |
 | Phase 4 (Backend Utilities) | 🟢 Low | Comments and name alignment only |
 | Phase 5 (Cross-Stack) | 🟢 Low | API endpoint + Pinia store, static fallbacks preserved |
-| Phase 6 (Bench/Queue) | 🔴 High (if logic touched) | Audit-only approach, 63-test gate, display changes only |
+| Phase 6 (Bench/Queue) | 🟢 Low | All 4 safe changes applied, 122 bench tests pass, 18 audit tests |
 
 ### Key Risk: Bench/Queue System
 
@@ -593,6 +580,7 @@ The bench/queue system is the most interconnected feature in the codebase:
 | `src/stores/constants.js` | Pinia store for shared constants |
 | `tests/test_api_helpers.py` | Tests for new API helpers |
 | `tests/test_meta_constants.py` | Tests for meta constants endpoint |
+| `tests/test_bench_audit.py` | Bench/queue structural audit tests (18 tests) |
 
 ### Files to Modify (Frontend)
 | File | Change |

@@ -27,6 +27,7 @@ from app.constants import (
     WOTLK_RAIDS,
     normalize_spec_name,
 )
+from app.enums import Role
 
 CONSTANTS_JS = Path(__file__).resolve().parent.parent / "src" / "constants.js"
 
@@ -259,7 +260,6 @@ class TestRoleLabelsSync:
 
     def test_role_labels_covers_all_roles(self):
         """Every Role enum value must have a label."""
-        from app.enums import Role
         for r in Role:
             assert r.value in ROLE_LABELS, (
                 f"Role '{r.value}' missing from ROLE_LABELS"
