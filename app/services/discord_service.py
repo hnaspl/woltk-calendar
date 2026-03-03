@@ -82,7 +82,7 @@ def _build_callback_url() -> str:
     return f"{request.scheme}://{request.host}{DISCORD_CALLBACK_PATH}"
 
 
-def _effective_redirect_uri(settings: dict) -> str:
+def _effective_redirect_uri() -> str:
     """Return the redirect_uri – always auto-generated from the request."""
     return _build_callback_url()
 
@@ -97,7 +97,7 @@ def get_redirect_uri() -> Optional[str]:
     settings = _get_discord_settings()
     if not settings:
         return None
-    return _effective_redirect_uri(settings)
+    return _effective_redirect_uri()
 
 
 def get_authorize_url(state: str) -> Optional[str]:
@@ -109,7 +109,7 @@ def get_authorize_url(state: str) -> Optional[str]:
     settings = _get_discord_settings()
     if not settings:
         return None
-    redirect_uri = _effective_redirect_uri(settings)
+    redirect_uri = _effective_redirect_uri()
     params = {
         "client_id": settings["discord_client_id"],
         "redirect_uri": redirect_uri,
@@ -165,7 +165,7 @@ def _do_exchange(code: str, settings: dict) -> Optional[dict]:
 
     client_id = settings["discord_client_id"]
     client_secret = settings["discord_client_secret"]
-    redirect_uri = _effective_redirect_uri(settings)
+    redirect_uri = _effective_redirect_uri()
 
     try:
         token_resp = requests.post(
