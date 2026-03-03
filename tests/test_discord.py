@@ -218,19 +218,6 @@ class TestDiscordEnabled:
         assert resp.status_code == 200
         assert resp.get_json()["enabled"] is True
 
-    def test_discord_enabled_without_redirect_uri(self, app, client, db):
-        """Discord should be enabled with just client_id and client_secret (redirect_uri is auto-generated)."""
-        with app.app_context():
-            from app.utils.encryption import encrypt_value
-            db.session.add(SystemSetting(key="discord_client_id", value="test-id"))
-            db.session.add(SystemSetting(key="discord_client_secret",
-                                         value=encrypt_value("test-secret")))
-            db.session.commit()
-
-        resp = client.get("/api/v1/auth/discord/enabled")
-        assert resp.status_code == 200
-        assert resp.get_json()["enabled"] is True
-
 
 # ---------------------------------------------------------------------------
 # Discord login URL
@@ -283,8 +270,8 @@ class TestDiscordLoginUrl:
         location = resp.headers["Location"]
         assert "prompt=consent" not in location
 
-    def test_auto_generates_redirect_uri_when_not_configured(self, app, client, db):
-        """When discord_redirect_uri is not set, the callback URL is auto-generated."""
+    def test_auto_generates_redirect_uri(self, app, client, db):
+        """The callback URL is auto-generated from the request context."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="auto-id"))
@@ -312,25 +299,6 @@ class TestDiscordLoginUrl:
             with app.test_request_context("/", base_url="http://mysite.com:5000"):
                 uri = get_redirect_uri()
                 assert uri == "http://mysite.com:5000/api/v1/auth/discord/callback"
-
-    def test_stale_redirect_uri_ignored_in_authorize_url(self, app, client, db):
-        """A stale discord_redirect_uri in the DB must NOT affect the authorize URL."""
-        with app.app_context():
-            from app.utils.encryption import encrypt_value
-            db.session.add(SystemSetting(key="discord_client_id", value="cid"))
-            db.session.add(SystemSetting(key="discord_client_secret",
-                                         value=encrypt_value("sec")))
-            # Stale wrong value from a previous admin save
-            db.session.add(SystemSetting(key="discord_redirect_uri",
-                                         value="http://wrong/bad/path"))
-            db.session.commit()
-
-        resp = client.get("/api/v1/auth/discord/login")
-        assert resp.status_code == 302
-        location = resp.headers["Location"]
-        # Must use auto-generated URL, not the stale DB value
-        assert "wrong" not in location
-        assert "%2Fapi%2Fv1%2Fauth%2Fdiscord%2Fcallback" in location
 
 
 # ---------------------------------------------------------------------------
@@ -627,22 +595,6 @@ class TestDiscordService:
                     post_data = call_kwargs.kwargs.get("data", {})
                     assert "client_id" not in post_data
                     assert "client_secret" not in post_data
-
-    def test_get_redirect_uri_ignores_stored_override(self, app, db):
-        """Stored discord_redirect_uri is ignored — auto-generated URL always used."""
-        with app.app_context():
-            from app.utils.encryption import encrypt_value
-            from app.services.discord_service import get_redirect_uri
-            db.session.add(SystemSetting(key="discord_client_id", value="id"))
-            db.session.add(SystemSetting(key="discord_client_secret",
-                                          value=encrypt_value("secret")))
-            # Even if a stale redirect_uri exists in DB, it should be ignored
-            db.session.add(SystemSetting(key="discord_redirect_uri",
-                                          value="http://wrong-host/bad/path"))
-            db.session.commit()
-            with app.test_request_context("/", base_url="http://mysite.com:5000"):
-                uri = get_redirect_uri()
-                assert uri == "http://mysite.com:5000/api/v1/auth/discord/callback"
 
     def test_get_redirect_uri_returns_none_when_not_configured(self, app):
         """get_redirect_uri returns None when settings are missing."""

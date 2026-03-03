@@ -284,12 +284,6 @@ def _seed_system_settings_if_missing() -> int:
             db.session.add(SystemSetting(key=key, value=default_value))
             seeded += 1
 
-    # Remove stale discord_redirect_uri — redirect_uri is now always
-    # auto-generated from the request context.
-    stale = db.session.get(SystemSetting, "discord_redirect_uri")
-    if stale:
-        db.session.delete(stale)
-
     db.session.commit()
     return seeded
 
