@@ -33,6 +33,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(guilds.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(characters.bp, url_prefix=f"{prefix}/characters")
     app.register_blueprint(raid_definitions.bp, url_prefix=f"{guild_prefix}/raid-definitions")
+    app.register_blueprint(raid_definitions.admin_bp, url_prefix=f"{prefix}/admin/raid-definitions")
     app.register_blueprint(templates.bp, url_prefix=f"{guild_prefix}/templates")
     app.register_blueprint(series.bp, url_prefix=f"{guild_prefix}/series")
     app.register_blueprint(events.bp, url_prefix=f"{guild_prefix}/events")

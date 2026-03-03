@@ -39,3 +39,18 @@ export const transferOwnership = (guildId, userId) =>
 export const adminGetAllGuilds = () => api.get('/guilds/admin/all')
 
 export const adminGetGuildMembers = (guildId) => api.get(`/guilds/admin/${guildId}/members`)
+
+export const adminUpdateMemberRole = (guildId, userId, role) =>
+  api.put(`/guilds/admin/${guildId}/members/${userId}`, { role })
+
+export const adminRemoveMember = (guildId, userId) =>
+  api.delete(`/guilds/admin/${guildId}/members/${userId}`)
+
+export const adminTransferOwnership = (guildId, userId) =>
+  api.post(`/guilds/admin/${guildId}/transfer-ownership`, { user_id: userId })
+
+export const adminDeleteGuild = (guildId) =>
+  api.delete(`/guilds/admin/${guildId}`)
+
+export const adminSendNotification = (guildId, userId, message) =>
+  api.post(`/guilds/admin/${guildId}/notify/${userId}`, { message })

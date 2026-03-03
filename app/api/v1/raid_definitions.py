@@ -1,10 +1,13 @@
-"""Raid Definitions API (guild-scoped)."""
+"""Raid Definitions API (guild-scoped + admin default management)."""
 
 from __future__ import annotations
 
+import sqlalchemy as sa
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
+from app.extensions import db
+from app.models.raid import RaidDefinition
 from app.services import raid_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
@@ -13,6 +16,80 @@ from app.utils.permissions import has_permission
 from app.i18n import _t
 
 bp = Blueprint("raid_definitions", __name__)
+
+# ---------------------------------------------------------------------------
+# Admin endpoints — manage default (built-in) raid definitions without guild scope
+# ---------------------------------------------------------------------------
+
+admin_bp = Blueprint("admin_raid_definitions", __name__)
+
+
+@admin_bp.get("")
+@login_required
+def admin_list_defaults():
+    """List all default (built-in, guild_id=NULL) raid definitions."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    stmt = sa.select(RaidDefinition).where(RaidDefinition.guild_id.is_(None))
+    defs = list(db.session.execute(stmt).scalars().all())
+    return jsonify([d.to_dict() for d in defs]), 200
+
+
+@admin_bp.post("")
+@login_required
+def admin_create_default():
+    """Create a new default raid definition (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    data = get_json()
+    if not data.get("name"):
+        return jsonify({"error": _t("api.raidDefinitions.nameRequired")}), 400
+    if not data.get("code"):
+        data["code"] = (data.get("raid_type") or data["name"]).lower().replace(" ", "_")[:30]
+    # Force global scope
+    data["is_builtin"] = True
+    try:
+        rd = raid_service.create_raid_definition(
+            guild_id=None, created_by=current_user.id, data=data,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(rd.to_dict()), 201
+
+
+@admin_bp.put("/<int:rd_id>")
+@login_required
+def admin_update_default(rd_id: int):
+    """Update a default raid definition (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    rd = raid_service.get_raid_definition(rd_id)
+    if rd is None or rd.guild_id is not None:
+        return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404
+    data = get_json()
+    try:
+        rd = raid_service.update_raid_definition(rd, data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(rd.to_dict()), 200
+
+
+@admin_bp.delete("/<int:rd_id>")
+@login_required
+def admin_delete_default(rd_id: int):
+    """Delete a default raid definition (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    rd = raid_service.get_raid_definition(rd_id)
+    if rd is None or rd.guild_id is not None:
+        return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404
+    raid_service.delete_raid_definition(rd)
+    return jsonify({"message": _t("api.raidDefinitions.deleted")}), 200
+
+
+# ---------------------------------------------------------------------------
+# Guild-scoped endpoints
+# ---------------------------------------------------------------------------
 
 
 @bp.get("")
