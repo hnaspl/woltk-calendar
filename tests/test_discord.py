@@ -603,8 +603,8 @@ class TestDiscordService:
             with app.test_request_context("/"):
                 assert get_redirect_uri() is None
 
-    def test_get_redirect_uri_auto_generates_when_no_manual(self, app, db):
-        """get_redirect_uri auto-generates from request context when no manual URI is set."""
+    def test_get_redirect_uri_auto_generates(self, app, db):
+        """get_redirect_uri auto-generates from request context."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             from app.services.discord_service import get_redirect_uri
