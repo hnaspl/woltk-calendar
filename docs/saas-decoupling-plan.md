@@ -577,39 +577,97 @@ EXPANSION_REGISTRY = {
 }
 ```
 
-#### 4.4.2 Guild → Expansion Binding
+#### 4.4.2 Guild → Expansion Binding (Cumulative, Per-Guild)
 
-Each guild selects which expansion(s)/addon(s) it plays:
+Expansion management is **per-guild**: the guild owner/admin enables expansion
+packs for their guild. This is per-guild because a single tenant can have guilds
+from different servers (e.g., a WotLK guild on Icecrown and a TBC guild on
+another server).
+
+**Cumulative rule:** Expansions are hierarchical. Enabling a later expansion
+(e.g., WotLK) automatically includes all previous expansions (Classic → TBC →
+WotLK), because each expansion contains all content from prior versions. The
+system enforces this: you cannot enable WotLK without Classic and TBC also
+being active.
 
 ```python
+class Expansion(db.Model):
+    """System-wide expansion definition (managed by global admin)."""
+    __tablename__ = "expansions"
+
+    id         = Column(Integer, primary_key=True)
+    name       = Column(String(100), nullable=False)    # "Wrath of the Lich King"
+    slug       = Column(String(30), unique=True)        # "wotlk"
+    sort_order = Column(Integer, nullable=False)        # 3 (Classic=1, TBC=2, WotLK=3, ...)
+    is_active  = Column(Boolean, default=True)          # Global admin can disable
+    metadata_json = Column(Text, nullable=True)
+
 class GuildExpansion(db.Model):
-    """Which expansions a guild has enabled."""
+    """Which expansions a guild has enabled.
+    Cumulative: enabling WotLK (sort_order=3) auto-includes Classic (1) + TBC (2)."""
     __tablename__ = "guild_expansions"
 
     id = Column(Integer, primary_key=True)
     guild_id = Column(Integer, ForeignKey("guilds.id"), nullable=False)
-    expansion_key = Column(String(30), nullable=False)  # e.g., "wotlk"
-    is_primary = Column(Boolean, default=False)          # Main expansion
+    expansion_id = Column(Integer, ForeignKey("expansions.id"), nullable=False)
+    enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=utcnow)
 
     __table_args__ = (
-        UniqueConstraint("guild_id", "expansion_key"),
+        UniqueConstraint("guild_id", "expansion_id"),
     )
 ```
 
 **How it works:**
-1. Guild admin creates guild → selects primary expansion (e.g., "wotlk")
-2. Optionally enables additional expansions (e.g., for alt raids on different servers)
-3. Character creation form filters available classes based on guild's expansion(s)
-4. Raid definitions filter based on guild's expansion(s)
-5. Class→Role matrix served via `/api/v1/meta/constants` is expansion-aware
+1. Global admin adds expansion packs to the system with `sort_order` (DB-driven, see §9.1 #1)
+2. Guild owner/admin enables expansion packs from guild settings
+3. **Cumulative enforcement:** If guild admin enables WotLK (`sort_order=3`), the system
+   automatically enables Classic (`sort_order=1`) and TBC (`sort_order=2`) as well
+4. Different guilds in the same tenant can have different expansions enabled
+   (e.g., Guild A on a WotLK server, Guild B on a TBC server)
+5. Character creation filters classes by the guild's enabled expansions (union of all)
+6. Raid definitions filter by the guild's enabled expansions
+7. Class→Role matrix served via v2 API is expansion-aware (merged across guild's enabled expansions)
+
+**Example:**
+```
+Guild "Icecrown Raiders" enables: WotLK
+→ System auto-enables: Classic, TBC, WotLK
+→ Available classes: all 10 classes (9 Classic + Death Knight from WotLK)
+→ Available raids: Classic raids + TBC raids + WotLK raids
+
+Guild "Legion Legends" (same tenant) enables: Legion
+→ System auto-enables: Classic, TBC, WotLK, Cata, MoP, WoD, Legion
+→ Available classes: 13 (adds Monk from MoP, Demon Hunter from Legion)
+→ Rogue "Combat" spec renamed to "Outlaw" (Legion change)
+```
+
+**Realm customization (per-guild):**
+
+Guild owners can specify custom realm names since different private servers have
+different realms. Realms are NOT hardcoded to Warmane's realm list.
+
+```python
+# Guild model addition (Phase 4):
+# Option A: JSON field for simple realm list
+realms_json = Column(Text, nullable=True)  # JSON array of realm names
+
+# Option B: Separate model for structured realms
+class GuildRealm(db.Model):
+    __tablename__ = "guild_realms"
+    id = Column(Integer, primary_key=True)
+    guild_id = Column(Integer, ForeignKey("guilds.id"), nullable=False)
+    name = Column(String(64), nullable=False)
+    is_default = Column(Boolean, default=False)
+    __table_args__ = (UniqueConstraint("guild_id", "name"),)
+```
 
 #### 4.4.3 Dynamic Constants API
 
-The existing `/api/v1/meta/constants` endpoint should become expansion-aware:
+The v2 constants endpoint returns expansion-specific data from DB:
 
 ```
-GET /api/v1/meta/constants?expansion=wotlk
+GET /api/v2/meta/expansions/{slug}/constants
 
 Response:
 {
@@ -618,25 +676,35 @@ Response:
     "class_specs": { ... },
     "class_roles": { ... },
     "raids": [ ... ],
-    "roles": [ ... ]  // Same across all expansions
+    "roles": [ ... ]
 }
 ```
 
-For guilds with multiple expansions enabled:
+For a guild's specific constants (guild's expansions merged + guild's custom realms):
 ```
-GET /api/v1/guilds/{guild_id}/constants
+GET /api/v2/guilds/{guild_id}/constants
 
 Response:
 {
-    "primary_expansion": "wotlk",
-    "enabled_expansions": ["wotlk", "tbc"],
-    "merged_classes": ["Warrior", ..., "Death Knight"],  // Union of all enabled
-    "class_availability": {
-        "Death Knight": ["wotlk"],       // Only in WotLK
-        "Warrior": ["wotlk", "tbc"],     // In both
+    "enabled_expansions": ["classic", "tbc", "wotlk"],
+    "wow_classes": ["Warrior", "Paladin", ..., "Death Knight"],  // Union across all enabled
+    "class_specs": { ... },   // Merged across enabled expansions
+    "class_roles": { ... },   // Merged across enabled expansions
+    "raids": [                // All raids from DB, merged across enabled expansions
+        {"code": "mc", "name": "Molten Core", "expansion": "classic", "raid_size": 40, ...},
+        {"code": "bwl", "name": "Blackwing Lair", "expansion": "classic", "raid_size": 40, ...},
+        {"code": "kara", "name": "Karazhan", "expansion": "tbc", "raid_size": 10, ...},
+        {"code": "naxx", "name": "Naxxramas", "expansion": "wotlk", "raid_size": 25, ...},
+        {"code": "ulduar", "name": "Ulduar", "expansion": "wotlk", "raid_size": 25, ...},
         ...
-    },
-    ...
+    ],
+    "roles": [ ... ],
+    "realms": ["Icecrown", "Lordaeron", "Custom-Realm"],  // Guild-specific realm list
+    "class_availability": {
+        "Death Knight": ["wotlk"],       // Only available from WotLK
+        "Warrior": ["classic", "tbc", "wotlk"],  // Available in all
+        ...
+    }
 }
 ```
 
@@ -974,45 +1042,53 @@ backup. Frontend migrates to v2 endpoints in this phase.
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 1: Foundation Decoupling — DB-Driven Expansion Registry
-**Goal:** Replace hardcoded class/role/spec Python enums and dicts with a
-DB-driven, pluggable expansion registry manageable from the global admin panel.
+**Goal:** Replace hardcoded class/role/spec/raid Python enums, dicts, and
+constants with a DB-driven, pluggable expansion registry manageable from the
+global admin panel. **Raids are also DB-driven** — each expansion's raid
+catalog lives in the `expansion_raids` table, not in `WOTLK_RAIDS` or
+`RAID_TYPES` constants.
 
-> **Decision §9.1 #1, #8:** Expansion definitions are stored in DB tables,
-> not Python dicts or enums. This allows global admins to add new expansions
-> without code changes.
+> **Decision §9.1 #1, #8:** Expansion definitions (classes, specs, roles,
+> **and raids**) are stored in DB tables, not Python dicts or enums. This
+> allows global admins to add new expansions without code changes.
 
 - [ ] Create expansion DB tables:
   - [ ] `expansions` — id, name, slug, sort_order, is_active, metadata
   - [ ] `expansion_classes` — id, expansion_id, name, icon, sort_order
   - [ ] `expansion_specs` — id, class_id, name, role (tank/healer/dps), icon
   - [ ] `expansion_roles` — id, expansion_id, name (tank/healer/melee_dps/range_dps)
-  - [ ] `expansion_raids` — id, expansion_id, name, slug, raid_size, icon
-- [ ] Seed WotLK expansion data into DB tables (migrate from `constants.py`)
+  - [ ] `expansion_raids` — id, expansion_id, name, slug, code, raid_size, supports_10, supports_25, supports_heroic, default_duration_minutes, icon
+- [ ] Seed WotLK expansion data into DB tables (migrate `WOTLK_RAIDS`, `CLASS_ROLES`, `CLASS_SPECS` from `constants.py`)
 - [ ] Create v2 API endpoints for expansion data:
   - [ ] `GET /api/v2/meta/expansions` — list all available expansions
   - [ ] `GET /api/v2/meta/expansions/{slug}/classes` — classes for expansion
   - [ ] `GET /api/v2/meta/expansions/{slug}/specs` — specs for expansion
   - [ ] `GET /api/v2/meta/expansions/{slug}/raids` — raids for expansion
   - [ ] `GET /api/v2/meta/default-expansion` — current system default (from system_settings)
-- [ ] Add `expansion_id` field to Guild model (FK to `expansions` table; default from system setting) — this is the guild's **primary** expansion; Phase 4 adds multi-expansion support via `GuildExpansion` M2M table
 - [ ] Create global admin UI to manage expansions:
   - [ ] View/add/edit/disable expansion packs
+  - [ ] Manage raids per expansion (add/edit/remove raids from an expansion's catalog)
   - [ ] Set default expansion
-- [ ] Make `meta.py` v2 constants endpoint return data from DB instead of Python dicts
-- [ ] Add expansion-aware validation in character service (read from DB, not enum)
+- [ ] Make raid definition creation expansion-aware:
+  - [ ] When guild admin creates a raid definition, the `raid_type` dropdown is populated from `expansion_raids` for the guild's enabled expansions (not from hardcoded `RAID_TYPES` / `WOTLK_RAIDS`)
+  - [ ] Default raid definitions (guild_id=NULL) link to `expansion_raids` entries
+- [ ] Add expansion-aware validation in character service (read from DB, not enum; classes available based on guild's enabled expansions)
 - [ ] **New admin permissions:**
-  - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs
+  - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs (including raid catalog)
 - [ ] All existing v1 tests must still pass (v1 backward compat)
 - [ ] **Frontend co-migration:**
   - [ ] Update constants store to fetch from v2 expansion endpoints
   - [ ] Remove hardcoded `WOW_CLASSES`, `CLASS_SPECS` fallbacks from `src/constants.js`
+  - [ ] Remove hardcoded `RAID_TYPES` from `src/constants.js` — raid types come from DB via expansion endpoints
   - [ ] Character creation dropdown reads from expansion-aware store
+  - [ ] Raid definition creation form populates `raid_type` dropdown from expansion-aware store
 - [ ] **🧹 Phase 1 cleanup** (see [§13.3.2](#1332-phase-1-cleanup-checklist)):
   - [ ] Remove hardcoded `WOTLK_RAIDS` from `app/constants.py`
   - [ ] Remove hardcoded `CLASS_ROLES` / `CLASS_SPECS` from `app/constants.py`
+  - [ ] Remove hardcoded `RAID_TYPES` from `src/constants.js`
   - [ ] Remove `WowClass` Python enum if all references now use DB-driven data
   - [ ] Delete any temporary backward-compat shims
-  - [ ] Remove hardcoded class/spec lists from frontend `src/constants.js`
+  - [ ] Remove hardcoded class/spec/raid lists from frontend `src/constants.js`
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 2: Guild Membership Hardening (Within Tenant)
@@ -1076,13 +1152,16 @@ guild admins can customize.
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 4: Multi-Expansion Support
-**Goal:** Support guilds running different WoW expansions, including **multiple
-expansions per guild** (primary + optional additional expansions). Global admin
-can add new expansion packs via the admin panel — they are DB-driven and
-pluggable.
+**Goal:** Support guilds running different WoW expansions within the same tenant.
+Expansion management is **per-guild** (cumulative) — a guild owner/admin selects
+which expansions their guild uses. A tenant can have guilds on different servers
+(e.g., a WotLK guild and a TBC guild). Global admin adds expansion packs via
+the admin panel — they are DB-driven and pluggable.
 
-> **Decision §9.1 #2:** Multi-expansion per guild is in scope. A guild has one
-> primary expansion and can enable additional expansions (e.g., for alt raids).
+> **Decision §9.1 #2:** Expansion management is per-guild and cumulative.
+> Guild owner/admin enables expansion packs for their guild. Enabling a later
+> expansion auto-includes all previous ones. Different guilds in the same
+> tenant can run different expansions (different servers).
 >
 > **Decision §9.1 #3:** When a new expansion comes, it should be pluggable
 > from the global admin panel. No code changes needed — admin uploads/configures
@@ -1093,32 +1172,41 @@ pluggable.
   - [ ] Define classes, specs, roles, raids for the expansion
   - [ ] Enable/disable expansion packs system-wide
   - [ ] Import expansion data from JSON/CSV (optional convenience feature)
-- [ ] **Multi-expansion per guild:**
-  - [ ] Create `GuildExpansion` model (guild ↔ expansion binding with `is_primary` flag, see §4.4.2)
-  - [ ] Guild selects primary expansion at creation; optionally enables additional expansions
-  - [ ] Character creation filters classes by guild's enabled expansion(s) — union of all enabled expansions
-  - [ ] Raid definitions filter by guild's enabled expansion(s)
-  - [ ] Class→role matrix defaults merge from all enabled expansions
-  - [ ] Guild constants endpoint returns merged class/spec/role data across enabled expansions (see §4.4.3)
-  - [ ] `class_availability` map shows which expansion(s) each class is available in
-- [ ] Create expansion selection flow in guild creation (choose primary + optional additional)
-- [ ] Update character creation to filter classes by guild's enabled expansion(s) (from DB)
+- [ ] **Per-guild expansion management (cumulative):**
+  - [ ] Create `GuildExpansion` model (guild ↔ expansion binding, see §4.4.2)
+  - [ ] Guild owner/admin enables expansions from guild settings
+  - [ ] **Cumulative enforcement:** enabling WotLK auto-enables Classic + TBC
+  - [ ] Character creation filters classes by the guild's enabled expansions (union of all)
+  - [ ] **Raids from DB based on enabled expansions:** guild's available raids are the union of `expansion_raids` for all enabled expansions. Raid definition creation and `raid_type` dropdown show only raids from enabled expansions.
+  - [ ] Class→role matrix defaults merge from the guild's enabled expansions
+  - [ ] Guild constants endpoint returns merged class/spec/role/raid data + `class_availability` map
+- [ ] **Realm customization (per-guild):**
+  - [ ] Guild owner can specify custom realm names for their guild (not hardcoded to Warmane realms)
+  - [ ] Create `GuildRealm` model or `realms` JSON field on Guild — guild owner defines which realm(s) their guild plays on
+  - [ ] Different private servers have different realms — realm list must be guild-configurable, not system-global
+  - [ ] Character creation realm dropdown reads from guild's configured realms
+  - [ ] Remove hardcoded `WARMANE_REALMS` dependency from guild/character creation
+  - [ ] Warmane-specific realm list moves into Warmane plugin (Phase 5) as default/suggestion
+- [ ] Create expansion selection flow in guild creation (guild admin picks highest expansion; cumulative auto-fill)
+- [ ] Update character creation to filter classes by guild's enabled expansions (from DB)
 - [ ] Update raid definition seeder for multi-expansion (from DB)
 - [ ] Update frontend constants store to be fully expansion-aware
-- [ ] Add expansion management in guild settings (enable/disable additional expansions)
+- [ ] Add expansion management in guild settings (guild owner/admin enables/disables)
 - [ ] **New admin permissions:**
-  - [ ] `manage_guild_expansions` — guild admin: enable/disable expansions for guild
+  - [ ] `manage_guild_expansions` — guild owner/admin: enable/disable expansion packs for guild
+  - [ ] `manage_guild_realms` — guild owner: configure guild's realm list
   - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs (if not already added in Phase 1)
 - [ ] **Frontend co-migration:**
-  - [ ] Expansion selection in guild creation wizard (primary + optional additional)
-  - [ ] Expansion management in guild admin panel (enable/disable expansions)
+  - [ ] Expansion management in guild settings (guild owner/admin view)
+  - [ ] Expansion selection in guild creation wizard (pick highest → auto-fill cumulative)
+  - [ ] Realm configuration in guild settings (guild owner defines realms)
   - [ ] Dynamic class/spec/role dropdowns merged across guild's enabled expansions
-  - [ ] Class availability badges showing which expansion(s) each class belongs to
   - [ ] Global admin expansion management UI
 - [ ] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
   - [ ] Remove ALL remaining WotLK-only assumptions from frontend and backend
   - [ ] Remove any `app/constants.py` re-exports that still exist
   - [ ] Remove hardcoded WotLK class/raid lists from any component
+  - [ ] Remove hardcoded `WARMANE_REALMS` from `app/constants.py` and `src/constants.js` — realms are now per-guild configurable
   - [ ] Verify `normalizeSpecName()` handles all expansion specs from DB
   - [ ] Clean up dead expansion-related code paths
   - [ ] Run full lint + build + test suite on clean branch
@@ -1234,9 +1322,9 @@ all subsequent phases.
 | # | Question | Decision | Rationale |
 |---|----------|----------|-----------|
 | 1 | Where to store expansion definitions? | **Database tables** | Expansions will be pluggable from the global admin panel. Hardcoding classes/roles in Python dicts or enums makes no sense in a multi-tenant system with pluggable expansions — every new expansion would require code changes and redeployment. DB-driven definitions allow global admins to add/configure expansions at runtime. |
-| 2 | Should guilds support multiple expansions simultaneously? | **Yes — multi-expansion per guild is in scope** | A guild selects a **primary expansion** at creation, and can optionally enable additional expansions (e.g., for alt raids on different servers). The `GuildExpansion` model (§4.4.2) supports multiple expansion bindings per guild with `is_primary` flag. Character creation, raid definitions, and class→role matrix all respect the guild's enabled expansion(s). Phase 4 implements this fully. |
+| 2 | Should guilds support multiple expansions simultaneously? | **Yes — per-guild, cumulative expansions** | Expansion configuration is **per-guild** because a single tenant can have guilds from different servers (e.g., a WotLK guild and a TBC guild). The **guild owner/admin** enables which expansion packs their guild uses. **Expansions are cumulative:** enabling a later expansion (e.g., WotLK) automatically includes all previous expansions (Classic, TBC), because each expansion contains all content from prior versions. |
 | 3 | How to handle spec changes across expansions? | **DB-driven, pluggable** | When a new expansion is added to the system (by global admin), its classes, specs, and roles are loaded from the expansion's DB records. No hardcoded enum — the system reads from `expansion_classes`, `expansion_specs`, `expansion_roles` tables. API endpoint returns the data for the guild's active expansion. |
-| 4 | Should class-role matrix overrides be per-raid or per-guild? | **Per-guild** with pluggable expansions | Guild admins configure the class→role matrix for their guild. The matrix defaults come from the guild's active expansion pack, and guild admins can customize. Per-raid overrides may be added as a future extension. |
+| 4 | Should class-role matrix overrides be per-raid or per-guild? | **Per-guild** with pluggable expansions | Guild admins configure the class→role matrix for their guild. The matrix defaults come from the guild's enabled expansion packs (merged), and guild admins can customize. Per-raid overrides may be added as a future extension. |
 | 5 | Invitation expiry default? | **Guild admin configurable, max 30 days** | Guild admins select the expiry duration when creating an invitation. The system enforces a maximum expiration of 30 days — no invitation can live longer than that. |
 | 6 | Allow users to see guilds they're not members of? | **Configurable per guild** within the tenant (visibility setting) | Hidden guilds are NOT shown in the sidebar navigation. They are only visible on a dedicated **guild discovery/browser page** within the tenant (added in Phase 2). Open guilds appear in both sidebar and discovery page. |
 | 7 | Database name change from `wotlk_calendar.db`? | **Yes** — rename to `raid_calendar.db` | Done in Phase 0 as part of tenant migration. |
@@ -4223,15 +4311,19 @@ Phase 1 moves classes/specs/roles/raids into **DB-driven expansion tables**
 |----------|------|--------|
 | `app/constants.py` | Hardcoded `WOTLK_RAIDS`, `CLASS_ROLES`, `CLASS_SPECS` | **Remove** — data now lives in DB expansion tables; seed script populates it |
 | `WowClass` Python enum | Hardcoded class enum | **Remove** — classes come from `expansion_classes` DB table |
-| `src/constants.js` | Static `WOW_CLASSES`, `CLASS_ROLES`, `CLASS_SPECS` | **Remove** — frontend fetches from `GET /api/v2/meta/expansions/{slug}/classes` |
-| Test files | Tests importing directly from `app/constants` for class/spec data | **Update** to use the new DB-driven expansion registry or test helpers |
-| `meta.py` v1 constants endpoint | Hardcoded class/spec response | **Keep v1 unchanged** (backward compat); v2 endpoint reads from DB |
+| `src/constants.js` | Static `WOW_CLASSES`, `CLASS_ROLES`, `CLASS_SPECS`, `RAID_TYPES` | **Remove** — frontend fetches from v2 expansion endpoints; raids come from `expansion_raids` DB table |
+| Test files | Tests importing directly from `app/constants` for class/spec/raid data | **Update** to use the new DB-driven expansion registry or test helpers |
+| `meta.py` v1 constants endpoint | Hardcoded class/spec/raid response | **Keep v1 unchanged** (backward compat); v2 endpoint reads from DB |
 
 **Dead code detection:**
 ```bash
-# Find any remaining direct import of CLASS_ROLES from constants.py
+# Find any remaining direct import of CLASS_ROLES, WOTLK_RAIDS from constants.py
 grep -rn "from app.constants import.*CLASS_ROLES\|from app.constants import.*CLASS_SPECS\|from app.constants import.*WOTLK_RAIDS" app/ tests/
 # Expected: empty — all references should use DB-driven expansion registry
+
+# Find any remaining RAID_TYPES references in frontend
+grep -rn "RAID_TYPES\|WOTLK_RAIDS" src/ --include="*.js" --include="*.vue"
+# Expected: empty — raid types come from DB via expansion endpoints
 
 # Verify WowClass enum is gone
 grep -rn "WowClass" app/ tests/
@@ -4285,7 +4377,8 @@ grep -rn "CLASS_ROLES\[" app/services/ --include="*.py"
 
 #### 13.3.5 Phase 4 Cleanup Checklist
 
-Phase 4 adds multi-expansion support. WotLK-only assumptions must go.
+Phase 4 adds multi-expansion support and per-guild realm customization.
+WotLK-only assumptions and hardcoded realm lists must go.
 
 **Code to remove/refactor:**
 
@@ -4293,19 +4386,26 @@ Phase 4 adds multi-expansion support. WotLK-only assumptions must go.
 |----------|------|--------|
 | `src/constants.js` static `WOW_CLASSES` | Hardcoded 10 WotLK classes | **Remove** — frontend gets classes from constants store which fetches from expansion-aware backend |
 | `src/constants.js` static `RAID_TYPES` | Hardcoded 8 WotLK raids | **Remove** — same as above |
+| `src/constants.js` `WARMANE_REALMS` | Hardcoded Warmane realm list | **Remove** — realms are now per-guild configurable; character creation reads from guild's realm list |
+| `app/constants.py` `WARMANE_REALMS` | Hardcoded Warmane realm list | **Remove** — realms come from guild settings, not a global constant. Warmane-specific defaults can move to Warmane plugin (Phase 5) |
 | `CharacterManagerView.vue` | Static class dropdown from `WOW_CLASSES` | **Replace** with `constantsStore.wowClasses` (already done but verify no hardcoded fallback) |
-| `app/constants.py` | Any remaining re-exports or hardcoded expansion data | **Remove entirely** if all data lives in `app/expansions/` registry |
+| `CharacterManagerView.vue` | Static realm dropdown from `WARMANE_REALMS` | **Replace** with guild-specific realm list from guild constants endpoint |
+| `app/constants.py` | Any remaining re-exports or hardcoded expansion data | **Remove entirely** if all data lives in DB expansion tables |
 | Phase 1 compat shims | Anything marked `# COMPAT: Remove in Phase 4` | **Remove now** |
 
 **Verification:**
 ```bash
 # No hardcoded WoW class lists in frontend
 grep -rn "Death Knight.*Druid.*Hunter\|WOW_CLASSES.*=.*\[" src/ --include="*.js" --include="*.vue"
-# Expected: only in constants.js static defaults (used until API loads)
+# Expected: empty (classes come from DB via API)
 
 # No WotLK-only raid types in frontend
 grep -rn "naxx\|ulduar\|icc" src/ --include="*.js" --include="*.vue" | grep -v "constants.js"
 # Expected: empty (raid types come from backend)
+
+# No hardcoded realm lists
+grep -rn "WARMANE_REALMS\|Icecrown.*Lordaeron" src/ app/ --include="*.js" --include="*.vue" --include="*.py"
+# Expected: empty (realms come from guild settings)
 ```
 
 #### 13.3.6 Phase 5 Cleanup Checklist
@@ -4321,8 +4421,8 @@ Phase 5 extracts Warmane and Discord into plugins.
 | `src/api/warmane.js` | Frontend Warmane API module | **Move** into plugin dynamic loader or delete if plugin handles its own API |
 | `src/api/armory.js` | Frontend armory API module | **Move** into plugin dynamic loader or delete |
 | `app/api/v1/warmane.py` | Warmane blueprint | **Move** into plugin registration — delete from main API |
-| `WARMANE_REALMS` in `app/constants.py` | Hardcoded Warmane realms | **Move** into Warmane plugin config; constants.py should not know about specific providers |
-| `WARMANE_REALMS` in `src/constants.js` | Same, frontend side | **Remove** — realms come from active provider plugin |
+| `WARMANE_REALMS` in `app/constants.py` | Hardcoded Warmane realms | Should already be removed in Phase 4 (realms are per-guild). If any reference remains, **move** into Warmane plugin config as default realm suggestions |
+| `WARMANE_REALMS` in `src/constants.js` | Same, frontend side | Should already be removed in Phase 4. If any reference remains, **remove** — realms come from guild settings |
 | `useWowheadTooltips.js` | Inline Wowhead script injection | **Consider** moving to plugin if Wowhead integration becomes optional |
 
 **Verification:**
@@ -4505,7 +4605,7 @@ phase:
 | 4 | Static `WOW_CLASSES` in `src/constants.js` | Active — hardcoded 10 WotLK classes | **Phase 1** | Remove when DB-driven expansion data replaces it |
 | 5 | `WowClass` Python enum in `app/enums.py` | Active — hardcoded class enum | **Phase 1** | Remove when DB-driven `expansion_classes` table replaces it |
 | 6 | `CLASS_ROLES` / `CLASS_SPECS` in `app/constants.py` | Active — hardcoded WotLK mappings | **Phase 1** | Remove when DB-driven expansion registry replaces it |
-| 7 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | Active — hardcoded Warmane realm list | **Phase 5** | Remove when provider plugins manage realm lists |
+| 7 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | Active — hardcoded Warmane realm list | **Phase 4** | Remove when per-guild realm customization replaces it; Warmane defaults move to plugin in Phase 5 |
 | 8 | `i18n-plan.md` | Planning doc — may become stale | **Phase 0** | Review; integrate remaining items into this plan or archive |
 | 9 | Hardcoded `max_guilds=3`, `max_members=unlimited` on Tenant model | Will be introduced in Phase 0 | **Phase 6** | Replace with billing-managed plan limits |
 | 10 | Database file `wotlk_calendar.db` | Active — WotLK-specific name | **Phase 0** | Rename to `raid_calendar.db` |
