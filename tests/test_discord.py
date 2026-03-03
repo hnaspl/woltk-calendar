@@ -257,8 +257,8 @@ class TestDiscordLoginUrl:
         assert "scope=identify%20email" in location
         assert "identify+email" not in location
 
-    def test_redirect_url_does_not_force_consent(self, app, client, db):
-        """Authorize URL must NOT include prompt=consent so returning users skip the consent screen."""
+    def test_redirect_url_uses_prompt_none(self, app, client, db):
+        """Authorize URL must include prompt=none to skip the consent screen for returning users."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="cid"))
@@ -268,6 +268,7 @@ class TestDiscordLoginUrl:
 
         resp = client.get("/api/v1/auth/discord/login")
         location = resp.headers["Location"]
+        assert "prompt=none" in location
         assert "prompt=consent" not in location
 
     def test_auto_generates_redirect_uri(self, app, client, db):
@@ -746,6 +747,63 @@ class TestDiscordCallback:
         assert resp.status_code == 302
         assert "/dashboard" in resp.headers["Location"]
         mock_exchange.assert_called_once_with("abc", redirect_uri=None)
+
+    def test_callback_access_denied_retries_with_consent(self, app, client, db):
+        """When prompt=none is rejected (first-time user), callback must redirect
+        to Discord again WITHOUT prompt=none so the consent dialog is shown."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="retry-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("retry-sec")))
+            db.session.commit()
+
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "denied-state"
+            sess["discord_redirect_uri"] = "http://localhost/api/v1/auth/discord/callback"
+
+        resp = client.get(
+            "/api/v1/auth/discord/callback?error=access_denied&state=denied-state")
+        assert resp.status_code == 302
+        location = resp.headers["Location"]
+        assert "discord.com" in location
+        # The retry must NOT include prompt=none
+        assert "prompt=none" not in location
+        assert "prompt=consent" not in location
+
+    def test_callback_access_denied_invalid_state_fails(self, client):
+        """access_denied with bad state must redirect to login error, not retry."""
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "correct-state"
+        resp = client.get(
+            "/api/v1/auth/discord/callback?error=access_denied&state=wrong-state")
+        assert resp.status_code == 302
+        assert "/login?error=discord_failed" in resp.headers["Location"]
+
+    def test_callback_access_denied_preserves_redirect_uri(self, app, client, db):
+        """Retry after access_denied must use the same redirect_uri."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="pres-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("pres-sec")))
+            db.session.commit()
+
+        stored_uri = "http://myhost:5000/api/v1/auth/discord/callback"
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "pres-state"
+            sess["discord_redirect_uri"] = stored_uri
+
+        resp = client.get(
+            "/api/v1/auth/discord/callback?error=access_denied&state=pres-state")
+        assert resp.status_code == 302
+        location = resp.headers["Location"]
+        # The stored redirect_uri should appear (url-encoded) in the new authorize URL
+        assert "myhost%3A5000" in location or "myhost:5000" in location
+
+        # Session must still contain the redirect_uri for the real callback
+        with client.session_transaction() as sess:
+            assert sess.get("discord_redirect_uri") == stored_uri
 
 
 # ---------------------------------------------------------------------------

@@ -152,6 +152,11 @@ def discord_login():
     callback handler can pass the *exact same* value to the token
     exchange — this prevents mismatches caused by proxy / header
     inconsistencies between the two requests.
+
+    Uses ``prompt=none`` so users who have previously authorized the app
+    skip the consent screen entirely.  If the user has *not* authorized
+    before, Discord returns ``error=access_denied`` and the callback
+    handler retries without ``prompt`` (which shows the consent dialog).
     """
     redirect_uri = discord_service.get_redirect_uri()
     if redirect_uri is None:
@@ -162,23 +167,69 @@ def discord_login():
     session["discord_oauth_state"] = state
     session["discord_redirect_uri"] = redirect_uri
 
-    url = discord_service.get_authorize_url(state, redirect_uri=redirect_uri)
+    url = discord_service.get_authorize_url(
+        state, redirect_uri=redirect_uri, prompt="none")
     if not url:
         current_app.logger.warning("Discord login: not configured")
         return redirect("/login?error=discord_not_configured")
-    current_app.logger.info("Discord login: redirecting to Discord (redirect_uri=%s)",
+    current_app.logger.info("Discord login: redirecting to Discord (redirect_uri=%s, prompt=none)",
                             redirect_uri)
     return redirect(url)
 
 
 @bp.get("/discord/callback")
 def discord_callback():
-    """Handle the OAuth2 callback from Discord."""
+    """Handle the OAuth2 callback from Discord.
+
+    Two expected flows:
+
+    1. **Returning user** (``prompt=none`` succeeded):
+       Discord redirects with ``code`` + ``state`` → exchange code, log in.
+
+    2. **First-time user** (``prompt=none`` returned ``access_denied``):
+       Discord redirects with ``error=access_denied`` + ``state`` →
+       we verify the state, generate a *new* state, and redirect to
+       Discord again **without** ``prompt`` so the consent dialog is
+       shown.  Discord then completes the normal code flow.
+    """
     from flask import request
 
     current_app.logger.info("Discord callback hit: %s", request.url)
 
     try:
+        error_param = request.args.get("error")
+
+        # ----- Handle prompt=none rejection (first-time users) -----
+        if error_param == "access_denied":
+            state = request.args.get("state")
+            expected_state = session.pop("discord_oauth_state", None)
+            stored_redirect_uri = session.get("discord_redirect_uri")
+
+            if not state or state != expected_state:
+                current_app.logger.warning(
+                    "Discord access_denied callback with invalid state")
+                return redirect("/login?error=discord_failed")
+
+            # Re-issue a fresh state and redirect to Discord WITHOUT
+            # prompt=none so the consent dialog is displayed.
+            new_state = secrets.token_urlsafe(32)
+            session["discord_oauth_state"] = new_state
+            # Keep discord_redirect_uri in session for the real callback.
+
+            redirect_uri = stored_redirect_uri or discord_service.get_redirect_uri()
+            session["discord_redirect_uri"] = redirect_uri
+
+            url = discord_service.get_authorize_url(
+                new_state, redirect_uri=redirect_uri)
+            if not url:
+                return redirect("/login?error=discord_not_configured")
+            current_app.logger.info(
+                "Discord prompt=none denied (first-time user), "
+                "retrying with consent dialog (redirect_uri=%s)",
+                redirect_uri)
+            return redirect(url)
+
+        # ----- Normal code exchange flow -----
         code = request.args.get("code")
         state = request.args.get("state")
 

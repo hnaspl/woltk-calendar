@@ -100,7 +100,8 @@ def get_redirect_uri() -> Optional[str]:
     return _effective_redirect_uri()
 
 
-def get_authorize_url(state: str, redirect_uri: Optional[str] = None) -> Optional[str]:
+def get_authorize_url(state: str, redirect_uri: Optional[str] = None,
+                      prompt: Optional[str] = None) -> Optional[str]:
     """Build the Discord OAuth2 authorization URL, or None if not configured.
 
     Per Discord docs, scopes are "separated by url encoded spaces (%20)".
@@ -112,6 +113,12 @@ def get_authorize_url(state: str, redirect_uri: Optional[str] = None) -> Optiona
             auto-generating from request context.  Callers should store
             this value in the session so the token-exchange step uses
             the *same* URI (see ``exchange_code``).
+        prompt: Discord ``prompt`` parameter.  ``"none"`` skips the
+            consent screen for users who have previously authorized
+            (returns ``access_denied`` if they haven't).  ``"consent"``
+            always shows the consent screen.  ``None`` omits the
+            parameter entirely (Discord defaults to ``consent`` for
+            authorization-code grants).
     """
     settings = _get_discord_settings()
     if not settings:
@@ -125,6 +132,8 @@ def get_authorize_url(state: str, redirect_uri: Optional[str] = None) -> Optiona
         "scope": "identify email",
         "state": state,
     }
+    if prompt is not None:
+        params["prompt"] = prompt
     # quote_via=quote encodes spaces as %20 (RFC 3986) instead of +.
     return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
 
