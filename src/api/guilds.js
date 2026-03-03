@@ -54,3 +54,17 @@ export const adminDeleteGuild = (guildId) =>
 
 export const adminSendNotification = (guildId, userId, message) =>
   api.post(`/guilds/admin/${guildId}/notify/${userId}`, { message })
+
+// Guild admin — notifications
+export const sendGuildNotification = (guildId, userId, message) =>
+  api.post(`/guilds/${guildId}/notify/${userId}`, { message })
+
+export const sendGuildNotificationAll = (guildId, message) =>
+  api.post(`/guilds/${guildId}/notify-all`, { message })
+
+// Guild admin — ban/unban
+export const banGuildMember = (guildId, userId) =>
+  api.post(`/guilds/${guildId}/ban/${userId}`)
+
+export const unbanGuildMember = (guildId, userId) =>
+  api.post(`/guilds/${guildId}/unban/${userId}`)

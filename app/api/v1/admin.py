@@ -32,6 +32,75 @@ def list_users():
     return jsonify([u.to_dict() for u in users]), 200
 
 
+@bp.get("/dashboard")
+@login_required
+def dashboard_stats():
+    err = _require_permission("list_system_users")
+    if err:
+        return err
+
+    import os
+    from datetime import datetime, timezone
+    import sqlalchemy as sa
+    from app.models.user import User
+    from app.models.guild import Guild
+    from app.models.raid import RaidEvent
+    from app.models.character import Character
+    from app.models.signup import Signup
+    from app.models.notification import JobQueue
+    from app.enums import JobStatus
+
+    now = datetime.now(timezone.utc)
+
+    total_users = db.session.scalar(sa.select(sa.func.count()).select_from(User))
+    active_users = db.session.scalar(
+        sa.select(sa.func.count()).select_from(User).where(User.is_active == True)  # noqa: E712
+    )
+    admin_users = db.session.scalar(
+        sa.select(sa.func.count()).select_from(User).where(User.is_admin == True)  # noqa: E712
+    )
+    total_guilds = db.session.scalar(sa.select(sa.func.count()).select_from(Guild))
+    total_raids = db.session.scalar(sa.select(sa.func.count()).select_from(RaidEvent))
+    upcoming_raids = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(
+            RaidEvent.starts_at_utc > now,
+            RaidEvent.status != "cancelled",
+        )
+    )
+    total_characters = db.session.scalar(sa.select(sa.func.count()).select_from(Character))
+    total_signups = db.session.scalar(sa.select(sa.func.count()).select_from(Signup))
+    pending_jobs = db.session.scalar(
+        sa.select(sa.func.count()).select_from(JobQueue).where(
+            JobQueue.status == JobStatus.QUEUED.value
+        )
+    )
+    failed_jobs = db.session.scalar(
+        sa.select(sa.func.count()).select_from(JobQueue).where(
+            JobQueue.status == JobStatus.FAILED.value
+        )
+    )
+
+    db_path = os.path.join("instance", "app.db")
+    try:
+        database_size_kb = round(os.path.getsize(db_path) / 1024, 1)
+    except OSError:
+        database_size_kb = None
+
+    return jsonify({
+        "total_users": total_users,
+        "active_users": active_users,
+        "admin_users": admin_users,
+        "total_guilds": total_guilds,
+        "total_raids": total_raids,
+        "upcoming_raids": upcoming_raids,
+        "total_characters": total_characters,
+        "total_signups": total_signups,
+        "pending_jobs": pending_jobs,
+        "failed_jobs": failed_jobs,
+        "database_size_kb": database_size_kb,
+    }), 200
+
+
 @bp.put("/users/<int:user_id>")
 @login_required
 def update_user(user_id: int):

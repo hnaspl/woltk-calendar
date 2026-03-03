@@ -570,3 +570,137 @@ def get_warmane_roster(guild_id: int):
         "member_count": data.get("membercount"),
         "roster": roster,
     }), 200
+
+
+# ---------------------------------------------------------------------------
+# Guild-level notifications
+# ---------------------------------------------------------------------------
+
+@bp.post("/<int:guild_id>/notify/<int:user_id>")
+@login_required
+@require_guild_permission("remove_members")
+def send_guild_notification(guild_id: int, user_id: int, membership):
+    """Send a notification to a single guild member (guild admin)."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    data = get_json()
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": _t("api.guilds.messageRequired")}), 400
+
+    from app.services.notification_service import create_notification
+    from app.utils.notify import _push_to_user
+    create_notification(
+        user_id=user_id,
+        notification_type="admin_message",
+        title=f"📢 Message from admin — {guild.name}",
+        body=message,
+        guild_id=guild.id,
+        title_key="notify.adminMessage.title",
+        body_key="notify.adminMessage.body",
+        title_params={"guildName": guild.name},
+        body_params={"message": message},
+    )
+    _push_to_user(user_id)
+    return jsonify({"message": "ok"}), 200
+
+
+@bp.post("/<int:guild_id>/notify-all")
+@login_required
+@require_guild_permission("remove_members")
+def send_guild_notification_all(guild_id: int, membership):
+    """Send a notification to all active guild members (except sender)."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    data = get_json()
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": _t("api.guilds.messageRequired")}), 400
+
+    from app.services.notification_service import create_notification
+    from app.utils.notify import _push_to_user
+
+    members = guild_service.list_members(guild_id)
+    count = 0
+    for m in members:
+        if m.user_id == current_user.id:
+            continue
+        create_notification(
+            user_id=m.user_id,
+            notification_type="admin_message",
+            title=f"📢 Message from admin — {guild.name}",
+            body=message,
+            guild_id=guild.id,
+            title_key="notify.adminMessage.title",
+            body_key="notify.adminMessage.body",
+            title_params={"guildName": guild.name},
+            body_params={"message": message},
+        )
+        _push_to_user(m.user_id)
+        count += 1
+
+    return jsonify({"message": "ok", "notified": count}), 200
+
+
+# ---------------------------------------------------------------------------
+# Guild-level ban / unban
+# ---------------------------------------------------------------------------
+
+@bp.post("/<int:guild_id>/ban/<int:user_id>")
+@login_required
+@require_guild_permission("remove_members")
+def ban_guild_member(guild_id: int, user_id: int, membership):
+    """Ban a user from rejoining the guild."""
+    from app.enums import MemberStatus
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    existing = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.status = MemberStatus.BANNED.value
+    else:
+        db.session.add(GuildMembership(
+            guild_id=guild_id,
+            user_id=user_id,
+            role="member",
+            status=MemberStatus.BANNED.value,
+        ))
+    db.session.commit()
+    emit_guild_changed(guild_id)
+    return jsonify({"message": "ok"}), 200
+
+
+@bp.post("/<int:guild_id>/unban/<int:user_id>")
+@login_required
+@require_guild_permission("remove_members")
+def unban_guild_member(guild_id: int, user_id: int, membership):
+    """Unban a user so they can rejoin the guild."""
+    from app.enums import MemberStatus
+
+    banned = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+            GuildMembership.status == MemberStatus.BANNED.value,
+        )
+    ).scalar_one_or_none()
+
+    if banned is None:
+        return jsonify({"error": "User is not banned"}), 404
+
+    db.session.delete(banned)
+    db.session.commit()
+    emit_guild_changed(guild_id)
+    return jsonify({"message": "ok"}), 200

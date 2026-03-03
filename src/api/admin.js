@@ -15,3 +15,5 @@ export const updateSystemSettings = (data) => api.put('/admin/settings/system', 
 export const getDiscordSettings = () => api.get('/admin/settings/discord')
 
 export const updateDiscordSettings = (data) => api.put('/admin/settings/discord', data)
+
+export const getDashboard = () => api.get('/admin/dashboard')
