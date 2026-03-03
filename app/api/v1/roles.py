@@ -42,15 +42,18 @@ def _caller_max_role_level() -> int:
 def _require_manage_roles(guild_id: int | None = None):
     """Check that the current user can manage roles.
 
-    Site admins always can.  Guild members need the ``manage_roles`` perm.
+    Site admins always can.  Guild members need the ``manage_roles`` perm
+    in at least one of their guilds.
     """
+    from app.utils.permissions import has_any_guild_permission
+
     # has_permission checks is_admin internally
     if guild_id:
         membership = get_membership(guild_id, current_user.id)
         if has_permission(membership, "manage_roles"):
             return None
-    # For non-guild-scoped calls, only site admin can manage
-    if has_permission(None, "manage_roles"):
+    # For non-guild-scoped calls, check if the user has manage_roles in any guild
+    if has_any_guild_permission(current_user.id, "manage_roles"):
         return None
     return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 

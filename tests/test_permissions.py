@@ -779,6 +779,143 @@ class TestRolesAPI:
 
 
 # ===========================================================================
+# Test: Role & permission filtering by caller level
+# ===========================================================================
+
+class TestRolePermissionFiltering:
+    """Non-admin users should only see roles at/below their level
+    and should not see admin-category permissions."""
+
+    def _login(self, app, client, user):
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+    # -- Roles filtering --
+
+    def test_admin_sees_all_roles(self, seeded, app):
+        """Site admin sees every role including global_admin."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.get("/api/v1/roles")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            names = {r["name"] for r in data}
+            assert "global_admin" in names
+            assert "member" in names
+            assert len(data) == len(DEFAULT_ROLES)
+
+    def test_guild_admin_sees_only_roles_at_or_below_own_level(self, seeded, app):
+        """Guild admin (level 80) should NOT see global_admin (level 100)."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.get("/api/v1/roles")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            names = {r["name"] for r in data}
+            assert "global_admin" not in names
+            assert "guild_admin" in names
+            assert "officer" in names
+            assert "member" in names
+
+    def test_officer_sees_only_roles_at_or_below_own_level(self, seeded, app):
+        """Officer (level 60) should NOT see guild_admin or global_admin."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["officer_user"])
+            resp = client.get("/api/v1/roles")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            names = {r["name"] for r in data}
+            assert "global_admin" not in names
+            assert "guild_admin" not in names
+            assert "officer" in names
+            assert "raid_leader" in names
+            assert "member" in names
+
+    def test_member_sees_only_member_role(self, seeded, app):
+        """Member (level 20) should only see member role."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["member_user"])
+            resp = client.get("/api/v1/roles")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            names = {r["name"] for r in data}
+            assert names == {"member"}
+
+    # -- Permissions filtering --
+
+    def test_admin_sees_all_permissions(self, seeded, app):
+        """Site admin sees all permissions including admin category."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.get("/api/v1/roles/permissions")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            categories = {p["category"] for p in data}
+            assert "admin" in categories
+            assert len(data) == len(ALL_PERMISSIONS)
+
+    def test_guild_admin_cannot_see_admin_category_permissions(self, seeded, app):
+        """Guild admin should not see admin-category permissions."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.get("/api/v1/roles/permissions")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            categories = {p["category"] for p in data}
+            assert "admin" not in categories
+            # Should still see guild-scoped permissions
+            assert "events" in categories
+            assert "guild" in categories
+
+    # -- Level enforcement on creation/update --
+
+    def test_guild_admin_cannot_create_role_above_own_level(self, seeded, app):
+        """Guild admin (level 80) cannot create a role with level > 80."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post("/api/v1/roles", json={
+                "name": "super_role",
+                "display_name": "Super Role",
+                "level": 90,
+            })
+            assert resp.status_code == 403
+
+    def test_guild_admin_can_create_role_at_own_level(self, seeded, app):
+        """Guild admin (level 80) CAN create a role with level = 80."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post("/api/v1/roles", json={
+                "name": "custom_ga_role",
+                "display_name": "Custom GA Role",
+                "level": 80,
+                "permissions": ["view_events"],
+            })
+            assert resp.status_code == 201
+            data = resp.get_json()
+            assert data["level"] == 80
+            # Admin permissions should be stripped
+            assert "manage_system_users" not in data["permissions"]
+
+    def test_guild_admin_cannot_assign_admin_permissions_on_create(self, seeded, app):
+        """Guild admin cannot assign admin-category permissions when creating a role."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post("/api/v1/roles", json={
+                "name": "sneaky_role",
+                "display_name": "Sneaky Role",
+                "level": 10,
+                "permissions": ["view_events", "list_system_users", "manage_system_users"],
+            })
+            assert resp.status_code == 201
+            data = resp.get_json()
+            # Admin-category permissions should NOT be included
+            assert "list_system_users" not in data["permissions"]
+            assert "manage_system_users" not in data["permissions"]
+            # Non-admin permissions should be included
+            assert "view_events" in data["permissions"]
+
+
+# ===========================================================================
 # Test: Guild Admin promotion restriction
 # ===========================================================================
 
