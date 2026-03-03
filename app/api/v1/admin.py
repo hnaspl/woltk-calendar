@@ -169,7 +169,7 @@ def get_discord_settings():
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     from flask import request
     from app.models.system_setting import SystemSetting
-    keys = ["discord_client_id", "discord_client_secret", "discord_redirect_uri"]
+    keys = ["discord_client_id", "discord_client_secret"]
     rows = db.session.execute(
         db.select(SystemSetting).where(SystemSetting.key.in_(keys))
     ).scalars().all()
@@ -197,7 +197,7 @@ def update_discord_settings():
     from app.utils.encryption import encrypt_value
 
     data = get_json()
-    allowed_keys = {"discord_client_id", "discord_redirect_uri"}
+    allowed_keys = {"discord_client_id"}
     for key in allowed_keys:
         if key in data:
             val = str(data[key]).strip()

@@ -48,17 +48,17 @@ def _get_discord_settings() -> dict:
     """Load and decrypt Discord OAuth settings from the database.
 
     Only ``discord_client_id`` and ``discord_client_secret`` are required.
-    ``discord_redirect_uri`` is optional – when absent the callback URL is
-    auto-generated from the current request so the admin cannot mis-type it.
+    The callback URL (redirect_uri) is always auto-generated from the
+    current request context so it cannot be misconfigured.
     """
-    keys = ["discord_client_id", "discord_client_secret", "discord_redirect_uri"]
+    keys = ["discord_client_id", "discord_client_secret"]
     rows = db.session.execute(
         sa.select(SystemSetting).where(SystemSetting.key.in_(keys))
     ).scalars().all()
     settings = {r.key: r.value for r in rows}
 
     result: dict[str, str] = {}
-    for key in ["discord_client_id", "discord_client_secret"]:
+    for key in keys:
         val = settings.get(key, "")
         if not val:
             return {}
@@ -68,11 +68,6 @@ def _get_discord_settings() -> dict:
             except ValueError:
                 return {}
         result[key] = val
-
-    # redirect_uri is optional – include it only when explicitly configured
-    redirect_uri = (settings.get("discord_redirect_uri") or "").strip()
-    if redirect_uri:
-        result["discord_redirect_uri"] = redirect_uri
 
     return result
 
@@ -88,8 +83,8 @@ def _build_callback_url() -> str:
 
 
 def _effective_redirect_uri(settings: dict) -> str:
-    """Return the redirect_uri to use: manual override or auto-generated."""
-    return settings.get("discord_redirect_uri") or _build_callback_url()
+    """Return the redirect_uri – always auto-generated from the request."""
+    return _build_callback_url()
 
 
 def is_discord_enabled() -> bool:
