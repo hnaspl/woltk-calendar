@@ -10,7 +10,7 @@ from app.extensions import db
 from app.models.raid import RaidDefinition
 
 
-def create_raid_definition(guild_id: int, created_by: int, data: dict) -> RaidDefinition:
+def create_raid_definition(guild_id: int | None, created_by: int, data: dict) -> RaidDefinition:
     raid_size = data.get("size", data.get("default_raid_size", 25))
     total_slots = (data.get("main_tank_slots") or 0) + (data.get("off_tank_slots") or 0) + \
                   (data.get("melee_dps_slots") or 0) + (data.get("healer_slots") or 0) + (data.get("range_dps_slots") or 0)

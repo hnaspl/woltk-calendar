@@ -181,6 +181,11 @@ def create_app(config_override: dict | None = None) -> Flask:
 
     # --------------------------------------------------------- Scheduler
     with app.app_context():
+        # Ensure the database directory + tables exist before anything else
+        if not app.config.get("TESTING", False):
+            _ensure_db_dir()
+            db.create_all()
+
         if app.config.get("SCHEDULER_ENABLED", True) and not app.config.get("TESTING", False):
             from app.jobs.scheduler import init_scheduler
             init_scheduler(app)
@@ -283,6 +288,12 @@ def _seed_system_settings_if_missing() -> int:
         if not existing:
             db.session.add(SystemSetting(key=key, value=default_value))
             seeded += 1
+
+    # Seed max_guilds_per_user separately to preserve the return count
+    # contract expected by existing callers.
+    for key, default_value in {"max_guilds_per_user": "5"}.items():
+        if not db.session.get(SystemSetting, key):
+            db.session.add(SystemSetting(key=key, value=default_value))
 
     db.session.commit()
     return seeded

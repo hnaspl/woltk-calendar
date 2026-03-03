@@ -157,7 +157,10 @@
     "profile": "Profil",
     "home": "Główna",
     "chars": "Postacie",
-    "attend": "Frekwencja"
+    "attend": "Frekwencja",
+    "guildAdmin": "Admin Gildii",
+    "globalAdmin": "Admin Globalny",
+    "administration": "Administracja"
   },
   "auth": {
     "appTitle": "Raid Calendar",
@@ -635,9 +638,29 @@
     "toasts": {
       "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
       "failedToTransfer": "Nie udało się przenieść własności",
-      "failedToFetchRoster": "Nie udało się pobrać składu gildii z Warmane"
+      "failedToFetchRoster": "Nie udało się pobrać składu gildii z Warmane",
+      "notificationSent": "Powiadomienie wysłane",
+      "allNotified": "Wszyscy członkowie powiadomieni",
+      "notificationFailed": "Nie udało się wysłać powiadomienia",
+      "memberBanned": "Członek zbanowany",
+      "banFailed": "Nie udało się zbanować członka",
+      "memberUnbanned": "Członek odbanowany",
+      "unbanFailed": "Nie udało się odbanować członka"
     },
-    "failedToLoad": "Nie udało się załadować członków"
+    "failedToLoad": "Nie udało się załadować członków",
+    "notify": "Powiadom",
+    "notifyAll": "Powiadom wszystkich",
+    "sendNotification": "Wyślij powiadomienie",
+    "notifyTo": "Wyślij powiadomienie do {name}:",
+    "notifyAllTitle": "Powiadom wszystkich członków",
+    "notifyAllDesc": "Wyślij powiadomienie do wszystkich {count} członków gildii:",
+    "notifyPlaceholder": "Wpisz wiadomość...",
+    "send": "Wyślij",
+    "ban": "Zbanuj",
+    "unban": "Odbanuj",
+    "banMember": "Zbanuj członka",
+    "banConfirm": "Zbanować {name} z gildii? Zostanie usunięty i nie będzie mógł ponownie dołączyć, dopóki nie zostanie odbanowany.",
+    "memberCharactersTitle": "Postacie gracza {name}"
   },
   "admin": {
     "title": "Panel admina",
@@ -663,7 +686,11 @@
       "unblock": "Odblokuj",
       "primaryAdmin": "Główny admin",
       "deleteUser": "Usuń użytkownika",
-      "deleteConfirm": "Trwale usunąć {name}? Tej operacji nie można cofnąć."
+      "deleteConfirm": "Trwale usunąć {name}? Tej operacji nie można cofnąć.",
+      "guildLimit": "Limit gildii",
+      "guildLimitDefault": "Domyślny",
+      "setGuildLimit": "Ustaw limit gildii",
+      "guildLimitUpdated": "Limit gildii zaktualizowany"
     },
     "system": {
       "title": "Ustawienia systemowe",
@@ -694,7 +721,9 @@
         "syncCompleted": "Synchronizacja postaci zakończona",
         "syncFailed": "Synchronizacja nie powiodła się",
         "discordSettingsSaved": "Ustawienia Discord zapisane",
-        "failedToSaveDiscord": "Nie udało się zapisać ustawień Discord"
+        "failedToSaveDiscord": "Nie udało się zapisać ustawień Discord",
+        "userPromoted": "Użytkownik awansowany na Globalnego Admina",
+        "userDemoted": "Status administratora cofnięty"
       },
       "discord": {
         "title": "Logowanie Discord",
@@ -710,6 +739,106 @@
         "callbackUrlHelp": "Skopiuj ten URL i wklej go w ustawieniach aplikacji Discord pod OAuth2 → Redirects.",
         "callbackUrlCopied": "URL przekierowania skopiowany do schowka"
       }
+    },
+    "guildAdmin": {
+      "title": "Panel Admina Gildii",
+      "subtitle": "Zarządzaj członkami gildii, rolami i ustawieniami"
+    },
+    "globalAdmin": {
+      "title": "Panel Admina Globalnego",
+      "subtitle": "Zarządzaj ustawieniami systemowymi, użytkownikami i rolami"
+    },
+    "guilds": {
+      "tabTitle": "Gildie",
+      "title": "Wszystkie gildie ({count})",
+      "name": "Nazwa gildii",
+      "realm": "Realm",
+      "members": "Członkowie",
+      "owner": "Właściciel",
+      "created": "Utworzona",
+      "joined": "Dołączył",
+      "viewMembers": "Pokaż członków",
+      "noGuilds": "Nie znaleziono gildii.",
+      "noMembers": "Brak członków w tej gildii.",
+      "loadError": "Nie udało się załadować gildii.",
+      "page": "Strona {current} z {total}",
+      "deleteGuild": "Usuń gildię",
+      "deleteConfirm": "Czy na pewno chcesz trwale usunąć gildię \"{guild}\"? Tej operacji nie można cofnąć.",
+      "guildDeleted": "Gildia została usunięta.",
+      "transferOwnership": "Przekaż własność",
+      "transferConfirm": "Przekazać własność \"{guild}\" do {user}? Obecny właściciel zostanie zdegradowany do członka.",
+      "ownershipTransferred": "Własność została przekazana.",
+      "sendNotification": "Wyślij powiadomienie",
+      "notifyTo": "Wyślij powiadomienie do {user}:",
+      "notifyPlaceholder": "Wpisz wiadomość...",
+      "send": "Wyślij",
+      "notificationSent": "Powiadomienie wysłane.",
+      "removeMember": "Usuń członka",
+      "removeConfirm": "Usunąć {user} z \"{guild}\"? Zostanie powiadomiony.",
+      "memberRemovedSuccess": "Członek został usunięty.",
+      "roleUpdated": "Rola członka zaktualizowana.",
+      "messageRequired": "Wiadomość jest wymagana.",
+      "features": "Funkcje",
+      "featureFlags": "Flagi funkcji",
+      "featureAttendance": "Frekwencja",
+      "featureTemplates": "Szablony",
+      "featureSeries": "Serie",
+      "featureCharacterSync": "Synchronizacja postaci",
+      "featureNotifications": "Powiadomienia",
+      "featuresUpdated": "Flagi funkcji zaktualizowane",
+      "armoryConfig": "Armory",
+      "armoryProvider": "Dostawca Armory",
+      "noArmory": "Brak"
+    },
+    "raidDefinitions": {
+      "tabTitle": "Definicje rajdów",
+      "title": "Domyślne definicje rajdów ({count})",
+      "name": "Nazwa",
+      "code": "Kod",
+      "raidSize": "Rozmiar rajdu",
+      "duration": "Czas trwania",
+      "modes": "Tryby",
+      "notes": "Notatki",
+      "newDefinition": "Nowa definicja",
+      "editDefinition": "Edytuj definicję",
+      "deleteDefinition": "Usuń definicję",
+      "deleteConfirm": "Czy na pewno chcesz usunąć domyślną definicję rajdu \"{name}\"?",
+      "noDefinitions": "Nie znaleziono domyślnych definicji rajdów.",
+      "loadError": "Nie udało się załadować definicji rajdów.",
+      "created": "Definicja rajdu utworzona.",
+      "updated": "Definicja rajdu zaktualizowana.",
+      "deleted": "Definicja rajdu usunięta."
+    },
+    "dashboard": {
+      "title": "Przegląd systemu",
+      "totalUsers": "Użytkownicy",
+      "activeUsers": "Aktywni",
+      "adminUsers": "Administratorzy",
+      "totalGuilds": "Gildie",
+      "totalRaids": "Rajdy",
+      "upcomingRaids": "Nadchodzące",
+      "totalCharacters": "Postacie",
+      "totalSignups": "Zapisy",
+      "pendingJobs": "Oczekujące zadania",
+      "failedJobs": "Nieudane zadania",
+      "databaseSize": "Rozmiar bazy danych",
+      "loadError": "Nie udało się załadować danych panelu",
+      "queueStatus": "Kolejka i zadania",
+      "runningJobs": "W trakcie",
+      "completedJobs": "Zakończone",
+      "recentJobs": "Ostatnie zadania",
+      "jobType": "Typ",
+      "jobAttempts": "Próby",
+      "jobCreated": "Utworzono",
+      "jobError": "Błąd",
+      "noRecentJobs": "Brak zadań w kolejce."
+    },
+    "settings": {
+      "guildLimits": "Limity gildii",
+      "maxGuildsPerUser": "Maks. gildii na użytkownika",
+      "maxGuildsPerUserHelp": "Maksymalna liczba gildii, które pojedynczy użytkownik może utworzyć. Indywidualne nadpisania można ustawić w zakładce Użytkownicy.",
+      "armoryAllowedDomains": "Dozwolone domeny armory",
+      "armoryAllowedDomainsHelp": "Lista domen armory oddzielona przecinkami. Pozostaw puste, aby zezwolić na dowolną domenę."
     }
   },
   "signup": {
@@ -830,7 +959,9 @@
       "cannotTransferSelf": "Nie można przenieść własności na obecnego właściciela",
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
       "notWarmane": "Gildia nie pochodzi z Warmane",
-      "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API"
+      "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API",
+      "messageRequired": "Wiadomość jest wymagana.",
+      "guildLimitReached": "Osiągnięto maksymalną liczbę gildii ({limit})"
     },
     "characters": {
       "notFound": "Postać nie znaleziona",
@@ -1006,6 +1137,10 @@
       "attended": "Obecny",
       "late": "Spóźniony",
       "no_show": "Nieobecny"
+    },
+    "adminMessage": {
+      "title": "📢 Wiadomość od administratora — {guildName}",
+      "body": "{message}"
     }
   },
   "language": {
@@ -1167,7 +1302,9 @@
     "manage_roles": "Zarządzanie rolami",
     "manage_roles_desc": "Tworzenie, edycja i usuwanie ról oraz uprawnień",
     "manage_system_settings": "Zarządzanie ustawieniami systemu",
-    "manage_system_settings_desc": "Konfiguracja globalnych ustawień systemu (Wowhead, synchronizacja)"
+    "manage_system_settings_desc": "Konfiguracja globalnych ustawień systemu (Wowhead, synchronizacja)",
+    "manage_guild_roles": "Zarządzaj Rolami Gildii",
+    "manage_guild_roles_desc": "Tworzenie, edycja i usuwanie ról gildii i ich uprawnień"
   },
   "permissionCategories": {
     "events": "Wydarzenia",
@@ -1179,5 +1316,12 @@
     "guild": "Zarządzanie gildią",
     "notifications": "Powiadomienia",
     "admin": "Administracja"
+  },
+  "armory": {
+    "providerRequired": "Dostawca armory jest wymagany",
+    "unknownProvider": "Nieznany dostawca armory",
+    "urlRequired": "URL API armory jest wymagany",
+    "labelRequired": "Etykieta konfiguracji armory jest wymagana",
+    "configNotFound": "Konfiguracja armory nie została znaleziona"
   }
 }

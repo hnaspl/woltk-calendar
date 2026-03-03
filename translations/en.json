@@ -157,7 +157,10 @@
     "profile": "Profile",
     "home": "Home",
     "chars": "Chars",
-    "attend": "Attend"
+    "attend": "Attend",
+    "guildAdmin": "Guild Admin",
+    "globalAdmin": "Global Admin",
+    "administration": "Administration"
   },
   "auth": {
     "appTitle": "Raid Calendar",
@@ -635,9 +638,29 @@
     "toasts": {
       "ownershipTransferred": "Guild ownership transferred successfully",
       "failedToTransfer": "Failed to transfer ownership",
-      "failedToFetchRoster": "Failed to fetch guild roster from Warmane"
+      "failedToFetchRoster": "Failed to fetch guild roster from Warmane",
+      "notificationSent": "Notification sent",
+      "allNotified": "All members notified",
+      "notificationFailed": "Failed to send notification",
+      "memberBanned": "Member banned",
+      "banFailed": "Failed to ban member",
+      "memberUnbanned": "Member unbanned",
+      "unbanFailed": "Failed to unban member"
     },
-    "failedToLoad": "Failed to load members"
+    "failedToLoad": "Failed to load members",
+    "notify": "Notify",
+    "notifyAll": "Notify All",
+    "sendNotification": "Send Notification",
+    "notifyTo": "Send a notification to {name}:",
+    "notifyAllTitle": "Notify All Members",
+    "notifyAllDesc": "Send a notification to all {count} guild members:",
+    "notifyPlaceholder": "Type your message...",
+    "send": "Send",
+    "ban": "Ban",
+    "unban": "Unban",
+    "banMember": "Ban Member",
+    "banConfirm": "Ban {name} from this guild? They will be removed and unable to rejoin until unbanned.",
+    "memberCharactersTitle": "{name}'s Characters"
   },
   "admin": {
     "title": "Admin Panel",
@@ -663,7 +686,11 @@
       "unblock": "Unblock",
       "primaryAdmin": "Primary Admin",
       "deleteUser": "Delete User",
-      "deleteConfirm": "Permanently delete {name}? This cannot be undone."
+      "deleteConfirm": "Permanently delete {name}? This cannot be undone.",
+      "guildLimit": "Guild Limit",
+      "guildLimitDefault": "Default",
+      "setGuildLimit": "Set Guild Limit",
+      "guildLimitUpdated": "Guild limit updated"
     },
     "system": {
       "title": "System Settings",
@@ -694,7 +721,9 @@
         "syncCompleted": "Character sync completed",
         "syncFailed": "Sync failed",
         "discordSettingsSaved": "Discord settings saved",
-        "failedToSaveDiscord": "Failed to save Discord settings"
+        "failedToSaveDiscord": "Failed to save Discord settings",
+        "userPromoted": "User promoted to Global Admin",
+        "userDemoted": "Admin status revoked"
       },
       "discord": {
         "title": "Discord Login",
@@ -710,6 +739,106 @@
         "callbackUrlHelp": "Copy this URL and paste it into your Discord application settings under OAuth2 → Redirects.",
         "callbackUrlCopied": "Redirect URL copied to clipboard"
       }
+    },
+    "guildAdmin": {
+      "title": "Guild Admin Panel",
+      "subtitle": "Manage your guild members, roles, and settings"
+    },
+    "globalAdmin": {
+      "title": "Global Admin Panel",
+      "subtitle": "Manage system-wide settings, users, and roles"
+    },
+    "guilds": {
+      "tabTitle": "Guilds",
+      "title": "All Guilds ({count})",
+      "name": "Guild Name",
+      "realm": "Realm",
+      "members": "Members",
+      "owner": "Owner",
+      "created": "Created",
+      "joined": "Joined",
+      "viewMembers": "View Members",
+      "noGuilds": "No guilds found.",
+      "noMembers": "No members in this guild.",
+      "loadError": "Failed to load guilds.",
+      "page": "Page {current} of {total}",
+      "deleteGuild": "Delete Guild",
+      "deleteConfirm": "Are you sure you want to permanently delete the guild \"{guild}\"? This action cannot be undone.",
+      "guildDeleted": "Guild deleted successfully.",
+      "transferOwnership": "Transfer Ownership",
+      "transferConfirm": "Transfer ownership of \"{guild}\" to {user}? The current owner will be demoted to member.",
+      "ownershipTransferred": "Ownership transferred successfully.",
+      "sendNotification": "Send Notification",
+      "notifyTo": "Send a notification to {user}:",
+      "notifyPlaceholder": "Type your message...",
+      "send": "Send",
+      "notificationSent": "Notification sent successfully.",
+      "removeMember": "Remove Member",
+      "removeConfirm": "Remove {user} from \"{guild}\"? They will be notified.",
+      "memberRemovedSuccess": "Member removed successfully.",
+      "roleUpdated": "Member role updated.",
+      "messageRequired": "Message is required.",
+      "features": "Features",
+      "featureFlags": "Feature Flags",
+      "featureAttendance": "Attendance",
+      "featureTemplates": "Templates",
+      "featureSeries": "Series",
+      "featureCharacterSync": "Character Sync",
+      "featureNotifications": "Notifications",
+      "featuresUpdated": "Feature flags updated",
+      "armoryConfig": "Armory",
+      "armoryProvider": "Armory Provider",
+      "noArmory": "None"
+    },
+    "raidDefinitions": {
+      "tabTitle": "Raid Definitions",
+      "title": "Default Raid Definitions ({count})",
+      "name": "Name",
+      "code": "Code",
+      "raidSize": "Raid Size",
+      "duration": "Duration",
+      "modes": "Modes",
+      "notes": "Notes",
+      "newDefinition": "New Definition",
+      "editDefinition": "Edit Definition",
+      "deleteDefinition": "Delete Definition",
+      "deleteConfirm": "Are you sure you want to delete the default raid definition \"{name}\"?",
+      "noDefinitions": "No default raid definitions found.",
+      "loadError": "Failed to load raid definitions.",
+      "created": "Raid definition created.",
+      "updated": "Raid definition updated.",
+      "deleted": "Raid definition deleted."
+    },
+    "dashboard": {
+      "title": "System Overview",
+      "totalUsers": "Total Users",
+      "activeUsers": "Active Users",
+      "adminUsers": "Admins",
+      "totalGuilds": "Guilds",
+      "totalRaids": "Total Raids",
+      "upcomingRaids": "Upcoming",
+      "totalCharacters": "Characters",
+      "totalSignups": "Signups",
+      "pendingJobs": "Pending Jobs",
+      "failedJobs": "Failed Jobs",
+      "databaseSize": "Database Size",
+      "loadError": "Failed to load dashboard data",
+      "queueStatus": "Queue & Jobs",
+      "runningJobs": "Running",
+      "completedJobs": "Completed",
+      "recentJobs": "Recent Jobs",
+      "jobType": "Type",
+      "jobAttempts": "Attempts",
+      "jobCreated": "Created",
+      "jobError": "Error",
+      "noRecentJobs": "No recent jobs in queue."
+    },
+    "settings": {
+      "guildLimits": "Guild Limits",
+      "maxGuildsPerUser": "Max Guilds Per User",
+      "maxGuildsPerUserHelp": "Maximum number of guilds a single user can create. Individual users can have overrides set in the Users tab.",
+      "armoryAllowedDomains": "Allowed Armory Domains",
+      "armoryAllowedDomainsHelp": "Comma-separated list of allowed armory domain names. Leave empty to allow any domain."
     }
   },
   "signup": {
@@ -830,7 +959,9 @@
       "cannotTransferSelf": "Cannot transfer ownership to the current owner",
       "targetNotActive": "Target user is not an active member of this guild",
       "notWarmane": "Guild is not sourced from Warmane",
-      "rosterFetchFailed": "Could not fetch roster from Warmane API"
+      "rosterFetchFailed": "Could not fetch roster from Warmane API",
+      "messageRequired": "Message is required.",
+      "guildLimitReached": "You have reached the maximum number of guilds you can create ({limit})"
     },
     "characters": {
       "notFound": "Character not found",
@@ -1006,6 +1137,10 @@
       "attended": "Attended",
       "late": "Late",
       "no_show": "Unattended"
+    },
+    "adminMessage": {
+      "title": "📢 Message from admin — {guildName}",
+      "body": "{message}"
     }
   },
   "language": {
@@ -1167,7 +1302,9 @@
     "manage_roles": "Manage Roles",
     "manage_roles_desc": "Create, edit and delete roles and permissions",
     "manage_system_settings": "Manage System Settings",
-    "manage_system_settings_desc": "Configure global system settings (Wowhead, sync)"
+    "manage_system_settings_desc": "Configure global system settings (Wowhead, sync)",
+    "manage_guild_roles": "Manage Guild Roles",
+    "manage_guild_roles_desc": "Create, edit and delete guild-scoped roles and permissions"
   },
   "permissionCategories": {
     "events": "Events",
@@ -1179,5 +1316,12 @@
     "guild": "Guild Management",
     "notifications": "Notifications",
     "admin": "Administration"
+  },
+  "armory": {
+    "providerRequired": "Armory provider is required",
+    "unknownProvider": "Unknown armory provider",
+    "urlRequired": "Armory API URL is required",
+    "labelRequired": "Armory config label is required",
+    "configNotFound": "Armory configuration not found"
   }
 }

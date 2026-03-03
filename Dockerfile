@@ -1,10 +1,21 @@
+# Stage 1: Build frontend with Node.js
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /build
+
+COPY package*.json ./
+RUN npm ci
+
+COPY index.html vite.config.js postcss.config.js ./
+COPY src/ src/
+COPY translations/ translations/
+
+RUN npm run build
+
+# Stage 2: Python runtime
 FROM python:3.13-slim
 
-# Install system deps for Node.js
-RUN apt-get update && apt-get install -y \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs git \
+RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -13,15 +24,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Node dependencies
-COPY package*.json ./
-RUN npm ci
-
-# Copy all source
+# Copy all application source
 COPY . .
 
-# Build frontend
-RUN npm run build
+# Copy built frontend from stage 1
+COPY --from=frontend-builder /build/dist /app/dist
 
 ENV FLASK_APP=wsgi.py
 

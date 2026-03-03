@@ -20,6 +20,8 @@ def create_guild(
     allow_self_join: bool = True,
     warmane_source: bool = False,
     timezone: str = "Europe/Warsaw",
+    armory_provider: str = "warmane",
+    armory_config_id: Optional[int] = None,
 ) -> Guild:
     # Check for duplicate guild (case-insensitive name + realm)
     existing = db.session.execute(
@@ -39,6 +41,8 @@ def create_guild(
         allow_self_join=allow_self_join,
         warmane_source=warmane_source,
         timezone=timezone,
+        armory_provider=armory_provider,
+        armory_config_id=armory_config_id,
         created_by=created_by,
     )
     db.session.add(guild)
@@ -61,7 +65,7 @@ def get_guild(guild_id: int) -> Optional[Guild]:
 
 
 def update_guild(guild: Guild, data: dict) -> Guild:
-    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "timezone"}
+    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "timezone", "armory_provider", "armory_config_id"}
     for key, value in data.items():
         if key in allowed:
             # Prevent changing name or realm on Warmane-sourced guilds

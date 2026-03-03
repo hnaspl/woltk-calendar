@@ -22,6 +22,7 @@ def register_blueprints(app: Flask) -> None:
         warmane,
         roles,
         meta,
+        armory,
     )
 
     prefix = "/api/v1"
@@ -33,6 +34,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(guilds.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(characters.bp, url_prefix=f"{prefix}/characters")
     app.register_blueprint(raid_definitions.bp, url_prefix=f"{guild_prefix}/raid-definitions")
+    app.register_blueprint(raid_definitions.admin_bp, url_prefix=f"{prefix}/admin/raid-definitions")
     app.register_blueprint(templates.bp, url_prefix=f"{guild_prefix}/templates")
     app.register_blueprint(series.bp, url_prefix=f"{guild_prefix}/series")
     app.register_blueprint(events.bp, url_prefix=f"{guild_prefix}/events")
@@ -43,3 +45,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(notifications.bp, url_prefix=f"{prefix}/notifications")
     app.register_blueprint(warmane.bp, url_prefix=f"{prefix}/warmane")
     app.register_blueprint(roles.bp, url_prefix=f"{prefix}/roles")
+    app.register_blueprint(armory.bp, url_prefix=f"{prefix}/armory")

@@ -46,6 +46,195 @@ def list_all_guilds():
     return jsonify(result), 200
 
 
+@bp.get("/admin/all")
+@login_required
+def admin_list_all_guilds():
+    """List all guilds with member counts (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guilds = guild_service.list_all_guilds()
+    result = []
+    for g in guilds:
+        d = g.to_dict()
+        d["member_count"] = db.session.execute(
+            sa.select(sa.func.count(GuildMembership.id)).where(
+                GuildMembership.guild_id == g.id,
+                GuildMembership.status == "active",
+            )
+        ).scalar() or 0
+        # Include creator username
+        if g.creator:
+            d["creator_username"] = g.creator.username
+        result.append(d)
+    return jsonify(result), 200
+
+
+@bp.get("/admin/<int:guild_id>/members")
+@login_required
+def admin_list_members(guild_id: int):
+    """List guild members (global admin only — no membership required)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    members = guild_service.list_members(guild_id)
+    return jsonify([m.to_dict() for m in members]), 200
+
+
+@bp.put("/admin/<int:guild_id>/members/<int:user_id>")
+@login_required
+def admin_update_member(guild_id: int, user_id: int):
+    """Update a guild member's role (global admin only — no membership required)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    target = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
+
+    data = get_json()
+    new_role = data.get("role")
+    if new_role:
+        target.role = new_role
+        db.session.commit()
+        if user_id != current_user.id:
+            notify.notify_guild_role_changed(user_id, guild, new_role)
+    return jsonify(target.to_dict()), 200
+
+
+@bp.delete("/admin/<int:guild_id>/members/<int:user_id>")
+@login_required
+def admin_remove_member(guild_id: int, user_id: int):
+    """Remove a member from a guild (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    target = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
+
+    db.session.delete(target)
+    db.session.commit()
+    notify.notify_removed_from_guild(user_id, guild)
+    return jsonify({"message": _t("api.guilds.memberRemoved")}), 200
+
+
+@bp.post("/admin/<int:guild_id>/transfer-ownership")
+@login_required
+def admin_transfer_ownership(guild_id: int):
+    """Transfer guild ownership (global admin only — no membership required)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    data = get_json()
+    target_user_id = data.get("user_id")
+    if not target_user_id:
+        return jsonify({"error": _t("api.guilds.userIdRequired")}), 400
+    if target_user_id == guild.created_by:
+        return jsonify({"error": _t("api.guilds.cannotTransferSelf")}), 400
+
+    target_membership = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == target_user_id,
+            GuildMembership.status == "active",
+        )
+    ).scalar_one_or_none()
+    if target_membership is None:
+        return jsonify({"error": _t("api.guilds.targetNotActive")}), 404
+
+    old_owner_id = guild.created_by
+    guild.created_by = target_user_id
+    target_membership.role = "guild_admin"
+    old_owner_membership = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == old_owner_id,
+        )
+    ).scalar_one_or_none()
+    if old_owner_membership is not None:
+        old_owner_membership.role = "member"
+
+    db.session.commit()
+    notify.notify_ownership_transferred(guild, target_user_id, old_owner_id)
+    emit_guild_changed(guild_id)
+    return jsonify(guild.to_dict()), 200
+
+
+@bp.delete("/admin/<int:guild_id>")
+@login_required
+def admin_delete_guild(guild_id: int):
+    """Delete a guild (global admin only — no membership required)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+    guild_service.delete_guild(guild)
+    emit_guilds_changed()
+    return jsonify({"message": _t("api.guilds.deleted")}), 200
+
+
+@bp.post("/admin/<int:guild_id>/notify/<int:user_id>")
+@login_required
+def admin_send_notification(guild_id: int, user_id: int):
+    """Send a notification to a guild member (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    data = get_json()
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": _t("api.guilds.messageRequired")}), 400
+
+    from app.services.notification_service import create_notification
+    from app.utils.notify import _push_to_user
+    create_notification(
+        user_id=user_id,
+        notification_type="admin_message",
+        title=f"📢 Message from admin — {guild.name}",
+        body=message,
+        guild_id=guild.id,
+        title_key="notify.adminMessage.title",
+        body_key="notify.adminMessage.body",
+        title_params={"guildName": guild.name},
+        body_params={"message": message},
+    )
+    _push_to_user(user_id)
+    return jsonify({"message": "ok"}), 200
+
+
 @bp.post("/<int:guild_id>/join")
 @login_required
 def join_guild(guild_id: int):
@@ -98,9 +287,34 @@ def available_users(guild_id: int, membership):
 def create_guild():
     if not has_any_guild_permission(current_user.id, "create_guild"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    # --- Guild creation limit enforcement ---
+    if not getattr(current_user, "is_admin", False):
+        from app.models.system_setting import SystemSetting
+        limit = current_user.max_guilds_override
+        if limit is None:
+            setting = db.session.get(SystemSetting, "max_guilds_per_user")
+            limit = int(setting.value) if setting else 5
+        count = db.session.execute(
+            sa.select(sa.func.count()).select_from(Guild).where(Guild.created_by == current_user.id)
+        ).scalar()
+        if count >= limit:
+            return jsonify({"error": _t("api.guilds.guildLimitReached", limit=limit)}), 403
+
     data = get_json()
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": _t("api.guilds.nameRequired")}), 400
+
+    # Resolve armory config if provided
+    armory_config_id = data.get("armory_config_id")
+    armory_provider = data.get("armory_provider", "warmane")
+    if armory_config_id is not None:
+        from app.models.armory_config import ArmoryConfig
+        ac = db.session.get(ArmoryConfig, armory_config_id)
+        if ac is None or ac.user_id != current_user.id:
+            return jsonify({"error": _t("armory.configNotFound")}), 400
+        armory_provider = ac.provider_name
+
     try:
         guild = guild_service.create_guild(
             name=data["name"],
@@ -111,6 +325,8 @@ def create_guild():
             allow_self_join=data.get("allow_self_join", True),
             warmane_source=bool(data.get("warmane_source", False)),
             timezone=data.get("timezone", "Europe/Warsaw"),
+            armory_provider=armory_provider,
+            armory_config_id=armory_config_id,
         )
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409
@@ -128,7 +344,8 @@ def get_guild(guild_id: int):
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
-    if get_membership(guild_id, current_user.id) is None:
+    # Global admins can view any guild
+    if not getattr(current_user, "is_admin", False) and get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": _t("common.errors.forbidden")}), 403
     return jsonify(guild.to_dict()), 200
 
@@ -380,3 +597,137 @@ def get_warmane_roster(guild_id: int):
         "member_count": data.get("membercount"),
         "roster": roster,
     }), 200
+
+
+# ---------------------------------------------------------------------------
+# Guild-level notifications
+# ---------------------------------------------------------------------------
+
+@bp.post("/<int:guild_id>/notify/<int:user_id>")
+@login_required
+@require_guild_permission("remove_members")
+def send_guild_notification(guild_id: int, user_id: int, membership):
+    """Send a notification to a single guild member (guild admin)."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    data = get_json()
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": _t("api.guilds.messageRequired")}), 400
+
+    from app.services.notification_service import create_notification
+    from app.utils.notify import _push_to_user
+    create_notification(
+        user_id=user_id,
+        notification_type="admin_message",
+        title=f"📢 Message from admin — {guild.name}",
+        body=message,
+        guild_id=guild.id,
+        title_key="notify.adminMessage.title",
+        body_key="notify.adminMessage.body",
+        title_params={"guildName": guild.name},
+        body_params={"message": message},
+    )
+    _push_to_user(user_id)
+    return jsonify({"message": "ok"}), 200
+
+
+@bp.post("/<int:guild_id>/notify-all")
+@login_required
+@require_guild_permission("remove_members")
+def send_guild_notification_all(guild_id: int, membership):
+    """Send a notification to all active guild members (except sender)."""
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    data = get_json()
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": _t("api.guilds.messageRequired")}), 400
+
+    from app.services.notification_service import create_notification
+    from app.utils.notify import _push_to_user
+
+    members = guild_service.list_members(guild_id)
+    count = 0
+    for m in members:
+        if m.user_id == current_user.id:
+            continue
+        create_notification(
+            user_id=m.user_id,
+            notification_type="admin_message",
+            title=f"📢 Message from admin — {guild.name}",
+            body=message,
+            guild_id=guild.id,
+            title_key="notify.adminMessage.title",
+            body_key="notify.adminMessage.body",
+            title_params={"guildName": guild.name},
+            body_params={"message": message},
+        )
+        _push_to_user(m.user_id)
+        count += 1
+
+    return jsonify({"message": "ok", "notified": count}), 200
+
+
+# ---------------------------------------------------------------------------
+# Guild-level ban / unban
+# ---------------------------------------------------------------------------
+
+@bp.post("/<int:guild_id>/ban/<int:user_id>")
+@login_required
+@require_guild_permission("remove_members")
+def ban_guild_member(guild_id: int, user_id: int, membership):
+    """Ban a user from rejoining the guild."""
+    from app.enums import MemberStatus
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    existing = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.status = MemberStatus.BANNED.value
+    else:
+        db.session.add(GuildMembership(
+            guild_id=guild_id,
+            user_id=user_id,
+            role="member",
+            status=MemberStatus.BANNED.value,
+        ))
+    db.session.commit()
+    emit_guild_changed(guild_id)
+    return jsonify({"message": "ok"}), 200
+
+
+@bp.post("/<int:guild_id>/unban/<int:user_id>")
+@login_required
+@require_guild_permission("remove_members")
+def unban_guild_member(guild_id: int, user_id: int, membership):
+    """Unban a user so they can rejoin the guild."""
+    from app.enums import MemberStatus
+
+    banned = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.guild_id == guild_id,
+            GuildMembership.user_id == user_id,
+            GuildMembership.status == MemberStatus.BANNED.value,
+        )
+    ).scalar_one_or_none()
+
+    if banned is None:
+        return jsonify({"error": "User is not banned"}), 404
+
+    db.session.delete(banned)
+    db.session.commit()
+    emit_guild_changed(guild_id)
+    return jsonify({"message": "ok"}), 200

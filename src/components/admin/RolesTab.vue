@@ -3,8 +3,8 @@
     <!-- Roles list -->
     <WowCard>
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">{{ t('roles.allRoles') }} ({{ roles.length }})</h2>
-        <WowButton @click="openCreateRole">{{ t('roles.newRole') }}</WowButton>
+        <h2 class="wow-heading text-base">{{ t('roles.allRoles') }} ({{ displayedRoles.length }})</h2>
+        <WowButton v-if="canManageRoles" @click="openCreateRole">{{ t('roles.newRole') }}</WowButton>
       </div>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
@@ -19,11 +19,11 @@
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.permissions') }}</th>
               <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.canAssign') }}</th>
               <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.type') }}</th>
-              <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
+              <th v-if="canManageRoles" class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
-            <tr v-for="role in roles" :key="role.id" class="hover:bg-bg-tertiary/50 transition-colors">
+            <tr v-for="role in displayedRoles" :key="role.id" class="hover:bg-bg-tertiary/50 transition-colors">
               <td class="px-4 py-2.5">
                 <div class="text-text-primary font-medium">{{ role.display_name }}</div>
                 <div class="text-xs text-text-muted">{{ role.name }}</div>
@@ -49,7 +49,7 @@
                 >{{ role.is_system ? t('common.labels.system') : t('common.labels.custom') }}</span>
               </td>
               <td class="px-4 py-2.5 text-right">
-                <div class="flex flex-wrap gap-1 justify-end">
+                <div v-if="canManageRoles" class="flex flex-wrap gap-1 justify-end">
                 <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditRole(role)">{{ t('common.buttons.edit') }}</WowButton>
                 <WowButton
                   v-if="!role.is_system"
@@ -67,7 +67,7 @@
 
     <!-- All permissions reference -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">{{ t('roles.availablePermissions') }} ({{ allPermissions.length }})</h2>
+      <h2 class="wow-heading text-base mb-4">{{ t('roles.availablePermissions') }} ({{ displayedPermissions.length }})</h2>
 
       <div v-if="permissionsLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else>
@@ -87,8 +87,8 @@
       </div>
     </WowCard>
 
-    <!-- Grant Rules — only visible to global admins -->
-    <WowCard v-if="isGlobalAdmin">
+    <!-- Grant Rules — visible when user can manage roles -->
+    <WowCard v-if="canManageRoles">
       <div class="flex items-center justify-between mb-4">
         <h2 class="wow-heading text-base">{{ t('roles.grantRules') }}</h2>
         <WowButton @click="showGrantRuleModal = true">{{ t('roles.addRule') }}</WowButton>
@@ -107,7 +107,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
-            <tr v-for="rule in grantRules" :key="rule.id" class="hover:bg-bg-tertiary/50 transition-colors">
+            <tr v-for="rule in displayedGrantRules" :key="rule.id" class="hover:bg-bg-tertiary/50 transition-colors">
               <td class="px-4 py-2.5 text-text-primary font-medium">{{ roleDisplayName(rule.granter_role_name) }}</td>
               <td class="px-4 py-2.5 text-center text-accent-gold">→</td>
               <td class="px-4 py-2.5 text-text-primary">{{ roleDisplayName(rule.grantee_role_name) }}</td>
@@ -115,7 +115,7 @@
                 <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">{{ t('common.buttons.remove') }}</WowButton>
               </td>
             </tr>
-            <tr v-if="!grantRules.length">
+            <tr v-if="!displayedGrantRules.length">
               <td colspan="4" class="px-4 py-4 text-center text-text-muted text-sm">{{ t('roles.noGrantRules') }}</td>
             </tr>
           </tbody>
@@ -229,14 +229,14 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterLabel') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
+            <option v-for="r in displayedRoles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeLabel') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
+            <option v-for="r in displayedRoles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div v-if="grantRuleError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ grantRuleError }}</div>
@@ -260,13 +260,26 @@ import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissions } from '@/composables/usePermissions'
 import * as rolesApi from '@/api/roles'
+
+const props = defineProps({
+  mode: { type: String, default: 'global', validator: v => ['guild', 'global'].includes(v) }
+})
 
 const { t } = useI18n()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
+const permissions = usePermissions()
 
+const isGuildMode = computed(() => props.mode === 'guild')
 const isGlobalAdmin = computed(() => !!authStore.user?.is_admin)
+// canManageRoles: global admins always can; guild-mode users with manage_guild_roles can
+const canManageRoles = computed(() => {
+  if (isGlobalAdmin.value) return true
+  if (isGuildMode.value) return permissions.can('manage_guild_roles')
+  return false
+})
 
 // Roles state
 const roles = ref([])
@@ -308,14 +321,40 @@ const grantRuleForm = reactive({
   grantee_role_id: null
 })
 
+// Computed — filtered views for guild vs global mode
+const displayedRoles = computed(() => {
+  if (isGuildMode.value) {
+    return roles.value.filter(r => r.name !== 'global_admin')
+  }
+  return roles.value
+})
+
+const displayedPermissions = computed(() => {
+  if (isGuildMode.value) {
+    return allPermissions.value.filter(p => p.category !== 'admin')
+  }
+  return allPermissions.value
+})
+
+// In guild mode, only show grant rules involving visible roles
+const displayedGrantRules = computed(() => {
+  if (isGuildMode.value) {
+    const visibleNames = new Set(displayedRoles.value.map(r => r.name))
+    return grantRules.value.filter(
+      r => visibleNames.has(r.granter_role_name) && visibleNames.has(r.grantee_role_name)
+    )
+  }
+  return grantRules.value
+})
+
 // Computed
 const permissionCategories = computed(() => {
-  const cats = [...new Set(allPermissions.value.map(p => p.category))]
+  const cats = [...new Set(displayedPermissions.value.map(p => p.category))]
   return cats.sort()
 })
 
 function permissionsByCategory(category) {
-  return allPermissions.value.filter(p => p.category === category)
+  return displayedPermissions.value.filter(p => p.category === category)
 }
 
 function permLabel(code, fallback) {
