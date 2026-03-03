@@ -361,3 +361,118 @@ class TestDiscordService:
             user = get_or_create_discord_user(info)
             assert user.username.startswith("samename_")
             assert user.discord_id == "77777"
+
+    def test_exchange_code_returns_none_on_network_error(self, app, db):
+        """exchange_code must not raise on network failures."""
+        from unittest.mock import patch
+        import requests as req
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("secret")))
+            db.session.add(SystemSetting(key="discord_redirect_uri",
+                                          value="http://localhost/cb"))
+            db.session.commit()
+
+            from app.services.discord_service import exchange_code
+            with patch("app.services.discord_service.requests.post",
+                       side_effect=req.ConnectionError("DNS failed")):
+                assert exchange_code("some-code") is None
+
+    def test_exchange_code_returns_none_on_timeout(self, app, db):
+        """exchange_code must not raise on timeout."""
+        from unittest.mock import patch
+        import requests as req
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("secret")))
+            db.session.add(SystemSetting(key="discord_redirect_uri",
+                                          value="http://localhost/cb"))
+            db.session.commit()
+
+            from app.services.discord_service import exchange_code
+            with patch("app.services.discord_service.requests.post",
+                       side_effect=req.Timeout("timed out")):
+                assert exchange_code("some-code") is None
+
+
+# ---------------------------------------------------------------------------
+# Discord callback endpoint
+# ---------------------------------------------------------------------------
+
+class TestDiscordCallback:
+    def test_callback_missing_code_redirects(self, client):
+        resp = client.get("/api/v1/auth/discord/callback?state=abc")
+        assert resp.status_code == 302
+        assert "/login?error=discord_failed" in resp.headers["Location"]
+
+    def test_callback_missing_state_redirects(self, client):
+        resp = client.get("/api/v1/auth/discord/callback?code=abc")
+        assert resp.status_code == 302
+        assert "/login?error=discord_failed" in resp.headers["Location"]
+
+    def test_callback_state_mismatch_redirects(self, client):
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "correct-state"
+        resp = client.get("/api/v1/auth/discord/callback?code=abc&state=wrong-state")
+        assert resp.status_code == 302
+        assert "/login?error=discord_failed" in resp.headers["Location"]
+
+    def test_callback_exchange_failure_redirects(self, client):
+        from unittest.mock import patch
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "test-state"
+        with patch("app.services.discord_service.exchange_code", return_value=None):
+            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=test-state")
+        assert resp.status_code == 302
+        assert "/login?error=discord_failed" in resp.headers["Location"]
+
+    def test_callback_network_error_redirects_not_500(self, client):
+        """Network errors must produce a redirect, never a JSON 500 response."""
+        from unittest.mock import patch
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "test-state"
+        with patch("app.services.discord_service.exchange_code",
+                   side_effect=Exception("unexpected")):
+            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=test-state")
+        assert resp.status_code == 302
+        assert "/login?error=discord_failed" in resp.headers["Location"]
+
+    def test_callback_success_redirects_to_dashboard(self, app, client, db):
+        from unittest.mock import patch
+        discord_info = {
+            "id": "111222333",
+            "username": "callbackuser",
+            "email": "cb@discord.com",
+            "global_name": "Callback User",
+        }
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "valid-state"
+        with patch("app.services.discord_service.exchange_code",
+                   return_value=discord_info):
+            resp = client.get("/api/v1/auth/discord/callback?code=real&state=valid-state")
+        assert resp.status_code == 302
+        assert "/dashboard" in resp.headers["Location"]
+
+    def test_callback_disabled_user_redirects(self, app, client, db):
+        from unittest.mock import patch
+        # Create a disabled Discord user
+        user = User(
+            email="disabled@discord.user", username="disableduser",
+            password_hash="!discord-oauth", discord_id="444555666",
+            auth_provider="discord", is_active=False,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        discord_info = {"id": "444555666", "username": "disableduser", "email": "d@d.com"}
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "valid-state"
+        with patch("app.services.discord_service.exchange_code",
+                   return_value=discord_info):
+            resp = client.get("/api/v1/auth/discord/callback?code=real&state=valid-state")
+        assert resp.status_code == 302
+        assert "/login?error=account_disabled" in resp.headers["Location"]

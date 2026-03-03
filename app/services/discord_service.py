@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 from urllib.parse import urlencode
 
@@ -12,6 +13,8 @@ from app.extensions import db
 from app.models.user import User
 from app.models.system_setting import SystemSetting
 from app.utils.encryption import decrypt_value
+
+logger = logging.getLogger(__name__)
 
 DISCORD_API_BASE = "https://discord.com/api/v10"
 DISCORD_AUTH_URL = "https://discord.com/api/oauth2/authorize"
@@ -68,36 +71,52 @@ def exchange_code(code: str) -> Optional[dict]:
     """
     settings = _get_discord_settings()
     if not settings:
+        logger.warning("Discord OAuth exchange_code called but settings not configured")
         return None
 
-    # Exchange code for token
-    token_resp = requests.post(
-        DISCORD_TOKEN_URL,
-        data={
-            "client_id": settings["discord_client_id"],
-            "client_secret": settings["discord_client_secret"],
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": settings["discord_redirect_uri"],
-        },
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=10,
-    )
+    try:
+        # Exchange code for token
+        token_resp = requests.post(
+            DISCORD_TOKEN_URL,
+            data={
+                "client_id": settings["discord_client_id"],
+                "client_secret": settings["discord_client_secret"],
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": settings["discord_redirect_uri"],
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
+        )
+    except requests.RequestException as exc:
+        logger.error("Discord token exchange request failed: %s", exc)
+        return None
+
     if token_resp.status_code != 200:
+        logger.warning("Discord token exchange returned %s: %s",
+                        token_resp.status_code, token_resp.text[:200])
         return None
 
     token_data = token_resp.json()
     access_token = token_data.get("access_token")
     if not access_token:
+        logger.warning("Discord token response missing access_token")
         return None
 
-    # Fetch user info
-    user_resp = requests.get(
-        f"{DISCORD_API_BASE}/users/@me",
-        headers={"Authorization": f"Bearer {access_token}"},
-        timeout=10,
-    )
+    try:
+        # Fetch user info
+        user_resp = requests.get(
+            f"{DISCORD_API_BASE}/users/@me",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+    except requests.RequestException as exc:
+        logger.error("Discord user info request failed: %s", exc)
+        return None
+
     if user_resp.status_code != 200:
+        logger.warning("Discord user info returned %s: %s",
+                        user_resp.status_code, user_resp.text[:200])
         return None
 
     return user_resp.json()

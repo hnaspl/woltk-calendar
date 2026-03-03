@@ -151,23 +151,32 @@ def discord_callback():
     """Handle the OAuth2 callback from Discord."""
     from flask import request
 
-    code = request.args.get("code")
-    state = request.args.get("state")
+    try:
+        code = request.args.get("code")
+        state = request.args.get("state")
 
-    if not code or not state:
+        if not code or not state:
+            current_app.logger.warning("Discord callback missing code or state")
+            return redirect("/login?error=discord_failed")
+
+        expected_state = session.pop("discord_oauth_state", None)
+        if state != expected_state:
+            current_app.logger.warning("Discord callback state mismatch")
+            return redirect("/login?error=discord_failed")
+
+        discord_info = discord_service.exchange_code(code)
+        if not discord_info:
+            current_app.logger.warning("Discord code exchange failed")
+            return redirect("/login?error=discord_failed")
+
+        user = discord_service.get_or_create_discord_user(discord_info)
+        if not user.is_active:
+            current_app.logger.info("Discord user %s is disabled", user.username)
+            return redirect("/login?error=account_disabled")
+
+        login_user(user, remember=True)
+        current_app.logger.info("Discord login successful for user %s", user.username)
+        return redirect("/dashboard")
+    except Exception:
+        current_app.logger.exception("Unhandled error in Discord callback")
         return redirect("/login?error=discord_failed")
-
-    expected_state = session.pop("discord_oauth_state", None)
-    if state != expected_state:
-        return redirect("/login?error=discord_failed")
-
-    discord_info = discord_service.exchange_code(code)
-    if not discord_info:
-        return redirect("/login?error=discord_failed")
-
-    user = discord_service.get_or_create_discord_user(discord_info)
-    if not user.is_active:
-        return redirect("/login?error=account_disabled")
-
-    login_user(user, remember=True)
-    return redirect("/dashboard")
