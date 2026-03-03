@@ -120,7 +120,7 @@ def _do_exchange(code: str, settings: dict) -> Optional[dict]:
                 "redirect_uri": settings["discord_redirect_uri"],
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=(5, 10),
+            timeout=(5, 10),  # (connect_timeout, read_timeout)
         )
     except requests.RequestException as exc:
         logger.error("Discord token exchange request failed: %s", exc)
@@ -143,7 +143,7 @@ def _do_exchange(code: str, settings: dict) -> Optional[dict]:
         user_resp = requests.get(
             f"{DISCORD_API_BASE}/users/@me",
             headers={"Authorization": f"Bearer {access_token}"},
-            timeout=(5, 10),
+            timeout=(5, 10),  # (connect_timeout, read_timeout)
         )
     except requests.RequestException as exc:
         logger.error("Discord user info request failed: %s", exc)
