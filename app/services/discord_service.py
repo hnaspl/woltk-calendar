@@ -244,10 +244,14 @@ def get_or_create_discord_user(discord_info: dict) -> User:
     if user:
         return user
 
-    # Determine email: use the real one if available and not already taken,
-    # otherwise fall back to a namespaced placeholder.
+    # Determine email: use the real Discord email when available.
+    # If no email provided, or if it's already taken by another user,
+    # fall back to a namespaced placeholder so the existing user is
+    # not disrupted (first-come-first-served).
     email = (discord_info.get("email") or "").strip().lower()
-    if not email or db.session.execute(
+    if not email:
+        email = f"{discord_id}@discord.user"
+    elif db.session.execute(
         sa.select(User).where(User.email == email)
     ).scalar_one_or_none():
         email = f"{discord_id}@discord.user"

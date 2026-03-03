@@ -388,7 +388,7 @@ async function copyCallbackUrl() {
     await navigator.clipboard.writeText(discordCallbackUrl.value)
     uiStore.showToast(t('admin.system.discord.callbackUrlCopied'), 'success')
   } catch {
-    // Fallback: select the text
+    // clipboard API may be blocked in non-HTTPS contexts; ignore silently
   }
 }
 </script>
