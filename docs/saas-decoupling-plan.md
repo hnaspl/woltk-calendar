@@ -22,7 +22,7 @@
 7. [Phased Implementation Roadmap](#7-phased-implementation-roadmap)
 8. [Migration & Backward Compatibility](#8-migration--backward-compatibility)
 9. [Open Questions & Decisions](#9-open-questions--decisions)
-10. [Phase 0: Row-Level Tenancy (tenant_id) — Detailed Plan](#10-phase-0-row-level-tenancy-tenant_id--detailed-plan)
+10. [Phase 0: Row-Level Tenancy (guild_id) — Detailed Plan](#10-phase-0-row-level-tenancy-guild_id--detailed-plan)
 
 ---
 
@@ -271,7 +271,7 @@ admins control while keeping the flexibility WoW players need.
 > **Update:** After further analysis, we recommend implementing **Row-level
 > tenancy (`tenant_id` / `guild_id` on every table)** as **Phase 0** — before
 > any other feature work. The rationale and full detailed plan are in
-> [Section 10: Phase 0](#10-phase-0-row-level-tenancy-tenant_id--detailed-plan).
+> [Section 10: Phase 0](#10-phase-0-row-level-tenancy-guild_id--detailed-plan).
 > This ensures every subsequent phase (invitation system, multi-expansion,
 > plugins, SaaS billing) is built on a solid tenant-isolated foundation, rather
 > than having to retrofit tenant checks into an already-complex codebase.
@@ -796,7 +796,7 @@ export const pluginRegistry = {
 (`guild_id` / `tenant_id` on every guild-scoped table) **before** any feature work.
 
 > **This phase is a prerequisite for all other phases.** See
-> [Section 10](#10-phase-0-row-level-tenancy-tenant_id--detailed-plan) for the
+> [Section 10](#10-phase-0-row-level-tenancy-guild_id--detailed-plan) for the
 > complete table-by-table, query-by-query, file-by-file change plan.
 
 - [ ] Add `guild_id` FK to tables that lack it (Signup, LineupSlot, RaidBan, AttendanceRecord, CharacterReplacement)
@@ -807,7 +807,6 @@ export const pluginRegistry = {
 - [ ] Add `TenantMixin` or `@filter_by_tenant` decorator for query safety
 - [ ] Add tests verifying cross-tenant data isolation
 - [ ] Regression-test all 632+ existing tests
-- [ ] Remove the Phase 6 "Evaluate need for row-level tenancy" item (now done)
 
 ### Phase 1: Foundation Decoupling (No Breaking Changes)
 **Goal:** Restructure internals without changing any external behavior.
@@ -1018,13 +1017,13 @@ Hunter:     Beast Mastery, Marksmanship, Survival   (Survival = melee)
 
 ---
 
-## 10. Phase 0: Row-Level Tenancy (`tenant_id`) — Detailed Plan
+## 10. Phase 0: Row-Level Tenancy (`guild_id`) — Detailed Plan
 
 > **Priority:** This is the very first implementation step — before Phase 1
 > (expansion registry), Phase 2 (invitations), or any other feature work.
 >
 > **Why first?** Every subsequent phase adds more tables, queries, and features.
-> If we retrofit `tenant_id` enforcement later, we must audit every new query
+> If we retrofit `guild_id` enforcement later, we must audit every new query
 > written by Phases 1-6. Doing it now means all future code is written with
 > tenant isolation baked in from day one, and debugging cross-tenant data leaks
 > in a mature codebase is exponentially harder.
@@ -1036,7 +1035,7 @@ Hunter:     Beast Mastery, Marksmanship, Survival   (Survival = melee)
 Row-level tenancy (also called "shared database, shared schema" multi-tenancy)
 means **every guild-scoped row** in the database carries a `guild_id` foreign
 key that identifies which tenant (guild) owns that data. Every query that reads
-or writes guild-scoped data **must** include a `WHERE guild_id = :tenant_id`
+or writes guild-scoped data **must** include a `WHERE guild_id = :guild_id`
 filter.
 
 ```
@@ -1161,14 +1160,26 @@ guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
 **Index changes:**
 ```python
 # Update __table_args__:
+# Note: The single-column ix_signups_guild index serves queries that filter
+# only by guild_id (e.g., "all signups for this guild"). The composite
+# ix_signups_guild_event index serves the more common query pattern that
+# filters by guild_id + raid_event_id together. The composite index can also
+# satisfy guild_id-only queries (leftmost prefix), so the single-column index
+# is optional — include it only if the DB engine (SQLite) doesn't efficiently
+# use leftmost prefix scans. Can be dropped after benchmarking.
 __table_args__ = (
     sa.UniqueConstraint("raid_event_id", "character_id", name="uq_event_character"),
     sa.Index("ix_signups_raid_event", "raid_event_id"),
     sa.Index("ix_signups_user", "user_id"),
-    sa.Index("ix_signups_guild", "guild_id"),            # NEW
+    sa.Index("ix_signups_guild", "guild_id"),            # NEW — guild-only lookups
     sa.Index("ix_signups_guild_event", "guild_id", "raid_event_id"),  # NEW composite
 )
 ```
+
+**Unique constraint note:** The existing `uq_event_character` constraint
+`(raid_event_id, character_id)` does **not** need `guild_id` added — an event
+already belongs to exactly one guild, so the constraint is implicitly
+guild-scoped.
 
 **Data migration (SQL):**
 ```sql
@@ -2033,7 +2044,7 @@ Execute these steps **in order**. Each step must be verified before proceeding.
 | Area | Files | Estimated changes |
 |------|-------|-------------------|
 | **New files** | `app/models/mixins.py` | 1 new file (~30 lines) |
-| **Model changes** | `app/models/signup.py`, `app/models/attendance.py` | 5 models updated (~25 lines total) |
+| **Model changes** | `app/models/signup.py` (Signup, LineupSlot, RaidBan, CharacterReplacement), `app/models/attendance.py` (AttendanceRecord) — 5 models across 2 files | ~25 lines total |
 | **Service changes** | `signup_service.py`, `lineup_service.py`, `attendance_service.py`, `event_service.py`, `character_service.py`, `raid_service.py` | ~60-80 query updates |
 | **API changes** | `signups.py`, `lineup.py`, `attendance.py` | ~15-20 parameter additions |
 | **Test fixtures** | 10-20 test files | ~70-120 fixture updates |
