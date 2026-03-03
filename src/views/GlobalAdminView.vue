@@ -44,6 +44,7 @@
           <SystemTab v-if="activeTab === 'system'" />
           <RolesTab v-else-if="activeTab === 'roles'" />
           <GuildsTab v-else-if="activeTab === 'guilds'" />
+          <DefaultRaidDefinitionsTab v-else-if="activeTab === 'raid-definitions'" />
         </KeepAlive>
       </template>
     </div>
@@ -56,6 +57,7 @@ import AppShell from '@/components/layout/AppShell.vue'
 import SystemTab from '@/components/admin/SystemTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildsTab from '@/components/admin/GuildsTab.vue'
+import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitionsTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 
@@ -71,6 +73,9 @@ const icons = {
   ]),
   guilds: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' })
+  ]),
+  raidDefs: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 10h16M4 14h16M4 18h16' })
   ])
 }
 
@@ -78,6 +83,7 @@ const tabs = [
   { id: 'system', label: t('common.labels.system'), icon: icons.system },
   { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles },
   { id: 'guilds', label: t('admin.guilds.tabTitle'), icon: icons.guilds },
+  { id: 'raid-definitions', label: t('admin.raidDefinitions.tabTitle'), icon: icons.raidDefs },
 ]
 
 const activeTab = ref('system')

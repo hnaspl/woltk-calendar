@@ -734,7 +734,43 @@
       "viewMembers": "Pokaż członków",
       "noGuilds": "Nie znaleziono gildii.",
       "noMembers": "Brak członków w tej gildii.",
-      "loadError": "Nie udało się załadować gildii."
+      "loadError": "Nie udało się załadować gildii.",
+      "page": "Strona {current} z {total}",
+      "deleteGuild": "Usuń gildię",
+      "deleteConfirm": "Czy na pewno chcesz trwale usunąć gildię \"{guild}\"? Tej operacji nie można cofnąć.",
+      "guildDeleted": "Gildia została usunięta.",
+      "transferOwnership": "Przekaż własność",
+      "transferConfirm": "Przekazać własność \"{guild}\" do {user}? Obecny właściciel zostanie zdegradowany do członka.",
+      "ownershipTransferred": "Własność została przekazana.",
+      "sendNotification": "Wyślij powiadomienie",
+      "notifyTo": "Wyślij powiadomienie do {user}:",
+      "notifyPlaceholder": "Wpisz wiadomość...",
+      "send": "Wyślij",
+      "notificationSent": "Powiadomienie wysłane.",
+      "removeMember": "Usuń członka",
+      "removeConfirm": "Usunąć {user} z \"{guild}\"? Zostanie powiadomiony.",
+      "memberRemovedSuccess": "Członek został usunięty.",
+      "roleUpdated": "Rola członka zaktualizowana.",
+      "messageRequired": "Wiadomość jest wymagana."
+    },
+    "raidDefinitions": {
+      "tabTitle": "Definicje rajdów",
+      "title": "Domyślne definicje rajdów ({count})",
+      "name": "Nazwa",
+      "code": "Kod",
+      "raidSize": "Rozmiar rajdu",
+      "duration": "Czas trwania",
+      "modes": "Tryby",
+      "notes": "Notatki",
+      "newDefinition": "Nowa definicja",
+      "editDefinition": "Edytuj definicję",
+      "deleteDefinition": "Usuń definicję",
+      "deleteConfirm": "Czy na pewno chcesz usunąć domyślną definicję rajdu \"{name}\"?",
+      "noDefinitions": "Nie znaleziono domyślnych definicji rajdów.",
+      "loadError": "Nie udało się załadować definicji rajdów.",
+      "created": "Definicja rajdu utworzona.",
+      "updated": "Definicja rajdu zaktualizowana.",
+      "deleted": "Definicja rajdu usunięta."
     }
   },
   "signup": {
@@ -855,7 +891,8 @@
       "cannotTransferSelf": "Nie można przenieść własności na obecnego właściciela",
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
       "notWarmane": "Gildia nie pochodzi z Warmane",
-      "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API"
+      "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API",
+      "messageRequired": "Wiadomość jest wymagana."
     },
     "characters": {
       "notFound": "Postać nie znaleziona",
@@ -1031,6 +1068,10 @@
       "attended": "Obecny",
       "late": "Spóźniony",
       "no_show": "Nieobecny"
+    },
+    "adminMessage": {
+      "title": "📢 Wiadomość od administratora — {guildName}",
+      "body": "{message}"
     }
   },
   "language": {

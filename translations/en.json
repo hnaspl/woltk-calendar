@@ -734,7 +734,43 @@
       "viewMembers": "View Members",
       "noGuilds": "No guilds found.",
       "noMembers": "No members in this guild.",
-      "loadError": "Failed to load guilds."
+      "loadError": "Failed to load guilds.",
+      "page": "Page {current} of {total}",
+      "deleteGuild": "Delete Guild",
+      "deleteConfirm": "Are you sure you want to permanently delete the guild \"{guild}\"? This action cannot be undone.",
+      "guildDeleted": "Guild deleted successfully.",
+      "transferOwnership": "Transfer Ownership",
+      "transferConfirm": "Transfer ownership of \"{guild}\" to {user}? The current owner will be demoted to member.",
+      "ownershipTransferred": "Ownership transferred successfully.",
+      "sendNotification": "Send Notification",
+      "notifyTo": "Send a notification to {user}:",
+      "notifyPlaceholder": "Type your message...",
+      "send": "Send",
+      "notificationSent": "Notification sent successfully.",
+      "removeMember": "Remove Member",
+      "removeConfirm": "Remove {user} from \"{guild}\"? They will be notified.",
+      "memberRemovedSuccess": "Member removed successfully.",
+      "roleUpdated": "Member role updated.",
+      "messageRequired": "Message is required."
+    },
+    "raidDefinitions": {
+      "tabTitle": "Raid Definitions",
+      "title": "Default Raid Definitions ({count})",
+      "name": "Name",
+      "code": "Code",
+      "raidSize": "Raid Size",
+      "duration": "Duration",
+      "modes": "Modes",
+      "notes": "Notes",
+      "newDefinition": "New Definition",
+      "editDefinition": "Edit Definition",
+      "deleteDefinition": "Delete Definition",
+      "deleteConfirm": "Are you sure you want to delete the default raid definition \"{name}\"?",
+      "noDefinitions": "No default raid definitions found.",
+      "loadError": "Failed to load raid definitions.",
+      "created": "Raid definition created.",
+      "updated": "Raid definition updated.",
+      "deleted": "Raid definition deleted."
     }
   },
   "signup": {
@@ -855,7 +891,8 @@
       "cannotTransferSelf": "Cannot transfer ownership to the current owner",
       "targetNotActive": "Target user is not an active member of this guild",
       "notWarmane": "Guild is not sourced from Warmane",
-      "rosterFetchFailed": "Could not fetch roster from Warmane API"
+      "rosterFetchFailed": "Could not fetch roster from Warmane API",
+      "messageRequired": "Message is required."
     },
     "characters": {
       "notFound": "Character not found",
@@ -1031,6 +1068,10 @@
       "attended": "Attended",
       "late": "Late",
       "no_show": "Unattended"
+    },
+    "adminMessage": {
+      "title": "📢 Message from admin — {guildName}",
+      "body": "{message}"
     }
   },
   "language": {
