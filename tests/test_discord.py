@@ -414,6 +414,11 @@ class TestDiscordService:
                        side_effect=req.Timeout("timed out")):
                 assert exchange_code("some-code") is None
 
+    def test_gevent_timeout_imported(self):
+        """Verify gevent.Timeout is available for hard timeout in production."""
+        from app.services.discord_service import _GeventTimeout
+        assert _GeventTimeout is not None
+
 
 # ---------------------------------------------------------------------------
 # Discord callback endpoint

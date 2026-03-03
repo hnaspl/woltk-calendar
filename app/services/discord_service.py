@@ -16,6 +16,16 @@ from app.utils.encryption import decrypt_value
 
 logger = logging.getLogger(__name__)
 
+# Hard overall timeout (seconds) for the Discord code exchange.
+# Covers DNS resolution, TCP connect, TLS handshake, and HTTP read –
+# prevents the gevent worker from blocking indefinitely.
+_EXCHANGE_TIMEOUT = 15
+
+try:
+    from gevent import Timeout as _GeventTimeout
+except ImportError:  # pragma: no cover – gevent always installed in prod
+    _GeventTimeout = None
+
 DISCORD_API_BASE = "https://discord.com/api/v10"
 DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize"
 DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
@@ -68,14 +78,38 @@ def exchange_code(code: str) -> Optional[dict]:
 
     Returns a dict with keys: id, username, email, discriminator, avatar
     or None on failure.
+
+    Wrapped in a hard gevent timeout so DNS / connect / TLS issues
+    cannot block the worker indefinitely.
     """
     settings = _get_discord_settings()
     if not settings:
         logger.warning("Discord OAuth exchange_code called but settings not configured")
         return None
 
+    # Use gevent.Timeout for a hard overall deadline that covers
+    # DNS resolution (not covered by requests timeout), TCP connect,
+    # TLS handshake, and HTTP read.  If gevent is not available the
+    # per-request timeouts are the only safeguard.
+    result = None
+    if _GeventTimeout is not None:
+        with _GeventTimeout(_EXCHANGE_TIMEOUT, False):
+            result = _do_exchange(code, settings)
+        if result is None:
+            logger.warning("Discord code exchange returned no result "
+                           "(failed or timed out after %ss)", _EXCHANGE_TIMEOUT)
+    else:
+        result = _do_exchange(code, settings)
+        if result is None:
+            logger.warning("Discord code exchange returned no result")
+    return result
+
+
+def _do_exchange(code: str, settings: dict) -> Optional[dict]:
+    """Inner exchange: token request + user-info fetch."""
+    logger.info("Discord token exchange: POST %s", DISCORD_TOKEN_URL)
+
     try:
-        # Exchange code for token
         token_resp = requests.post(
             DISCORD_TOKEN_URL,
             data={
@@ -86,7 +120,7 @@ def exchange_code(code: str) -> Optional[dict]:
                 "redirect_uri": settings["discord_redirect_uri"],
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=10,
+            timeout=(5, 10),
         )
     except requests.RequestException as exc:
         logger.error("Discord token exchange request failed: %s", exc)
@@ -103,12 +137,13 @@ def exchange_code(code: str) -> Optional[dict]:
         logger.warning("Discord token response missing access_token")
         return None
 
+    logger.info("Discord token received, fetching user info")
+
     try:
-        # Fetch user info
         user_resp = requests.get(
             f"{DISCORD_API_BASE}/users/@me",
             headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
+            timeout=(5, 10),
         )
     except requests.RequestException as exc:
         logger.error("Discord user info request failed: %s", exc)
@@ -119,6 +154,7 @@ def exchange_code(code: str) -> Optional[dict]:
                         user_resp.status_code)
         return None
 
+    logger.info("Discord user info received successfully")
     return user_resp.json()
 
 

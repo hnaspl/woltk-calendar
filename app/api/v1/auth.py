@@ -142,7 +142,9 @@ def discord_login():
     session["discord_oauth_state"] = state
     url = discord_service.get_authorize_url(state)
     if not url:
+        current_app.logger.warning("Discord login: not configured")
         return jsonify({"error": _t("auth.errors.discordNotConfigured")}), 400
+    current_app.logger.info("Discord login: redirecting to Discord")
     return jsonify({"url": url}), 200
 
 
@@ -150,6 +152,8 @@ def discord_login():
 def discord_callback():
     """Handle the OAuth2 callback from Discord."""
     from flask import request
+
+    current_app.logger.info("Discord callback hit: %s", request.url)
 
     try:
         code = request.args.get("code")
@@ -164,6 +168,7 @@ def discord_callback():
             current_app.logger.warning("Discord callback state mismatch")
             return redirect("/login?error=discord_failed")
 
+        current_app.logger.info("Discord callback: state verified, exchanging code")
         discord_info = discord_service.exchange_code(code)
         if not discord_info:
             current_app.logger.warning("Discord code exchange failed")
