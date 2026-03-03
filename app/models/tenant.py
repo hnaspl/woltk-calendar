@@ -193,7 +193,12 @@ class TenantInvitation(db.Model):
     def is_expired(self) -> bool:
         if self.expires_at is None:
             return False
-        return datetime.now(timezone.utc) > self.expires_at
+        now = datetime.now(timezone.utc)
+        exp = self.expires_at
+        # Handle timezone-naive datetimes from SQLite
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        return now > exp
 
     @property
     def is_usable(self) -> bool:

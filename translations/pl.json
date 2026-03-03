@@ -70,7 +70,9 @@
       "loadingCharacters": "Ładowanie postaci…",
       "noSignups": "Brak zapisów.",
       "optionalNote": "Opcjonalna notatka…",
-      "recordAttendance": "Zapisz frekwencję"
+      "recordAttendance": "Zapisz frekwencję",
+      "saved": "Zapisano!",
+      "copied": "Skopiowano!"
     },
     "time": {
       "lastNDays": "Ostatnie {n} dni",
@@ -839,6 +841,24 @@
       "maxGuildsPerUserHelp": "Maksymalna liczba gildii, które pojedynczy użytkownik może utworzyć. Indywidualne nadpisania można ustawić w zakładce Użytkownicy.",
       "armoryAllowedDomains": "Dozwolone domeny armory",
       "armoryAllowedDomainsHelp": "Lista domen armory oddzielona przecinkami. Pozostaw puste, aby zezwolić na dowolną domenę."
+    },
+    "tenants": {
+      "title": "Zarządzanie najemcami",
+      "tabTitle": "Najemcy",
+      "total": "łącznie",
+      "name": "Nazwa",
+      "owner": "Właściciel",
+      "plan": "Plan",
+      "guilds": "Gildie",
+      "members": "Członkowie",
+      "status": "Status",
+      "actions": "Akcje",
+      "active": "Aktywny",
+      "suspended": "Zawieszony",
+      "suspend": "Zawieś",
+      "activate": "Aktywuj",
+      "confirmSuspend": "Zawiesić najemcę \"{name}\"? Użytkownicy stracą dostęp.",
+      "confirmDelete": "Usunąć najemcę \"{name}\"? Wszystkie dane zostaną trwale usunięte."
     }
   },
   "signup": {
@@ -1323,5 +1343,41 @@
     "urlRequired": "URL API armory jest wymagany",
     "labelRequired": "Etykieta konfiguracji armory jest wymagana",
     "configNotFound": "Konfiguracja armory nie została znaleziona"
+  },
+  "tenant": {
+    "workspace": "Przestrzeń robocza",
+    "noWorkspaces": "Brak przestrzeni roboczych",
+    "settings": "Ustawienia",
+    "invites": "Zaproszenia",
+    "settingsTitle": "Ustawienia przestrzeni roboczej",
+    "name": "Nazwa przestrzeni",
+    "description": "Opis",
+    "slug": "Slug URL",
+    "slugHelp": "Używany w adresach URL. Tylko małe litery, cyfry i myślniki.",
+    "membersTitle": "Członkowie",
+    "confirmRemoveMember": "Usunąć {name} z tej przestrzeni roboczej?",
+    "invitesTitle": "Zaproszenia do przestrzeni roboczej",
+    "createInvite": "Utwórz link z zaproszeniem",
+    "inviteRole": "Rola",
+    "roleMember": "Członek",
+    "roleAdmin": "Administrator",
+    "maxUses": "Maks. użyć",
+    "expiresInDays": "Wygasa (dni)",
+    "generateLink": "Generuj link",
+    "inviteLink": "Link z zaproszeniem",
+    "existingInvites": "Istniejące zaproszenia",
+    "noInvites": "Brak zaproszeń.",
+    "inviteBy": "Zaproszony przez {name}",
+    "uses": "Użycia",
+    "revoke": "Cofnij",
+    "confirmRevoke": "Cofnąć to zaproszenie?",
+    "acceptInviteTitle": "Przyjmij zaproszenie",
+    "acceptInviteMsg": "Kliknij przycisk poniżej, aby dołączyć do tej przestrzeni roboczej.",
+    "acceptInvite": "Przyjmij zaproszenie",
+    "inviteAccepted": "Zaproszenie przyjęte!",
+    "inviteAcceptedMsg": "Zostałeś dodany do przestrzeni roboczej.",
+    "goToDashboard": "Przejdź do panelu",
+    "invalidToken": "Nieprawidłowy link z zaproszeniem.",
+    "inviteFailed": "Nie udało się przyjąć zaproszenia."
   }
 }

@@ -13,6 +13,9 @@
       </div>
     </div>
 
+    <!-- Tenant Switcher -->
+    <TenantSwitcher />
+
     <!-- Guild Switcher -->
     <div class="px-4 py-3 border-b border-[#2a3450]">
       <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('common.labels.guild') }}</label>
@@ -212,6 +215,7 @@ import { useSocket } from '@/composables/useSocket'
 import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
+import TenantSwitcher from '@/components/layout/TenantSwitcher.vue'
 
 const { t } = useI18n()
 

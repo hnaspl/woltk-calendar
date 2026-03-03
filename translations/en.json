@@ -70,7 +70,9 @@
       "loadingCharacters": "Loading characters…",
       "noSignups": "No signups yet.",
       "optionalNote": "Optional note…",
-      "recordAttendance": "Record Attendance"
+      "recordAttendance": "Record Attendance",
+      "saved": "Saved!",
+      "copied": "Copied!"
     },
     "time": {
       "lastNDays": "Last {n} days",
@@ -839,6 +841,24 @@
       "maxGuildsPerUserHelp": "Maximum number of guilds a single user can create. Individual users can have overrides set in the Users tab.",
       "armoryAllowedDomains": "Allowed Armory Domains",
       "armoryAllowedDomainsHelp": "Comma-separated list of allowed armory domain names. Leave empty to allow any domain."
+    },
+    "tenants": {
+      "title": "Tenant Management",
+      "tabTitle": "Tenants",
+      "total": "total",
+      "name": "Name",
+      "owner": "Owner",
+      "plan": "Plan",
+      "guilds": "Guilds",
+      "members": "Members",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "suspended": "Suspended",
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "confirmSuspend": "Suspend tenant \"{name}\"? Users will lose access.",
+      "confirmDelete": "Delete tenant \"{name}\"? All data will be permanently removed."
     }
   },
   "signup": {
@@ -1323,5 +1343,41 @@
     "urlRequired": "Armory API URL is required",
     "labelRequired": "Armory config label is required",
     "configNotFound": "Armory configuration not found"
+  },
+  "tenant": {
+    "workspace": "Workspace",
+    "noWorkspaces": "No workspaces",
+    "settings": "Settings",
+    "invites": "Invitations",
+    "settingsTitle": "Workspace Settings",
+    "name": "Workspace Name",
+    "description": "Description",
+    "slug": "URL Slug",
+    "slugHelp": "Used in URLs. Only lowercase letters, numbers, and hyphens.",
+    "membersTitle": "Members",
+    "confirmRemoveMember": "Remove {name} from this workspace?",
+    "invitesTitle": "Workspace Invitations",
+    "createInvite": "Create Invitation Link",
+    "inviteRole": "Role",
+    "roleMember": "Member",
+    "roleAdmin": "Admin",
+    "maxUses": "Max Uses",
+    "expiresInDays": "Expires (days)",
+    "generateLink": "Generate Link",
+    "inviteLink": "Invite Link",
+    "existingInvites": "Existing Invitations",
+    "noInvites": "No invitations yet.",
+    "inviteBy": "Invited by {name}",
+    "uses": "Uses",
+    "revoke": "Revoke",
+    "confirmRevoke": "Revoke this invitation?",
+    "acceptInviteTitle": "Accept Invitation",
+    "acceptInviteMsg": "Click the button below to join this workspace.",
+    "acceptInvite": "Accept Invitation",
+    "inviteAccepted": "Invitation Accepted!",
+    "inviteAcceptedMsg": "You have been added to the workspace.",
+    "goToDashboard": "Go to Dashboard",
+    "invalidToken": "Invalid invitation link.",
+    "inviteFailed": "Failed to accept invitation."
   }
 }
