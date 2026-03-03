@@ -41,6 +41,16 @@ def require_guild_permission(permission_code: str | None = None) -> Callable:
             if guild_id is None:
                 return jsonify({"error": "guild_id is required"}), 400
 
+            # Tenant isolation: verify guild belongs to user's active tenant
+            active_tid = getattr(current_user, "active_tenant_id", None)
+            if active_tid is not None:
+                from app.extensions import db
+                from app.models.guild import Guild
+                guild = db.session.get(Guild, guild_id)
+                if guild is not None and getattr(guild, "tenant_id", None) is not None:
+                    if guild.tenant_id != active_tid:
+                        return jsonify({"error": _t("api.events.notFound")}), 404
+
             membership = get_membership(guild_id, current_user.id)
 
             if permission_code:

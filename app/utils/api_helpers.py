@@ -31,17 +31,21 @@ def validate_required(data: dict, *fields: str):
     return None
 
 
-def get_event_or_404(guild_id: int, event_id: int):
+def get_event_or_404(guild_id: int, event_id: int, *, active_tenant_id: int | None = None):
     """Fetch a guild-scoped event by ID.
 
     Returns ``(event, None)`` on success or ``(None, error_response)`` when the
-    event does not exist or does not belong to the guild.
+    event does not exist or does not belong to the guild (or tenant).
     """
     from app.services import event_service
 
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return None, (jsonify({"error": _t("api.events.notFound")}), 404)
+    # Tenant isolation check
+    if active_tenant_id is not None and getattr(event, "tenant_id", None) is not None:
+        if event.tenant_id != active_tenant_id:
+            return None, (jsonify({"error": _t("api.events.notFound")}), 404)
     return event, None
 
 

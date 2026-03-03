@@ -11,6 +11,31 @@ export const useAuthStore = defineStore('auth', () => {
   // (router guard + App.vue onMounted) share a single API request.
   let _fetchPromise = null
 
+  /** Helper to bootstrap tenant context after auth. */
+  function _bootstrapTenant(userData) {
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      const tenantStore = useTenantStore()
+      if (userData?.active_tenant_id) {
+        tenantStore.activeTenantId = userData.active_tenant_id
+      }
+      tenantStore.fetchTenants()
+    } catch {
+      // Tenant store not yet initialized — skip
+    }
+  }
+
+  /** Helper to clear tenant context on logout. */
+  function _resetTenant() {
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      const tenantStore = useTenantStore()
+      tenantStore.$reset()
+    } catch {
+      // Tenant store not yet initialized — skip
+    }
+  }
+
   async function fetchMe() {
     if (_fetchPromise) return _fetchPromise
 
@@ -18,7 +43,11 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     _fetchPromise = authApi.getMe()
-      .then(data => { user.value = data; return data })
+      .then(data => {
+        user.value = data
+        _bootstrapTenant(data)
+        return data
+      })
       .catch(err => { user.value = null; throw err })
       .finally(() => { loading.value = false; _fetchPromise = null })
 
@@ -31,6 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const data = await authApi.login({ email, password })
       user.value = data.user ?? data
+      _bootstrapTenant(user.value)
     } catch (err) {
       error.value = err?.response?.data?.message || 'Login failed'
       throw err
@@ -45,6 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const data = await authApi.register({ username, email, password })
       user.value = data.user ?? data
+      _bootstrapTenant(user.value)
     } catch (err) {
       error.value = err?.response?.data?.message || 'Registration failed'
       throw err
@@ -59,6 +90,7 @@ export const useAuthStore = defineStore('auth', () => {
       await authApi.logout()
     } finally {
       user.value = null
+      _resetTenant()
       loading.value = false
     }
   }

@@ -105,11 +105,12 @@ def list_guilds_for_user(user_id: int) -> list[Guild]:
     return list(rows)
 
 
-def list_all_guilds() -> list[Guild]:
-    """Return all guilds (for browsing / joining)."""
-    rows = db.session.execute(
-        sa.select(Guild).order_by(Guild.name.asc())
-    ).scalars().all()
+def list_all_guilds(*, tenant_id: int | None = None) -> list[Guild]:
+    """Return all guilds, optionally scoped to a tenant."""
+    stmt = sa.select(Guild).order_by(Guild.name.asc())
+    if tenant_id is not None:
+        stmt = stmt.where(Guild.tenant_id == tenant_id)
+    rows = db.session.execute(stmt).scalars().all()
     return list(rows)
 
 

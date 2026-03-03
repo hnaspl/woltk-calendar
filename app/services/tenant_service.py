@@ -10,6 +10,7 @@ from typing import Optional
 import sqlalchemy as sa
 
 from app.extensions import db
+from app.enums import MemberStatus
 from app.models.tenant import Tenant, TenantMembership, TenantInvitation
 from app.models.user import User
 
@@ -80,7 +81,7 @@ def create_tenant(
         tenant_id=tenant.id,
         user_id=owner.id,
         role="owner",
-        status="active",
+        status=MemberStatus.ACTIVE,
     )
     db.session.add(membership)
 
@@ -132,7 +133,7 @@ def list_tenants_for_user(user_id: int) -> list[Tenant]:
         .join(TenantMembership, TenantMembership.tenant_id == Tenant.id)
         .where(
             TenantMembership.user_id == user_id,
-            TenantMembership.status == "active",
+            TenantMembership.status == MemberStatus.ACTIVE,
         )
     ).scalars().all()
     return list(rows)
@@ -208,7 +209,7 @@ def add_member(
         count = db.session.execute(
             sa.select(sa.func.count()).select_from(TenantMembership).where(
                 TenantMembership.tenant_id == tenant_id,
-                TenantMembership.status == "active",
+                TenantMembership.status == MemberStatus.ACTIVE,
             )
         ).scalar()
         if count >= tenant.max_members:
@@ -218,7 +219,7 @@ def add_member(
         tenant_id=tenant_id,
         user_id=user_id,
         role=role,
-        status="active",
+        status=MemberStatus.ACTIVE,
     )
     db.session.add(membership)
     db.session.commit()
@@ -251,7 +252,7 @@ def remove_member(tenant_id: int, user_id: int) -> None:
 def switch_active_tenant(user: User, tenant_id: int) -> User:
     """Set the user's active tenant. Verifies membership."""
     membership = get_membership(tenant_id, user.id)
-    if not membership or membership.status != "active":
+    if not membership or membership.status != MemberStatus.ACTIVE.value:
         raise ValueError("You are not an active member of this tenant")
     tenant = db.session.get(Tenant, tenant_id)
     if not tenant or not tenant.is_active:
@@ -363,7 +364,7 @@ def is_tenant_admin(tenant_id: int, user_id: int) -> bool:
 
 def is_tenant_member(tenant_id: int, user_id: int) -> bool:
     membership = get_membership(tenant_id, user_id)
-    return membership is not None and membership.status == "active"
+    return membership is not None and membership.status == MemberStatus.ACTIVE.value
 
 
 def get_guild_count(tenant_id: int) -> int:

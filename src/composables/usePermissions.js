@@ -63,8 +63,37 @@ export function usePermissions() {
     return dynamicPermissions.value.includes(permission)
   }
 
+  // ── Tenant-level permission helpers ──
+  let _tenantStore = null
+  try {
+    const { useTenantStore } = require('@/stores/tenant')
+    _tenantStore = useTenantStore()
+  } catch {
+    // Tenant store not yet initialized
+  }
+
+  const tenantRole = computed(() => _tenantStore?.activeTenant?.role ?? null)
+  const isTenantOwner = computed(() => tenantRole.value === 'owner')
+  const isTenantAdmin = computed(() => ['owner', 'admin'].includes(tenantRole.value))
+
+  /**
+   * Check tenant-level permissions.
+   * @param {'create_guild'|'invite_member'|'manage_settings'|'manage_members'} action
+   */
+  function canTenant(action) {
+    if (currentUser.value?.is_admin === true) return true
+    switch (action) {
+      case 'create_guild': return isTenantAdmin.value && !(_tenantStore?.atGuildLimit)
+      case 'invite_member': return isTenantAdmin.value
+      case 'manage_settings': return isTenantOwner.value
+      case 'manage_members': return isTenantAdmin.value
+      default: return false
+    }
+  }
+
   return {
     membership, role, isMember,
     can, dynamicPermissions, permissionsLoaded, fetchPermissions,
+    tenantRole, isTenantOwner, isTenantAdmin, canTenant,
   }
 }

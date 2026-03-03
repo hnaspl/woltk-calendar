@@ -26,3 +26,15 @@ export const getGuildFeatures = (guildId) =>
 
 export const updateGuildFeatures = (guildId, features) =>
   api.put(`/admin/guilds/${guildId}/features`, features).then(r => r.data)
+
+// ── Tenant admin endpoints (v2) ──
+const v2 = api.create ? api : { ...api }
+const v2base = '/api/v2'
+
+export const getAdminTenants = () => api.get(`${v2base}/admin/tenants`)
+export const getAdminTenant = (id) => api.get(`${v2base}/admin/tenants/${id}`)
+export const updateAdminTenant = (id, data) => api.put(`${v2base}/admin/tenants/${id}`, data)
+export const suspendTenant = (id) => api.post(`${v2base}/admin/tenants/${id}/suspend`)
+export const activateTenant = (id) => api.post(`${v2base}/admin/tenants/${id}/activate`)
+export const deleteAdminTenant = (id) => api.delete(`${v2base}/admin/tenants/${id}`)
+export const updateTenantLimits = (id, data) => api.put(`${v2base}/admin/tenants/${id}/limits`, data)

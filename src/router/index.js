@@ -85,7 +85,7 @@ const routes = [
     path: '/invite/:token',
     name: 'invite-accept',
     component: () => import('@/views/InviteAcceptView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: false }
   },
   {
     path: '/guild/settings',

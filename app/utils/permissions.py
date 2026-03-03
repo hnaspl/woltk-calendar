@@ -62,17 +62,24 @@ def has_any_guild_permission(user_id: int, permission_code: str) -> bool:
 
     Useful for non-guild-scoped actions like creating a guild, where the user
     doesn't yet belong to the target guild.  Site admins bypass all checks.
+    Scoped to active tenant when the user has one set.
     """
     if current_user and getattr(current_user, "is_admin", False):
         return True
 
-    # Find all active memberships for this user
-    memberships = db.session.execute(
-        sa.select(GuildMembership).where(
-            GuildMembership.user_id == user_id,
-            GuildMembership.status == MemberStatus.ACTIVE.value,
+    # Build query scoped to active tenant if available
+    stmt = sa.select(GuildMembership).where(
+        GuildMembership.user_id == user_id,
+        GuildMembership.status == MemberStatus.ACTIVE.value,
+    )
+    active_tid = getattr(current_user, "active_tenant_id", None) if current_user else None
+    if active_tid is not None:
+        from app.models.guild import Guild
+        stmt = stmt.join(Guild, GuildMembership.guild_id == Guild.id).where(
+            Guild.tenant_id == active_tid
         )
-    ).scalars().all()
+
+    memberships = db.session.execute(stmt).scalars().all()
 
     # If user has no memberships, check the default "member" role
     if not memberships:

@@ -11,6 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
+from app.enums import MemberStatus
 from app.utils.dt import utc_iso
 
 if TYPE_CHECKING:
@@ -112,7 +113,11 @@ class TenantMembership(db.Model):
         sa.Integer, sa.ForeignKey("users.id"), nullable=False
     )
     role: Mapped[str] = mapped_column(sa.String(30), nullable=False, default="member")
-    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="active")
+    status: Mapped[str] = mapped_column(
+        sa.Enum(MemberStatus, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=MemberStatus.ACTIVE,
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,

@@ -5,7 +5,10 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="wow-heading text-xl sm:text-2xl">{{ t('common.labels.dashboard') }}</h1>
-          <p class="text-text-muted text-sm mt-0.5">{{ t('dashboard.welcome', { name: authStore.user?.username }) }}</p>
+          <p class="text-text-muted text-sm mt-0.5">
+            {{ t('dashboard.welcome', { name: authStore.user?.username }) }}
+            <span v-if="tenantStore.activeTenant" class="text-accent-gold/70"> · {{ tenantStore.activeTenant.name }}</span>
+          </p>
         </div>
         <RouterLink to="/calendar">
           <WowButton variant="secondary">
@@ -242,6 +245,7 @@ import SpecBadge from '@/components/common/SpecBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
+import { useTenantStore } from '@/stores/tenant'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
@@ -255,6 +259,7 @@ import { useI18n } from 'vue-i18n'
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const calStore = useCalendarStore()
+const tenantStore = useTenantStore()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
 const tzHelper = useTimezone()
