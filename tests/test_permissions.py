@@ -633,9 +633,15 @@ class TestRoleHierarchy:
 class TestRolesAPI:
     """Test the /api/v1/roles API endpoints."""
 
-    def _login(self, app, client, user):
-        with client.session_transaction() as sess:
-            sess["_user_id"] = str(user.id)
+    @staticmethod
+    def _login(app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+            from flask import session as flask_session
+            sess_data = dict(flask_session)
+        with client.session_transaction() as s:
+            s.update(sess_data)
 
     def test_list_roles(self, seeded, app):
         with app.test_client() as client:
@@ -786,9 +792,15 @@ class TestRolePermissionFiltering:
     """Non-admin users should only see roles at/below their level
     and should not see admin-category permissions."""
 
-    def _login(self, app, client, user):
-        with client.session_transaction() as sess:
-            sess["_user_id"] = str(user.id)
+    @staticmethod
+    def _login(app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+            from flask import session as flask_session
+            sess_data = dict(flask_session)
+        with client.session_transaction() as s:
+            s.update(sess_data)
 
     # -- Roles filtering --
 
@@ -880,8 +892,8 @@ class TestRolePermissionFiltering:
             })
             assert resp.status_code == 403
 
-    def test_guild_admin_can_create_role_at_own_level(self, seeded, app):
-        """Guild admin (level 80) CAN create a role with level = 80."""
+    def test_guild_admin_cannot_create_roles(self, seeded, app):
+        """Guild admin cannot create roles — role CRUD is global admin only."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.post("/api/v1/roles", json={
@@ -890,29 +902,86 @@ class TestRolePermissionFiltering:
                 "level": 80,
                 "permissions": ["view_events"],
             })
-            assert resp.status_code == 201
-            data = resp.get_json()
-            assert data["level"] == 80
-            # Admin permissions should be stripped
-            assert "manage_system_users" not in data["permissions"]
+            assert resp.status_code == 403
 
-    def test_guild_admin_cannot_assign_admin_permissions_on_create(self, seeded, app):
-        """Guild admin cannot assign admin-category permissions when creating a role."""
+    def test_guild_admin_cannot_update_roles(self, seeded, app):
+        """Guild admin cannot update roles — role CRUD is global admin only."""
+        # Get a role ID as site admin
+        with app.test_client() as admin_client:
+            self._login(app, admin_client, seeded["site_admin"])
+            resp = admin_client.get("/api/v1/roles")
+            role_id = resp.get_json()[0]["id"]
+
+        # Try to update as guild admin in a fresh session
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.post("/api/v1/roles", json={
-                "name": "sneaky_role",
-                "display_name": "Sneaky Role",
+            resp = client.put(f"/api/v1/roles/{role_id}", json={
+                "display_name": "Hacked Name",
+            })
+            assert resp.status_code == 403
+
+    def test_guild_admin_cannot_delete_roles(self, seeded, app):
+        """Guild admin cannot delete roles — role CRUD is global admin only."""
+        # Create a custom role as site admin
+        with app.test_client() as admin_client:
+            self._login(app, admin_client, seeded["site_admin"])
+            resp = admin_client.post("/api/v1/roles", json={
+                "name": "to_delete_ga",
+                "display_name": "To Delete",
                 "level": 10,
-                "permissions": ["view_events", "list_system_users", "manage_system_users"],
+            })
+            role_id = resp.get_json()["id"]
+
+        # Try to delete as guild admin in a fresh session
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.delete(f"/api/v1/roles/{role_id}")
+            assert resp.status_code == 403
+
+    def test_guild_admin_cannot_create_grant_rules(self, seeded, app):
+        """Guild admin cannot create grant rules — global admin only."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            # Get role IDs
+            resp = client.get("/api/v1/roles")
+            roles = resp.get_json()
+            if len(roles) >= 2:
+                resp = client.post("/api/v1/roles/grant-rules", json={
+                    "granter_role_id": roles[0]["id"],
+                    "grantee_role_id": roles[1]["id"],
+                })
+                assert resp.status_code == 403
+
+    def test_guild_admin_cannot_delete_grant_rules(self, seeded, app):
+        """Guild admin cannot delete grant rules — global admin only."""
+        # Get existing grant rules as site admin
+        with app.test_client() as admin_client:
+            self._login(app, admin_client, seeded["site_admin"])
+            resp = admin_client.get("/api/v1/roles/grant-rules")
+            rules = resp.get_json()
+
+        if rules:
+            # Try to delete as guild admin in a fresh session
+            with app.test_client() as client:
+                self._login(app, client, seeded["guild_admin_user"])
+                resp = client.delete(f"/api/v1/roles/grant-rules/{rules[0]['id']}")
+                assert resp.status_code == 403
+
+    def test_global_admin_can_create_roles(self, seeded, app):
+        """Global admin CAN create roles."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.post("/api/v1/roles", json={
+                "name": "admin_created_role",
+                "display_name": "Admin Created",
+                "level": 50,
+                "permissions": ["view_events", "list_system_users"],
             })
             assert resp.status_code == 201
             data = resp.get_json()
-            # Admin-category permissions should NOT be included
-            assert "list_system_users" not in data["permissions"]
-            assert "manage_system_users" not in data["permissions"]
-            # Non-admin permissions should be included
-            assert "view_events" in data["permissions"]
+            assert data["level"] == 50
+            # Admin CAN assign admin-category permissions
+            assert "list_system_users" in data["permissions"]
 
 
 # ===========================================================================

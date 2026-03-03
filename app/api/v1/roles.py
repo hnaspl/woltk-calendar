@@ -39,6 +39,13 @@ def _caller_max_role_level() -> int:
     return rows or 0
 
 
+def _require_global_admin():
+    """Return an error tuple if the current user is not a global admin."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    return None
+
+
 def _require_manage_roles(guild_id: int | None = None):
     """Check that the current user can manage roles.
 
@@ -117,8 +124,8 @@ def get_role(role_id: int):
 @bp.post("")
 @login_required
 def create_role():
-    """Create a new custom role."""
-    err = _require_manage_roles()
+    """Create a new custom role. Global admin only."""
+    err = _require_global_admin()
     if err:
         return err
 
@@ -175,8 +182,8 @@ def create_role():
 @bp.put("/<int:role_id>")
 @login_required
 def update_role(role_id: int):
-    """Update a role's properties and/or permissions."""
-    err = _require_manage_roles()
+    """Update a role's properties and/or permissions. Global admin only."""
+    err = _require_global_admin()
     if err:
         return err
 
@@ -237,8 +244,8 @@ def update_role(role_id: int):
 @bp.delete("/<int:role_id>")
 @login_required
 def delete_role(role_id: int):
-    """Delete a custom role (system roles cannot be deleted)."""
-    err = _require_manage_roles()
+    """Delete a custom role (system roles cannot be deleted). Global admin only."""
+    err = _require_global_admin()
     if err:
         return err
 
@@ -290,8 +297,8 @@ def list_grant_rules():
 @bp.post("/grant-rules")
 @login_required
 def create_grant_rule():
-    """Create a new grant rule (which role can assign which role)."""
-    err = _require_manage_roles()
+    """Create a new grant rule (which role can assign which role). Global admin only."""
+    err = _require_global_admin()
     if err:
         return err
 
@@ -328,8 +335,8 @@ def create_grant_rule():
 @bp.delete("/grant-rules/<int:rule_id>")
 @login_required
 def delete_grant_rule(rule_id: int):
-    """Delete a grant rule."""
-    err = _require_manage_roles()
+    """Delete a grant rule. Global admin only."""
+    err = _require_global_admin()
     if err:
         return err
 
