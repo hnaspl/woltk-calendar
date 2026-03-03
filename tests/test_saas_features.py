@@ -245,6 +245,7 @@ class TestGuildCreationLimits:
         # Third guild — blocked
         resp = self._create_guild(client, "Guild 3")
         assert resp.status_code == 403
+        assert "2" in resp.get_json().get("error", "")
 
     def test_admin_bypasses_limit(self, app, ctx):
         """Admin user is never subject to guild creation limits."""
@@ -287,6 +288,7 @@ class TestGuildCreationLimits:
         # Override limit of 1 should now block
         resp = self._create_guild(client, "Override Guild 2")
         assert resp.status_code == 403
+        assert "1" in resp.get_json().get("error", "")
 
 
 # ===================================================================
