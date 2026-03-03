@@ -694,3 +694,100 @@ class TestDiscordCallback:
             resp = client.get("/api/v1/auth/discord/callback?code=real&state=valid-state")
         assert resp.status_code == 302
         assert "/login?error=account_disabled" in resp.headers["Location"]
+
+    def test_login_stores_redirect_uri_in_session(self, app, client, db):
+        """discord/login must store the redirect_uri in the session so
+        the callback can reuse the exact same value for token exchange."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="sess-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("sess-sec")))
+            db.session.commit()
+
+        resp = client.get("/api/v1/auth/discord/login")
+        assert resp.status_code == 302
+
+        with client.session_transaction() as sess:
+            assert "discord_redirect_uri" in sess
+            assert sess["discord_redirect_uri"].endswith(
+                "/api/v1/auth/discord/callback")
+
+    def test_callback_passes_stored_redirect_uri_to_exchange(self, app, client, db):
+        """The callback must pass the stored redirect_uri to exchange_code."""
+        from unittest.mock import patch
+        discord_info = {
+            "id": "888999",
+            "username": "uriuser",
+            "email": "uri@discord.com",
+        }
+        stored_uri = "http://myhost:5000/api/v1/auth/discord/callback"
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "uri-state"
+            sess["discord_redirect_uri"] = stored_uri
+        with patch("app.services.discord_service.exchange_code",
+                   return_value=discord_info) as mock_exchange:
+            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=uri-state")
+        assert resp.status_code == 302
+        assert "/dashboard" in resp.headers["Location"]
+        mock_exchange.assert_called_once_with("abc", redirect_uri=stored_uri)
+
+    def test_callback_works_without_stored_redirect_uri(self, app, client, db):
+        """The callback should still work if the stored redirect_uri is missing
+        (falls back to auto-generation)."""
+        from unittest.mock import patch
+        discord_info = {"id": "777888", "username": "fallback"}
+        with client.session_transaction() as sess:
+            sess["discord_oauth_state"] = "fb-state"
+            # No discord_redirect_uri in session
+        with patch("app.services.discord_service.exchange_code",
+                   return_value=discord_info) as mock_exchange:
+            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=fb-state")
+        assert resp.status_code == 302
+        assert "/dashboard" in resp.headers["Location"]
+        mock_exchange.assert_called_once_with("abc", redirect_uri=None)
+
+
+# ---------------------------------------------------------------------------
+# discord_enabled endpoint robustness
+# ---------------------------------------------------------------------------
+
+class TestDiscordEnabledRobust:
+    def test_discord_enabled_handles_db_error(self, app, client, db):
+        """discord/enabled must return {enabled: false} on DB errors, not 500."""
+        from unittest.mock import patch
+        with patch("app.services.discord_service.is_discord_enabled",
+                   side_effect=Exception("DB gone")):
+            resp = client.get("/api/v1/auth/discord/enabled")
+        assert resp.status_code == 200
+        assert resp.get_json()["enabled"] is False
+
+    def test_exchange_code_accepts_redirect_uri(self, app, db):
+        """exchange_code must forward the redirect_uri to the token exchange."""
+        from unittest.mock import patch, MagicMock
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="x-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("x-sec")))
+            db.session.commit()
+
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"access_token": "tok"}
+
+            mock_user_resp = MagicMock()
+            mock_user_resp.status_code = 200
+            mock_user_resp.json.return_value = {"id": "1", "username": "u"}
+
+            from app.services.discord_service import exchange_code
+            # Pass explicit redirect_uri — should NOT need request context
+            with patch("app.services.discord_service.requests.post",
+                       return_value=mock_resp) as mock_post, \
+                 patch("app.services.discord_service.requests.get",
+                       return_value=mock_user_resp):
+                result = exchange_code("test-code",
+                                       redirect_uri="http://custom:5000/api/v1/auth/discord/callback")
+                assert result is not None
+                call_data = mock_post.call_args.kwargs.get("data", {})
+                assert call_data["redirect_uri"] == "http://custom:5000/api/v1/auth/discord/callback"

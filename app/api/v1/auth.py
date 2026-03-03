@@ -136,20 +136,38 @@ def change_password():
 @bp.get("/discord/enabled")
 def discord_enabled():
     """Return whether Discord login is configured."""
-    return jsonify({"enabled": discord_service.is_discord_enabled()}), 200
+    try:
+        enabled = discord_service.is_discord_enabled()
+    except Exception:
+        current_app.logger.exception("Error checking Discord enabled status")
+        enabled = False
+    return jsonify({"enabled": enabled}), 200
 
 
 @bp.get("/discord/login")
 def discord_login():
-    """Redirect the user to Discord's authorization page (HTTP 302)."""
+    """Redirect the user to Discord's authorization page (HTTP 302).
+
+    The redirect_uri is generated here and stored in the session so the
+    callback handler can pass the *exact same* value to the token
+    exchange — this prevents mismatches caused by proxy / header
+    inconsistencies between the two requests.
+    """
+    redirect_uri = discord_service.get_redirect_uri()
+    if redirect_uri is None:
+        current_app.logger.warning("Discord login: not configured")
+        return redirect("/login?error=discord_not_configured")
+
     state = secrets.token_urlsafe(32)
     session["discord_oauth_state"] = state
-    url = discord_service.get_authorize_url(state)
+    session["discord_redirect_uri"] = redirect_uri
+
+    url = discord_service.get_authorize_url(state, redirect_uri=redirect_uri)
     if not url:
         current_app.logger.warning("Discord login: not configured")
         return redirect("/login?error=discord_not_configured")
     current_app.logger.info("Discord login: redirecting to Discord (redirect_uri=%s)",
-                            discord_service.get_redirect_uri())
+                            redirect_uri)
     return redirect(url)
 
 
@@ -169,12 +187,29 @@ def discord_callback():
             return redirect("/login?error=discord_failed")
 
         expected_state = session.pop("discord_oauth_state", None)
+        stored_redirect_uri = session.pop("discord_redirect_uri", None)
+
         if state != expected_state:
-            current_app.logger.warning("Discord callback state mismatch")
+            current_app.logger.warning(
+                "Discord callback state mismatch (expected=%s, got=%s)",
+                "present" if expected_state else "missing",
+                "present" if state else "missing",
+            )
             return redirect("/login?error=discord_failed")
 
+        # Use the stored redirect_uri so it matches the authorize URL exactly.
+        # Falls back to auto-generation if session value was lost (best effort).
+        if stored_redirect_uri:
+            current_app.logger.info("Discord callback: using stored redirect_uri=%s",
+                                    stored_redirect_uri)
+        else:
+            current_app.logger.warning(
+                "Discord callback: stored redirect_uri missing from session, "
+                "auto-generating (may cause mismatch)")
+
         current_app.logger.info("Discord callback: state verified, exchanging code")
-        discord_info = discord_service.exchange_code(code)
+        discord_info = discord_service.exchange_code(
+            code, redirect_uri=stored_redirect_uri)
         if not discord_info:
             current_app.logger.warning("Discord code exchange failed")
             return redirect("/login?error=discord_failed")

@@ -100,16 +100,24 @@ def get_redirect_uri() -> Optional[str]:
     return _effective_redirect_uri()
 
 
-def get_authorize_url(state: str) -> Optional[str]:
+def get_authorize_url(state: str, redirect_uri: Optional[str] = None) -> Optional[str]:
     """Build the Discord OAuth2 authorization URL, or None if not configured.
 
     Per Discord docs, scopes are "separated by url encoded spaces (%20)".
     Reference: https://discord.com/developers/docs/topics/oauth2#authorization-code-grant
+
+    Args:
+        state: CSRF state token.
+        redirect_uri: If provided, uses this exact URI instead of
+            auto-generating from request context.  Callers should store
+            this value in the session so the token-exchange step uses
+            the *same* URI (see ``exchange_code``).
     """
     settings = _get_discord_settings()
     if not settings:
         return None
-    redirect_uri = _effective_redirect_uri()
+    if redirect_uri is None:
+        redirect_uri = _effective_redirect_uri()
     params = {
         "client_id": settings["discord_client_id"],
         "redirect_uri": redirect_uri,
@@ -121,11 +129,19 @@ def get_authorize_url(state: str) -> Optional[str]:
     return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
 
 
-def exchange_code(code: str) -> Optional[dict]:
+def exchange_code(code: str, redirect_uri: Optional[str] = None) -> Optional[dict]:
     """Exchange an authorization code for access token + user info.
 
     Returns a dict with keys: id, username, email, discriminator, avatar
     or None on failure.
+
+    Args:
+        code: The authorization code from Discord.
+        redirect_uri: The *exact* redirect_uri that was used in the
+            authorize URL.  When provided the value is sent as-is in
+            the token exchange so the two always match (Discord
+            requirement).  Falls back to auto-generation from the
+            current request context when ``None``.
 
     Wrapped in a hard gevent timeout so DNS / connect / TLS issues
     cannot block the worker indefinitely.
@@ -142,18 +158,19 @@ def exchange_code(code: str) -> Optional[dict]:
     result = None
     if _GeventTimeout is not None:
         with _GeventTimeout(_EXCHANGE_TIMEOUT, False):
-            result = _do_exchange(code, settings)
+            result = _do_exchange(code, settings, redirect_uri=redirect_uri)
         if result is None:
             logger.warning("Discord code exchange returned no result "
                            "(failed or timed out after %ss)", _EXCHANGE_TIMEOUT)
     else:
-        result = _do_exchange(code, settings)
+        result = _do_exchange(code, settings, redirect_uri=redirect_uri)
         if result is None:
             logger.warning("Discord code exchange returned no result")
     return result
 
 
-def _do_exchange(code: str, settings: dict) -> Optional[dict]:
+def _do_exchange(code: str, settings: dict, *,
+                 redirect_uri: Optional[str] = None) -> Optional[dict]:
     """Inner exchange: token request + user-info fetch.
 
     Per Discord docs, the token exchange uses HTTP Basic authentication
@@ -161,11 +178,12 @@ def _do_exchange(code: str, settings: dict) -> Optional[dict]:
     redirect_uri as form-encoded body.
     Reference: https://discord.com/developers/docs/topics/oauth2#authorization-code-grant-access-token-exchange-example
     """
-    logger.info("Discord token exchange: POST %s", DISCORD_TOKEN_URL)
-
     client_id = settings["discord_client_id"]
     client_secret = settings["discord_client_secret"]
-    redirect_uri = _effective_redirect_uri()
+    if redirect_uri is None:
+        redirect_uri = _effective_redirect_uri()
+    logger.info("Discord token exchange: POST %s (redirect_uri=%s)",
+                DISCORD_TOKEN_URL, redirect_uri)
 
     try:
         token_resp = requests.post(
