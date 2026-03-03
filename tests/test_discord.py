@@ -736,7 +736,7 @@ class TestDiscordCallback:
         """The callback should still work if the stored redirect_uri is missing
         (falls back to auto-generation)."""
         from unittest.mock import patch
-        discord_info = {"id": "777888", "username": "fallback"}
+        discord_info = {"id": "777888", "username": "fallback", "email": "fb@discord.com"}
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "fb-state"
             # No discord_redirect_uri in session
