@@ -22,6 +22,7 @@
 7. [Phased Implementation Roadmap](#7-phased-implementation-roadmap)
 8. [Migration & Backward Compatibility](#8-migration--backward-compatibility)
 9. [Open Questions & Decisions](#9-open-questions--decisions)
+10. [Phase 0: Row-Level Tenancy (tenant_id) — Detailed Plan](#10-phase-0-row-level-tenancy-tenant_id--detailed-plan)
 
 ---
 
@@ -265,8 +266,15 @@ Even without strict tenant isolation, enforce guild-scoped data access:
 | **Invitation-based membership** ✅ | Simple, flexible, matches WoW guild model | Less strict isolation, needs careful permission enforcement |
 
 **Decision:** Start with **invitation-based membership** (3.2) which gives guild
-admins control while keeping the flexibility WoW players need. Add row-level
-tenancy boundaries later only if needed for enterprise billing features.
+admins control while keeping the flexibility WoW players need.
+
+> **Update:** After further analysis, we recommend implementing **Row-level
+> tenancy (`tenant_id` / `guild_id` on every table)** as **Phase 0** — before
+> any other feature work. The rationale and full detailed plan are in
+> [Section 10: Phase 0](#10-phase-0-row-level-tenancy-tenant_id--detailed-plan).
+> This ensures every subsequent phase (invitation system, multi-expansion,
+> plugins, SaaS billing) is built on a solid tenant-isolated foundation, rather
+> than having to retrofit tenant checks into an already-complex codebase.
 
 ---
 
@@ -783,6 +791,24 @@ export const pluginRegistry = {
 
 ## 7. Phased Implementation Roadmap
 
+### Phase 0: Row-Level Tenancy (`tenant_id` on every table)
+**Goal:** Remodel the entire application to enforce row-level tenant isolation
+(`guild_id` / `tenant_id` on every guild-scoped table) **before** any feature work.
+
+> **This phase is a prerequisite for all other phases.** See
+> [Section 10](#10-phase-0-row-level-tenancy-tenant_id--detailed-plan) for the
+> complete table-by-table, query-by-query, file-by-file change plan.
+
+- [ ] Add `guild_id` FK to tables that lack it (Signup, LineupSlot, RaidBan, AttendanceRecord, CharacterReplacement)
+- [ ] Data migration: backfill `guild_id` from parent relationships
+- [ ] Add composite indexes on `(guild_id, ...)` for all tenant-scoped tables
+- [ ] Update every service-layer query to include `guild_id` filter
+- [ ] Update every API route to pass `guild_id` through the call chain
+- [ ] Add `TenantMixin` or `@filter_by_tenant` decorator for query safety
+- [ ] Add tests verifying cross-tenant data isolation
+- [ ] Regression-test all 632+ existing tests
+- [ ] Remove the Phase 6 "Evaluate need for row-level tenancy" item (now done)
+
 ### Phase 1: Foundation Decoupling (No Breaking Changes)
 **Goal:** Restructure internals without changing any external behavior.
 
@@ -847,7 +873,7 @@ export const pluginRegistry = {
 ### Phase 6: SaaS Infrastructure
 **Goal:** Add billing and organization management.
 
-- [ ] Evaluate need for row-level tenancy (guild_id enforcement)
+- [x] ~~Evaluate need for row-level tenancy (guild_id enforcement)~~ → **Moved to Phase 0**
 - [ ] Add subscription/billing model (if needed)
 - [ ] Add usage tracking per guild
 - [ ] Add API rate limiting per guild
@@ -989,3 +1015,1056 @@ Hunter:     Beast Mastery, Marksmanship, Survival   (Survival = melee)
 | Guild | manage_class_role_matrix | Edit class-role assignment matrix |
 | Guild | manage_guild_expansions | Enable/disable expansion packs for guild |
 | Admin | manage_plugins | Enable/disable system plugins |
+
+---
+
+## 10. Phase 0: Row-Level Tenancy (`tenant_id`) — Detailed Plan
+
+> **Priority:** This is the very first implementation step — before Phase 1
+> (expansion registry), Phase 2 (invitations), or any other feature work.
+>
+> **Why first?** Every subsequent phase adds more tables, queries, and features.
+> If we retrofit `tenant_id` enforcement later, we must audit every new query
+> written by Phases 1-6. Doing it now means all future code is written with
+> tenant isolation baked in from day one, and debugging cross-tenant data leaks
+> in a mature codebase is exponentially harder.
+
+---
+
+### 10.1 What Is Row-Level Tenancy?
+
+Row-level tenancy (also called "shared database, shared schema" multi-tenancy)
+means **every guild-scoped row** in the database carries a `guild_id` foreign
+key that identifies which tenant (guild) owns that data. Every query that reads
+or writes guild-scoped data **must** include a `WHERE guild_id = :tenant_id`
+filter.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Single Database                       │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ Guild A rows  │  │ Guild B rows  │  │ Guild C rows  │  │
+│  │ guild_id = 1  │  │ guild_id = 2  │  │ guild_id = 3  │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │
+│                                                          │
+│  Isolation enforced by WHERE guild_id = ? on EVERY query │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 10.2 Risks & Mitigation
+
+| # | Risk | Severity | Likelihood | Mitigation |
+|---|------|----------|------------|------------|
+| 1 | **Cross-tenant data leak** — forgetting `guild_id` filter on a query exposes Guild A's data to Guild B | 🔴 Critical | High (many queries) | `TenantMixin` base class with `@validates` + integration tests per endpoint |
+| 2 | **Data migration corruption** — backfilling `guild_id` on existing rows uses wrong parent chain | 🔴 Critical | Medium | Run migration on a copy first; write verification queries; compare row counts |
+| 3 | **Performance regression** — adding `guild_id` column + index to every table increases write amplification | 🟡 Medium | Low | Composite indexes `(guild_id, <existing_index>)` replace single-column indexes; SQLite/Postgres handle this well |
+| 4 | **Broken unique constraints** — existing `UNIQUE(raid_event_id, character_id)` may need to become `UNIQUE(guild_id, raid_event_id, character_id)` | 🟡 Medium | Medium | Audit every constraint; some stay event-scoped (event already belongs to one guild) |
+| 5 | **ORM relationship breakage** — adding `guild_id` to child tables may confuse existing `relationship()` declarations | 🟡 Medium | Low | Relationships are FK-based, not column-based; adding a column doesn't break them |
+| 6 | **Test suite breakage** — all 632+ tests assume current schema | 🟡 Medium | High | Run full suite after each table migration; fix tests incrementally |
+| 7 | **Global admin queries break** — admin dashboard counts (`SELECT COUNT(*) FROM users`) should NOT be tenant-filtered | 🟡 Medium | Medium | Clearly separate global-scoped tables/queries from tenant-scoped ones (see §10.3) |
+| 8 | **Seed data duplication** — system-wide seeds (permissions, roles, default raid definitions) must remain `guild_id=NULL` | 🟢 Low | Low | Only guild-scoped tables get `NOT NULL` constraint; system tables keep `guild_id` nullable or absent |
+| 9 | **Frontend breaks** — API response shape changes if we add `guild_id` to `to_dict()` output | 🟢 Low | Low | `guild_id` already present in most `to_dict()` outputs; add to new ones consistently |
+| 10 | **Alembic migration ordering** — tables with FK dependencies must be migrated in correct order | 🟡 Medium | Medium | Single migration file; backfill in parent→child order |
+
+### 10.3 Table Classification: Global vs. Tenant-Scoped
+
+Every table in the application falls into one of three categories:
+
+| Category | Tables | `guild_id` needed? | Rationale |
+|----------|--------|-------------------|-----------|
+| **Global (system-wide)** | `users`, `system_settings`, `permissions`, `system_roles`, `role_permissions`, `role_grant_rules`, `job_queue` | ❌ No | These are shared across all tenants. Users can belong to multiple guilds. Permissions/roles are system-wide definitions. |
+| **Already tenant-scoped** | `guilds`, `guild_memberships`, `guild_features`, `characters`, `raid_definitions`, `raid_templates`, `event_series`, `raid_events`, `notifications` | ✅ Already have `guild_id` | These tables already carry `guild_id` as a direct column. |
+| **Needs `guild_id` added** | `signups`, `lineup_slots`, `raid_bans`, `attendance_records`, `character_replacements`, `armory_configs` | ⚠️ **Must add** | These tables are implicitly tenant-scoped via parent FK chains (e.g., `signup → raid_event → guild`), but lack a direct `guild_id` column for efficient filtering and safety. |
+
+### 10.4 Table-by-Table Change Plan
+
+#### 10.4.1 Tables That Already Have `guild_id` (Verify & Harden)
+
+These tables already have `guild_id`. The work here is to **verify** that every
+query on them includes a `guild_id` filter and to add a composite index if
+missing.
+
+##### `guilds` (no changes needed)
+- `guild_id` is the PK itself (`id`); this IS the tenant table.
+- No filter needed — this table defines tenants.
+
+##### `guild_memberships`
+- **Has:** `guild_id` FK → `guilds.id` ✅
+- **Has:** Unique constraint `(guild_id, user_id)` ✅
+- **Action:** Verify all queries filter by `guild_id`. Already done in `guild_service.py`, `permissions.py`, `api_helpers.py`.
+- **Risk:** None — already properly scoped.
+
+##### `guild_features`
+- **Has:** `guild_id` FK → `guilds.id` ✅
+- **Has:** Unique constraint `(guild_id, feature_key)` ✅
+- **Action:** No changes needed. `feature_service.py` already filters by `guild_id`.
+
+##### `characters`
+- **Has:** `guild_id` FK → `guilds.id` ✅
+- **Has:** Unique constraint `(realm_name, name, guild_id)` ✅
+- **Action:** Verify `character_service.py` queries always include `guild_id`. Current `list_characters()` (line 147) already filters by `guild_id`. `get_character()` (line 59) uses `db.session.get()` by PK — **should add `guild_id` ownership check after fetch**.
+
+| File | Function | Line | Current | Change needed |
+|------|----------|------|---------|---------------|
+| `character_service.py` | `get_character()` | 59 | `db.session.get(Character, character_id)` | Add `if char and char.guild_id != guild_id: return None` after fetch |
+| `character_service.py` | `delete_character()` | ~80 | Deletes by object | Caller must verify `guild_id` match (already done in API layer) |
+| `character_service.py` | `archive_character()` | ~128 | Updates by object | Caller must verify `guild_id` match (already done in API layer) |
+
+##### `raid_definitions`
+- **Has:** `guild_id` FK → `guilds.id` (nullable — `NULL` = builtin/default) ✅
+- **Action:** Keep nullable. `guild_id=NULL` means system-wide default definitions. `raid_service.py` already filters by `guild_id` or `guild_id.is_(None)`.
+
+##### `raid_templates`
+- **Has:** `guild_id` FK → `guilds.id` ✅
+- **Action:** Verify `event_service.py` `list_templates()` (line 63) already filters by `guild_id`. ✅
+
+##### `event_series`
+- **Has:** `guild_id` FK → `guilds.id` ✅
+- **Action:** Verify `event_service.py` `list_series()` (line 152) already filters by `guild_id`. ✅
+
+##### `raid_events`
+- **Has:** `guild_id` FK → `guilds.id`, indexed ✅
+- **Has:** Composite index `(guild_id, starts_at_utc)` ✅
+- **Action:** Verify all event queries include `guild_id`. `event_service.py` `list_events()` and variants already filter by `guild_id`. ✅
+
+##### `notifications`
+- **Has:** `guild_id` FK → `guilds.id` (nullable) ✅
+- **Action:** Keep nullable — some notifications are system-wide (not guild-specific). `notification_service.py` queries by `user_id`, not by `guild_id` — this is correct because notifications are user-scoped with optional guild context.
+
+#### 10.4.2 Tables That Need `guild_id` Added
+
+These are the **critical changes**. Each table below currently relies on a FK
+chain to determine tenant ownership (e.g., `signup.raid_event_id → raid_events.guild_id`).
+Adding a direct `guild_id` column allows:
+1. Direct tenant-scoped queries without JOINs
+2. Safety — even if a bug corrupts a parent FK, the tenant boundary holds
+3. Future index optimization
+
+---
+
+##### `signups` — Add `guild_id`
+
+**Current state:** Tenant is inferred via `signup.raid_event_id → raid_events.guild_id`.
+
+**Model change (`app/models/signup.py`):**
+```python
+# Add to Signup class (after user_id):
+guild_id: Mapped[int] = mapped_column(
+    sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True
+)
+
+# Add relationship:
+guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
+```
+
+**Index changes:**
+```python
+# Update __table_args__:
+__table_args__ = (
+    sa.UniqueConstraint("raid_event_id", "character_id", name="uq_event_character"),
+    sa.Index("ix_signups_raid_event", "raid_event_id"),
+    sa.Index("ix_signups_user", "user_id"),
+    sa.Index("ix_signups_guild", "guild_id"),            # NEW
+    sa.Index("ix_signups_guild_event", "guild_id", "raid_event_id"),  # NEW composite
+)
+```
+
+**Data migration (SQL):**
+```sql
+-- Backfill guild_id from parent raid_events
+UPDATE signups
+SET guild_id = (
+    SELECT raid_events.guild_id
+    FROM raid_events
+    WHERE raid_events.id = signups.raid_event_id
+);
+```
+
+**Queries to update in `signup_service.py`:**
+
+| Function | Line(s) | Current query | Change |
+|----------|---------|---------------|--------|
+| `create_signup()` | 259 | `db.session.add(signup)` | Set `signup.guild_id = guild_id` before adding |
+| `get_signup()` | 272 | `db.session.get(Signup, signup_id)` | Add `guild_id` ownership check after fetch |
+| `update_signup()` | 291 | Update by object | Caller verifies guild_id (via event ownership check) |
+| `delete_signup()` | 315 | Delete by object | Caller verifies guild_id (via event ownership check) |
+| `list_signups()` | 344-349 | `Signup.raid_event_id == event_id` | Add `.where(Signup.guild_id == guild_id)` |
+| `list_user_signups()` | 354-362 | Filters by user_id and event list | Add `.where(Signup.guild_id == guild_id)` |
+| `list_user_characters_for_event()` | 582-588 | `Character.guild_id == guild_id` | Already scoped via character; also add to signup subquery |
+
+**Queries to update in API layer (`app/api/v1/signups.py`):**
+
+| Function | Line | Change |
+|----------|------|--------|
+| `list_signups()` | 28 | Pass `guild_id` to `build_guild_role_map()` — already done ✅ |
+| `create_signup()` | various | Pass `guild_id` from event context to `signup_service.create_signup()` |
+
+---
+
+##### `lineup_slots` — Add `guild_id`
+
+**Current state:** Tenant is inferred via `lineup_slot.raid_event_id → raid_events.guild_id`.
+
+**Model change (`app/models/signup.py`):**
+```python
+# Add to LineupSlot class (after raid_event_id):
+guild_id: Mapped[int] = mapped_column(
+    sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True
+)
+
+guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
+```
+
+**Index changes:**
+```python
+__table_args__ = (
+    sa.UniqueConstraint("raid_event_id", "slot_group", "slot_index", name="uq_event_slot"),
+    sa.Index("ix_lineup_slots_raid_event", "raid_event_id"),
+    sa.Index("ix_lineup_slots_signup", "signup_id"),
+    sa.Index("ix_lineup_slots_guild", "guild_id"),                     # NEW
+    sa.Index("ix_lineup_slots_guild_event", "guild_id", "raid_event_id"),  # NEW composite
+)
+```
+
+**Data migration (SQL):**
+```sql
+UPDATE lineup_slots
+SET guild_id = (
+    SELECT raid_events.guild_id
+    FROM raid_events
+    WHERE raid_events.id = lineup_slots.raid_event_id
+);
+```
+
+**Queries to update in `lineup_service.py`:**
+
+| Function | Line(s) | Current query | Change |
+|----------|---------|---------------|--------|
+| `get_lineup()` | 18-26 | `LineupSlot.raid_event_id == event_id` | Add `.where(LineupSlot.guild_id == guild_id)` |
+| `add_slot()` | 60-81 | Max slot_index query + add | Set `slot.guild_id = guild_id`; add `guild_id` to max query |
+| `remove_slot()` | 86-89 | Delete by event_id + signup_id | Add `LineupSlot.guild_id == guild_id` |
+| `count_role_slots()` | 94-99 | Count by event_id + group | Add `LineupSlot.guild_id == guild_id` |
+| `get_bench_slot()` | 109-114 | Query by event_id + signup_id + bench | Add `LineupSlot.guild_id == guild_id` |
+| `get_bench_position()` | 124-133 | Count by event + group + index | Add `guild_id` filter |
+| `update_slot_group()` | 145-153 | Update by event + signup | Add `guild_id` filter |
+| `upsert_slot()` | 164-184 | Query + insert/update | Add `guild_id` to query and new slot |
+| `save_full_lineup()` | 225-397 | Complex batch operation | Set `guild_id` on every new `LineupSlot`; add filter on delete query (line 237) |
+| `reorder_bench()` | 463-512 | Query + update bench slots | Add `guild_id` filter to all queries |
+| `confirm_lineup()` | 541-546 | Update confirmed_at | `guild_id` added via `get_lineup()` |
+| `add_to_bench_queue()` | 560-561 | Insert bench slot | Set `slot.guild_id = guild_id` |
+
+---
+
+##### `raid_bans` — Add `guild_id`
+
+**Current state:** Tenant is inferred via `raid_ban.raid_event_id → raid_events.guild_id`.
+
+**Model change (`app/models/signup.py`):**
+```python
+# Add to RaidBan class (after raid_event_id):
+guild_id: Mapped[int] = mapped_column(
+    sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True
+)
+
+guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
+```
+
+**Data migration (SQL):**
+```sql
+UPDATE raid_bans
+SET guild_id = (
+    SELECT raid_events.guild_id
+    FROM raid_events
+    WHERE raid_events.id = raid_bans.raid_event_id
+);
+```
+
+**Queries to update in `signup_service.py`:**
+
+| Function | Line(s) | Change |
+|----------|---------|--------|
+| `get_ban()` | 371-376 | Add `.where(RaidBan.guild_id == guild_id)` |
+| `list_bans()` | 382-387 | Add `.where(RaidBan.guild_id == guild_id)` |
+| `create_ban()` | 403 | Set `ban.guild_id = guild_id` before `db.session.add()` |
+| `delete_ban()` | 413 | Verify `ban.guild_id == guild_id` before delete |
+
+---
+
+##### `attendance_records` — Add `guild_id`
+
+**Current state:** Tenant is inferred via `attendance.raid_event_id → raid_events.guild_id`.
+
+**Model change (`app/models/attendance.py`):**
+```python
+# Add to AttendanceRecord class (after raid_event_id):
+guild_id: Mapped[int] = mapped_column(
+    sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True
+)
+
+guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
+```
+
+**Unique constraint update:**
+```python
+# Current: uq_attendance_event_user (raid_event_id, user_id)
+# Keep as-is — event_id is already guild-scoped, so adding guild_id to the
+# unique constraint is redundant (an event can only belong to one guild).
+```
+
+**Data migration (SQL):**
+```sql
+UPDATE attendance_records
+SET guild_id = (
+    SELECT raid_events.guild_id
+    FROM raid_events
+    WHERE raid_events.id = attendance_records.raid_event_id
+);
+```
+
+**Queries to update in `attendance_service.py`:**
+
+| Function | Line(s) | Change |
+|----------|---------|--------|
+| `record_attendance()` | 23-28, 46 | Add `guild_id` to the `WHERE` clause and set on new record |
+| `get_event_attendance()` | 53-57 | Add `.where(AttendanceRecord.guild_id == guild_id)` |
+| `get_character_history()` | 68-80 | Add `.where(AttendanceRecord.guild_id == guild_id)` or leave cross-guild if intentional |
+
+**Queries to update in API layer (`app/api/v1/attendance.py`):**
+
+| Function | Line(s) | Change |
+|----------|---------|--------|
+| `record_or_update()` | 25-32 | Pass `guild_id` from route to service |
+| `get_attendance()` | 53-58 | Pass `guild_id` to lineup slot check |
+
+---
+
+##### `character_replacements` — Add `guild_id`
+
+**Current state:** Tenant is inferred via `replacement.signup_id → signups.raid_event_id → raid_events.guild_id` (2-hop chain).
+
+**Model change (`app/models/signup.py`):**
+```python
+# Add to CharacterReplacement class (after signup_id):
+guild_id: Mapped[int] = mapped_column(
+    sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True
+)
+
+guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
+```
+
+**Data migration (SQL):**
+```sql
+UPDATE character_replacements
+SET guild_id = (
+    SELECT raid_events.guild_id
+    FROM signups
+    JOIN raid_events ON raid_events.id = signups.raid_event_id
+    WHERE signups.id = character_replacements.signup_id
+);
+```
+
+**Queries to update in `signup_service.py`:**
+
+| Function | Line(s) | Change |
+|----------|---------|--------|
+| `request_replacement()` | 436-455 | Add `guild_id` filter to existing-check query; set `req.guild_id = guild_id` |
+| `get_pending_replacement()` | 461-472 | Add `.where(CharacterReplacement.guild_id == guild_id)` |
+| `list_pending_replacements()` | 478-493 | Add `.where(CharacterReplacement.guild_id == guild_id)` |
+| `confirm_replacement()` | 522-570 | Add `guild_id` filter to conflict and cleanup queries |
+
+---
+
+##### `armory_configs` — Evaluate
+
+**Current state:** `armory_configs` has `user_id` FK but no `guild_id`.
+
+**Decision:** `armory_configs` is **user-scoped**, not guild-scoped. A user's
+armory configuration (API endpoint, provider) is personal — the same config can
+be used across multiple guilds. **Do NOT add `guild_id`.**
+
+However, the `Guild` model has an `armory_config_id` FK, so the guild→armory
+link is already established. No changes needed.
+
+---
+
+### 10.5 Service Layer — Complete Query Audit
+
+Every service file that performs database queries must be audited. Below is the
+complete list of changes needed per file.
+
+#### `app/services/signup_service.py` (Highest impact — ~20 queries)
+
+| # | Function | Line | Query type | `guild_id` filter? | Action |
+|---|----------|------|-----------|-------------------|--------|
+| 1 | `_check_character_ownership()` | 22 | `db.session.get(Character, cid)` | ❌ | Add `char.guild_id == guild_id` check |
+| 2 | `_count_assigned_slots()` | 32-37 | `sa.func.count(LineupSlot.id)` | ❌ | Add `.where(LineupSlot.guild_id == guild_id)` |
+| 3 | `_count_assigned_slots_locked()` | 50-56 | Count with `with_for_update()` | ❌ | Add `.where(LineupSlot.guild_id == guild_id)` |
+| 4 | `_count_user_role_slots()` | 76-86 | JOIN Signup + LineupSlot | ❌ | Add `Signup.guild_id == guild_id` |
+| 5 | `_auto_assign_signup()` | 127-181 | Multiple bench/slot queries | ❌ | Add `guild_id` to all sub-queries |
+| 6 | `create_signup()` | 259 | `db.session.add(signup)` | ❌ | Set `signup.guild_id = guild_id` |
+| 7 | `get_signup()` | 272 | `db.session.get(Signup, id)` | ❌ | Add `guild_id` ownership check |
+| 8 | `update_signup()` | 291 | Update by object | ✅ (via caller) | Verify in caller |
+| 9 | `delete_signup()` | 315 | Delete by object | ✅ (via caller) | Verify in caller |
+| 10 | `list_signups()` | 344-349 | `Signup.raid_event_id == eid` | ❌ | Add `.where(Signup.guild_id == guild_id)` |
+| 11 | `list_user_signups()` | 354-362 | Filter by user + events | ❌ | Add `.where(Signup.guild_id == guild_id)` |
+| 12 | `get_ban()` | 371-376 | `RaidBan` query | ❌ | Add `.where(RaidBan.guild_id == guild_id)` |
+| 13 | `list_bans()` | 382-387 | `RaidBan` query | ❌ | Add `.where(RaidBan.guild_id == guild_id)` |
+| 14 | `create_ban()` | 403 | `db.session.add(ban)` | ❌ | Set `ban.guild_id = guild_id` |
+| 15 | `delete_ban()` | 413 | Delete by object | ❌ | Add `guild_id` check |
+| 16 | `request_replacement()` | 436-455 | Query + insert | ❌ | Add `guild_id` filter; set on new object |
+| 17 | `get_pending_replacement()` | 461-472 | CharacterReplacement query | ❌ | Add `guild_id` filter |
+| 18 | `list_pending_replacements()` | 478-493 | JOIN query | ❌ | Add `guild_id` filter |
+| 19 | `confirm_replacement()` | 522-570 | Complex multi-query | ❌ | Add `guild_id` to all sub-queries |
+| 20 | `list_user_characters_for_event()` | 582-588 | Character query | ✅ | Already filters by `guild_id` |
+
+**Function signature changes needed:**
+```python
+# Most functions need guild_id parameter added:
+def create_signup(guild_id, raid_event_id, user_id, character_id, ...) -> Signup:
+def list_signups(guild_id, event_id) -> list[Signup]:
+def list_user_signups(guild_id, user_id, event_ids) -> list[Signup]:
+def create_ban(guild_id, raid_event_id, character_id, banned_by, ...) -> RaidBan:
+def get_ban(guild_id, raid_event_id, character_id) -> RaidBan | None:
+def list_bans(guild_id, raid_event_id) -> list[RaidBan]:
+def request_replacement(guild_id, signup_id, ...) -> CharacterReplacement:
+def confirm_replacement(guild_id, replacement_id, ...) -> ...:
+```
+
+#### `app/services/lineup_service.py` (~25 queries)
+
+| # | Function | Line | Action |
+|---|----------|------|--------|
+| 1 | `get_lineup()` | 18-26 | Add `guild_id` param + filter |
+| 2 | `has_role_slot()` | — | Internal; called from Signup.to_dict(). Needs guild_id context. |
+| 3 | `get_bench_info()` | — | Internal; needs guild_id context. |
+| 4 | `add_slot()` | 60-81 | Add `guild_id` param; set on new slot; add to max query |
+| 5 | `remove_slot()` | 86-89 | Add `guild_id` filter to delete |
+| 6 | `count_role_slots()` | 94-99 | Add `guild_id` filter |
+| 7 | `get_bench_slot()` | 109-114 | Add `guild_id` filter |
+| 8 | `get_bench_position()` | 124-133 | Add `guild_id` filter |
+| 9 | `update_slot_group()` | 145-153 | Add `guild_id` filter |
+| 10 | `upsert_slot()` | 164-184 | Add `guild_id` filter + set on new slot |
+| 11 | `save_full_lineup()` | 225-397 | Add `guild_id` to delete-all query (line 237); set on every new slot |
+| 12 | `reorder_bench()` | 463-512 | Add `guild_id` filter to all queries |
+| 13 | `confirm_lineup()` | 541-546 | `guild_id` passed via `get_lineup()` |
+| 14 | `add_to_bench_queue()` | 560-561 | Set `guild_id` on new slot |
+
+**Special concern — `has_role_slot()` and `get_bench_info()`:**
+These are called from `Signup.to_dict()` which doesn't currently receive
+`guild_id`. Options:
+1. **Recommended:** These functions query by `signup_id` which is globally unique, so tenant
+   filtering is implicitly enforced (a signup belongs to exactly one guild).
+   Keep as-is but add a code comment documenting this decision.
+2. **Alternative:** Pass `guild_id` through the serialization chain — higher impact, lower risk.
+
+#### `app/services/event_service.py` (~30 queries)
+
+Most queries already filter by `guild_id`. Changes needed:
+
+| # | Function | Line | Action |
+|---|----------|------|--------|
+| 1 | `get_template()` | 39 | `db.session.get()` — add `guild_id` ownership check |
+| 2 | `get_event()` | 287 | `db.session.get()` — add `guild_id` ownership check |
+| 3 | `get_series()` | 130 | `db.session.get()` — add `guild_id` ownership check |
+| 4 | `duplicate_event()` | 410-426 | Set `guild_id` on new event (already done via `RaidEvent(guild_id=…)`) |
+| 5 | All `list_*()` functions | various | Already filter by `guild_id` ✅ |
+
+#### `app/services/attendance_service.py` (~5 queries)
+
+| # | Function | Line | Action |
+|---|----------|------|--------|
+| 1 | `record_attendance()` | 23-46 | Add `guild_id` param; set on record; add to query |
+| 2 | `get_event_attendance()` | 53-57 | Add `guild_id` param + filter |
+| 3 | `get_character_history()` | 68-80 | Add `guild_id` param + filter (or intentionally cross-guild for global admins) |
+
+#### `app/services/character_service.py` (~10 queries)
+
+| # | Function | Line | Action |
+|---|----------|------|--------|
+| 1 | `get_character()` | 59 | Add `guild_id` ownership check after `db.session.get()` |
+| 2 | `delete_character()` | 80-125 | Already receives character object; caller ensures guild match |
+| 3 | `list_characters()` | 147-152 | Already filters by `guild_id` ✅ |
+| 4 | `find_existing_character()` | 157-163 | Already filters by `guild_id` ✅ |
+
+#### `app/services/guild_service.py` (~12 queries)
+
+All queries already properly filter by `guild_id`. No changes needed. ✅
+
+#### `app/services/raid_service.py` (~8 queries)
+
+Most queries already filter by `guild_id`. Verify:
+| # | Function | Line | Action |
+|---|----------|------|--------|
+| 1 | `get_raid_definition()` | 48 | `db.session.get()` — add `guild_id` ownership check |
+| 2 | `list_raid_definitions()` | 91-94 | Already filters by `guild_id` ✅ |
+| 3 | `find_by_name()` | 81-86 | Already filters by `guild_id` ✅ |
+
+#### `app/services/notification_service.py` (~8 queries)
+
+Notifications are **user-scoped** with optional `guild_id` context. Current
+queries filter by `user_id` which is correct — a user sees their own
+notifications regardless of guild. No changes needed. ✅
+
+#### `app/services/auth_service.py` (~8 queries)
+
+Global/user-scoped queries. No `guild_id` needed. ✅
+
+#### `app/services/feature_service.py` (~3 queries)
+
+Already filters by `guild_id`. No changes needed. ✅
+
+#### `app/services/discord_service.py` (~4 queries)
+
+Global/user-scoped queries. No `guild_id` needed. ✅
+
+---
+
+### 10.6 API Layer — Complete Route Audit
+
+Every API blueprint must pass `guild_id` from the URL route into the service
+layer. Below is the audit for routes that need changes.
+
+#### `app/api/v1/signups.py`
+
+| Route | Method | Current `guild_id` handling | Change |
+|-------|--------|---------------------------|--------|
+| `/guilds/<guild_id>/events/<eid>/signups` | GET | `guild_id` in URL but not passed to `list_signups()` | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/signups` | POST | `guild_id` in URL but not passed to `create_signup()` | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/signups/<sid>` | PUT | `guild_id` in URL; event ownership checked | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/signups/<sid>` | DELETE | `guild_id` in URL; event ownership checked | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/bans` | GET/POST | `guild_id` available | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/bans/<bid>` | DELETE | `guild_id` available | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/replacements` | GET/POST | `guild_id` available | Pass `guild_id` to service |
+| `/guilds/<guild_id>/events/<eid>/replacements/<rid>` | PUT | `guild_id` available | Pass `guild_id` to service |
+
+#### `app/api/v1/lineup.py`
+
+| Route | Method | Change |
+|-------|--------|--------|
+| `/guilds/<guild_id>/events/<eid>/lineup` | GET | Pass `guild_id` to `get_lineup()` |
+| `/guilds/<guild_id>/events/<eid>/lineup` | PUT | Pass `guild_id` to `save_full_lineup()` |
+| `/guilds/<guild_id>/events/<eid>/lineup/confirm` | POST | Pass `guild_id` to `confirm_lineup()` |
+| `/guilds/<guild_id>/events/<eid>/lineup/bench/reorder` | PUT | Pass `guild_id` to `reorder_bench()` |
+
+#### `app/api/v1/attendance.py`
+
+| Route | Method | Change |
+|-------|--------|--------|
+| `/guilds/<guild_id>/events/<eid>/attendance` | GET | Pass `guild_id` to `get_event_attendance()` |
+| `/guilds/<guild_id>/events/<eid>/attendance` | POST | Pass `guild_id` to `record_attendance()` |
+
+#### `app/api/v1/events.py`
+
+Most event routes already pass `guild_id` correctly. Verify `get_event_or_404()`
+checks `event.guild_id == guild_id` (it does — line 43 of `api_helpers.py`). ✅
+
+#### `app/api/v1/admin.py`
+
+Admin dashboard stats queries (`SELECT COUNT(*)`) are **global** — they should
+NOT be filtered by `guild_id`. These count all users, all guilds, all events
+system-wide. No changes needed. ✅
+
+#### `app/api/v1/roles.py`
+
+Permission and role management is **system-wide**. No `guild_id` filtering
+needed. ✅
+
+---
+
+### 10.7 Utility Layer — Query Audit
+
+#### `app/utils/permissions.py`
+
+| Function | Line | Status |
+|----------|------|--------|
+| `get_membership()` | 23-31 | Already filters by `guild_id` ✅ |
+| `has_permission()` | 45-55 | Uses membership from `get_membership()` ✅ |
+| `has_any_guild_permission()` | 70-75 | Queries all user memberships (intentionally cross-guild) ✅ |
+| `get_user_permissions()` | 109-115 | Uses membership role ✅ |
+| `can_grant_role()` | 130-146 | System-wide role check ✅ |
+
+#### `app/utils/api_helpers.py`
+
+| Function | Line | Status |
+|----------|------|--------|
+| `get_event_or_404()` | 43 | Checks `event.guild_id == guild_id` ✅ |
+| `build_guild_role_map()` | 62-67 | Already filters by `guild_id` ✅ |
+
+#### `app/utils/notify.py`
+
+| Function | Line | Status |
+|----------|------|--------|
+| `_get_officer_user_ids()` | 47-61 | Filters by `guild_id` ✅ |
+| `_guild_member_ids()` | 85-94 | Filters by `guild_id` ✅ |
+| All `notify_*()` | various | Use `event.guild_id` ✅ |
+
+#### `app/utils/decorators.py`
+
+| Function | Line | Status |
+|----------|------|--------|
+| `guild_permission_required()` | 5-16 | Extracts `guild_id` from URL kwargs ✅ |
+
+---
+
+### 10.8 Background Jobs — Query Audit
+
+#### `app/jobs/handlers.py`
+
+| Function | Line | Status | Change |
+|----------|------|--------|--------|
+| `handle_send_notification()` | 31-38 | `guild_id` from payload | No change — notification uses `guild_id` from payload ✅ |
+| `auto_lock_upcoming_events()` | 56-79 | Queries all events (intentionally cross-guild for scheduler) | No change — global scheduler job ✅ |
+| `handle_sync_characters()` | 93-144 | Optional `guild_id` filter for character sync | Already filters by `guild_id` when provided ✅ |
+
+#### `app/jobs/worker.py`
+
+| Function | Line | Status |
+|----------|------|--------|
+| `claim_next_job()` | 17-25 | Global job queue (not tenant-scoped) ✅ |
+
+#### `app/jobs/scheduler.py`
+
+| Function | Line | Status |
+|----------|------|--------|
+| All | — | Global system settings (not tenant-scoped) ✅ |
+
+---
+
+### 10.9 Seed Data — Impact Assessment
+
+#### `app/seeds/permissions.py`
+
+No changes needed. Permissions and system roles are **global** — they apply to
+all guilds equally. `guild_id` is not involved. ✅
+
+#### `app/seeds/raid_definitions.py`
+
+No changes needed. Default raid definitions use `guild_id=None` (builtin).
+Guild-specific definitions already have `guild_id` set. ✅
+
+#### `app/seeds/admin_user.py`
+
+No changes needed. Admin user is a global user, not tied to a specific guild. ✅
+
+---
+
+### 10.10 Implementation Strategy — Recommended Approach
+
+#### Option A: `TenantMixin` Base Class (Recommended)
+
+Create a mixin that automatically adds `guild_id` and provides tenant-scoped
+query helpers:
+
+```python
+# app/models/mixins.py (NEW FILE)
+
+class TenantMixin:
+    """Mixin for models that are scoped to a guild (tenant).
+
+    Adds guild_id FK and provides helper methods for tenant-scoped queries.
+    """
+
+    @declared_attr
+    def guild_id(cls):
+        return mapped_column(
+            sa.Integer,
+            sa.ForeignKey("guilds.id"),
+            nullable=False,
+            index=True,
+        )
+
+    @declared_attr
+    def guild(cls):
+        return relationship("Guild", foreign_keys=[cls.guild_id], lazy="select")
+
+    @classmethod
+    def tenant_query(cls, guild_id: int):
+        """Return a base query filtered by guild_id."""
+        return sa.select(cls).where(cls.guild_id == guild_id)
+
+    @classmethod
+    def tenant_filter(cls, guild_id: int):
+        """Return a WHERE clause for guild_id filtering."""
+        return cls.guild_id == guild_id
+```
+
+**Usage in models:**
+```python
+class Signup(TenantMixin, db.Model):
+    # guild_id and guild relationship are inherited from TenantMixin
+    ...
+```
+
+**Usage in services:**
+```python
+# Before:
+stmt = sa.select(Signup).where(Signup.raid_event_id == event_id)
+
+# After:
+stmt = sa.select(Signup).where(
+    Signup.guild_id == guild_id,
+    Signup.raid_event_id == event_id,
+)
+
+# Or using helper:
+stmt = Signup.tenant_query(guild_id).where(Signup.raid_event_id == event_id)
+```
+
+#### Option B: `@filter_by_tenant` Query Decorator
+
+Create a decorator that automatically injects `guild_id` filtering:
+
+```python
+# app/utils/tenant.py (NEW FILE)
+
+def tenant_scoped(model_class):
+    """Decorator for service functions that need tenant scoping.
+
+    Automatically adds guild_id filter to the first sa.select() call.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(guild_id, *args, **kwargs):
+            # Inject guild_id into the function's scope
+            return func(guild_id, *args, **kwargs)
+        return wrapper
+    return decorator
+```
+
+**Verdict:** Option A (`TenantMixin`) is simpler, more explicit, and easier to
+audit. **Use Option A.**
+
+---
+
+### 10.11 Database Migration — Step-by-Step
+
+The migration must be executed as a **single Alembic migration** to maintain
+atomicity. Here is the exact sequence:
+
+```python
+# migrations/versions/xxxx_add_tenant_id_to_child_tables.py
+
+def upgrade():
+    # Step 1: Add guild_id columns (nullable initially for backfill)
+    op.add_column('signups', sa.Column('guild_id', sa.Integer(), nullable=True))
+    op.add_column('lineup_slots', sa.Column('guild_id', sa.Integer(), nullable=True))
+    op.add_column('raid_bans', sa.Column('guild_id', sa.Integer(), nullable=True))
+    op.add_column('attendance_records', sa.Column('guild_id', sa.Integer(), nullable=True))
+    op.add_column('character_replacements', sa.Column('guild_id', sa.Integer(), nullable=True))
+
+    # Step 2: Backfill guild_id from parent relationships
+    # signups → raid_events.guild_id
+    op.execute("""
+        UPDATE signups SET guild_id = (
+            SELECT raid_events.guild_id FROM raid_events
+            WHERE raid_events.id = signups.raid_event_id
+        )
+    """)
+
+    # lineup_slots → raid_events.guild_id
+    op.execute("""
+        UPDATE lineup_slots SET guild_id = (
+            SELECT raid_events.guild_id FROM raid_events
+            WHERE raid_events.id = lineup_slots.raid_event_id
+        )
+    """)
+
+    # raid_bans → raid_events.guild_id
+    op.execute("""
+        UPDATE raid_bans SET guild_id = (
+            SELECT raid_events.guild_id FROM raid_events
+            WHERE raid_events.id = raid_bans.raid_event_id
+        )
+    """)
+
+    # attendance_records → raid_events.guild_id
+    op.execute("""
+        UPDATE attendance_records SET guild_id = (
+            SELECT raid_events.guild_id FROM raid_events
+            WHERE raid_events.id = attendance_records.raid_event_id
+        )
+    """)
+
+    # character_replacements → signups → raid_events.guild_id (2-hop)
+    op.execute("""
+        UPDATE character_replacements SET guild_id = (
+            SELECT raid_events.guild_id FROM signups
+            JOIN raid_events ON raid_events.id = signups.raid_event_id
+            WHERE signups.id = character_replacements.signup_id
+        )
+    """)
+
+    # Step 3: Make columns NOT NULL
+    op.alter_column('signups', 'guild_id', nullable=False)
+    op.alter_column('lineup_slots', 'guild_id', nullable=False)
+    op.alter_column('raid_bans', 'guild_id', nullable=False)
+    op.alter_column('attendance_records', 'guild_id', nullable=False)
+    op.alter_column('character_replacements', 'guild_id', nullable=False)
+
+    # Step 4: Add foreign key constraints
+    op.create_foreign_key('fk_signups_guild', 'signups', 'guilds', ['guild_id'], ['id'])
+    op.create_foreign_key('fk_lineup_slots_guild', 'lineup_slots', 'guilds', ['guild_id'], ['id'])
+    op.create_foreign_key('fk_raid_bans_guild', 'raid_bans', 'guilds', ['guild_id'], ['id'])
+    op.create_foreign_key('fk_attendance_records_guild', 'attendance_records', 'guilds', ['guild_id'], ['id'])
+    op.create_foreign_key('fk_character_replacements_guild', 'character_replacements', 'guilds', ['guild_id'], ['id'])
+
+    # Step 5: Add indexes for tenant-scoped queries
+    op.create_index('ix_signups_guild', 'signups', ['guild_id'])
+    op.create_index('ix_signups_guild_event', 'signups', ['guild_id', 'raid_event_id'])
+    op.create_index('ix_lineup_slots_guild', 'lineup_slots', ['guild_id'])
+    op.create_index('ix_lineup_slots_guild_event', 'lineup_slots', ['guild_id', 'raid_event_id'])
+    op.create_index('ix_raid_bans_guild', 'raid_bans', ['guild_id'])
+    op.create_index('ix_attendance_records_guild', 'attendance_records', ['guild_id'])
+    op.create_index('ix_character_replacements_guild', 'character_replacements', ['guild_id'])
+
+
+def downgrade():
+    # Remove indexes
+    op.drop_index('ix_character_replacements_guild', 'character_replacements')
+    op.drop_index('ix_attendance_records_guild', 'attendance_records')
+    op.drop_index('ix_raid_bans_guild', 'raid_bans')
+    op.drop_index('ix_lineup_slots_guild_event', 'lineup_slots')
+    op.drop_index('ix_lineup_slots_guild', 'lineup_slots')
+    op.drop_index('ix_signups_guild_event', 'signups')
+    op.drop_index('ix_signups_guild', 'signups')
+
+    # Remove foreign keys
+    op.drop_constraint('fk_character_replacements_guild', 'character_replacements', type_='foreignkey')
+    op.drop_constraint('fk_attendance_records_guild', 'attendance_records', type_='foreignkey')
+    op.drop_constraint('fk_raid_bans_guild', 'raid_bans', type_='foreignkey')
+    op.drop_constraint('fk_lineup_slots_guild', 'lineup_slots', type_='foreignkey')
+    op.drop_constraint('fk_signups_guild', 'signups', type_='foreignkey')
+
+    # Remove columns
+    op.drop_column('character_replacements', 'guild_id')
+    op.drop_column('attendance_records', 'guild_id')
+    op.drop_column('raid_bans', 'guild_id')
+    op.drop_column('lineup_slots', 'guild_id')
+    op.drop_column('signups', 'guild_id')
+```
+
+---
+
+### 10.12 Verification & Testing Plan
+
+#### Pre-migration verification:
+```sql
+-- Count rows in each table BEFORE migration
+SELECT 'signups' AS tbl, COUNT(*) AS cnt FROM signups
+UNION ALL SELECT 'lineup_slots', COUNT(*) FROM lineup_slots
+UNION ALL SELECT 'raid_bans', COUNT(*) FROM raid_bans
+UNION ALL SELECT 'attendance_records', COUNT(*) FROM attendance_records
+UNION ALL SELECT 'character_replacements', COUNT(*) FROM character_replacements;
+```
+
+#### Post-migration verification:
+```sql
+-- Verify NO nulls remain after backfill
+SELECT 'signups' AS tbl, COUNT(*) AS nulls FROM signups WHERE guild_id IS NULL
+UNION ALL SELECT 'lineup_slots', COUNT(*) FROM lineup_slots WHERE guild_id IS NULL
+UNION ALL SELECT 'raid_bans', COUNT(*) FROM raid_bans WHERE guild_id IS NULL
+UNION ALL SELECT 'attendance_records', COUNT(*) FROM attendance_records WHERE guild_id IS NULL
+UNION ALL SELECT 'character_replacements', COUNT(*) FROM character_replacements WHERE guild_id IS NULL;
+
+-- Verify guild_id matches parent chain
+SELECT COUNT(*) AS mismatches
+FROM signups s
+JOIN raid_events re ON re.id = s.raid_event_id
+WHERE s.guild_id != re.guild_id;
+-- Expected: 0
+
+SELECT COUNT(*) AS mismatches
+FROM lineup_slots ls
+JOIN raid_events re ON re.id = ls.raid_event_id
+WHERE ls.guild_id != re.guild_id;
+-- Expected: 0
+
+SELECT COUNT(*) AS mismatches
+FROM raid_bans rb
+JOIN raid_events re ON re.id = rb.raid_event_id
+WHERE rb.guild_id != re.guild_id;
+-- Expected: 0
+
+SELECT COUNT(*) AS mismatches
+FROM attendance_records ar
+JOIN raid_events re ON re.id = ar.raid_event_id
+WHERE ar.guild_id != re.guild_id;
+-- Expected: 0
+
+SELECT COUNT(*) AS mismatches
+FROM character_replacements cr
+JOIN signups s ON s.id = cr.signup_id
+JOIN raid_events re ON re.id = s.raid_event_id
+WHERE cr.guild_id != re.guild_id;
+-- Expected: 0
+```
+
+#### New integration tests to add:
+
+```python
+# tests/test_tenant_isolation.py (NEW FILE)
+
+class TestTenantIsolation:
+    """Verify that guild-scoped data is properly isolated between tenants."""
+
+    def test_signup_cannot_see_other_guild_signups(self):
+        """Signups from Guild A must NOT appear in Guild B queries."""
+
+    def test_lineup_cannot_see_other_guild_slots(self):
+        """Lineup slots from Guild A must NOT appear in Guild B queries."""
+
+    def test_attendance_cannot_see_other_guild_records(self):
+        """Attendance records from Guild A must NOT appear in Guild B queries."""
+
+    def test_ban_cannot_see_other_guild_bans(self):
+        """Raid bans from Guild A must NOT appear in Guild B queries."""
+
+    def test_replacement_cannot_see_other_guild_replacements(self):
+        """Character replacements from Guild A must NOT appear in Guild B."""
+
+    def test_event_cannot_access_other_guild_event(self):
+        """An event_id from Guild A should not be accessible from Guild B context."""
+
+    def test_character_cannot_signup_to_other_guild_event(self):
+        """A character from Guild A cannot sign up for a Guild B event."""
+
+    def test_admin_dashboard_sees_all_guilds(self):
+        """Global admin dashboard should count ALL guilds (not tenant-filtered)."""
+
+    def test_notification_visible_across_guilds(self):
+        """User notifications are user-scoped, not guild-scoped."""
+
+    def test_global_roles_not_tenant_scoped(self):
+        """System roles and permissions are global, not per-guild."""
+```
+
+#### Existing test regression:
+```bash
+# Run full suite after every model change:
+python -m pytest tests/ -v
+# Expected: all 632+ tests pass (some may need guild_id added to fixtures)
+```
+
+---
+
+### 10.13 Test Fixture Changes
+
+Many existing tests create signups, lineup slots, bans, and attendance records
+without setting `guild_id` (since the column doesn't exist yet). After adding
+the column, these tests will fail because `guild_id` is `NOT NULL`.
+
+**Approach:** Update test fixtures/factories to include `guild_id`:
+
+```python
+# Before (current test fixtures):
+signup = Signup(
+    raid_event_id=event.id,
+    user_id=user.id,
+    character_id=char.id,
+    chosen_role="melee_dps",
+)
+
+# After (with tenant_id):
+signup = Signup(
+    guild_id=guild.id,          # NEW — required
+    raid_event_id=event.id,
+    user_id=user.id,
+    character_id=char.id,
+    chosen_role="melee_dps",
+)
+```
+
+**Files that will need fixture updates (estimate):**
+
+| Test file | Affected fixtures | Estimated changes |
+|-----------|-------------------|-------------------|
+| `tests/test_signups.py` | Signup creation | ~15-25 places |
+| `tests/test_lineup.py` | LineupSlot creation | ~20-30 places |
+| `tests/test_attendance.py` | AttendanceRecord creation | ~5-10 places |
+| `tests/test_events.py` | Event + signup chains | ~10-15 places |
+| `tests/test_replacements.py` | CharacterReplacement creation | ~5-10 places |
+| `tests/test_permissions.py` | Various through full-stack tests | ~5-10 places |
+| Other test files | Various | ~10-20 places |
+
+**Total estimated:** 70-120 test fixture updates across ~20 test files.
+
+---
+
+### 10.14 Rollout Checklist
+
+Execute these steps **in order**. Each step must be verified before proceeding.
+
+- [ ] **Step 0.1:** Create `app/models/mixins.py` with `TenantMixin`
+- [ ] **Step 0.2:** Add `TenantMixin` to `Signup` model — run tests (expect failures)
+- [ ] **Step 0.3:** Update test fixtures for `Signup.guild_id` — run tests (expect pass)
+- [ ] **Step 0.4:** Update `signup_service.py` — add `guild_id` params + filters to all queries
+- [ ] **Step 0.5:** Update `app/api/v1/signups.py` — pass `guild_id` to service calls
+- [ ] **Step 0.6:** Run full test suite — all signup tests pass ✅
+- [ ] **Step 0.7:** Add `TenantMixin` to `LineupSlot` model — run tests (expect failures)
+- [ ] **Step 0.8:** Update test fixtures for `LineupSlot.guild_id` — run tests
+- [ ] **Step 0.9:** Update `lineup_service.py` — add `guild_id` params + filters
+- [ ] **Step 0.10:** Update `app/api/v1/lineup.py` — pass `guild_id` to service calls
+- [ ] **Step 0.11:** Run full test suite — all lineup tests pass ✅
+- [ ] **Step 0.12:** Add `TenantMixin` to `RaidBan` model — run tests (expect failures)
+- [ ] **Step 0.13:** Update test fixtures for `RaidBan.guild_id` — run tests
+- [ ] **Step 0.14:** Update `signup_service.py` ban functions — add `guild_id` filters
+- [ ] **Step 0.15:** Run full test suite — all ban tests pass ✅
+- [ ] **Step 0.16:** Add `TenantMixin` to `AttendanceRecord` model — run tests (expect failures)
+- [ ] **Step 0.17:** Update test fixtures for `AttendanceRecord.guild_id` — run tests
+- [ ] **Step 0.18:** Update `attendance_service.py` — add `guild_id` params + filters
+- [ ] **Step 0.19:** Update `app/api/v1/attendance.py` — pass `guild_id` to service calls
+- [ ] **Step 0.20:** Run full test suite — all attendance tests pass ✅
+- [ ] **Step 0.21:** Add `TenantMixin` to `CharacterReplacement` model — run tests (expect failures)
+- [ ] **Step 0.22:** Update test fixtures for `CharacterReplacement.guild_id` — run tests
+- [ ] **Step 0.23:** Update `signup_service.py` replacement functions — add `guild_id` filters
+- [ ] **Step 0.24:** Run full test suite — all replacement tests pass ✅
+- [ ] **Step 0.25:** Write and run the Alembic migration script
+- [ ] **Step 0.26:** Run post-migration verification queries
+- [ ] **Step 0.27:** Write `tests/test_tenant_isolation.py` — cross-tenant isolation tests
+- [ ] **Step 0.28:** Run full test suite — all 632+ tests pass ✅
+- [ ] **Step 0.29:** Manual smoke test — create 2 guilds, create events/signups in each, verify isolation
+- [ ] **Step 0.30:** Code review — audit every query in the codebase for missing `guild_id` filters
+
+---
+
+### 10.15 Summary of All Changes
+
+| Area | Files | Estimated changes |
+|------|-------|-------------------|
+| **New files** | `app/models/mixins.py` | 1 new file (~30 lines) |
+| **Model changes** | `app/models/signup.py`, `app/models/attendance.py` | 5 models updated (~25 lines total) |
+| **Service changes** | `signup_service.py`, `lineup_service.py`, `attendance_service.py`, `event_service.py`, `character_service.py`, `raid_service.py` | ~60-80 query updates |
+| **API changes** | `signups.py`, `lineup.py`, `attendance.py` | ~15-20 parameter additions |
+| **Test fixtures** | 10-20 test files | ~70-120 fixture updates |
+| **New tests** | `tests/test_tenant_isolation.py` | 1 new file (~10 tests) |
+| **Migration** | Alembic migration file | 1 file (~100 lines) |
+| **Total** | ~25-35 files | ~200-300 lines changed |
+
+### 10.16 What This Does NOT Cover
+
+The following are explicitly **out of scope** for Phase 0 and will be addressed
+in later phases:
+
+| Item | Phase | Reason |
+|------|-------|--------|
+| Invitation-based guild membership | Phase 2 | Separate feature, not a tenancy concern |
+| Per-guild role customization | Phase 3 | Requires expansion system first |
+| Multi-expansion support | Phase 4 | Build on top of tenant-isolated foundation |
+| Plugin architecture | Phase 5 | Build on top of tenant-isolated foundation |
+| Billing/subscription per guild | Phase 6 | Requires tenant isolation (done in Phase 0) |
+| Row-level security (Postgres RLS) | Future | Advanced DB-level enforcement; Phase 0 uses application-level enforcement |
+| Separate databases per tenant | Never | Over-engineering for this application's scale |
+
+### 10.17 Decision Record
+
+| # | Decision | Rationale |
+|---|----------|-----------|
+| 1 | Use application-level tenant filtering (not Postgres RLS) | App uses SQLite in dev; RLS is Postgres-only. Application-level is portable. |
+| 2 | Add `guild_id` as denormalized column (not just rely on FK chain) | 1-hop lookup is faster and safer than 2-3 hop JOINs. Denormalization is acceptable for read-heavy workload. |
+| 3 | Use `TenantMixin` (not decorator) | Explicit is better than implicit. Mixin makes guild_id visible in model definition. |
+| 4 | Migrate all 5 tables in one Alembic migration | Atomic migration prevents half-migrated state. Easier to rollback. |
+| 5 | Do Phase 0 before all other phases | Retrofitting tenancy after Phases 1-5 would require re-auditing every new query. Pay the cost once, upfront. |
+| 6 | Keep `armory_configs` without `guild_id` | User-scoped, not guild-scoped. Guild links via `Guild.armory_config_id` FK. |
+| 7 | Keep `notifications` `guild_id` nullable | Some notifications are system-wide (password change, etc.). User-scoped queries are correct. |
+| 8 | Keep unique constraints event-scoped (not guild-scoped) | Events already belong to exactly one guild. Adding guild_id to unique constraints is redundant. |
