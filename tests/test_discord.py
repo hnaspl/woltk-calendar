@@ -227,6 +227,22 @@ class TestDiscordLoginUrl:
         assert "discord.com" in data["url"]
         assert "my-client-id" in data["url"]
 
+    def test_url_uses_percent_20_for_scope_spaces(self, app, client, db):
+        """Discord requires scopes separated by %20, not +."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="cid"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                         value=encrypt_value("sec")))
+            db.session.add(SystemSetting(key="discord_redirect_uri",
+                                         value="http://localhost/cb"))
+            db.session.commit()
+
+        resp = client.get("/api/v1/auth/discord/login")
+        url = resp.get_json()["url"]
+        assert "scope=identify%20email" in url
+        assert "identify+email" not in url
+
 
 # ---------------------------------------------------------------------------
 # Admin Discord settings endpoints (global admin only)

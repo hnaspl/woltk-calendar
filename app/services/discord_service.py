@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import requests
 import sqlalchemy as sa
@@ -17,7 +17,7 @@ from app.utils.encryption import decrypt_value
 logger = logging.getLogger(__name__)
 
 DISCORD_API_BASE = "https://discord.com/api/v10"
-DISCORD_AUTH_URL = "https://discord.com/api/oauth2/authorize"
+DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize"
 DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
 
 
@@ -60,7 +60,7 @@ def get_authorize_url(state: str) -> Optional[str]:
         "scope": "identify email",
         "state": state,
     }
-    return f"{DISCORD_AUTH_URL}?{urlencode(params)}"
+    return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
 
 
 def exchange_code(code: str) -> Optional[dict]:
