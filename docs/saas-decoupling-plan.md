@@ -143,7 +143,7 @@ Currently, any registered user can:
 - See all guilds in the system
 - Self-join any guild (if `allow_self_join=True`, which is the default)
 - Be a member of multiple guilds simultaneously
-- There is no concept of "ownership workspace" — all guilds live in a flat namespace
+- There is no concept of isolated user workspaces — all guilds exist in a shared global namespace
 
 This is **not SaaS-safe** because:
 - No data isolation between users' workspaces
@@ -225,6 +225,8 @@ class Tenant(db.Model):
     name          = Column(String(100), nullable=False)        # Display name (e.g., "Arthas's Workspace")
     slug          = Column(String(100), unique=True, nullable=False)  # URL-friendly identifier
     owner_id      = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+                    # unique=True → each user owns exactly one tenant. Drop unique if
+                    # multi-workspace support is needed in the future.
     plan          = Column(String(30), default="free")         # free / pro / enterprise (future billing)
     max_guilds    = Column(Integer, default=3)                 # Guild limit per plan
     max_members   = Column(Integer, default=50)                # Member limit per plan
@@ -1792,9 +1794,12 @@ def register_user(email, username, password):
     db.session.flush()  # Get user.id
 
     # Auto-create tenant for the new user
+    # Note: slug generation should use a robust slugify function that handles
+    # Unicode, special characters, and appends a unique suffix on collision.
+    # Simplified here for illustration.
     tenant = Tenant(
         name=f"{username}'s Workspace",
-        slug=username.lower().replace(' ', '-'),
+        slug=generate_unique_slug(username),  # e.g., "arthas" or "arthas-2" on collision
         owner_id=user.id,
         plan="free",
         max_guilds=3,
