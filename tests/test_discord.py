@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+import sqlalchemy as sa
 
 from app import create_app
 from app.extensions import bcrypt, db as _db
@@ -275,8 +276,8 @@ class TestDiscordLoginUrl:
         assert "scope=identify%20email" in location
         assert "identify+email" not in location
 
-    def test_redirect_url_contains_prompt_consent(self, app, client, db):
-        """Discord authorize URL includes prompt=consent per Discord docs."""
+    def test_redirect_url_does_not_force_consent(self, app, client, db):
+        """Authorize URL must NOT include prompt=consent so returning users skip the consent screen."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="cid"))
@@ -288,7 +289,7 @@ class TestDiscordLoginUrl:
 
         resp = client.get("/api/v1/auth/discord/login")
         location = resp.headers["Location"]
-        assert "prompt=consent" in location
+        assert "prompt=consent" not in location
 
     def test_auto_generates_redirect_uri_when_not_configured(self, app, client, db):
         """When discord_redirect_uri is not set, the callback URL is auto-generated."""
@@ -443,6 +444,8 @@ class TestDiscordService:
             assert user.auth_provider == "discord"
             assert user.username == "testdiscord"
             assert user.display_name == "Test Discord User"
+            # Real Discord email is stored when not already taken
+            assert user.email == "test@discord.com"
 
     def test_get_or_create_discord_user_returns_existing(self, app, db, discord_user):
         with app.app_context():
@@ -453,16 +456,99 @@ class TestDiscordService:
 
     def test_get_or_create_handles_username_collision(self, app, db):
         with app.app_context():
-            # Create a user with a conflicting username
+            # Create a local user with a conflicting username
             existing = User(email="x@test.com", username="samename", password_hash="x")
             db.session.add(existing)
             db.session.commit()
 
             from app.services.discord_service import get_or_create_discord_user
-            info = {"id": "77777", "username": "samename", "email": "discord@discord.com"}
+            info = {"id": "77777", "username": "samename", "email": "unique@discord.com"}
             user = get_or_create_discord_user(info)
             assert user.username.startswith("samename_")
             assert user.discord_id == "77777"
+
+    def test_get_or_create_does_not_link_by_email(self, app, db):
+        """Discord login must NOT auto-link to a local account by email (security risk).
+        Instead it falls back to a generated email."""
+        with app.app_context():
+            local_user = User(
+                email="shared@example.com", username="localuser",
+                password_hash="$2b$12$hash", auth_provider="local",
+            )
+            db.session.add(local_user)
+            db.session.commit()
+            local_id = local_user.id
+
+            from app.services.discord_service import get_or_create_discord_user
+            info = {"id": "55555", "username": "discordname", "email": "shared@example.com"}
+            discord_u = get_or_create_discord_user(info)
+
+            # Must be a SEPARATE user, not linked to the local account
+            assert discord_u.id != local_id
+            assert discord_u.discord_id == "55555"
+            # Falls back to generated email because real one is taken
+            assert discord_u.email == "55555@discord.user"
+
+    def test_get_or_create_no_duplicate_on_reauth(self, app, db, discord_user):
+        """Re-authorizing Discord must return the same user, never a duplicate."""
+        with app.app_context():
+            from app.services.discord_service import get_or_create_discord_user
+            info = {"id": "123456789", "username": "changed", "email": "changed@x.com"}
+            user = get_or_create_discord_user(info)
+            assert user.id == discord_user.id
+
+            total = db.session.execute(
+                sa.select(sa.func.count()).select_from(User).where(
+                    User.discord_id == "123456789"
+                )
+            ).scalar()
+            assert total == 1
+
+    def test_discord_first_blocks_local_registration_email(self, app, db):
+        """If Discord user registered first, local registration with same email is blocked."""
+        with app.app_context():
+            from app.services.discord_service import get_or_create_discord_user
+            from app.services.auth_service import register_user
+
+            # Discord user registers first with real email
+            get_or_create_discord_user({
+                "id": "11111", "username": "discorduser", "email": "alice@example.com",
+            })
+
+            # Local registration with same email must fail
+            with pytest.raises(ValueError):
+                register_user("alice@example.com", "alice_local", "password123")
+
+    def test_discord_first_blocks_local_registration_username(self, app, db):
+        """If Discord user registered first, local registration with same username is blocked."""
+        with app.app_context():
+            from app.services.discord_service import get_or_create_discord_user
+            from app.services.auth_service import register_user
+
+            get_or_create_discord_user({
+                "id": "22222", "username": "sharedname", "email": "d@d.com",
+            })
+
+            with pytest.raises(ValueError):
+                register_user("new@example.com", "sharedname", "password123")
+
+    def test_local_first_not_blocked_by_discord(self, app, db):
+        """If local user registered first, Discord login does not disrupt them."""
+        with app.app_context():
+            from app.services.discord_service import get_or_create_discord_user
+            from app.services.auth_service import register_user
+
+            # Local user registers first
+            local = register_user("bob@example.com", "boblocal", "password123")
+
+            # Discord user with same email gets a fallback, local user untouched
+            discord_u = get_or_create_discord_user({
+                "id": "33333", "username": "bobdiscord", "email": "bob@example.com",
+            })
+
+            assert discord_u.id != local.id
+            assert discord_u.email == "33333@discord.user"
+            assert local.email == "bob@example.com"
 
     def test_exchange_code_returns_none_on_network_error(self, app, db):
         """exchange_code must not raise on network failures."""

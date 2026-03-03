@@ -121,7 +121,6 @@ def get_authorize_url(state: str) -> Optional[str]:
         "response_type": "code",
         "scope": "identify email",
         "state": state,
-        "prompt": "consent",
     }
     # quote_via=quote encodes spaces as %20 (RFC 3986) instead of +.
     return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
@@ -222,24 +221,40 @@ def _do_exchange(code: str, settings: dict) -> Optional[dict]:
 
 
 def get_or_create_discord_user(discord_info: dict) -> User:
-    """Find existing user by discord_id or create a new one.
+    """Find existing user by discord_id, or create a new one.
+
+    Design decisions:
+    - Lookup is by ``discord_id`` only — prevents duplicates on re-auth.
+    - Uses the real Discord email when available so the same person cannot
+      create a second (local) account with the same email address.
+    - If the email is already taken by an existing local user, falls back
+      to ``{discord_id}@discord.user`` so the local user is not disrupted.
+    - Username collisions are resolved with a numeric suffix.
+    - No auto-linking by email — avoids account-takeover risk from
+      unverified Discord emails.
 
     Returns the User object.
     """
     discord_id = str(discord_info["id"])
 
-    # Look up by discord_id first
+    # Returning Discord user — same discord_id → same account
     user = db.session.execute(
         sa.select(User).where(User.discord_id == discord_id)
     ).scalar_one_or_none()
     if user:
         return user
 
-    # Create new user
-    email = discord_info.get("email") or f"{discord_id}@discord.user"
+    # Determine email: use the real one if available and not already taken,
+    # otherwise fall back to a namespaced placeholder.
+    email = (discord_info.get("email") or "").strip().lower()
+    if not email or db.session.execute(
+        sa.select(User).where(User.email == email)
+    ).scalar_one_or_none():
+        email = f"{discord_id}@discord.user"
+
     base_username = discord_info.get("username", f"discord_{discord_id}")
 
-    # Ensure unique username
+    # Ensure unique username (append suffix if taken)
     username = base_username
     suffix = 1
     while db.session.execute(
@@ -247,12 +262,6 @@ def get_or_create_discord_user(discord_info: dict) -> User:
     ).scalar_one_or_none():
         username = f"{base_username}_{suffix}"
         suffix += 1
-
-    # If email already taken, append discord id
-    if db.session.execute(
-        sa.select(User).where(User.email == email)
-    ).scalar_one_or_none():
-        email = f"{discord_id}@discord.user"
 
     user = User(
         email=email,
