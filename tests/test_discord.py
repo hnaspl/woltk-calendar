@@ -228,7 +228,7 @@ class TestDiscordLoginUrl:
         assert "my-client-id" in location
 
     def test_redirect_url_contains_correct_scope(self, app, client, db):
-        """Discord scopes use + (standard query-string encoding for spaces)."""
+        """Discord requires scopes separated by %20 (url-encoded space), not +."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="cid"))
@@ -240,7 +240,23 @@ class TestDiscordLoginUrl:
 
         resp = client.get("/api/v1/auth/discord/login")
         location = resp.headers["Location"]
-        assert "scope=identify+email" in location
+        assert "scope=identify%20email" in location
+        assert "identify+email" not in location
+
+    def test_redirect_url_contains_prompt_consent(self, app, client, db):
+        """Discord authorize URL includes prompt=consent per Discord docs."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="cid"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                         value=encrypt_value("sec")))
+            db.session.add(SystemSetting(key="discord_redirect_uri",
+                                         value="http://localhost/cb"))
+            db.session.commit()
+
+        resp = client.get("/api/v1/auth/discord/login")
+        location = resp.headers["Location"]
+        assert "prompt=consent" in location
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +433,58 @@ class TestDiscordService:
         """Verify gevent.Timeout is available for hard timeout in production."""
         from app.services.discord_service import _GeventTimeout
         assert _GeventTimeout is not None
+
+    def test_exchange_code_uses_basic_auth(self, app, db):
+        """Token exchange must use HTTP Basic auth per Discord docs."""
+        from unittest.mock import patch, MagicMock
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="my-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("my-secret")))
+            db.session.add(SystemSetting(key="discord_redirect_uri",
+                                          value="http://localhost/cb"))
+            db.session.commit()
+
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"access_token": "tok"}
+
+            mock_user_resp = MagicMock()
+            mock_user_resp.status_code = 200
+            mock_user_resp.json.return_value = {"id": "1", "username": "u"}
+
+            from app.services.discord_service import exchange_code
+            with patch("app.services.discord_service.requests.post",
+                       return_value=mock_resp) as mock_post, \
+                 patch("app.services.discord_service.requests.get",
+                       return_value=mock_user_resp):
+                exchange_code("test-code")
+                # Verify Basic auth was used (not client_id/secret in body)
+                call_kwargs = mock_post.call_args
+                assert call_kwargs.kwargs.get("auth") == ("my-id", "my-secret")
+                post_data = call_kwargs.kwargs.get("data", {})
+                assert "client_id" not in post_data
+                assert "client_secret" not in post_data
+
+    def test_get_redirect_uri_returns_configured(self, app, db):
+        """get_redirect_uri returns the configured redirect URI."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            from app.services.discord_service import get_redirect_uri
+            db.session.add(SystemSetting(key="discord_client_id", value="id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("secret")))
+            db.session.add(SystemSetting(key="discord_redirect_uri",
+                                          value="http://myhost:5000/api/v1/auth/discord/callback"))
+            db.session.commit()
+            assert get_redirect_uri() == "http://myhost:5000/api/v1/auth/discord/callback"
+
+    def test_get_redirect_uri_returns_none_when_not_configured(self, app):
+        """get_redirect_uri returns None when settings are missing."""
+        with app.app_context():
+            from app.services.discord_service import get_redirect_uri
+            assert get_redirect_uri() is None
 
 
 # ---------------------------------------------------------------------------

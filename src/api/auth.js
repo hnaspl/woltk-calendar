@@ -13,5 +13,3 @@ export const changePassword = (payload) => api.post('/auth/change-password', pay
 export const updateProfile = (payload) => api.put('/auth/profile', payload)
 
 export const getDiscordEnabled = () => api.get('/auth/discord/enabled')
-
-export const getDiscordLoginUrl = () => api.get('/auth/discord/login')

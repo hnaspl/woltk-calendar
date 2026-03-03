@@ -144,7 +144,8 @@ def discord_login():
     if not url:
         current_app.logger.warning("Discord login: not configured")
         return redirect("/login?error=discord_not_configured")
-    current_app.logger.info("Discord login: redirecting to Discord")
+    current_app.logger.info("Discord login: redirecting to Discord (redirect_uri=%s)",
+                            discord_service.get_redirect_uri())
     return redirect(url)
 
 

@@ -1,10 +1,19 @@
-"""Discord OAuth2 service: build auth URL, exchange code, fetch user info."""
+"""Discord OAuth2 service: build auth URL, exchange code, fetch user info.
+
+Implements the Authorization Code Grant flow per Discord documentation:
+https://discord.com/developers/docs/topics/oauth2#authorization-code-grant
+
+Key requirements from Discord docs:
+- Scopes in the authorize URL are separated by url-encoded spaces (%20)
+- Token exchange uses HTTP Basic auth (client_id, client_secret)
+- redirect_uri in token exchange must match the authorize URL exactly
+"""
 
 from __future__ import annotations
 
 import logging
 from typing import Optional
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import requests
 import sqlalchemy as sa
@@ -28,7 +37,7 @@ except ImportError:  # pragma: no cover – gevent always installed in prod
 
 DISCORD_API_BASE = "https://discord.com/api/v10"
 DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize"
-DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
+DISCORD_TOKEN_URL = f"{DISCORD_API_BASE}/oauth2/token"
 
 
 def _get_discord_settings() -> dict:
@@ -58,8 +67,18 @@ def is_discord_enabled() -> bool:
     return bool(_get_discord_settings())
 
 
+def get_redirect_uri() -> Optional[str]:
+    """Return the configured redirect URI, or None if not configured."""
+    settings = _get_discord_settings()
+    return settings.get("discord_redirect_uri") if settings else None
+
+
 def get_authorize_url(state: str) -> Optional[str]:
-    """Build the Discord OAuth2 authorization URL, or None if not configured."""
+    """Build the Discord OAuth2 authorization URL, or None if not configured.
+
+    Per Discord docs, scopes are "separated by url encoded spaces (%20)".
+    Reference: https://discord.com/developers/docs/topics/oauth2#authorization-code-grant
+    """
     settings = _get_discord_settings()
     if not settings:
         return None
@@ -69,8 +88,11 @@ def get_authorize_url(state: str) -> Optional[str]:
         "response_type": "code",
         "scope": "identify email",
         "state": state,
+        "prompt": "consent",
     }
-    return f"{DISCORD_AUTH_URL}?{urlencode(params)}"
+    # quote_via=quote encodes spaces as %20 (RFC 3986) instead of +
+    # Discord requires %20 for scope separation in the authorize URL.
+    return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
 
 
 def exchange_code(code: str) -> Optional[dict]:
@@ -106,20 +128,29 @@ def exchange_code(code: str) -> Optional[dict]:
 
 
 def _do_exchange(code: str, settings: dict) -> Optional[dict]:
-    """Inner exchange: token request + user-info fetch."""
+    """Inner exchange: token request + user-info fetch.
+
+    Per Discord docs, the token exchange uses HTTP Basic authentication
+    with client_id and client_secret, and sends grant_type, code,
+    redirect_uri as form-encoded body.
+    Reference: https://discord.com/developers/docs/topics/oauth2#authorization-code-grant-access-token-exchange-example
+    """
     logger.info("Discord token exchange: POST %s", DISCORD_TOKEN_URL)
+
+    client_id = settings["discord_client_id"]
+    client_secret = settings["discord_client_secret"]
+    redirect_uri = settings["discord_redirect_uri"]
 
     try:
         token_resp = requests.post(
             DISCORD_TOKEN_URL,
             data={
-                "client_id": settings["discord_client_id"],
-                "client_secret": settings["discord_client_secret"],
                 "grant_type": "authorization_code",
                 "code": code,
-                "redirect_uri": settings["discord_redirect_uri"],
+                "redirect_uri": redirect_uri,
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            auth=(client_id, client_secret),
             timeout=(5, 10),  # (connect_timeout, read_timeout)
         )
     except requests.RequestException as exc:
