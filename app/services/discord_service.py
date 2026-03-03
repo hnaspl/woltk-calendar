@@ -90,8 +90,7 @@ def get_authorize_url(state: str) -> Optional[str]:
         "state": state,
         "prompt": "consent",
     }
-    # quote_via=quote encodes spaces as %20 (RFC 3986) instead of +
-    # Discord requires %20 for scope separation in the authorize URL.
+    # quote_via=quote encodes spaces as %20 (RFC 3986) instead of +.
     return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
 
 
