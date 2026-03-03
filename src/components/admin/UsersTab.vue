@@ -19,6 +19,7 @@
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.fields.status') }}</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.admin') }}</th>
               <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.registered') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.users.guildLimit') }}</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
             </tr>
           </thead>
@@ -40,6 +41,17 @@
                 <span v-else class="text-text-muted text-xs">—</span>
               </td>
               <td class="hidden lg:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(u.created_at) }}</td>
+              <td class="hidden md:table-cell px-4 py-2.5">
+                <div class="flex items-center gap-1">
+                  <span class="text-text-muted text-xs">{{ u.max_guilds_override != null ? u.max_guilds_override : t('admin.users.guildLimitDefault') }}</span>
+                  <button
+                    v-if="u.id !== 1"
+                    class="text-text-muted hover:text-accent-gold text-xs transition-colors"
+                    :title="t('admin.users.setGuildLimit')"
+                    @click="openGuildLimitModal(u)"
+                  >✏️</button>
+                </div>
+              </td>
               <td class="px-4 py-2.5 text-right">
                 <div class="flex flex-wrap gap-1 justify-end">
                 <template v-if="u.id !== authStore.user.id && u.id !== 1">
@@ -89,6 +101,30 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Guild Limit Modal -->
+    <WowModal v-model="showGuildLimitModal" :title="t('admin.users.setGuildLimit')" size="sm">
+      <div class="space-y-3">
+        <p class="text-text-muted text-sm">{{ guildLimitTarget?.username }}</p>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.users.guildLimit') }}</label>
+          <input
+            v-model.number="guildLimitValue"
+            type="number"
+            min="0"
+            :placeholder="t('admin.users.guildLimitDefault')"
+            class="w-32 bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+          <p class="text-[10px] text-text-muted mt-1">{{ t('admin.settings.maxGuildsPerUserHelp') }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showGuildLimitModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="savingGuildLimit" @click="saveGuildLimit">{{ t('admin.system.saveSettings') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </div>
 </template>
 
@@ -114,6 +150,11 @@ const error = ref(null)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const deleting = ref(false)
+
+const showGuildLimitModal = ref(false)
+const guildLimitTarget = ref(null)
+const guildLimitValue = ref(null)
+const savingGuildLimit = ref(false)
 
 onMounted(async () => {
   loading.value = true
@@ -164,6 +205,28 @@ async function doDelete() {
     uiStore.showToast(t('admin.system.toasts.failedToDeleteUser'), 'error')
   } finally {
     deleting.value = false
+  }
+}
+
+function openGuildLimitModal(user) {
+  guildLimitTarget.value = user
+  guildLimitValue.value = user.max_guilds_override ?? ''
+  showGuildLimitModal.value = true
+}
+
+async function saveGuildLimit() {
+  savingGuildLimit.value = true
+  try {
+    const val = guildLimitValue.value === '' || guildLimitValue.value == null ? null : Number(guildLimitValue.value)
+    await adminApi.setUserGuildLimit(guildLimitTarget.value.id, val)
+    const idx = users.value.findIndex(u => u.id === guildLimitTarget.value.id)
+    if (idx !== -1) users.value[idx].max_guilds_override = val
+    showGuildLimitModal.value = false
+    uiStore.showToast(t('admin.users.guildLimitUpdated'), 'success')
+  } catch {
+    uiStore.showToast(t('admin.system.toasts.failedToUpdateUser'), 'error')
+  } finally {
+    savingGuildLimit.value = false
   }
 }
 </script>

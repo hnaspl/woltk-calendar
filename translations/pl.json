@@ -686,7 +686,11 @@
       "unblock": "Odblokuj",
       "primaryAdmin": "Główny admin",
       "deleteUser": "Usuń użytkownika",
-      "deleteConfirm": "Trwale usunąć {name}? Tej operacji nie można cofnąć."
+      "deleteConfirm": "Trwale usunąć {name}? Tej operacji nie można cofnąć.",
+      "guildLimit": "Limit gildii",
+      "guildLimitDefault": "Domyślny",
+      "setGuildLimit": "Ustaw limit gildii",
+      "guildLimitUpdated": "Limit gildii zaktualizowany"
     },
     "system": {
       "title": "Ustawienia systemowe",
@@ -773,7 +777,15 @@
       "removeConfirm": "Usunąć {user} z \"{guild}\"? Zostanie powiadomiony.",
       "memberRemovedSuccess": "Członek został usunięty.",
       "roleUpdated": "Rola członka zaktualizowana.",
-      "messageRequired": "Wiadomość jest wymagana."
+      "messageRequired": "Wiadomość jest wymagana.",
+      "features": "Funkcje",
+      "featureFlags": "Flagi funkcji",
+      "featureAttendance": "Frekwencja",
+      "featureTemplates": "Szablony",
+      "featureSeries": "Serie",
+      "featureCharacterSync": "Synchronizacja postaci",
+      "featureNotifications": "Powiadomienia",
+      "featuresUpdated": "Flagi funkcji zaktualizowane"
     },
     "raidDefinitions": {
       "tabTitle": "Definicje rajdów",
@@ -817,6 +829,11 @@
       "jobCreated": "Utworzono",
       "jobError": "Błąd",
       "noRecentJobs": "Brak zadań w kolejce."
+    },
+    "settings": {
+      "guildLimits": "Limity gildii",
+      "maxGuildsPerUser": "Maks. gildii na użytkownika",
+      "maxGuildsPerUserHelp": "Maksymalna liczba gildii, które pojedynczy użytkownik może utworzyć. Indywidualne nadpisania można ustawić w zakładce Użytkownicy."
     }
   },
   "signup": {

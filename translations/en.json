@@ -686,7 +686,11 @@
       "unblock": "Unblock",
       "primaryAdmin": "Primary Admin",
       "deleteUser": "Delete User",
-      "deleteConfirm": "Permanently delete {name}? This cannot be undone."
+      "deleteConfirm": "Permanently delete {name}? This cannot be undone.",
+      "guildLimit": "Guild Limit",
+      "guildLimitDefault": "Default",
+      "setGuildLimit": "Set Guild Limit",
+      "guildLimitUpdated": "Guild limit updated"
     },
     "system": {
       "title": "System Settings",
@@ -773,7 +777,15 @@
       "removeConfirm": "Remove {user} from \"{guild}\"? They will be notified.",
       "memberRemovedSuccess": "Member removed successfully.",
       "roleUpdated": "Member role updated.",
-      "messageRequired": "Message is required."
+      "messageRequired": "Message is required.",
+      "features": "Features",
+      "featureFlags": "Feature Flags",
+      "featureAttendance": "Attendance",
+      "featureTemplates": "Templates",
+      "featureSeries": "Series",
+      "featureCharacterSync": "Character Sync",
+      "featureNotifications": "Notifications",
+      "featuresUpdated": "Feature flags updated"
     },
     "raidDefinitions": {
       "tabTitle": "Raid Definitions",
@@ -817,6 +829,11 @@
       "jobCreated": "Created",
       "jobError": "Error",
       "noRecentJobs": "No recent jobs in queue."
+    },
+    "settings": {
+      "guildLimits": "Guild Limits",
+      "maxGuildsPerUser": "Max Guilds Per User",
+      "maxGuildsPerUserHelp": "Maximum number of guilds a single user can create. Individual users can have overrides set in the Users tab."
     }
   },
   "signup": {

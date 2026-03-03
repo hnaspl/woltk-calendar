@@ -68,6 +68,28 @@
       </div>
     </WowCard>
 
+    <!-- Guild Limits -->
+    <WowCard>
+      <h2 class="wow-heading text-base mb-4">{{ t('admin.settings.guildLimits') }}</h2>
+
+      <div v-if="sysSettingsLoading" class="h-20 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else class="space-y-4 max-w-lg">
+        <div>
+          <label class="block text-sm text-text-primary mb-1">{{ t('admin.settings.maxGuildsPerUser') }}</label>
+          <p class="text-[10px] text-text-muted mb-2">{{ t('admin.settings.maxGuildsPerUserHelp') }}</p>
+          <input
+            v-model.number="settingsForm.max_guilds_per_user"
+            type="number"
+            min="1"
+            class="w-32 bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+        </div>
+        <div class="pt-2">
+          <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">{{ t('admin.system.saveSettings') }}</WowButton>
+        </div>
+      </div>
+    </WowCard>
+
     <!-- Discord OAuth Settings (Global Admin only) -->
     <WowCard v-if="authStore.user?.is_admin">
       <h2 class="wow-heading text-base mb-2">{{ t('admin.system.discord.title') }}</h2>
@@ -138,6 +160,7 @@ const settingsForm = ref({
   wowhead_tooltips: true,
   autosync_enabled: false,
   autosync_interval_minutes: 60,
+  max_guilds_per_user: 5,
 })
 
 // Discord OAuth settings state
@@ -158,6 +181,7 @@ onMounted(async () => {
       wowhead_tooltips: settings.wowhead_tooltips !== 'false',
       autosync_enabled: settings.autosync_enabled === 'true',
       autosync_interval_minutes: parseInt(settings.autosync_interval_minutes) || 60,
+      max_guilds_per_user: parseInt(settings.max_guilds_per_user) || 5,
     }
   } catch {
     // ignore – defaults are fine
@@ -192,11 +216,13 @@ async function saveAllSettings() {
       wowhead_tooltips: settingsForm.value.wowhead_tooltips,
       autosync_enabled: settingsForm.value.autosync_enabled,
       autosync_interval_minutes: settingsForm.value.autosync_interval_minutes,
+      max_guilds_per_user: settingsForm.value.max_guilds_per_user,
     })
     settingsForm.value = {
       wowhead_tooltips: updated.wowhead_tooltips !== 'false',
       autosync_enabled: updated.autosync_enabled === 'true',
       autosync_interval_minutes: parseInt(updated.autosync_interval_minutes) || 60,
+      max_guilds_per_user: parseInt(updated.max_guilds_per_user) || 5,
     }
     uiStore.showToast(t('admin.system.toasts.settingsSaved'), 'success')
   } catch {

@@ -53,6 +53,7 @@
                 <td class="px-4 py-2.5 text-right">
                   <div class="flex flex-wrap gap-1 justify-end">
                     <WowButton variant="secondary" class="text-xs py-1 px-2" @click="viewMembers(g)">{{ t('admin.guilds.viewMembers') }}</WowButton>
+                    <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openFeaturesModal(g)">{{ t('admin.guilds.features') }}</WowButton>
                     <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmDeleteGuild(g)">{{ t('admin.guilds.deleteGuild') }}</WowButton>
                   </div>
                 </td>
@@ -178,6 +179,34 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Feature Flags Modal -->
+    <WowModal v-model="showFeaturesModal" :title="t('admin.guilds.featureFlags')" size="sm">
+      <div v-if="featuresLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else class="space-y-3">
+        <p class="text-text-muted text-sm mb-2">{{ featuresGuild?.name }}</p>
+        <label v-for="key in featureKeys" :key="key" class="flex items-center gap-3 cursor-pointer">
+          <button
+            type="button"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+            :class="featuresForm[key] ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+            @click="featuresForm[key] = !featuresForm[key]"
+          >
+            <span
+              class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+              :class="featuresForm[key] ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+          <span class="text-sm text-text-primary">{{ featureLabels[key] }}</span>
+        </label>
+      </div>
+      <template #footer>
+        <div class="flex gap-2 justify-end">
+          <WowButton variant="secondary" @click="showFeaturesModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="featuresSaving" @click="saveFeatures">{{ t('admin.system.saveSettings') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </div>
 </template>
 
@@ -190,6 +219,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import { useUiStore } from '@/stores/ui'
 import * as guildsApi from '@/api/guilds'
 import * as rolesApi from '@/api/roles'
+import * as adminApi from '@/api/admin'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
@@ -265,6 +295,27 @@ const deleteGuildTarget = ref(null)
 // Remove member
 const showRemoveMemberModal = ref(false)
 const removeMemberTarget = ref(null)
+
+// Feature flags
+const showFeaturesModal = ref(false)
+const featuresGuild = ref(null)
+const featuresLoading = ref(false)
+const featuresSaving = ref(false)
+const featureKeys = ['attendance', 'templates', 'series', 'character_sync', 'notifications']
+const featureLabels = computed(() => ({
+  attendance: t('admin.guilds.featureAttendance'),
+  templates: t('admin.guilds.featureTemplates'),
+  series: t('admin.guilds.featureSeries'),
+  character_sync: t('admin.guilds.featureCharacterSync'),
+  notifications: t('admin.guilds.featureNotifications'),
+}))
+const featuresForm = ref({
+  attendance: false,
+  templates: false,
+  series: false,
+  character_sync: false,
+  notifications: false,
+})
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -392,6 +443,39 @@ async function doRemoveMember() {
     await loadGuilds()
   } catch (err) {
     uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+  }
+}
+
+async function openFeaturesModal(guild) {
+  featuresGuild.value = guild
+  featuresLoading.value = true
+  showFeaturesModal.value = true
+  try {
+    const data = await adminApi.getGuildFeatures(guild.id)
+    featuresForm.value = {
+      attendance: !!data.attendance,
+      templates: !!data.templates,
+      series: !!data.series,
+      character_sync: !!data.character_sync,
+      notifications: !!data.notifications,
+    }
+  } catch {
+    featuresForm.value = { attendance: true, templates: true, series: true, character_sync: true, notifications: true }
+  } finally {
+    featuresLoading.value = false
+  }
+}
+
+async function saveFeatures() {
+  featuresSaving.value = true
+  try {
+    await adminApi.updateGuildFeatures(featuresGuild.value.id, { ...featuresForm.value })
+    showFeaturesModal.value = false
+    uiStore.showToast(t('admin.guilds.featuresUpdated'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+  } finally {
+    featuresSaving.value = false
   }
 }
 </script>
