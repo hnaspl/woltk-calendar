@@ -23,6 +23,8 @@
 8. [Migration & Backward Compatibility](#8-migration--backward-compatibility)
 9. [Open Questions & Decisions](#9-open-questions--decisions)
 10. [Phase 0: Per-User Tenancy — Detailed Plan](#10-phase-0-per-user-tenancy--detailed-plan)
+11. [Frontend Multi-Tenant Migration — Complete Plan](#11-frontend-multi-tenant-migration--complete-plan)
+12. [Frontend Testing Strategy for Multi-Tenancy](#12-frontend-testing-strategy-for-multi-tenancy)
 
 ---
 
@@ -2287,3 +2289,1205 @@ in later phases:
 | 10 | **Keep notifications `tenant_id` nullable** | Some notifications are system-wide (password change, etc.). User-scoped queries are correct. |
 | 11 | **`active_tenant_id` on User model** | Simplest approach — server always knows which tenant context the user is in. Alternative (JWT claim) adds complexity. |
 | 12 | **Configurable guild limit per tenant (`max_guilds`)** | Different plans can have different limits. Global admin can override per-tenant. Default: 3 for free plan. |
+
+---
+
+## 11. Frontend Multi-Tenant Migration — Complete Plan
+
+> **Why a separate section?** Section 10 covers backend models, services, APIs,
+> and migration. But the frontend is a full Vue 3 SPA with its own store layer,
+> routing, composables, API modules, and 15+ views — all of which need tenant
+> awareness. This section provides the **complete file-by-file frontend plan**.
+
+---
+
+### 11.1 Current Frontend Architecture
+
+The frontend is a Vue 3 SPA using Vite, Pinia (state), Vue Router, Vue I18n,
+Axios (HTTP), and Socket.IO (real-time). Here is the complete file inventory:
+
+#### 11.1.1 File Inventory
+
+| Category | Files | Lines | Tenant Impact |
+|----------|-------|-------|---------------|
+| **Entry** | `main.js`, `App.vue`, `i18n.js`, `constants.js` | ~210 | `main.js` bootstrap; `constants.js` stays as-is |
+| **Stores (5)** | `auth.js`, `guild.js`, `calendar.js`, `constants.js`, `ui.js` | ~200 | Auth + Guild stores need major changes; new `tenant.js` store needed |
+| **API modules (17)** | `index.js`, `auth.js`, `guilds.js`, `events.js`, `signups.js`, `lineup.js`, `attendance.js`, `characters.js`, `raidDefinitions.js`, `roles.js`, `templates.js`, `series.js`, `notifications.js`, `admin.js`, `meta.js`, `warmane.js`, `armory.js` | ~450 | Axios interceptor needs `X-Tenant-Id`; new `tenants.js` API module |
+| **Views (15)** | `LoginView`, `RegisterView`, `DashboardView`, `CalendarView`, `RaidDetailView`, `CharacterManagerView`, `AttendanceView`, `UserProfileView`, `AdminPanelView`, `GlobalAdminView`, `GuildSettingsView`, `RaidDefinitionsView`, `TemplatesView`, `SeriesView`, `RolesManagementView` | ~5,500 | Most views unaffected (tenant context via stores); Register, GlobalAdmin need changes |
+| **Layout (4)** | `AppShell.vue`, `AppSidebar.vue`, `AppTopBar.vue`, `AppBottomNav.vue` | ~950 | AppSidebar needs tenant switcher; AppTopBar shows tenant name |
+| **Admin components (9)** | `DashboardTab`, `UsersTab`, `RolesTab`, `GuildsTab`, `DefaultRaidDefinitionsTab`, `SettingsTab`, `GuildSettingsTab`, `MembersTab`, `SystemTab` | ~3,500 | New `TenantsTab`; DashboardTab adds tenant stats |
+| **Common components (13)** | `WowCard`, `WowButton`, `WowModal`, `WowTooltip`, `ClassBadge`, `RoleBadge`, `SpecBadge`, `StatusBadge`, `LockBadge`, `RaidSizeBadge`, `RealmBadge`, `CharacterDetailModal`, `CharacterTooltip` | ~700 | None — these are presentation-only |
+| **Composables (9)** | `useAuth`, `usePermissions`, `useSocket`, `useFormatting`, `useTimezone`, `useDragDrop`, `useSystemSettings`, `useWowIcons`, `useWowheadTooltips` | ~830 | `usePermissions` needs tenant context; `useSocket` needs tenant rooms |
+| **Router** | `router/index.js` | ~150 | New invite route; tenant context in guards |
+| **Total** | ~72 files | ~12,500 | ~25-30 files need changes |
+
+#### 11.1.2 Current Data Flow
+
+```
+User logs in → auth store (user object)
+            → guild store (user's guilds) → currentGuild selected
+            → calendar store (events for currentGuild)
+            → constants store (WoW classes, specs, roles, realms)
+
+Every view reads from stores; API calls go through /api/v1/*
+Guild context = guildStore.currentGuild.id (used in API calls)
+
+No tenant concept exists anywhere in the frontend today.
+```
+
+#### 11.1.3 Target Data Flow (After Tenancy)
+
+```
+User logs in → auth store (user + activeTenantId + tenants[])
+            → tenant store (active tenant details, members, invitations)
+            → guild store (guilds within active tenant)
+            → calendar store (events for currentGuild within active tenant)
+            → constants store (no change — global)
+
+Tenant switch → tenant store updates activeTenantId
+             → guild store reloads (different guilds)
+             → calendar store reloads (different events)
+             → permissions reload (different roles/permissions per tenant)
+             → Socket.IO leaves old tenant rooms, joins new ones
+```
+
+---
+
+### 11.2 Store Layer Changes
+
+#### 11.2.1 New Store: `src/stores/tenant.js`
+
+```javascript
+// src/stores/tenant.js (NEW FILE)
+
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import * as tenantsApi from '@/api/tenants'
+
+export const useTenantStore = defineStore('tenant', () => {
+  // ── State ──
+  const tenants = ref([])              // All tenants user belongs to (owned + member)
+  const activeTenantId = ref(null)     // Currently active tenant ID
+  const activeTenant = ref(null)       // Full details of active tenant
+  const members = ref([])              // Members of active tenant
+  const invitations = ref([])          // Pending invitations for active tenant
+  const loading = ref(false)
+  const error = ref(null)
+
+  // ── Derived ──
+  const ownedTenants = computed(() =>
+    tenants.value.filter(t => t.role === 'owner')
+  )
+  const memberTenants = computed(() =>
+    tenants.value.filter(t => t.role !== 'owner')
+  )
+  const isOwner = computed(() =>
+    activeTenant.value?.role === 'owner'
+  )
+  const isAdmin = computed(() =>
+    ['owner', 'admin'].includes(activeTenant.value?.role)
+  )
+  const canCreateGuild = computed(() =>
+    isOwner.value || isAdmin.value
+  )
+  const guildCount = computed(() =>
+    activeTenant.value?.guild_count ?? 0
+  )
+  const maxGuilds = computed(() =>
+    activeTenant.value?.max_guilds ?? 3
+  )
+  const atGuildLimit = computed(() =>
+    guildCount.value >= maxGuilds.value
+  )
+
+  // ── Actions ──
+  async function fetchTenants() {
+    loading.value = true
+    error.value = null
+    try {
+      tenants.value = await tenantsApi.getTenants()
+      if (!activeTenantId.value && tenants.value.length > 0) {
+        // Default to the user's owned tenant (first in list)
+        activeTenantId.value = tenants.value[0].id
+      }
+    } catch (err) {
+      error.value = err?.response?.data?.message || 'Failed to load tenants'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchActiveTenant() {
+    if (!activeTenantId.value) return
+    try {
+      activeTenant.value = await tenantsApi.getTenant(activeTenantId.value)
+    } catch { /* ignore */ }
+  }
+
+  async function switchTenant(tenantId) {
+    loading.value = true
+    try {
+      await tenantsApi.setActiveTenant(tenantId)
+      activeTenantId.value = tenantId
+      await fetchActiveTenant()
+      // Stores that depend on tenant context will reload via watchers
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchMembers() {
+    if (!activeTenantId.value) return
+    try {
+      members.value = await tenantsApi.getTenantMembers(activeTenantId.value)
+    } catch { /* ignore */ }
+  }
+
+  async function fetchInvitations() {
+    if (!activeTenantId.value) return
+    try {
+      invitations.value = await tenantsApi.getTenantInvitations(activeTenantId.value)
+    } catch { /* ignore */ }
+  }
+
+  function reset() {
+    tenants.value = []
+    activeTenantId.value = null
+    activeTenant.value = null
+    members.value = []
+    invitations.value = []
+  }
+
+  return {
+    // state
+    tenants, activeTenantId, activeTenant, members, invitations,
+    loading, error,
+    // derived
+    ownedTenants, memberTenants, isOwner, isAdmin,
+    canCreateGuild, guildCount, maxGuilds, atGuildLimit,
+    // actions
+    fetchTenants, fetchActiveTenant, switchTenant,
+    fetchMembers, fetchInvitations, reset,
+  }
+})
+```
+
+#### 11.2.2 Changes to `src/stores/auth.js`
+
+```javascript
+// Current auth store has: user, loading, error, fetchMe, login, register, logout
+
+// Changes needed:
+// 1. fetchMe() response now includes active_tenant_id and tenants[]
+// 2. After login/register, auto-set tenant context
+// 3. logout() must reset tenant store
+
+// Modified fetchMe:
+async function fetchMe() {
+  // ...existing code...
+  const data = await authApi.getMe()
+  user.value = data
+  // NEW: Initialize tenant store from user data
+  const tenantStore = useTenantStore()
+  if (data.active_tenant_id) {
+    tenantStore.activeTenantId = data.active_tenant_id
+  }
+  await tenantStore.fetchTenants()
+}
+
+// Modified register:
+async function register(username, email, password) {
+  // ...existing code...
+  const data = await authApi.register({ username, email, password })
+  user.value = data.user ?? data
+  // NEW: Backend auto-creates tenant — set it as active
+  const tenantStore = useTenantStore()
+  if (data.tenant_id || data.user?.active_tenant_id) {
+    tenantStore.activeTenantId = data.tenant_id || data.user.active_tenant_id
+    await tenantStore.fetchTenants()
+  }
+}
+
+// Modified logout:
+async function logout() {
+  // ...existing code...
+  user.value = null
+  // NEW: Clear tenant state
+  const tenantStore = useTenantStore()
+  tenantStore.reset()
+}
+```
+
+#### 11.2.3 Changes to `src/stores/guild.js`
+
+The guild store currently lists all guilds the user is a member of. After
+tenancy, it must only show guilds **within the active tenant**.
+
+```javascript
+// Key change: fetchGuilds() is already called from router guard.
+// After tenancy, the backend API already filters by active_tenant_id.
+// So the guild store itself doesn't need to know about tenants — the
+// backend handles the scoping. However, we need to:
+
+// 1. Add a watcher to re-fetch when tenant changes
+// 2. Reset currentGuild on tenant switch
+
+import { useTenantStore } from '@/stores/tenant'
+
+// Inside the store setup:
+const tenantStore = useTenantStore()
+
+// Watch for tenant switch → reload guilds
+watch(() => tenantStore.activeTenantId, (newId, oldId) => {
+  if (oldId && newId !== oldId) {
+    currentGuild.value = null
+    members.value = []
+    fetchGuilds()  // Reload guilds for new tenant
+  }
+})
+```
+
+#### 11.2.4 Changes to `src/stores/calendar.js`
+
+The calendar store fetches events via `getAllEvents()`. After tenancy, the
+backend API filters by active tenant. The calendar store needs to:
+
+```javascript
+// Reset events on tenant switch:
+import { useTenantStore } from '@/stores/tenant'
+
+const tenantStore = useTenantStore()
+
+watch(() => tenantStore.activeTenantId, (newId, oldId) => {
+  if (oldId && newId !== oldId) {
+    events.value = []
+    // Calendar will re-fetch via the CalendarView's onMounted
+  }
+})
+```
+
+#### 11.2.5 `src/stores/constants.js` — No Changes
+
+The constants store serves global WoW data (classes, specs, roles, realms). This
+data is **not tenant-scoped** — it's the same for all tenants. ✅ No changes.
+
+#### 11.2.6 `src/stores/ui.js` — No Changes
+
+The UI store manages sidebar state, modals, and toasts. These are purely
+local UI state. ✅ No changes.
+
+---
+
+### 11.3 API Layer Changes
+
+#### 11.3.1 New API Module: `src/api/tenants.js`
+
+```javascript
+// src/api/tenants.js (NEW FILE)
+
+import api from '.'
+
+// ── Tenant CRUD ──
+export const getTenants = () => api.get('/tenants')
+export const getTenant = (id) => api.get(`/tenants/${id}`)
+export const updateTenant = (id, data) => api.put(`/tenants/${id}`, data)
+export const deleteTenant = (id) => api.delete(`/tenants/${id}`)
+
+// ── Tenant Members ──
+export const getTenantMembers = (id) => api.get(`/tenants/${id}/members`)
+export const addTenantMember = (id, data) => api.post(`/tenants/${id}/members`, data)
+export const updateTenantMember = (id, userId, data) => api.put(`/tenants/${id}/members/${userId}`, data)
+export const removeTenantMember = (id, userId) => api.delete(`/tenants/${id}/members/${userId}`)
+
+// ── Tenant Invitations ──
+export const getTenantInvitations = (id) => api.get(`/tenants/${id}/invitations`)
+export const createTenantInvitation = (id, data) => api.post(`/tenants/${id}/invitations`, data)
+export const revokeInvitation = (tenantId, invId) => api.delete(`/tenants/${tenantId}/invitations/${invId}`)
+export const acceptInvite = (token) => api.post(`/invite/${token}`)
+
+// ── Tenant Switching ──
+export const setActiveTenant = (tenantId) => api.put('/auth/active-tenant', { tenant_id: tenantId })
+export const getActiveTenant = () => api.get('/auth/active-tenant')
+```
+
+#### 11.3.2 Axios Interceptor — Tenant Context Header
+
+The Axios instance (`src/api/index.js`) needs a request interceptor that
+attaches the active tenant ID to every request. This allows the backend to
+know which tenant context to use without changing every API call signature.
+
+```javascript
+// src/api/index.js — ADD request interceptor:
+
+import { useTenantStore } from '@/stores/tenant'
+
+// Request interceptor — attach tenant context
+api.interceptors.request.use(config => {
+  // Lazy import to avoid circular dependency at module-evaluation time
+  try {
+    const tenantStore = useTenantStore()
+    if (tenantStore.activeTenantId) {
+      config.headers['X-Tenant-Id'] = tenantStore.activeTenantId
+    }
+  } catch {
+    // Store not yet initialized (e.g., during app bootstrap) — skip
+  }
+  return config
+})
+```
+
+> **Note:** The backend already knows the active tenant from `user.active_tenant_id`
+> (session/cookie). The `X-Tenant-Id` header is an **additional safety check** —
+> if the header doesn't match the user's active tenant, the backend rejects the
+> request. This prevents stale tenant context from a browser tab that missed a
+> tenant switch.
+
+#### 11.3.3 Changes to `src/api/admin.js`
+
+```javascript
+// ADD new admin tenant endpoints:
+export const getAdminTenants = () => api.get('/admin/tenants')
+export const getAdminTenant = (id) => api.get(`/admin/tenants/${id}`)
+export const updateAdminTenant = (id, data) => api.put(`/admin/tenants/${id}`, data)
+export const suspendTenant = (id) => api.post(`/admin/tenants/${id}/suspend`)
+export const activateTenant = (id) => api.post(`/admin/tenants/${id}/activate`)
+export const deleteAdminTenant = (id) => api.delete(`/admin/tenants/${id}`)
+export const updateTenantLimits = (id, data) => api.put(`/admin/tenants/${id}/limits`, data)
+```
+
+#### 11.3.4 Other API Modules — No Changes Needed
+
+All other API modules (`guilds.js`, `events.js`, `signups.js`, `lineup.js`,
+`attendance.js`, `characters.js`, `raidDefinitions.js`, `roles.js`,
+`templates.js`, `series.js`, `notifications.js`, `meta.js`, `warmane.js`,
+`armory.js`) **do not need changes**. The tenant context is attached
+automatically via the Axios interceptor (`X-Tenant-Id` header) and the
+backend resolves the tenant from the user's session. The existing guild-scoped
+API calls (`/guilds/<id>/...`) continue to work — the backend just adds a
+tenant ownership check. ✅
+
+---
+
+### 11.4 Router Changes
+
+#### 11.4.1 New Routes
+
+```javascript
+// Add to routes array in src/router/index.js:
+
+{
+  path: '/invite/:token',
+  name: 'invite-accept',
+  component: () => import('@/views/InviteAcceptView.vue'),
+  meta: { requiresAuth: false }  // Can be accessed before login
+},
+{
+  path: '/tenant/settings',
+  name: 'tenant-settings',
+  component: () => import('@/views/TenantSettingsView.vue'),
+  meta: { requiresAuth: true }
+},
+{
+  path: '/tenant/invite',
+  name: 'tenant-invite',
+  component: () => import('@/views/TenantInviteView.vue'),
+  meta: { requiresAuth: true }
+},
+```
+
+#### 11.4.2 Router Guard — Tenant Bootstrap
+
+The current router guard flow is:
+1. `fetchMe()` → restore session
+2. `fetchGuilds()` → load user's guilds
+
+After tenancy, the flow becomes:
+1. `fetchMe()` → restore session + `active_tenant_id`
+2. `fetchTenants()` → load user's tenants
+3. `fetchGuilds()` → load guilds within active tenant
+
+```javascript
+// Modified router guard (src/router/index.js):
+
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+
+  if (!_authChecked) {
+    _authChecked = true
+    try {
+      const constantsStore = useConstantsStore()
+      const authPromise = authStore.fetchMe()
+      constantsStore.fetchConstants()
+      await authPromise
+
+      if (authStore.user) {
+        // NEW: Bootstrap tenant context
+        const tenantStore = useTenantStore()
+        await tenantStore.fetchTenants()
+
+        // Then load guilds (now tenant-scoped)
+        const guildStore = useGuildStore()
+        await guildStore.fetchGuilds()
+      }
+    } catch {
+      // Not authenticated
+    }
+  }
+
+  // ... rest of guard unchanged ...
+})
+```
+
+#### 11.4.3 Invite Link Handling
+
+When a user clicks an invite link (`/invite/{token}`), the router should:
+1. If logged in → show "Join {tenant_name}?" confirmation page
+2. If not logged in → redirect to `/login?redirect=/invite/{token}` →
+   after login, auto-redirect back to invite page
+
+This is handled automatically by the existing `requiresAuth: false` meta
+and the redirect logic in the router guard.
+
+---
+
+### 11.5 Layout & Shell Changes
+
+#### 11.5.1 `AppSidebar.vue` — Tenant Switcher
+
+The sidebar currently has:
+1. Logo/branding
+2. Guild switcher dropdown
+3. Available guilds to join
+4. Create guild button
+5. Navigation links
+6. User info
+
+**After tenancy**, it needs a **tenant switcher** above the guild switcher:
+
+```
+┌─────────────────────────────────────────┐
+│  Logo / Branding                         │
+├─────────────────────────────────────────┤
+│  🏠 Workspace                    (NEW)   │
+│  ┌─────────────────────────────────────┐│
+│  │ ▼ My Workspace                  ✓  │ │
+│  │   Thrall's Guild Hub               │ │
+│  │   PvP League (invited)             │ │
+│  └─────────────────────────────────────┘│
+├─────────────────────────────────────────┤
+│  ⚔️ Guild                               │
+│  ┌─────────────────────────────────────┐│
+│  │ ▼ Select Guild...                  │ │
+│  └─────────────────────────────────────┘│
+│  [+ Create Guild] (if under limit)      │
+├─────────────────────────────────────────┤
+│  📅 Calendar                            │
+│  ⚔️ Dashboard                           │
+│  👤 Characters                          │
+│  📊 Attendance                          │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  ⚙️ Tenant Settings (owner/admin)       │
+│  👥 Invite Players (owner/admin)        │
+│  🛡️ Guild Admin                         │
+│  🔧 Global Admin (if global admin)      │
+├─────────────────────────────────────────┤
+│  User info                              │
+└─────────────────────────────────────────┘
+```
+
+**Implementation approach:**
+
+The tenant switcher is extracted into a new component `TenantSwitcher.vue`
+and imported into `AppSidebar.vue`. This keeps the sidebar manageable.
+
+```vue
+<!-- New section in AppSidebar.vue, above the guild switcher: -->
+<div class="px-4 py-3 border-b border-[#2a3450]">
+  <TenantSwitcher />
+</div>
+```
+
+**Changes to AppSidebar.vue:**
+
+| # | Change | Details |
+|---|--------|---------|
+| 1 | Import `TenantSwitcher` component | New child component |
+| 2 | Add tenant switcher section above guild switcher | New `<div>` block |
+| 3 | "Create Guild" respects tenant guild limit | `canCreateGuild` checks `tenantStore.atGuildLimit` |
+| 4 | Remove "available guilds to join" section | Guild joining happens within tenant context now |
+| 5 | Add "Tenant Settings" nav link (owner/admin only) | Below main nav |
+| 6 | Add "Invite Players" nav link (owner/admin only) | Below main nav |
+
+#### 11.5.2 `AppTopBar.vue` — Tenant Name Display
+
+Currently shows `guildStore.currentGuild?.name` in the top bar. After tenancy,
+also show the tenant name as context:
+
+```vue
+<!-- Modified top bar header: -->
+<div>
+  <h1 class="text-sm font-bold text-accent-gold font-wow leading-tight">
+    {{ guildStore.currentGuild?.name ?? t('topBar.noGuild') }}
+  </h1>
+  <!-- NEW: Show active tenant name as subtitle -->
+  <p class="text-xs text-text-muted leading-tight">
+    {{ tenantStore.activeTenant?.name ?? '' }}
+  </p>
+</div>
+```
+
+**Changes to AppTopBar.vue:**
+
+| # | Change | Details |
+|---|--------|---------|
+| 1 | Import `useTenantStore` | Access active tenant |
+| 2 | Show tenant name below guild name | Subtitle/context line |
+| 3 | No other changes | Notifications, profile dropdown stay the same |
+
+#### 11.5.3 `AppBottomNav.vue` — No Changes
+
+The mobile bottom navigation shows Dashboard, Calendar, Characters, Attendance,
+Guild. This is fine for tenancy — the tenant context is implicit via the
+sidebar. ✅ No changes needed.
+
+#### 11.5.4 `AppShell.vue` — No Changes
+
+The shell is a flex container for sidebar + main content + toast. No tenant
+awareness needed at this level. ✅ No changes.
+
+---
+
+### 11.6 View-by-View Migration Audit
+
+Every view is assessed for tenant impact. Most views **require zero changes**
+because they operate through stores and API calls that already have tenant
+context via the interceptor/backend.
+
+#### 11.6.1 Views That Need Changes
+
+| View | File | Change | Reason |
+|------|------|--------|--------|
+| **RegisterView** | `RegisterView.vue` | Minor | After registration, auto-redirect to dashboard (tenant is auto-created). Show success message mentioning workspace. |
+| **GlobalAdminView** | `GlobalAdminView.vue` | Medium | Add new `TenantsTab` tab to the 6 existing tabs (becomes 7). Import `TenantsTab` component. |
+| **DashboardView** | `DashboardView.vue` | Minor | Show tenant name in welcome message: "Welcome to {tenant_name}, {username}". Optionally show tenant stats (guild count, member count). |
+| **GuildSettingsView** | `GuildSettingsView.vue` | None → Minor | Guild creation flow may need to check tenant guild limit. Currently in sidebar, but if guild settings view allows creating, check limit. |
+
+#### 11.6.2 Views That Need Zero Changes
+
+| View | File | Why No Change |
+|------|------|---------------|
+| **LoginView** | `LoginView.vue` | Login flow is tenant-agnostic; tenant context set after login |
+| **CalendarView** | `CalendarView.vue` | Reads from calendar store (already tenant-scoped via backend) |
+| **RaidDetailView** | `RaidDetailView.vue` | Fetches single event by ID; backend verifies tenant ownership |
+| **CharacterManagerView** | `CharacterManagerView.vue` | Characters are guild-scoped; backend filters by tenant |
+| **AttendanceView** | `AttendanceView.vue` | Guild-scoped; backend filters by tenant |
+| **UserProfileView** | `UserProfileView.vue` | User-scoped (global); not tenant-specific |
+| **AdminPanelView** | `AdminPanelView.vue` | Guild admin panel; works within current guild (tenant-scoped by backend) |
+| **RaidDefinitionsView** | `RaidDefinitionsView.vue` | Guild-scoped; backend filters by tenant |
+| **TemplatesView** | `TemplatesView.vue` | Guild-scoped; backend filters by tenant |
+| **SeriesView** | `SeriesView.vue` | Guild-scoped; backend filters by tenant |
+| **RolesManagementView** | `RolesManagementView.vue` | Guild-scoped; backend filters by tenant |
+
+#### 11.6.3 New Views
+
+| View | File | Purpose |
+|------|------|---------|
+| **InviteAcceptView** | `InviteAcceptView.vue` | Public page: shows tenant name + accept/decline invitation |
+| **TenantSettingsView** | `TenantSettingsView.vue` | Tenant owner: edit name, view plan/limits, manage members |
+| **TenantInviteView** | `TenantInviteView.vue` | Tenant owner/admin: create invite links, view pending invitations |
+
+---
+
+### 11.7 Component Migration Audit
+
+#### 11.7.1 Admin Tab Components — Changes Needed
+
+| Component | File | Change |
+|-----------|------|--------|
+| **TenantsTab** (NEW) | `src/components/admin/TenantsTab.vue` | New component: list all tenants, view details, edit limits, suspend/activate, delete. ~200-300 lines. |
+| **DashboardTab** | `DashboardTab.vue` | Add tenant-related stats to dashboard: total tenants, active tenants, suspended tenants |
+| **GuildsTab** | `GuildsTab.vue` | Add "Tenant" column to guild list showing which tenant each guild belongs to |
+| **UsersTab** | `UsersTab.vue` | Add "Tenants" column showing how many tenants each user belongs to |
+
+#### 11.7.2 Admin Tab Components — No Changes
+
+| Component | Why No Change |
+|-----------|---------------|
+| **RolesTab** | System roles are global, not tenant-scoped |
+| **DefaultRaidDefinitionsTab** | Default raid defs are global (guild_id=NULL) |
+| **SettingsTab** | System settings are global |
+| **GuildSettingsTab** | Guild settings work within tenant context (backend-scoped) |
+| **MembersTab** | Guild member management works within tenant context |
+| **SystemTab** | Legacy component; no active use |
+
+#### 11.7.3 New Components
+
+| Component | File | Purpose | Est. Lines |
+|-----------|------|---------|-----------|
+| **TenantSwitcher** | `src/components/layout/TenantSwitcher.vue` | Dropdown for switching between tenants in sidebar | ~80-120 |
+| **TenantsTab** | `src/components/admin/TenantsTab.vue` | Global admin: tenant management table with actions | ~250-350 |
+| **TenantMembersModal** | `src/components/admin/TenantMembersModal.vue` | Global admin: view/manage members of a specific tenant | ~150-200 |
+| **InviteLinkCard** | `src/components/common/InviteLinkCard.vue` | Display invite link with copy button, expiry info | ~60-80 |
+
+#### 11.7.4 Common Components — No Changes
+
+All 13 common components (`WowCard`, `WowButton`, `WowModal`, `ClassBadge`,
+`RoleBadge`, `SpecBadge`, `StatusBadge`, `LockBadge`, `RaidSizeBadge`,
+`RealmBadge`, `WowTooltip`, `CharacterDetailModal`, `CharacterTooltip`) are
+purely presentational. They render data passed via props. They have no concept
+of guilds, tenants, or API calls. ✅ No changes needed.
+
+---
+
+### 11.8 Composable Changes
+
+#### 11.8.1 `usePermissions.js` — Tenant-Aware
+
+Currently, `usePermissions()` fetches permissions for the **current guild**.
+After tenancy, it needs to also consider **tenant-level roles** (owner, admin,
+member). The tenant role determines what the user can do at the workspace level
+(create guilds, invite players, manage tenant settings).
+
+```javascript
+// Add tenant-level permission helpers:
+
+const tenantStore = useTenantStore()
+
+const tenantRole = computed(() => tenantStore.activeTenant?.role ?? null)
+const isTenantOwner = computed(() => tenantRole.value === 'owner')
+const isTenantAdmin = computed(() => ['owner', 'admin'].includes(tenantRole.value))
+
+// Tenant-level permissions:
+function canTenant(action) {
+  if (currentUser.value?.is_admin === true) return true
+  switch (action) {
+    case 'create_guild': return isTenantAdmin.value && !tenantStore.atGuildLimit
+    case 'invite_member': return isTenantAdmin.value
+    case 'manage_settings': return isTenantOwner.value
+    case 'manage_members': return isTenantAdmin.value
+    default: return false
+  }
+}
+
+// Return in addition to existing:
+return { ..., tenantRole, isTenantOwner, isTenantAdmin, canTenant }
+```
+
+#### 11.8.2 `useSocket.js` — Tenant Rooms
+
+Currently, Socket.IO joins guild rooms (`join_guild`) and event rooms
+(`join_event`). After tenancy, it should also join a **tenant room** for
+tenant-level real-time updates (e.g., new member joined, invitation accepted).
+
+```javascript
+// Add to useSocket.js:
+
+/** Join the Socket.IO room for the active tenant. */
+function joinTenant(tenantId) {
+  s.emit('join_tenant', { tenant_id: Number(tenantId) })
+}
+
+/** Leave the Socket.IO room for a tenant. */
+function leaveTenant(tenantId) {
+  s.emit('leave_tenant', { tenant_id: Number(tenantId) })
+}
+
+// Return in addition to existing:
+return { ..., joinTenant, leaveTenant }
+```
+
+#### 11.8.3 Other Composables — No Changes
+
+| Composable | Why No Change |
+|------------|---------------|
+| `useAuth.js` | Wraps auth store; store handles tenant context |
+| `useFormatting.js` | Pure formatting utilities |
+| `useTimezone.js` | Timezone conversion; no tenant dependency |
+| `useDragDrop.js` | Drag/drop handler; UI-only |
+| `useSystemSettings.js` | Global system settings; not tenant-scoped |
+| `useWowIcons.js` | Static WoW icon mapping; not tenant-scoped |
+| `useWowheadTooltips.js` | External tooltip integration; no tenant dependency |
+
+---
+
+### 11.9 New Component Specifications
+
+#### 11.9.1 `TenantSwitcher.vue`
+
+```vue
+<!-- src/components/layout/TenantSwitcher.vue -->
+<!--
+  Dropdown component in the sidebar that shows all tenants the user
+  belongs to. Clicking a different tenant triggers a full context switch.
+  
+  Behavior:
+  - Shows tenant name + role badge (Owner/Admin/Member)
+  - Active tenant has a checkmark
+  - Switching triggers: store update → API call → full data reload
+  - Shows tenant plan badge if applicable
+-->
+<template>
+  <div>
+    <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">
+      {{ t('tenant.workspace') }}
+    </label>
+    <select
+      :value="tenantStore.activeTenantId"
+      class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
+      @change="onSwitch"
+    >
+      <option
+        v-for="t in tenantStore.tenants"
+        :key="t.id"
+        :value="t.id"
+      >{{ t.name }} ({{ t.role }})</option>
+    </select>
+  </div>
+</template>
+```
+
+#### 11.9.2 `TenantsTab.vue` (Global Admin)
+
+```
+Features:
+- Table listing all tenants with columns:
+  ID | Name | Owner | Plan | Guilds (used/max) | Members (used/max) | Status | Actions
+- Actions per tenant:
+  - View Details → modal with tenant info + member list
+  - Edit Limits → modal to change max_guilds, max_members, plan
+  - Suspend → confirmation dialog → POST /admin/tenants/{id}/suspend
+  - Activate → POST /admin/tenants/{id}/activate
+  - Delete → confirmation dialog → DELETE /admin/tenants/{id}
+- Search/filter by name, owner, plan, status
+- Pagination for large tenant lists
+
+Estimated: ~250-350 lines (similar complexity to existing GuildsTab)
+```
+
+#### 11.9.3 `InviteAcceptView.vue`
+
+```
+Features:
+- Public page (no auth required for viewing)
+- Fetches invite details by token: GET /api/v1/invite/{token}/details
+- Shows: tenant name, inviter name, role being assigned, expiry
+- If user is logged in: "Accept" / "Decline" buttons
+- If user is NOT logged in: "Login to Accept" / "Register to Accept" buttons
+  (redirect back after auth)
+- After accepting: redirect to dashboard with tenant switched to the new one
+
+Estimated: ~120-180 lines
+```
+
+#### 11.9.4 `TenantSettingsView.vue`
+
+```
+Features:
+- Only accessible to tenant owner/admin
+- Sections:
+  1. Tenant Details: name (editable), slug (display), plan (display)
+  2. Limits: guilds used/max, members used/max (display)
+  3. Members: table of all tenant members with role, status, actions
+     - Change role (admin/member)
+     - Remove member (with confirmation)
+  4. Invitations: list pending invites, revoke links
+  5. Danger Zone: delete tenant (owner only, with confirmation)
+
+Estimated: ~300-400 lines
+```
+
+#### 11.9.5 `TenantInviteView.vue`
+
+```
+Features:
+- Only accessible to tenant owner/admin
+- Create new invite:
+  - Type: link / direct (search for user)
+  - Role: member / admin
+  - Max uses: unlimited / 1 / 5 / 10 / custom
+  - Expiry: never / 24h / 7d / 30d / custom
+- Copy link button for shareable invites
+- Table of existing invitations:
+  - Token (truncated), type, role, uses (count/max), expiry, status, actions (revoke)
+- Discord integration (future): "Send via Discord" button
+
+Estimated: ~200-300 lines
+```
+
+---
+
+### 11.10 I18n Additions
+
+New translation keys needed across `translations/en.json` and
+`translations/pl.json`:
+
+```json
+{
+  "tenant": {
+    "workspace": "Workspace",
+    "myWorkspace": "My Workspace",
+    "switchWorkspace": "Switch Workspace",
+    "settings": "Workspace Settings",
+    "invitePlayers": "Invite Players",
+    "createInvite": "Create Invitation",
+    "inviteLink": "Invite Link",
+    "copyLink": "Copy Link",
+    "linkCopied": "Link copied to clipboard!",
+    "maxUses": "Max Uses",
+    "unlimited": "Unlimited",
+    "expiresIn": "Expires In",
+    "never": "Never",
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "declined": "Declined",
+    "expired": "Expired",
+    "revoke": "Revoke",
+    "revokeConfirm": "Are you sure you want to revoke this invitation?",
+    "members": "Workspace Members",
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member",
+    "changeRole": "Change Role",
+    "removeMember": "Remove Member",
+    "removeMemberConfirm": "Remove {name} from this workspace?",
+    "plan": "Plan",
+    "free": "Free",
+    "pro": "Pro",
+    "enterprise": "Enterprise",
+    "guildsUsed": "{count}/{max} guilds",
+    "membersUsed": "{count}/{max} members",
+    "atGuildLimit": "Guild limit reached ({max})",
+    "dangerZone": "Danger Zone",
+    "deleteTenant": "Delete Workspace",
+    "deleteTenantConfirm": "This will permanently delete the workspace and ALL its data. This action cannot be undone.",
+    "suspended": "Suspended",
+    "active": "Active"
+  },
+  "invite": {
+    "title": "You've Been Invited!",
+    "joinWorkspace": "Join {name}",
+    "invitedBy": "Invited by {name}",
+    "assignedRole": "You'll join as: {role}",
+    "expiresAt": "This invite expires {date}",
+    "accept": "Accept Invitation",
+    "decline": "Decline",
+    "loginToAccept": "Login to Accept",
+    "registerToAccept": "Register to Accept",
+    "invalidToken": "This invitation link is invalid or has expired.",
+    "alreadyMember": "You're already a member of this workspace.",
+    "accepted": "You've joined {name}!"
+  },
+  "admin": {
+    "tenants": {
+      "tabTitle": "Tenants",
+      "title": "All Tenants",
+      "name": "Name",
+      "owner": "Owner",
+      "plan": "Plan",
+      "guilds": "Guilds",
+      "members": "Members",
+      "status": "Status",
+      "actions": "Actions",
+      "viewDetails": "View Details",
+      "editLimits": "Edit Limits",
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "delete": "Delete",
+      "suspendConfirm": "Suspend {name}? All users will lose access.",
+      "deleteConfirm": "Delete {name}? All data will be permanently lost.",
+      "totalTenants": "Total Tenants",
+      "activeTenants": "Active Tenants",
+      "suspendedTenants": "Suspended"
+    }
+  }
+}
+```
+
+**Estimated:** ~80-100 new translation keys per language (en.json, pl.json).
+
+---
+
+### 11.11 File-by-File Change Summary
+
+#### New Files (8)
+
+| # | File | Purpose | Est. Lines |
+|---|------|---------|-----------|
+| 1 | `src/stores/tenant.js` | Tenant Pinia store | ~120 |
+| 2 | `src/api/tenants.js` | Tenant API module | ~25 |
+| 3 | `src/components/layout/TenantSwitcher.vue` | Sidebar tenant dropdown | ~100 |
+| 4 | `src/components/admin/TenantsTab.vue` | Global admin tenant management | ~300 |
+| 5 | `src/views/InviteAcceptView.vue` | Accept invitation page | ~150 |
+| 6 | `src/views/TenantSettingsView.vue` | Tenant owner settings page | ~350 |
+| 7 | `src/views/TenantInviteView.vue` | Create/manage invitations page | ~250 |
+| 8 | `src/components/common/InviteLinkCard.vue` | Reusable invite link display | ~70 |
+| | **Subtotal** | | **~1,365** |
+
+#### Modified Files (12)
+
+| # | File | Changes | Est. Lines Changed |
+|---|------|---------|-------------------|
+| 1 | `src/stores/auth.js` | Add tenant bootstrap on login/register, reset on logout | ~15 |
+| 2 | `src/stores/guild.js` | Watch tenant switch → reload guilds, clear current guild | ~10 |
+| 3 | `src/stores/calendar.js` | Watch tenant switch → clear events | ~8 |
+| 4 | `src/api/index.js` | Add `X-Tenant-Id` request interceptor | ~12 |
+| 5 | `src/api/admin.js` | Add tenant admin API functions | ~10 |
+| 6 | `src/router/index.js` | Add 3 routes + tenant bootstrap in guard | ~20 |
+| 7 | `src/components/layout/AppSidebar.vue` | Add TenantSwitcher, tenant nav links, guild limit check | ~30 |
+| 8 | `src/components/layout/AppTopBar.vue` | Show tenant name below guild name | ~5 |
+| 9 | `src/views/GlobalAdminView.vue` | Add TenantsTab (7th tab) | ~10 |
+| 10 | `src/views/RegisterView.vue` | Post-registration tenant welcome message | ~5 |
+| 11 | `src/composables/usePermissions.js` | Add tenant-level permission helpers | ~20 |
+| 12 | `src/composables/useSocket.js` | Add `joinTenant`/`leaveTenant` | ~10 |
+| | **Subtotal** | | **~155** |
+
+#### I18n Files (2)
+
+| # | File | Changes |
+|---|------|---------|
+| 1 | `translations/en.json` | Add ~80-100 tenant/invite keys |
+| 2 | `translations/pl.json` | Add ~80-100 tenant/invite keys (Polish) |
+
+#### Unchanged Files (~52)
+
+All views, components, composables, and API modules not listed above remain
+unchanged. The tenant context is handled transparently by the store layer
+and the Axios interceptor.
+
+#### Grand Total
+
+| Category | New Lines | Changed Lines |
+|----------|-----------|---------------|
+| New files (8) | ~1,365 | — |
+| Modified files (12) | — | ~155 |
+| I18n additions | ~200 | — |
+| **Total** | **~1,565** | **~155** |
+| **Combined** | | **~1,720 lines** |
+
+---
+
+### 11.12 Frontend Migration Order
+
+Execute these steps **in order**, matching the backend Phase 0 rollout steps
+(§10.17). Frontend work begins after backend steps 0.16-0.18 (tenant API,
+invitations, switching endpoints are built).
+
+- [ ] **Step F.1:** Create `src/stores/tenant.js` (tenant store)
+- [ ] **Step F.2:** Create `src/api/tenants.js` (tenant API module)
+- [ ] **Step F.3:** Update `src/api/index.js` — add `X-Tenant-Id` interceptor
+- [ ] **Step F.4:** Update `src/stores/auth.js` — integrate tenant bootstrap
+- [ ] **Step F.5:** Update `src/stores/guild.js` — watch tenant switch
+- [ ] **Step F.6:** Update `src/stores/calendar.js` — watch tenant switch
+- [ ] **Step F.7:** Update `src/router/index.js` — tenant guard + new routes
+- [ ] **Step F.8:** Create `TenantSwitcher.vue` component
+- [ ] **Step F.9:** Update `AppSidebar.vue` — add tenant switcher + nav links
+- [ ] **Step F.10:** Update `AppTopBar.vue` — show tenant name
+- [ ] **Step F.11:** Update `usePermissions.js` — add tenant-level permissions
+- [ ] **Step F.12:** Update `useSocket.js` — add tenant rooms
+- [ ] **Step F.13:** Create `InviteAcceptView.vue`
+- [ ] **Step F.14:** Create `TenantSettingsView.vue`
+- [ ] **Step F.15:** Create `TenantInviteView.vue`
+- [ ] **Step F.16:** Create `InviteLinkCard.vue`
+- [ ] **Step F.17:** Update `src/api/admin.js` — add tenant admin functions
+- [ ] **Step F.18:** Create `TenantsTab.vue` (global admin)
+- [ ] **Step F.19:** Update `GlobalAdminView.vue` — add TenantsTab (7th tab)
+- [ ] **Step F.20:** Update `DashboardView.vue` — tenant welcome message
+- [ ] **Step F.21:** Update `RegisterView.vue` — post-registration tenant message
+- [ ] **Step F.22:** Add i18n keys to `translations/en.json` and `translations/pl.json`
+- [ ] **Step F.23:** Run `npx vite build` — verify no build errors
+- [ ] **Step F.24:** Manual smoke test:
+  - Register → tenant auto-created → dashboard shows "Welcome to {workspace}"
+  - Sidebar shows tenant switcher with 1 workspace
+  - Create guild → respects tenant limit
+  - Generate invite link → copy to clipboard
+  - Second user accepts invite → appears in first user's tenant
+  - Second user has two tenants → switch via sidebar → data context changes
+  - Global admin → Tenants tab → sees all tenants, can suspend/activate
+- [ ] **Step F.25:** Verify existing frontend behavior is unaffected:
+  - Calendar loads events correctly
+  - Raid detail page works
+  - Signup/lineup/attendance flows work
+  - Guild settings/roles/raid definitions work
+  - Notifications work (cross-tenant)
+
+---
+
+### 11.13 Tenant Switching UX — Detailed Behavior
+
+When a user clicks a different tenant in the sidebar dropdown, the following
+sequence happens:
+
+```
+                                      Frontend                                        Backend
+                                    ─────────                                       ─────────
+User clicks "Thrall's Hub"
+        │
+        ▼
+TenantSwitcher.vue
+  onSwitch(tenantId)
+        │
+        ▼
+tenantStore.switchTenant(newId)
+  ├── PUT /auth/active-tenant ──────────────────────────────▶ Validate user is
+  │                                                            member of tenant
+  │                                                            Update user.active_tenant_id
+  │   ◀──────────────────────────────────────────────────────── 200 OK
+  │
+  ├── tenantStore.fetchActiveTenant()
+  │     GET /tenants/{id} ──────────────────────────────────▶ Return tenant details
+  │     ◀──────────────────────────────────────────────────── { name, plan, guild_count, ... }
+  │
+  ├── guildStore triggered by watcher:
+  │     currentGuild = null
+  │     guilds = []
+  │     fetchGuilds()
+  │       GET /guilds ──────────────────────────────────────▶ Return guilds for new tenant
+  │       ◀──────────────────────────────────────────────────── [guild1, guild2]
+  │       currentGuild = guild1
+  │       fetchMembers(guild1.id)
+  │
+  ├── calendarStore triggered by watcher:
+  │     events = []
+  │     (Calendar view will re-fetch on next render)
+  │
+  ├── usePermissions triggered by guildStore.currentGuild change:
+  │     fetchPermissions()
+  │       GET /roles/my-permissions/{guild_id} ─────────────▶ Return permissions
+  │
+  └── useSocket:
+        leaveTenant(oldTenantId)
+        joinTenant(newTenantId)
+        leaveGuild(oldGuildId)
+        joinGuild(newGuildId)
+```
+
+**Key UX considerations:**
+
+| Concern | Solution |
+|---------|----------|
+| Flicker during switch | Show loading spinner/skeleton in sidebar while switching |
+| User on a guild-specific page during switch | If current route requires a guild (e.g., `/raids/123`), redirect to `/dashboard` after switch (the old raid doesn't exist in new tenant) |
+| Notifications during switch | Notifications are user-scoped (cross-tenant) — no change needed |
+| Socket.IO reconnection | Leave old rooms, join new rooms; the socket connection itself persists |
+| Browser back button after switch | Router history naturally handles this; data is already loaded for the new tenant |
+
+---
+
+## 12. Frontend Testing Strategy for Multi-Tenancy
+
+### 12.1 Current Testing State
+
+The frontend currently has **no dedicated frontend tests** (no Vitest, Cypress,
+or Playwright test files). All testing is done via:
+1. Backend Python tests (632+ tests via pytest) — tests API behavior
+2. Manual smoke testing via the development server
+3. `npx vite build` to verify no compile/type errors
+
+### 12.2 Recommended Testing Approach for Tenancy
+
+Given the critical nature of tenant isolation (a bug could expose User A's data
+to User B), the following testing strategy is recommended:
+
+#### 12.2.1 Component Unit Tests (Vitest)
+
+Add Vitest for testing store logic and composable behavior:
+
+```javascript
+// tests/frontend/stores/tenant.test.js
+
+import { setActivePinia, createPinia } from 'pinia'
+import { useTenantStore } from '@/stores/tenant'
+
+describe('Tenant Store', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  test('fetchTenants sets first tenant as active', async () => { ... })
+  test('switchTenant updates activeTenantId', async () => { ... })
+  test('atGuildLimit returns true when at limit', () => { ... })
+  test('isOwner returns true for owner role', () => { ... })
+  test('reset clears all state', () => { ... })
+})
+```
+
+```javascript
+// tests/frontend/composables/usePermissions.test.js
+
+describe('usePermissions (tenant)', () => {
+  test('canTenant("create_guild") returns false at guild limit', () => { ... })
+  test('canTenant("invite_member") returns true for tenant admin', () => { ... })
+  test('canTenant("manage_settings") returns false for member', () => { ... })
+  test('isTenantOwner returns true for owner role', () => { ... })
+})
+```
+
+#### 12.2.2 Integration/E2E Tests (Playwright or Cypress)
+
+Critical user flows that should be tested end-to-end:
+
+```
+Test: "Tenant switching changes data context"
+1. Login as User A (owns Tenant A with Guild1, Guild2)
+2. Verify sidebar shows "Tenant A" active with Guild1, Guild2
+3. Accept invite to Tenant B (owned by User B with Guild3)
+4. Switch to Tenant B via sidebar
+5. Verify sidebar shows "Tenant B" active with Guild3 only
+6. Verify calendar shows Guild3's events (not Guild1/Guild2)
+7. Switch back to Tenant A
+8. Verify Guild1 and Guild2 are shown again
+
+Test: "Invite link flow"
+1. Login as User A (tenant owner)
+2. Navigate to /tenant/invite
+3. Create invite link with max_uses=1, expires=7d
+4. Copy the link
+5. Open in incognito → shows "Login to Accept"
+6. Register as new User B → auto-redirect to invite page
+7. Accept → redirected to dashboard with Tenant A active
+8. Verify User B sees Tenant A's guilds
+
+Test: "Global admin tenant management"
+1. Login as global admin
+2. Navigate to /admin/global → Tenants tab
+3. Verify all tenants listed with correct stats
+4. Suspend a tenant → verify suspended badge
+5. Try to access suspended tenant as its owner → blocked
+6. Activate tenant → verify access restored
+```
+
+#### 12.2.3 Testing Priority
+
+| Priority | Test Category | When |
+|----------|--------------|------|
+| 🔴 **P0** | Tenant switching changes data context | Phase 0 |
+| 🔴 **P0** | Invite link create/accept flow | Phase 0 |
+| 🔴 **P0** | Guild creation respects tenant limit | Phase 0 |
+| 🟡 **P1** | Global admin tenant CRUD | Phase 0 |
+| 🟡 **P1** | Tenant settings owner-only access | Phase 0 |
+| 🟢 **P2** | Notification cross-tenant visibility | Phase 0 |
+| 🟢 **P2** | Socket.IO room switching | Phase 0 |
+
+### 12.3 Build Verification
+
+After all frontend changes, verify:
+```bash
+# No build errors:
+npx vite build
+
+# No TypeScript/linting errors (if configured):
+npx eslint src/ --ext .vue,.js
+
+# Development server runs:
+npm run dev
+```
+
+---
+
+### End of Frontend Migration Plan
+
+> **Summary:** The frontend multi-tenant migration adds **~1,720 lines** across
+> **8 new files** and **12 modified files**. Most existing views (11 of 15)
+> require **zero changes** because tenant context flows through the store layer
+> and Axios interceptor. The heaviest changes are the new tenant store, the
+> sidebar tenant switcher, the global admin TenantsTab, and three new views
+> (invite accept, tenant settings, tenant invite management).
