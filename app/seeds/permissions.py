@@ -70,6 +70,7 @@ ALL_PERMISSIONS = [
     ("add_members", "Add Members", "Add new members to guild", "guild"),
     ("remove_members", "Remove Members", "Remove members from guild", "guild"),
     ("update_member_roles", "Update Member Roles", "Change member roles", "guild"),
+    ("manage_guild_roles", "Manage Guild Roles", "Create/edit/delete guild-scoped roles and permissions", "guild"),
 
     # Notifications
     ("view_notifications", "View Notifications", "View own notifications", "notifications"),
@@ -135,7 +136,7 @@ ROLE_PERMISSIONS = {
         "add_members", "remove_members", "update_member_roles",
         "update_guild_settings",
         # Guild admin specifics
-        "create_guild", "delete_guild", "manage_roles",
+        "create_guild", "delete_guild", "manage_guild_roles",
     ],
     "global_admin": [
         # All permissions
@@ -154,7 +155,7 @@ ROLE_PERMISSIONS = {
         "add_members", "remove_members", "update_member_roles",
         "update_guild_settings",
         # Admin specifics
-        "create_guild", "delete_guild", "manage_roles",
+        "create_guild", "delete_guild", "manage_roles", "manage_guild_roles",
         "list_system_users", "manage_system_users",
         "trigger_sync", "manage_autosync",
         "manage_system_settings",

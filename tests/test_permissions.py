@@ -207,14 +207,15 @@ class TestHasPermission:
             from flask_login import login_user
             login_user(seeded["guild_admin_user"])
             gm = seeded["gm_ga"]
-            # Guild admin should have manage_roles
-            assert has_permission(gm, "manage_roles") is True
+            # Guild admin should have manage_guild_roles (guild-scoped)
+            assert has_permission(gm, "manage_guild_roles") is True
             assert has_permission(gm, "create_events") is True
             assert has_permission(gm, "update_lineup") is True
             assert has_permission(gm, "sign_up") is True
             # Guild admin should NOT have admin-only permissions
             assert has_permission(gm, "list_system_users") is False
             assert has_permission(gm, "manage_system_users") is False
+            assert has_permission(gm, "manage_roles") is False
 
     def test_officer_permissions(self, seeded, app):
         with app.test_request_context():
@@ -229,6 +230,7 @@ class TestHasPermission:
             assert has_permission(gm, "record_attendance") is True
             # Officer cannot manage roles
             assert has_permission(gm, "manage_roles") is False
+            assert has_permission(gm, "manage_guild_roles") is False
             # Officer cannot do admin things
             assert has_permission(gm, "list_system_users") is False
 
@@ -551,9 +553,11 @@ class TestPermissionDifferentiation:
             login_user(seeded["guild_admin_user"])
             ga_perms = set(get_user_permissions(seeded["gm_ga"]))
 
-        # Guild admin has manage_roles, officer does not
-        assert "manage_roles" in ga_perms
-        assert "manage_roles" not in officer_perms
+        # Guild admin has manage_guild_roles, officer does not
+        assert "manage_guild_roles" in ga_perms
+        assert "manage_guild_roles" not in officer_perms
+        # manage_roles (admin category) should NOT be in guild_admin perms
+        assert "manage_roles" not in ga_perms
         # Guild admin is a strict superset of officer
         assert officer_perms.issubset(ga_perms)
 
@@ -582,6 +586,7 @@ class TestPermissionDifferentiation:
             "create_events", "edit_events", "delete_events",
             "update_lineup", "confirm_lineup", "manage_signups",
             "add_members", "remove_members", "manage_roles",
+            "manage_guild_roles",
         }
         assert mb_perms.isdisjoint(management_perms)
 
@@ -892,8 +897,8 @@ class TestRolePermissionFiltering:
             })
             assert resp.status_code == 403
 
-    def test_guild_admin_cannot_create_roles(self, seeded, app):
-        """Guild admin cannot create roles — role CRUD is global admin only."""
+    def test_guild_admin_can_create_roles_at_own_level(self, seeded, app):
+        """Guild admin can create roles at or below their level (80)."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.post("/api/v1/roles", json={
@@ -902,26 +907,30 @@ class TestRolePermissionFiltering:
                 "level": 80,
                 "permissions": ["view_events"],
             })
-            assert resp.status_code == 403
+            assert resp.status_code == 201
 
-    def test_guild_admin_cannot_update_roles(self, seeded, app):
-        """Guild admin cannot update roles — role CRUD is global admin only."""
-        # Get a role ID as site admin
+    def test_guild_admin_can_update_roles_at_own_level(self, seeded, app):
+        """Guild admin can update roles at or below their level."""
+        # Create a custom role as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
-            resp = admin_client.get("/api/v1/roles")
-            role_id = resp.get_json()[0]["id"]
+            resp = admin_client.post("/api/v1/roles", json={
+                "name": "editable_role",
+                "display_name": "Editable",
+                "level": 50,
+            })
+            role_id = resp.get_json()["id"]
 
-        # Try to update as guild admin in a fresh session
+        # Update as guild admin
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.put(f"/api/v1/roles/{role_id}", json={
-                "display_name": "Hacked Name",
+                "display_name": "Updated Name",
             })
-            assert resp.status_code == 403
+            assert resp.status_code == 200
 
-    def test_guild_admin_cannot_delete_roles(self, seeded, app):
-        """Guild admin cannot delete roles — role CRUD is global admin only."""
+    def test_guild_admin_can_delete_custom_roles(self, seeded, app):
+        """Guild admin can delete custom (non-system) roles."""
         # Create a custom role as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
@@ -932,10 +941,38 @@ class TestRolePermissionFiltering:
             })
             role_id = resp.get_json()["id"]
 
-        # Try to delete as guild admin in a fresh session
+        # Delete as guild admin
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.delete(f"/api/v1/roles/{role_id}")
+            assert resp.status_code == 200
+
+    def test_guild_admin_cannot_assign_admin_perms(self, seeded, app):
+        """Guild admin creating a role cannot include admin-category permissions."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.post("/api/v1/roles", json={
+                "name": "sneaky_role",
+                "display_name": "Sneaky",
+                "level": 30,
+                "permissions": ["view_events", "list_system_users", "manage_system_settings"],
+            })
+            assert resp.status_code == 201
+            data = resp.get_json()
+            # Admin-category permissions should be silently stripped
+            assert "list_system_users" not in data["permissions"]
+            assert "manage_system_settings" not in data["permissions"]
+            assert "view_events" in data["permissions"]
+
+    def test_officer_cannot_create_roles(self, seeded, app):
+        """Officer (without manage_guild_roles) cannot create roles."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["officer_user"])
+            resp = client.post("/api/v1/roles", json={
+                "name": "officer_role",
+                "display_name": "Officer Role",
+                "level": 10,
+            })
             assert resp.status_code == 403
 
     def test_guild_admin_cannot_create_grant_rules(self, seeded, app):

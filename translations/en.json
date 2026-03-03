@@ -1178,7 +1178,9 @@
     "manage_roles": "Manage Roles",
     "manage_roles_desc": "Create, edit and delete roles and permissions",
     "manage_system_settings": "Manage System Settings",
-    "manage_system_settings_desc": "Configure global system settings (Wowhead, sync)"
+    "manage_system_settings_desc": "Configure global system settings (Wowhead, sync)",
+    "manage_guild_roles": "Manage Guild Roles",
+    "manage_guild_roles_desc": "Create, edit and delete guild-scoped roles and permissions"
   },
   "permissionCategories": {
     "events": "Events",

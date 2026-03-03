@@ -316,7 +316,7 @@ const icons = {
 
 const hasGuildAdminAccess = computed(() =>
   permissions.can('update_member_roles') ||
-  permissions.can('manage_roles') ||
+  permissions.can('manage_guild_roles') ||
   permissions.can('update_guild_settings')
 )
 

@@ -4,7 +4,7 @@
     <WowCard>
       <div class="flex items-center justify-between mb-4">
         <h2 class="wow-heading text-base">{{ t('roles.allRoles') }} ({{ displayedRoles.length }})</h2>
-        <WowButton v-if="isGlobalAdmin" @click="openCreateRole">{{ t('roles.newRole') }}</WowButton>
+        <WowButton v-if="canManageRoles" @click="openCreateRole">{{ t('roles.newRole') }}</WowButton>
       </div>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
@@ -19,7 +19,7 @@
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.permissions') }}</th>
               <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('roles.canAssign') }}</th>
               <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.type') }}</th>
-              <th v-if="isGlobalAdmin" class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
+              <th v-if="canManageRoles" class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
@@ -49,7 +49,7 @@
                 >{{ role.is_system ? t('common.labels.system') : t('common.labels.custom') }}</span>
               </td>
               <td class="px-4 py-2.5 text-right">
-                <div v-if="isGlobalAdmin" class="flex flex-wrap gap-1 justify-end">
+                <div v-if="canManageRoles" class="flex flex-wrap gap-1 justify-end">
                 <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditRole(role)">{{ t('common.buttons.edit') }}</WowButton>
                 <WowButton
                   v-if="!role.is_system"
@@ -260,6 +260,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissions } from '@/composables/usePermissions'
 import * as rolesApi from '@/api/roles'
 
 const props = defineProps({
@@ -269,9 +270,16 @@ const props = defineProps({
 const { t } = useI18n()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
+const permissions = usePermissions()
 
 const isGuildMode = computed(() => props.mode === 'guild')
 const isGlobalAdmin = computed(() => !!authStore.user?.is_admin)
+// canManageRoles: global admins always can; guild-mode users with manage_guild_roles can
+const canManageRoles = computed(() => {
+  if (isGlobalAdmin.value) return true
+  if (isGuildMode.value) return permissions.can('manage_guild_roles')
+  return false
+})
 
 // Roles state
 const roles = ref([])

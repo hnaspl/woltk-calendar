@@ -1178,7 +1178,9 @@
     "manage_roles": "Zarządzanie rolami",
     "manage_roles_desc": "Tworzenie, edycja i usuwanie ról oraz uprawnień",
     "manage_system_settings": "Zarządzanie ustawieniami systemu",
-    "manage_system_settings_desc": "Konfiguracja globalnych ustawień systemu (Wowhead, synchronizacja)"
+    "manage_system_settings_desc": "Konfiguracja globalnych ustawień systemu (Wowhead, synchronizacja)",
+    "manage_guild_roles": "Zarządzaj Rolami Gildii",
+    "manage_guild_roles_desc": "Tworzenie, edycja i usuwanie ról gildii i ich uprawnień"
   },
   "permissionCategories": {
     "events": "Wydarzenia",

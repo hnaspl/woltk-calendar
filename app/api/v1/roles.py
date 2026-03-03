@@ -49,18 +49,20 @@ def _require_global_admin():
 def _require_manage_roles(guild_id: int | None = None):
     """Check that the current user can manage roles.
 
-    Site admins always can.  Guild members need the ``manage_roles`` perm
-    in at least one of their guilds.
+    Site admins always can.  Guild members need the ``manage_roles`` or
+    ``manage_guild_roles`` perm in at least one of their guilds.
     """
     from app.utils.permissions import has_any_guild_permission
 
     # has_permission checks is_admin internally
     if guild_id:
         membership = get_membership(guild_id, current_user.id)
-        if has_permission(membership, "manage_roles"):
+        if has_permission(membership, "manage_roles") or has_permission(membership, "manage_guild_roles"):
             return None
-    # For non-guild-scoped calls, check if the user has manage_roles in any guild
+    # For non-guild-scoped calls, check if the user has manage_roles or manage_guild_roles in any guild
     if has_any_guild_permission(current_user.id, "manage_roles"):
+        return None
+    if has_any_guild_permission(current_user.id, "manage_guild_roles"):
         return None
     return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
@@ -124,8 +126,8 @@ def get_role(role_id: int):
 @bp.post("")
 @login_required
 def create_role():
-    """Create a new custom role. Global admin only."""
-    err = _require_global_admin()
+    """Create a new custom role. Requires manage_roles or manage_guild_roles."""
+    err = _require_manage_roles()
     if err:
         return err
 
@@ -182,8 +184,8 @@ def create_role():
 @bp.put("/<int:role_id>")
 @login_required
 def update_role(role_id: int):
-    """Update a role's properties and/or permissions. Global admin only."""
-    err = _require_global_admin()
+    """Update a role's properties and/or permissions. Requires manage_roles or manage_guild_roles."""
+    err = _require_manage_roles()
     if err:
         return err
 
@@ -244,8 +246,8 @@ def update_role(role_id: int):
 @bp.delete("/<int:role_id>")
 @login_required
 def delete_role(role_id: int):
-    """Delete a custom role (system roles cannot be deleted). Global admin only."""
-    err = _require_global_admin()
+    """Delete a custom role (system roles cannot be deleted). Requires manage_roles or manage_guild_roles."""
+    err = _require_manage_roles()
     if err:
         return err
 

@@ -113,7 +113,7 @@ const icons = {
 // Tab definitions with permission requirements (guild-scoped only)
 const allTabs = [
   { id: 'members', label: t('common.labels.members'), icon: icons.members, permission: 'update_member_roles' },
-  { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles, permission: 'manage_roles' },
+  { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles, permission: 'manage_guild_roles' },
   { id: 'guild', label: t('admin.tabs.guildSettings'), icon: icons.guild, permission: 'update_guild_settings' },
 ]
 
