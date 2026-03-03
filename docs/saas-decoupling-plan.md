@@ -25,6 +25,7 @@
 10. [Phase 0: Per-User Tenancy — Detailed Plan](#10-phase-0-per-user-tenancy--detailed-plan)
 11. [Frontend Multi-Tenant Migration — Complete Plan](#11-frontend-multi-tenant-migration--complete-plan)
 12. [Frontend Testing Strategy for Multi-Tenancy](#12-frontend-testing-strategy-for-multi-tenancy)
+13. [Cleanup Protocol — Per-Phase Code Hygiene](#13-cleanup-protocol--per-phase-code-hygiene)
 
 ---
 
@@ -917,6 +918,13 @@ all data is scoped by `tenant_id`.
 - [ ] Add Tenants tab to global admin panel
 - [ ] Add tests verifying cross-tenant data isolation
 - [ ] Regression-test all 632+ existing tests
+- [ ] **🧹 Phase 0 cleanup** (see [§13.3.1](#1331-phase-0-cleanup-checklist)):
+  - [ ] Delete orphaned `src/components/admin/SystemTab.vue` (unused, replaced by UsersTab + SettingsTab)
+  - [ ] Remove pre-tenant `allow_self_join` guild-level self-join flow from AppSidebar (replaced by tenant invitation system)
+  - [ ] Remove "available guilds to join" sidebar section (guild discovery now happens within tenant)
+  - [ ] Audit and remove any temporary migration helpers/scripts
+  - [ ] Verify no dead imports remain after model/service changes
+  - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 1: Foundation Decoupling (No Breaking Changes)
 **Goal:** Restructure internals without changing any external behavior.
@@ -928,6 +936,12 @@ all data is scoped by `tenant_id`.
 - [ ] Make `meta.py` constants endpoint expansion-aware (with backward-compatible default)
 - [ ] Add expansion-aware validation in character service
 - [ ] All existing tests must pass unchanged
+- [ ] **🧹 Phase 1 cleanup** (see [§13.3.2](#1332-phase-1-cleanup-checklist)):
+  - [ ] Remove hardcoded `WOTLK_RAIDS` from `app/constants.py` after moving to `app/expansions/wotlk.py`
+  - [ ] Remove hardcoded `CLASS_ROLES` / `CLASS_SPECS` from `app/constants.py` (keep backward-compat re-exports only)
+  - [ ] Delete any temporary backward-compat shims that are no longer needed
+  - [ ] Verify no file imports the old location directly (all go through expansion registry)
+  - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 2: Guild Membership Hardening (Within Tenant)
 **Goal:** Give guild admins control over guild membership within their tenant.
@@ -942,6 +956,12 @@ all data is scoped by `tenant_id`.
 - [ ] Change `allow_self_join` default to `False`
 - [ ] Build invitation management UI (guild admin panel)
 - [ ] Add guild discovery page (open guilds within tenant only)
+- [ ] **🧹 Phase 2 cleanup** (see [§13.3.3](#1333-phase-2-cleanup-checklist)):
+  - [ ] Remove or deprecate `allow_self_join` field from Guild model if fully replaced by invitation system
+  - [ ] Remove any remaining direct-join logic (old `POST /guilds/{id}/join` flow without invitation)
+  - [ ] Clean up old guild membership test fixtures that bypass invitation flow
+  - [ ] Verify no frontend code references removed join flows
+  - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 3: Class-Role Matrix
 **Goal:** Give guild admins a visual matrix to control class-role assignments.
@@ -954,6 +974,11 @@ all data is scoped by `tenant_id`.
 - [ ] Integrate matrix checks into signup validation
 - [ ] Integrate matrix checks into lineup assignment
 - [ ] Add `manage_class_role_matrix` permission
+- [ ] **🧹 Phase 3 cleanup** (see [§13.3.4](#1334-phase-3-cleanup-checklist)):
+  - [ ] Remove hardcoded class→role validation from signup/lineup services (replaced by matrix resolution)
+  - [ ] Remove static `CLASS_ROLES` usage in signup validation (should use guild-specific matrix)
+  - [ ] Clean up any compatibility shims between old static mapping and new matrix system
+  - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 4: Multi-Expansion Support
 **Goal:** Support guilds running different WoW expansions.
@@ -967,6 +992,13 @@ all data is scoped by `tenant_id`.
 - [ ] Update raid definition seeder for multi-expansion
 - [ ] Update frontend constants store for expansion-awareness
 - [ ] Add expansion selector in guild settings
+- [ ] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
+  - [ ] Remove WotLK-only assumptions from `src/constants.js` (static `WOW_CLASSES`, `RAID_TYPES`)
+  - [ ] Remove Phase 1 backward-compat re-exports in `app/constants.py` if no longer used
+  - [ ] Remove hardcoded WotLK class list from `CharacterManagerView.vue` (should come from expansion-aware constants store)
+  - [ ] Verify `normalizeSpecName()` handles all expansion specs, remove any WotLK-only branches
+  - [ ] Clean up dead expansion-related code paths (e.g., `if expansion === 'wotlk'` branches that are now generic)
+  - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 5: Plugin Architecture
 **Goal:** Make features truly pluggable.
@@ -978,6 +1010,14 @@ all data is scoped by `tenant_id`.
 - [ ] Build plugin management UI (guild settings)
 - [ ] Create plugin developer documentation
 - [ ] Frontend dynamic component loading for plugins
+- [ ] **🧹 Phase 5 cleanup** (see [§13.3.6](#1336-phase-5-cleanup-checklist)):
+  - [ ] Remove inline Warmane API calls from services — all go through plugin interface
+  - [ ] Remove inline Discord integration from services — all go through plugin interface
+  - [ ] Delete `src/api/warmane.js` if fully moved to plugin dynamic loading
+  - [ ] Delete `src/api/armory.js` if fully moved to plugin dynamic loading
+  - [ ] Remove hardcoded Warmane realm list if realms are now provider-agnostic
+  - [ ] Clean up old import paths referencing moved modules
+  - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 6: SaaS Infrastructure
 **Goal:** Add billing and tenant management.
@@ -989,6 +1029,12 @@ all data is scoped by `tenant_id`.
 - [ ] Add data export/import for tenant portability
 - [ ] Add tenant deletion with full data cleanup
 - [ ] Add tenant suspension/reactivation by global admin
+- [ ] **🧹 Phase 6 cleanup** (see [§13.3.7](#1337-phase-6-cleanup-checklist)):
+  - [ ] Remove free-plan hardcoded defaults if plan limits now come from billing model
+  - [ ] Remove any manual guild/member counting if usage tracking replaces it
+  - [ ] Clean up Phase 0 `max_guilds`/`max_members` defaults if billing system overrides them
+  - [ ] Final full-codebase dead-code audit (see §13.4)
+  - [ ] Run full lint + build + test suite on clean branch
 
 ---
 
@@ -3491,3 +3537,391 @@ npm run dev
 > and Axios interceptor. The heaviest changes are the new tenant store, the
 > sidebar tenant switcher, the global admin TenantsTab, and three new views
 > (invite accept, tenant settings, tenant invite management).
+
+---
+
+## 13. Cleanup Protocol — Per-Phase Code Hygiene
+
+> **Principle:** Every phase runs on a **separate branch**. Before merging that
+> branch, every line of orphaned, unused, deprecated, or shortcut code introduced
+> **or made obsolete** by that phase must be removed. The branch should merge
+> cleaner than it found the codebase — no trash, no dead code, no "we'll clean
+> this up later" comments.
+
+---
+
+### 13.1 Cleanup Rules (Apply to Every Phase)
+
+These rules are **mandatory** for every phase's PR before merge:
+
+| # | Rule | How to Verify |
+|---|------|---------------|
+| 1 | **No orphaned files** — every file must be imported/used somewhere | `grep -rn "import.*{filename}"` across the codebase; unused files must be deleted |
+| 2 | **No dead imports** — every `import` statement must reference something used in that file | Linter (`ruff check` / `eslint --no-unused-vars`) with zero warnings |
+| 3 | **No commented-out code** — delete it, it lives in git history | `grep -rn "^#.*def \|^#.*class \|^//.*function\|^//.*const "` returns empty |
+| 4 | **No TODO/FIXME/HACK/XXX in merged code** — resolve them or create a tracked issue | `grep -rn "TODO\|FIXME\|HACK\|XXX"` returns empty for changed files |
+| 5 | **No temporary helpers, scripts, or workarounds** | No `/tmp/`, no `_temp_`, no `_old_` files in the repo |
+| 6 | **No backward-compat shims older than 1 phase** — if Phase N introduced a shim, Phase N+1 must remove it | Review every `# backward compat` / `# compat` / `# legacy` comment |
+| 7 | **No unreachable code paths** — if a condition can never be true, remove the branch | Manual review + coverage report |
+| 8 | **No duplicate logic** — if the same logic exists in 2+ places, consolidate into a shared utility | `grep` for known patterns; review during code review |
+| 9 | **No stale tests** — tests must test current behavior, not removed features | `pytest` passes with `--strict-markers`; no `@skip` without a linked issue |
+| 10 | **No stale documentation** — docstrings and comments must match current code | Review every changed file's docstrings |
+| 11 | **No stale translation keys** — if a UI element is removed, its i18n keys must be removed | Diff `translations/*.json` against actual `t('...')` usage |
+| 12 | **Full build + lint + test before merge** — zero warnings, zero failures | `python -m pytest tests/ && npx vite build && npx eslint src/` |
+
+---
+
+### 13.2 Pre-Existing Cleanup Items (Before Phase 0)
+
+These items exist in the codebase **today** and must be cleaned up as the
+**first step** of Phase 0, before any new code is written:
+
+| # | Item | File | Action | Reason |
+|---|------|------|--------|--------|
+| 1 | **Orphaned `SystemTab.vue`** | `src/components/admin/SystemTab.vue` (394 lines) | **Delete** | Not imported anywhere. Replaced by `UsersTab.vue` + `SettingsTab.vue`. Dead code. |
+| 2 | **Stale tech debt list in §9.3** | `docs/saas-decoupling-plan.md` §9.3 | **Resolve or remove** | Items like "Consolidate frontend role label maps (7 duplicates)" — verify if already done, if so remove the item; if not, do it now |
+| 3 | **`codebase-cleanup-plan.md` completion** | `docs/codebase-cleanup-plan.md` | **Mark completed items** | Verify which cleanup tasks are done; remove completed items or mark them ✅ |
+
+---
+
+### 13.3 Per-Phase Cleanup Checklists
+
+Each phase has a specific cleanup checklist. These are **not optional** — they
+are part of the phase's definition of done.
+
+#### 13.3.1 Phase 0 Cleanup Checklist
+
+Phase 0 introduces tenancy. It also obsoletes several pre-tenancy patterns.
+
+**Files to delete:**
+
+| File | Reason |
+|------|--------|
+| `src/components/admin/SystemTab.vue` | Orphaned; never imported. Functionality lives in `UsersTab.vue` + `SettingsTab.vue`. |
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `AppSidebar.vue` lines 33-50 | "Available guilds to join" section | **Remove** — guild discovery is now within tenant context; users join tenants first, then guilds within |
+| `AppSidebar.vue` `availableGuilds` computed | Computed property filtering `allGuilds` by `allow_self_join` | **Remove** — replaced by tenant invitation system |
+| `guild_service.py` `list_all_guilds()` | Lists ALL guilds in the system (no tenant filter) | **Refactor** — must filter by `tenant_id`; old global listing is a security risk |
+| `guilds.py` API `GET /guilds/all` | Returns all guilds without tenant scoping | **Refactor** — scope to active tenant; global admin has separate endpoint |
+| Any `console.log` / `print()` debug statements | Left from development | **Remove** — use proper logging (Python `logging` module, no `print()`) |
+
+**Test fixtures to update:**
+
+| Area | Action |
+|------|--------|
+| All test fixtures creating guilds | Add `tenant_id` parameter — tests that create guilds without a tenant context must be updated or they fail with `NOT NULL` constraint |
+| All test fixtures creating events/signups | Add `tenant_id` + `guild_id` where newly required |
+| `conftest.py` | Add `tenant_with_owner` and `guild_in_tenant` base fixtures (see §10.16) |
+
+**Verification commands:**
+```bash
+# 1. No orphaned Vue components (every .vue file must be imported somewhere)
+for f in src/components/**/*.vue; do
+  name=$(basename "$f" .vue)
+  if ! grep -rq "$name" src/ --include="*.vue" --include="*.js" | grep -v "$f"; then
+    echo "ORPHAN: $f"
+  fi
+done
+
+# 2. No dead Python imports
+ruff check app/ tests/ --select F401
+
+# 3. No dead JS imports (if eslint configured)
+npx eslint src/ --rule '{"no-unused-vars": "error"}' --ext .vue,.js
+
+# 4. Full build + test
+python -m pytest tests/ -v && npx vite build
+
+# 5. No print() statements in production code
+grep -rn "^\s*print(" app/ --include="*.py" | grep -v "test"
+```
+
+#### 13.3.2 Phase 1 Cleanup Checklist
+
+Phase 1 moves constants to expansion-specific files. Cleanup the old locations.
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `app/constants.py` | Hardcoded `WOTLK_RAIDS`, `CLASS_ROLES`, `CLASS_SPECS` | **Move** to `app/expansions/wotlk.py`; keep only re-export wrappers in `constants.py` for exactly one phase of backward compat |
+| `app/constants.py` re-exports | Backward-compat imports from `constants.py` → `expansions/wotlk.py` | These are **allowed in Phase 1 only** — mark with `# COMPAT: Remove in Phase 2` comment |
+| Test files | Tests importing directly from `app/constants` for class/spec data | **Update** to import from `app/expansions/` or use the new expansion registry |
+
+**Dead code detection:**
+```bash
+# Find any remaining direct import of CLASS_ROLES from constants.py
+grep -rn "from app.constants import.*CLASS_ROLES\|from app.constants import.*CLASS_SPECS\|from app.constants import.*WOTLK_RAIDS" app/ tests/
+# Expected: only re-export wrappers in constants.py, nothing else
+```
+
+#### 13.3.3 Phase 2 Cleanup Checklist
+
+Phase 2 replaces self-join with invitation-based guild membership.
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `Guild` model `allow_self_join` field | Boolean flag for direct join | **Deprecate** — if invitation system fully replaces it, remove the column in migration. If kept for backward compat, mark with `# DEPRECATED: Remove in Phase 3` |
+| `POST /guilds/{id}/join` endpoint | Direct join without invitation | **Remove** or **gate behind invitation** — direct join should not bypass the invitation system |
+| `AppSidebar.vue` `doJoinGuild()` | Direct join button in sidebar | **Remove** if direct join endpoint is removed |
+| `guilds.js` API `joinGuild()` | API call for direct join | **Remove** if endpoint is removed |
+| Phase 1 backward-compat re-exports | `# COMPAT: Remove in Phase 2` markers | **Remove now** — Phase 2 is where these shims die |
+
+**Verification:**
+```bash
+# No references to allow_self_join in frontend (if deprecated)
+grep -rn "allow_self_join\|self.join\|self_join" src/ --include="*.vue" --include="*.js"
+# Expected: empty
+
+# No direct join endpoints remaining
+grep -rn "join.*guild\|guilds.*join" app/api/ --include="*.py"
+# Expected: only invitation-based join
+```
+
+#### 13.3.4 Phase 3 Cleanup Checklist
+
+Phase 3 introduces the class-role matrix, replacing static mappings.
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `app/expansions/*.py` static `CLASS_ROLES` | Static class→role mappings | **Keep as defaults** but remove any code that reads them directly for validation (should go through matrix resolver) |
+| `signup_service.py` hardcoded validation | `if char.role not in CLASS_ROLES[char.wow_class]` | **Replace** with `matrix.is_valid_role(guild_id, char.wow_class, char.role)` |
+| `lineup_service.py` hardcoded validation | Similar static class→role check | **Replace** with matrix resolver |
+| `src/constants.js` `CLASS_ROLES` | Static frontend mapping | **Replace** with dynamic data from `GET /api/v1/guilds/{id}/class-role-matrix` |
+
+**Verification:**
+```bash
+# No hardcoded CLASS_ROLES validation in services
+grep -rn "CLASS_ROLES\[" app/services/ --include="*.py"
+# Expected: empty (all go through matrix resolver)
+```
+
+#### 13.3.5 Phase 4 Cleanup Checklist
+
+Phase 4 adds multi-expansion support. WotLK-only assumptions must go.
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `src/constants.js` static `WOW_CLASSES` | Hardcoded 10 WotLK classes | **Remove** — frontend gets classes from constants store which fetches from expansion-aware backend |
+| `src/constants.js` static `RAID_TYPES` | Hardcoded 8 WotLK raids | **Remove** — same as above |
+| `CharacterManagerView.vue` | Static class dropdown from `WOW_CLASSES` | **Replace** with `constantsStore.wowClasses` (already done but verify no hardcoded fallback) |
+| `app/constants.py` | Any remaining re-exports or hardcoded expansion data | **Remove entirely** if all data lives in `app/expansions/` registry |
+| Phase 1 compat shims | Anything marked `# COMPAT: Remove in Phase 4` | **Remove now** |
+
+**Verification:**
+```bash
+# No hardcoded WoW class lists in frontend
+grep -rn "Death Knight.*Druid.*Hunter\|WOW_CLASSES.*=.*\[" src/ --include="*.js" --include="*.vue"
+# Expected: only in constants.js static defaults (used until API loads)
+
+# No WotLK-only raid types in frontend
+grep -rn "naxx\|ulduar\|icc" src/ --include="*.js" --include="*.vue" | grep -v "constants.js"
+# Expected: empty (raid types come from backend)
+```
+
+#### 13.3.6 Phase 5 Cleanup Checklist
+
+Phase 5 extracts Warmane and Discord into plugins.
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `app/services/warmane_service.py` | Direct Warmane API integration | **Move** into `app/plugins/warmane/` — delete original file |
+| `app/services/discord_service.py` | Direct Discord integration | **Move** into `app/plugins/discord/` — delete original file |
+| `src/api/warmane.js` | Frontend Warmane API module | **Move** into plugin dynamic loader or delete if plugin handles its own API |
+| `src/api/armory.js` | Frontend armory API module | **Move** into plugin dynamic loader or delete |
+| `app/api/v1/warmane.py` | Warmane blueprint | **Move** into plugin registration — delete from main API |
+| `WARMANE_REALMS` in `app/constants.py` | Hardcoded Warmane realms | **Move** into Warmane plugin config; constants.py should not know about specific providers |
+| `WARMANE_REALMS` in `src/constants.js` | Same, frontend side | **Remove** — realms come from active provider plugin |
+| `useWowheadTooltips.js` | Inline Wowhead script injection | **Consider** moving to plugin if Wowhead integration becomes optional |
+
+**Verification:**
+```bash
+# No direct Warmane/Discord imports outside plugins/
+grep -rn "warmane_service\|discord_service" app/ --include="*.py" | grep -v "plugins/"
+# Expected: empty
+
+# No Warmane/armory API modules in frontend (if moved to plugins)
+ls src/api/warmane.js src/api/armory.js 2>/dev/null
+# Expected: files don't exist
+```
+
+#### 13.3.7 Phase 6 Cleanup Checklist
+
+Phase 6 adds billing. Clean up hardcoded plan defaults.
+
+**Code to remove/refactor:**
+
+| Location | What | Action |
+|----------|------|--------|
+| `Tenant` model `max_guilds` default=3, `max_members` default=50 | Hardcoded limits | **Replace** with limits from billing/subscription model. Defaults should come from plan definition, not model defaults |
+| `tenant_service.py` guild limit check | `if guild_count >= tenant.max_guilds` | **Replace** with `billing_service.check_limit(tenant, 'guilds')` if billing manages limits |
+| Phase 0 manual limit checks | Anywhere `tenant.max_guilds` is checked directly | **Consolidate** into billing service |
+
+**Final full-codebase audit (see §13.4):**
+```bash
+# Run all verification commands from all previous phases
+# Confirm zero orphans, zero dead imports, zero stale tests
+```
+
+---
+
+### 13.4 Dead Code Detection Process
+
+Run this process **at the end of every phase** and **before every merge**:
+
+#### 13.4.1 Backend (Python)
+
+```bash
+# ── Step 1: Dead imports ──
+ruff check app/ tests/ --select F401 --output-format text
+# Fix ALL F401 (unused import) warnings
+
+# ── Step 2: Unused functions ──
+# Use vulture (dead code finder) or manual grep:
+pip install vulture
+vulture app/ --min-confidence 80
+# Review each finding — false positives are common with Flask/SQLAlchemy
+
+# ── Step 3: Unreferenced files ──
+# Every .py file in app/ should be imported by something:
+for f in $(find app/ -name "*.py" ! -name "__init__.py" ! -name "__pycache__"); do
+  module=$(echo "$f" | sed 's|/|.|g' | sed 's|\.py$||')
+  if ! grep -rq "$(basename $f .py)" app/ --include="*.py" | grep -v "$f"; then
+    echo "POSSIBLY UNUSED: $f"
+  fi
+done
+
+# ── Step 4: print() statements (should use logging) ──
+grep -rn "^\s*print(" app/ --include="*.py"
+# Expected: empty for production code
+
+# ── Step 5: Commented-out code ──
+grep -rn "^#\s*def \|^#\s*class \|^#\s*from \|^#\s*import " app/ --include="*.py"
+# Expected: empty
+
+# ── Step 6: TODO/FIXME markers ──
+grep -rn "TODO\|FIXME\|HACK\|XXX\|TEMP\|DEPRECATED" app/ --include="*.py"
+# Expected: empty (create tracked issues instead)
+```
+
+#### 13.4.2 Frontend (JavaScript/Vue)
+
+```bash
+# ── Step 1: Dead imports (ESLint) ──
+npx eslint src/ --rule '{"no-unused-vars": "error", "no-unused-imports": "error"}' --ext .vue,.js
+
+# ── Step 2: Orphaned components ──
+for f in $(find src/components/ -name "*.vue"); do
+  name=$(basename "$f" .vue)
+  count=$(grep -rl "$name" src/ --include="*.vue" --include="*.js" | grep -v "$f" | wc -l)
+  if [ "$count" -eq 0 ]; then
+    echo "ORPHAN: $f"
+  fi
+done
+
+# ── Step 3: Orphaned API modules ──
+for f in src/api/*.js; do
+  name=$(basename "$f" .js)
+  if [ "$name" = "index" ]; then continue; fi
+  count=$(grep -rl "@/api/$name\|from.*api/$name" src/ --include="*.vue" --include="*.js" | wc -l)
+  if [ "$count" -eq 0 ]; then
+    echo "ORPHAN API: $f"
+  fi
+done
+
+# ── Step 4: Orphaned composables ──
+for f in src/composables/*.js; do
+  name=$(basename "$f" .js)
+  count=$(grep -rl "$name" src/ --include="*.vue" --include="*.js" | grep -v "$f" | wc -l)
+  if [ "$count" -eq 0 ]; then
+    echo "ORPHAN COMPOSABLE: $f"
+  fi
+done
+
+# ── Step 5: Unused i18n keys ──
+# Compare keys in translations/en.json with actual t('...') usage:
+# (Manual audit or use a tool like i18n-unused)
+
+# ── Step 6: Build verification ──
+npx vite build
+# Must succeed with zero warnings
+```
+
+#### 13.4.3 Tests
+
+```bash
+# ── All tests pass ──
+python -m pytest tests/ -v --tb=short
+
+# ── No skipped tests without reason ──
+python -m pytest tests/ -v | grep -i "skip\|xfail"
+# Review each skip — should have a linked issue or be removed
+
+# ── No tests for removed features ──
+# Manual review: if a feature was removed in this phase, its tests should
+# also be removed (not skipped).
+```
+
+---
+
+### 13.5 Branch Hygiene
+
+Since each phase is developed on a **separate branch**, these branch rules
+apply:
+
+| Rule | Details |
+|------|---------|
+| **Feature branch naming** | `phase-0/tenancy`, `phase-1/expansion-registry`, etc. |
+| **No merge without cleanup** | PR cannot be approved until all cleanup checklist items are checked off |
+| **No "fix later" comments** | If something can't be fixed now, create a GitHub issue and link it; do NOT leave a TODO in code |
+| **Squash-merge or rebase** | Keep commit history clean; no "fix typo" / "oops" commits in main |
+| **Delete branch after merge** | Feature branches are deleted after merge to main/develop |
+| **No cross-phase debt** | Each phase's cleanup checklist must be complete before starting the next phase. No carrying forward cleanup debt. |
+
+---
+
+### 13.6 Definition of Done (Per Phase)
+
+A phase is **done** only when ALL of the following are true:
+
+- [ ] All feature checkboxes in §7 for this phase are checked
+- [ ] All cleanup checkboxes in §13.3.X for this phase are checked
+- [ ] Dead code detection (§13.4) returns zero findings
+- [ ] `python -m pytest tests/ -v` — all tests pass, zero skipped without issue
+- [ ] `npx vite build` — zero warnings, zero errors
+- [ ] `ruff check app/` — zero linting issues (or pre-existing baseline unchanged)
+- [ ] Code review approved by at least one reviewer
+- [ ] No `TODO`/`FIXME`/`HACK`/`XXX` in changed files
+- [ ] No orphaned files, dead imports, or commented-out code
+- [ ] Documentation (docstrings, comments, this plan) updated to reflect current state
+- [ ] Translation files updated (no stale keys, no missing keys)
+- [ ] PR description lists every file changed with a one-line rationale
+
+---
+
+### 13.7 Known Pre-Existing Items to Track
+
+Items that exist today and should be addressed **no later than** the indicated
+phase:
+
+| # | Item | Current State | Address By | Action |
+|---|------|---------------|------------|--------|
+| 1 | `SystemTab.vue` (394 lines) | Orphaned — not imported anywhere | **Phase 0** | Delete |
+| 2 | `codebase-cleanup-plan.md` | Contains cleanup tasks — unclear which are done | **Phase 0** | Audit; mark completed items ✅; create issues for remaining |
+| 3 | `allow_self_join` on Guild model | Active — used in sidebar for direct guild join | **Phase 2** | Remove or deprecate when invitation system replaces it |
+| 4 | Static `WOW_CLASSES` in `src/constants.js` | Active — hardcoded 10 WotLK classes | **Phase 4** | Remove when constants store fetches expansion-aware data |
+| 5 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | Active — hardcoded Warmane realm list | **Phase 5** | Remove when provider plugins manage realm lists |
+| 6 | `i18n-plan.md` | Planning doc — may become stale | **Phase 0** | Review; integrate remaining items into this plan or archive |
+| 7 | Hardcoded `max_guilds=3`, `max_members=50` on Tenant model | Will be introduced in Phase 0 | **Phase 6** | Replace with billing-managed limits |
