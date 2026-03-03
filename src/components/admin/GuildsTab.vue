@@ -90,7 +90,7 @@
                   :value="m.role"
                   @change="changeMemberRole(m, $event.target.value)"
                 >
-                  <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
+                  <option v-for="r in availableRoles" :key="r.name" :value="r.name">{{ r.display_name || r.name }}</option>
                 </select>
               </td>
               <td class="px-4 py-2.5">
@@ -99,12 +99,12 @@
                   :class="m.status === 'active' ? 'bg-green-900/50 text-green-300 border border-green-600' : 'bg-yellow-900/50 text-yellow-300 border border-yellow-600'"
                 >{{ m.status }}</span>
               </td>
-              <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.joined_at) }}</td>
+              <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.created_at) }}</td>
               <td class="px-4 py-2.5 text-right">
-                <div class="flex flex-wrap gap-1 justify-end">
-                  <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openTransferModal(m)">{{ t('admin.guilds.transferOwnership') }}</WowButton>
-                  <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openNotifyModal(m)">{{ t('admin.guilds.sendNotification') }}</WowButton>
-                  <WowButton variant="danger" class="text-xs py-1 px-2" @click="confirmRemoveMember(m)">{{ t('admin.guilds.removeMember') }}</WowButton>
+                <div class="flex flex-col gap-1 items-end">
+                  <WowButton v-if="!isGuildOwner(m)" variant="secondary" class="text-xs py-1 px-2 w-full sm:w-auto" @click="openTransferModal(m)">{{ t('admin.guilds.transferOwnership') }}</WowButton>
+                  <WowButton variant="secondary" class="text-xs py-1 px-2 w-full sm:w-auto" @click="openNotifyModal(m)">{{ t('admin.guilds.sendNotification') }}</WowButton>
+                  <WowButton variant="danger" class="text-xs py-1 px-2 w-full sm:w-auto" @click="confirmRemoveMember(m)">{{ t('admin.guilds.removeMember') }}</WowButton>
                 </div>
               </td>
             </tr>
@@ -284,12 +284,17 @@ async function loadGuilds() {
 
 onMounted(async () => {
   await loadGuilds()
-  // Load role names for the dropdown
+  // Load role objects for the dropdown (with display_name)
   try {
     const roles = await rolesApi.getRoles()
-    availableRoles.value = roles.map(r => r.name)
+    availableRoles.value = roles
   } catch {
-    availableRoles.value = ['guild_admin', 'officer', 'raid_leader', 'member']
+    availableRoles.value = [
+      { name: 'guild_admin', display_name: 'Guild Admin' },
+      { name: 'officer', display_name: 'Officer' },
+      { name: 'raid_leader', display_name: 'Raid Leader' },
+      { name: 'member', display_name: 'Member' },
+    ]
   }
 })
 
@@ -322,6 +327,10 @@ async function changeMemberRole(member, newRole) {
 function openTransferModal(member) {
   transferTarget.value = member
   showTransferModal.value = true
+}
+
+function isGuildOwner(member) {
+  return selectedGuild.value && member.user_id === selectedGuild.value.created_by
 }
 
 async function doTransferOwnership() {
