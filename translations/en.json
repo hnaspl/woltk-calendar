@@ -716,7 +716,9 @@
         "syncCompleted": "Character sync completed",
         "syncFailed": "Sync failed",
         "discordSettingsSaved": "Discord settings saved",
-        "failedToSaveDiscord": "Failed to save Discord settings"
+        "failedToSaveDiscord": "Failed to save Discord settings",
+        "userPromoted": "User promoted to Global Admin",
+        "userDemoted": "Admin status revoked"
       },
       "discord": {
         "title": "Discord Login",

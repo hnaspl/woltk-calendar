@@ -54,10 +54,10 @@ def dashboard_stats():
 
     total_users = db.session.scalar(sa.select(sa.func.count()).select_from(User))
     active_users = db.session.scalar(
-        sa.select(sa.func.count()).select_from(User).where(User.is_active == True)  # noqa: E712
+        sa.select(sa.func.count()).select_from(User).where(User.is_active.is_(True))
     )
     admin_users = db.session.scalar(
-        sa.select(sa.func.count()).select_from(User).where(User.is_admin == True)  # noqa: E712
+        sa.select(sa.func.count()).select_from(User).where(User.is_admin.is_(True))
     )
     total_guilds = db.session.scalar(sa.select(sa.func.count()).select_from(Guild))
     total_raids = db.session.scalar(sa.select(sa.func.count()).select_from(RaidEvent))
@@ -80,9 +80,11 @@ def dashboard_stats():
         )
     )
 
-    db_path = os.path.join("instance", "app.db")
+    from flask import current_app
+    db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    db_path = db_uri.replace("sqlite:///", "") if db_uri.startswith("sqlite:///") else None
     try:
-        database_size_kb = round(os.path.getsize(db_path) / 1024, 1)
+        database_size_kb = round(os.path.getsize(db_path) / 1024, 1) if db_path else None
     except OSError:
         database_size_kb = None
 

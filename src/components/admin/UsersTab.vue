@@ -142,10 +142,7 @@ async function toggleAdmin(user) {
     const updated = await adminApi.updateUser(user.id, { is_admin: !user.is_admin })
     const idx = users.value.findIndex(u => u.id === user.id)
     if (idx !== -1) users.value[idx] = updated
-    const msg = updated.is_admin
-      ? `${updated.username} promoted to Global Admin`
-      : `${updated.username} admin status revoked`
-    uiStore.showToast(msg, 'success')
+    uiStore.showToast(t(updated.is_admin ? 'admin.system.toasts.userPromoted' : 'admin.system.toasts.userDemoted'), 'success')
   } catch {
     uiStore.showToast(t('admin.system.toasts.failedToUpdateAdmin'), 'error')
   }

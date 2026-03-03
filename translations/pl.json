@@ -716,7 +716,9 @@
         "syncCompleted": "Synchronizacja postaci zakończona",
         "syncFailed": "Synchronizacja nie powiodła się",
         "discordSettingsSaved": "Ustawienia Discord zapisane",
-        "failedToSaveDiscord": "Nie udało się zapisać ustawień Discord"
+        "failedToSaveDiscord": "Nie udało się zapisać ustawień Discord",
+        "userPromoted": "Użytkownik awansowany na Globalnego Admina",
+        "userDemoted": "Status administratora cofnięty"
       },
       "discord": {
         "title": "Logowanie Discord",
