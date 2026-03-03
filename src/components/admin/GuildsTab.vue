@@ -288,7 +288,9 @@ onMounted(async () => {
   try {
     const roles = await rolesApi.getRoles()
     availableRoles.value = roles.map(r => r.name)
-  } catch { /* ignore */ }
+  } catch {
+    availableRoles.value = ['guild_admin', 'officer', 'raid_leader', 'member']
+  }
 })
 
 async function viewMembers(guild) {

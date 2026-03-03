@@ -179,6 +179,11 @@ function openEditModal(d) {
 }
 
 async function saveDefinition() {
+  const size = form.value.default_raid_size
+  if (!size || size < 1 || size > 40) {
+    uiStore.showToast('Raid size must be between 1 and 40', 'error')
+    return
+  }
   try {
     if (editingDef.value) {
       await rdApi.adminUpdateDefaultDefinition(editingDef.value.id, form.value)
