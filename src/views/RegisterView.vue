@@ -154,13 +154,7 @@ async function handleRegister() {
 }
 
 async function handleDiscordLogin() {
-  discordLoading.value = true
-  try {
-    const data = await authApi.getDiscordLoginUrl()
-    window.location.href = data.url
-  } catch {
-    error.value = t('auth.errors.discordNotConfigured')
-    discordLoading.value = false
-  }
+  // Direct navigation to backend endpoint which returns HTTP 302 to Discord
+  window.location.href = '/api/v1/auth/discord/login'
 }
 </script>

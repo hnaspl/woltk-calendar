@@ -206,11 +206,12 @@ class TestDiscordEnabled:
 # ---------------------------------------------------------------------------
 
 class TestDiscordLoginUrl:
-    def test_returns_error_when_not_configured(self, client):
+    def test_redirects_to_login_when_not_configured(self, client):
         resp = client.get("/api/v1/auth/discord/login")
-        assert resp.status_code == 400
+        assert resp.status_code == 302
+        assert "/login?error=discord_not_configured" in resp.headers["Location"]
 
-    def test_returns_url_when_configured(self, app, client, db):
+    def test_redirects_to_discord_when_configured(self, app, client, db):
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="my-client-id"))
@@ -221,14 +222,13 @@ class TestDiscordLoginUrl:
             db.session.commit()
 
         resp = client.get("/api/v1/auth/discord/login")
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert "url" in data
-        assert "discord.com" in data["url"]
-        assert "my-client-id" in data["url"]
+        assert resp.status_code == 302
+        location = resp.headers["Location"]
+        assert "discord.com" in location
+        assert "my-client-id" in location
 
-    def test_url_uses_percent_20_for_scope_spaces(self, app, client, db):
-        """Discord requires scopes separated by %20, not +."""
+    def test_redirect_url_contains_correct_scope(self, app, client, db):
+        """Discord scopes use + (standard query-string encoding for spaces)."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="cid"))
@@ -239,9 +239,8 @@ class TestDiscordLoginUrl:
             db.session.commit()
 
         resp = client.get("/api/v1/auth/discord/login")
-        url = resp.get_json()["url"]
-        assert "scope=identify%20email" in url
-        assert "identify+email" not in url
+        location = resp.headers["Location"]
+        assert "scope=identify+email" in location
 
 
 # ---------------------------------------------------------------------------

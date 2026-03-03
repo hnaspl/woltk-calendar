@@ -108,6 +108,8 @@ onMounted(async () => {
     error.value = t('auth.errors.discordLoginFailed')
   } else if (params.get('error') === 'account_disabled') {
     error.value = t('auth.errors.accountDisabled')
+  } else if (params.get('error') === 'discord_not_configured') {
+    error.value = t('auth.errors.discordNotConfigured')
   }
 
   try {
@@ -131,13 +133,7 @@ async function handleLogin() {
 }
 
 async function handleDiscordLogin() {
-  discordLoading.value = true
-  try {
-    const data = await authApi.getDiscordLoginUrl()
-    window.location.href = data.url
-  } catch {
-    error.value = t('auth.errors.discordNotConfigured')
-    discordLoading.value = false
-  }
+  // Direct navigation to backend endpoint which returns HTTP 302 to Discord
+  window.location.href = '/api/v1/auth/discord/login'
 }
 </script>

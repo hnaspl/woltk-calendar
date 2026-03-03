@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 import requests
 import sqlalchemy as sa
@@ -70,7 +70,7 @@ def get_authorize_url(state: str) -> Optional[str]:
         "scope": "identify email",
         "state": state,
     }
-    return f"{DISCORD_AUTH_URL}?{urlencode(params, quote_via=quote)}"
+    return f"{DISCORD_AUTH_URL}?{urlencode(params)}"
 
 
 def exchange_code(code: str) -> Optional[dict]:

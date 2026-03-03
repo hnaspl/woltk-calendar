@@ -137,15 +137,15 @@ def discord_enabled():
 
 @bp.get("/discord/login")
 def discord_login():
-    """Redirect the user to Discord's authorization page."""
+    """Redirect the user to Discord's authorization page (HTTP 302)."""
     state = secrets.token_urlsafe(32)
     session["discord_oauth_state"] = state
     url = discord_service.get_authorize_url(state)
     if not url:
         current_app.logger.warning("Discord login: not configured")
-        return jsonify({"error": _t("auth.errors.discordNotConfigured")}), 400
+        return redirect("/login?error=discord_not_configured")
     current_app.logger.info("Discord login: redirecting to Discord")
-    return jsonify({"url": url}), 200
+    return redirect(url)
 
 
 @bp.get("/discord/callback")
