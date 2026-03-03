@@ -41,10 +41,12 @@
 
         <!-- Tab content -->
         <KeepAlive>
-          <SystemTab v-if="activeTab === 'system'" />
+          <DashboardTab v-if="activeTab === 'dashboard'" />
+          <UsersTab v-else-if="activeTab === 'users'" />
           <RolesTab v-else-if="activeTab === 'roles'" />
           <GuildsTab v-else-if="activeTab === 'guilds'" />
           <DefaultRaidDefinitionsTab v-else-if="activeTab === 'raid-definitions'" />
+          <SettingsTab v-else-if="activeTab === 'settings'" />
         </KeepAlive>
       </template>
     </div>
@@ -54,10 +56,12 @@
 <script setup>
 import { ref, h } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
-import SystemTab from '@/components/admin/SystemTab.vue'
+import DashboardTab from '@/components/admin/DashboardTab.vue'
+import UsersTab from '@/components/admin/UsersTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildsTab from '@/components/admin/GuildsTab.vue'
 import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitionsTab.vue'
+import SettingsTab from '@/components/admin/SettingsTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 
@@ -65,8 +69,11 @@ const authStore = useAuthStore()
 const { t } = useI18n()
 
 const icons = {
-  system: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' })
+  dashboard: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-2a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z' })
+  ]),
+  users: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' })
   ]),
   roles: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
@@ -76,15 +83,21 @@ const icons = {
   ]),
   raidDefs: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 10h16M4 14h16M4 18h16' })
+  ]),
+  settings: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }),
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' })
   ])
 }
 
 const tabs = [
-  { id: 'system', label: t('common.labels.system'), icon: icons.system },
+  { id: 'dashboard', label: t('admin.dashboard.title'), icon: icons.dashboard },
+  { id: 'users', label: t('admin.users.title', { count: '' }).replace('()', '').trim(), icon: icons.users },
   { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles },
   { id: 'guilds', label: t('admin.guilds.tabTitle'), icon: icons.guilds },
   { id: 'raid-definitions', label: t('admin.raidDefinitions.tabTitle'), icon: icons.raidDefs },
+  { id: 'settings', label: t('admin.system.title'), icon: icons.settings },
 ]
 
-const activeTab = ref('system')
+const activeTab = ref('dashboard')
 </script>

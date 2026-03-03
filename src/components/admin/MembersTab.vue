@@ -4,9 +4,14 @@
     <WowCard>
       <div class="flex items-center justify-between mb-4">
         <h2 class="wow-heading text-base">{{ t('members.title', { count: members.length }) }}</h2>
-        <WowButton v-if="permissions.can('manage_guild_members')" variant="secondary" class="text-xs py-1 px-3" @click="showAddMember = true">
-          {{ t('members.addMember') }}
-        </WowButton>
+        <div class="flex gap-2">
+          <WowButton v-if="permissions.can('manage_guild_members')" variant="secondary" class="text-xs py-1 px-3" @click="showAddMember = true">
+            {{ t('members.addMember') }}
+          </WowButton>
+          <WowButton v-if="permissions.can('remove_members')" variant="secondary" class="text-xs py-1 px-3" @click="showNotifyAllModal = true">
+            📢 {{ t('members.notifyAll') }}
+          </WowButton>
+        </div>
       </div>
 
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
@@ -41,16 +46,19 @@
                   </select>
                 </td>
                 <td class="px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.joined_at ?? m.created_at) }}</td>
-                <td class="px-4 py-2.5 text-right space-x-2">
-                  <button
-                    class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors"
-                    @click="viewMemberChars(m)"
-                  >
-                    📋 {{ t('common.labels.characters') }}
-                  </button>
-                  <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">
-                    {{ t('common.buttons.remove') }}
-                  </WowButton>
+                <td class="px-4 py-2.5">
+                  <div class="flex flex-col gap-1 items-end">
+                    <button
+                      class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 hover:border-accent-gold/70 transition-colors w-full justify-center"
+                      @click="viewMemberChars(m)"
+                    >
+                      📋 {{ t('common.labels.characters') }}
+                    </button>
+                    <WowButton v-if="canChangeRole(m)" variant="secondary" class="text-xs py-1 px-2 w-full" @click="openNotifyModal(m)">📢 {{ t('members.notify') }}</WowButton>
+                    <WowButton v-if="canChangeRole(m) && m.status !== 'banned'" variant="danger" class="text-xs py-1 px-2 w-full" @click="confirmBan(m)">🚫 {{ t('members.ban') }}</WowButton>
+                    <WowButton v-if="canChangeRole(m) && m.status === 'banned'" variant="secondary" class="text-xs py-1 px-2 w-full" @click="doUnban(m)">✅ {{ t('members.unban') }}</WowButton>
+                    <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2 w-full" @click="confirmKick(m)">{{ t('common.buttons.remove') }}</WowButton>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -79,12 +87,17 @@
               </select>
             </div>
             <div class="text-xs text-text-muted">{{ t('members.joined') }}: {{ formatDate(m.joined_at ?? m.created_at) }}</div>
-            <div class="flex gap-2">
+            <div class="flex flex-col gap-1">
               <button
                 class="flex-1 inline-flex items-center justify-center gap-1 text-xs font-medium px-3 py-1.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/40 hover:bg-accent-gold/25 transition-colors"
                 @click="viewMemberChars(m)"
               >📋 {{ t('common.labels.characters') }}</button>
-              <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2" @click="confirmKick(m)">{{ t('common.buttons.remove') }}</WowButton>
+              <WowButton v-if="canChangeRole(m)" variant="secondary" class="text-xs py-1 px-2" @click="openNotifyModal(m)">📢 {{ t('members.notify') }}</WowButton>
+              <div class="flex gap-2">
+                <WowButton v-if="canChangeRole(m) && m.status !== 'banned'" variant="danger" class="text-xs py-1 px-2 flex-1" @click="confirmBan(m)">🚫 {{ t('members.ban') }}</WowButton>
+                <WowButton v-if="canChangeRole(m) && m.status === 'banned'" variant="secondary" class="text-xs py-1 px-2 flex-1" @click="doUnban(m)">✅ {{ t('members.unban') }}</WowButton>
+                <WowButton v-if="canChangeRole(m)" variant="danger" class="text-xs py-1 px-2 flex-1" @click="confirmKick(m)">{{ t('common.buttons.remove') }}</WowButton>
+              </div>
             </div>
           </div>
         </div>
@@ -302,6 +315,45 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Notify Single Member Modal -->
+    <WowModal v-model="showNotifyModal" :title="t('members.sendNotification')" size="sm">
+      <div class="space-y-3">
+        <p class="text-text-muted text-sm">{{ t('members.notifyTo', { name: notifyTarget?.username ?? notifyTarget?.user?.username }) }}</p>
+        <textarea v-model="notifyMessage" rows="3" class="w-full bg-bg-secondary border border-border-default text-text-primary text-sm rounded px-3 py-2 focus:border-accent-gold focus:outline-none" :placeholder="t('members.notifyPlaceholder')" />
+      </div>
+      <template #footer>
+        <div class="flex gap-2 justify-end">
+          <WowButton variant="secondary" @click="showNotifyModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="primary" :disabled="!notifyMessage.trim()" :loading="notifying" @click="doNotify">{{ t('members.send') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Notify All Modal -->
+    <WowModal v-model="showNotifyAllModal" :title="t('members.notifyAllTitle')" size="sm">
+      <div class="space-y-3">
+        <p class="text-text-muted text-sm">{{ t('members.notifyAllDesc', { count: members.length }) }}</p>
+        <textarea v-model="notifyAllMessage" rows="3" class="w-full bg-bg-secondary border border-border-default text-text-primary text-sm rounded px-3 py-2 focus:border-accent-gold focus:outline-none" :placeholder="t('members.notifyPlaceholder')" />
+      </div>
+      <template #footer>
+        <div class="flex gap-2 justify-end">
+          <WowButton variant="secondary" @click="showNotifyAllModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="primary" :disabled="!notifyAllMessage.trim()" :loading="notifyingAll" @click="doNotifyAll">{{ t('members.send') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Ban Confirmation Modal -->
+    <WowModal v-model="showBanConfirm" :title="t('members.banMember')" size="sm">
+      <p class="text-text-muted">{{ t('members.banConfirm', { name: banTarget?.username ?? banTarget?.user?.username }) }}</p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showBanConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="banning" @click="doBan">{{ t('members.ban') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </div>
 </template>
 
@@ -339,6 +391,22 @@ const members = ref([])
 const allRoles = ref([])
 const showKickConfirm = ref(false)
 const kickTarget = ref(null)
+
+// Notify single member
+const showNotifyModal = ref(false)
+const notifyTarget = ref(null)
+const notifyMessage = ref('')
+const notifying = ref(false)
+
+// Notify all members
+const showNotifyAllModal = ref(false)
+const notifyAllMessage = ref('')
+const notifyingAll = ref(false)
+
+// Ban/unban
+const showBanConfirm = ref(false)
+const banTarget = ref(null)
+const banning = ref(false)
 
 const isWarmaneSource = computed(() => !!guildStore.currentGuild?.warmane_source)
 
@@ -439,6 +507,69 @@ async function doKick() {
     uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
   } finally {
     saving.value = false
+  }
+}
+
+function openNotifyModal(member) {
+  notifyTarget.value = member
+  notifyMessage.value = ''
+  showNotifyModal.value = true
+}
+
+async function doNotify() {
+  notifying.value = true
+  try {
+    await guildsApi.sendGuildNotification(guildStore.currentGuild.id, notifyTarget.value.user_id, notifyMessage.value)
+    showNotifyModal.value = false
+    uiStore.showToast(t('members.toasts.notificationSent'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.notificationFailed'), 'error')
+  } finally {
+    notifying.value = false
+  }
+}
+
+async function doNotifyAll() {
+  notifyingAll.value = true
+  try {
+    await guildsApi.sendGuildNotificationAll(guildStore.currentGuild.id, notifyAllMessage.value)
+    showNotifyAllModal.value = false
+    uiStore.showToast(t('members.toasts.allNotified'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.notificationFailed'), 'error')
+  } finally {
+    notifyingAll.value = false
+  }
+}
+
+function confirmBan(member) {
+  banTarget.value = member
+  showBanConfirm.value = true
+}
+
+async function doBan() {
+  banning.value = true
+  try {
+    await guildsApi.banGuildMember(guildStore.currentGuild.id, banTarget.value.user_id)
+    const idx = members.value.findIndex(m => m.user_id === banTarget.value.user_id)
+    if (idx !== -1) members.value[idx].status = 'banned'
+    showBanConfirm.value = false
+    uiStore.showToast(t('members.toasts.memberBanned'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.banFailed'), 'error')
+  } finally {
+    banning.value = false
+  }
+}
+
+async function doUnban(member) {
+  try {
+    await guildsApi.unbanGuildMember(guildStore.currentGuild.id, member.user_id)
+    const idx = members.value.findIndex(m => m.user_id === member.user_id)
+    if (idx !== -1) members.value[idx].status = 'active'
+    uiStore.showToast(t('members.toasts.memberUnbanned'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.unbanFailed'), 'error')
   }
 }
 

@@ -638,9 +638,28 @@
     "toasts": {
       "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
       "failedToTransfer": "Nie udało się przenieść własności",
-      "failedToFetchRoster": "Nie udało się pobrać składu gildii z Warmane"
+      "failedToFetchRoster": "Nie udało się pobrać składu gildii z Warmane",
+      "notificationSent": "Powiadomienie wysłane",
+      "allNotified": "Wszyscy członkowie powiadomieni",
+      "notificationFailed": "Nie udało się wysłać powiadomienia",
+      "memberBanned": "Członek zbanowany",
+      "banFailed": "Nie udało się zbanować członka",
+      "memberUnbanned": "Członek odbanowany",
+      "unbanFailed": "Nie udało się odbanować członka"
     },
-    "failedToLoad": "Nie udało się załadować członków"
+    "failedToLoad": "Nie udało się załadować członków",
+    "notify": "Powiadom",
+    "notifyAll": "Powiadom wszystkich",
+    "sendNotification": "Wyślij powiadomienie",
+    "notifyTo": "Wyślij powiadomienie do {name}:",
+    "notifyAllTitle": "Powiadom wszystkich członków",
+    "notifyAllDesc": "Wyślij powiadomienie do wszystkich {count} członków gildii:",
+    "notifyPlaceholder": "Wpisz wiadomość...",
+    "send": "Wyślij",
+    "ban": "Zbanuj",
+    "unban": "Odbanuj",
+    "banMember": "Zbanuj członka",
+    "banConfirm": "Zbanować {name} z gildii? Zostanie usunięty i nie będzie mógł ponownie dołączyć, dopóki nie zostanie odbanowany."
   },
   "admin": {
     "title": "Panel admina",

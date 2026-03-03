@@ -638,9 +638,28 @@
     "toasts": {
       "ownershipTransferred": "Guild ownership transferred successfully",
       "failedToTransfer": "Failed to transfer ownership",
-      "failedToFetchRoster": "Failed to fetch guild roster from Warmane"
+      "failedToFetchRoster": "Failed to fetch guild roster from Warmane",
+      "notificationSent": "Notification sent",
+      "allNotified": "All members notified",
+      "notificationFailed": "Failed to send notification",
+      "memberBanned": "Member banned",
+      "banFailed": "Failed to ban member",
+      "memberUnbanned": "Member unbanned",
+      "unbanFailed": "Failed to unban member"
     },
-    "failedToLoad": "Failed to load members"
+    "failedToLoad": "Failed to load members",
+    "notify": "Notify",
+    "notifyAll": "Notify All",
+    "sendNotification": "Send Notification",
+    "notifyTo": "Send a notification to {name}:",
+    "notifyAllTitle": "Notify All Members",
+    "notifyAllDesc": "Send a notification to all {count} guild members:",
+    "notifyPlaceholder": "Type your message...",
+    "send": "Send",
+    "ban": "Ban",
+    "unban": "Unban",
+    "banMember": "Ban Member",
+    "banConfirm": "Ban {name} from this guild? They will be removed and unable to rejoin until unbanned."
   },
   "admin": {
     "title": "Admin Panel",
