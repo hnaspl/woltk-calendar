@@ -659,7 +659,8 @@
     "ban": "Ban",
     "unban": "Unban",
     "banMember": "Ban Member",
-    "banConfirm": "Ban {name} from this guild? They will be removed and unable to rejoin until unbanned."
+    "banConfirm": "Ban {name} from this guild? They will be removed and unable to rejoin until unbanned.",
+    "memberCharactersTitle": "{name}'s Characters"
   },
   "admin": {
     "title": "Admin Panel",
@@ -803,11 +804,19 @@
       "upcomingRaids": "Upcoming",
       "totalCharacters": "Characters",
       "totalSignups": "Signups",
-      "systemHealth": "System Health",
       "pendingJobs": "Pending Jobs",
       "failedJobs": "Failed Jobs",
       "databaseSize": "Database Size",
-      "loadError": "Failed to load dashboard data"
+      "loadError": "Failed to load dashboard data",
+      "queueStatus": "Queue & Jobs",
+      "runningJobs": "Running",
+      "completedJobs": "Completed",
+      "recentJobs": "Recent Jobs",
+      "jobType": "Type",
+      "jobAttempts": "Attempts",
+      "jobCreated": "Created",
+      "jobError": "Error",
+      "noRecentJobs": "No recent jobs in queue."
     }
   },
   "signup": {

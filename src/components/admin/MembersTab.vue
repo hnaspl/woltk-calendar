@@ -577,7 +577,7 @@ async function doUnban(member) {
 const showMemberChars = ref(false)
 const memberChars = ref([])
 const loadingMemberChars = ref(false)
-const memberCharsTitle = ref('Member Characters')
+const memberCharsTitle = ref('')
 
 // Character detail modal
 const showCharDetailModal = ref(false)
@@ -590,7 +590,7 @@ function openCharDetailModal(character) {
 
 async function viewMemberChars(member) {
   const username = member.username ?? member.user?.username ?? 'Unknown'
-  memberCharsTitle.value = `${username}'s Characters`
+  memberCharsTitle.value = t('members.memberCharactersTitle', { name: username })
   showMemberChars.value = true
   loadingMemberChars.value = true
   memberChars.value = []

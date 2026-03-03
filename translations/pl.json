@@ -659,7 +659,8 @@
     "ban": "Zbanuj",
     "unban": "Odbanuj",
     "banMember": "Zbanuj członka",
-    "banConfirm": "Zbanować {name} z gildii? Zostanie usunięty i nie będzie mógł ponownie dołączyć, dopóki nie zostanie odbanowany."
+    "banConfirm": "Zbanować {name} z gildii? Zostanie usunięty i nie będzie mógł ponownie dołączyć, dopóki nie zostanie odbanowany.",
+    "memberCharactersTitle": "Postacie gracza {name}"
   },
   "admin": {
     "title": "Panel admina",
@@ -803,11 +804,19 @@
       "upcomingRaids": "Nadchodzące",
       "totalCharacters": "Postacie",
       "totalSignups": "Zapisy",
-      "systemHealth": "Stan systemu",
       "pendingJobs": "Oczekujące zadania",
       "failedJobs": "Nieudane zadania",
       "databaseSize": "Rozmiar bazy danych",
-      "loadError": "Nie udało się załadować danych panelu"
+      "loadError": "Nie udało się załadować danych panelu",
+      "queueStatus": "Kolejka i zadania",
+      "runningJobs": "W trakcie",
+      "completedJobs": "Zakończone",
+      "recentJobs": "Ostatnie zadania",
+      "jobType": "Typ",
+      "jobAttempts": "Próby",
+      "jobCreated": "Utworzono",
+      "jobError": "Błąd",
+      "noRecentJobs": "Brak zadań w kolejce."
     }
   },
   "signup": {

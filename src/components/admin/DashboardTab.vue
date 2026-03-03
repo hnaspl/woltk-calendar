@@ -59,39 +59,67 @@
       </div>
     </WowCard>
 
-    <!-- System Health -->
+    <!-- Queue & Jobs Status -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">{{ t('admin.dashboard.systemHealth') }}</h2>
+      <h2 class="wow-heading text-base mb-4">{{ t('admin.dashboard.queueStatus') }}</h2>
 
       <div v-if="loading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
 
       <div v-else-if="!error" class="space-y-4">
-        <!-- Job Queue -->
-        <div class="flex flex-wrap gap-4">
+        <!-- Job counters -->
+        <div class="flex flex-wrap gap-3">
           <div class="flex items-center gap-2 px-3 py-2 rounded bg-bg-secondary border border-border-default">
-            <span
-              class="inline-block w-2 h-2 rounded-full"
-              :class="data.pending_jobs > 0 ? 'bg-yellow-400' : 'bg-green-400'"
-            />
+            <span class="inline-block w-2 h-2 rounded-full" :class="data.pending_jobs > 0 ? 'bg-yellow-400' : 'bg-green-400'" />
             <span class="text-xs text-text-muted">{{ t('admin.dashboard.pendingJobs') }}</span>
             <span class="text-sm font-bold text-text-primary">{{ data.pending_jobs }}</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2 rounded bg-bg-secondary border border-border-default">
-            <span
-              class="inline-block w-2 h-2 rounded-full"
-              :class="data.failed_jobs > 0 ? 'bg-red-400' : 'bg-green-400'"
-            />
+            <span class="inline-block w-2 h-2 rounded-full" :class="data.running_jobs > 0 ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'" />
+            <span class="text-xs text-text-muted">{{ t('admin.dashboard.runningJobs') }}</span>
+            <span class="text-sm font-bold text-text-primary">{{ data.running_jobs }}</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2 rounded bg-bg-secondary border border-border-default">
+            <span class="inline-block w-2 h-2 rounded-full" :class="data.failed_jobs > 0 ? 'bg-red-400' : 'bg-green-400'" />
             <span class="text-xs text-text-muted">{{ t('admin.dashboard.failedJobs') }}</span>
             <span class="text-sm font-bold text-text-primary">{{ data.failed_jobs }}</span>
           </div>
+          <div class="flex items-center gap-2 px-3 py-2 rounded bg-bg-secondary border border-border-default">
+            <span class="inline-block w-2 h-2 rounded-full bg-green-400" />
+            <span class="text-xs text-text-muted">{{ t('admin.dashboard.completedJobs') }}</span>
+            <span class="text-sm font-bold text-text-primary">{{ data.done_jobs }}</span>
+          </div>
         </div>
 
-        <!-- Database -->
-        <div class="flex items-center gap-2 px-3 py-2 rounded bg-bg-secondary border border-border-default w-fit">
-          <span class="text-sm">💾</span>
-          <span class="text-xs text-text-muted">{{ t('admin.dashboard.databaseSize') }}</span>
-          <span class="text-sm font-bold text-text-primary">{{ formattedDbSize }}</span>
+        <!-- Recent queue items -->
+        <div v-if="data.recent_queue && data.recent_queue.length" class="overflow-x-auto">
+          <h3 class="text-xs text-text-muted uppercase mb-2">{{ t('admin.dashboard.recentJobs') }}</h3>
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="bg-bg-tertiary border-b border-border-default">
+                <th class="text-left px-3 py-1.5 text-text-muted">{{ t('admin.dashboard.jobType') }}</th>
+                <th class="text-left px-3 py-1.5 text-text-muted">{{ t('common.fields.status') }}</th>
+                <th class="hidden sm:table-cell text-left px-3 py-1.5 text-text-muted">{{ t('admin.dashboard.jobAttempts') }}</th>
+                <th class="hidden md:table-cell text-left px-3 py-1.5 text-text-muted">{{ t('admin.dashboard.jobCreated') }}</th>
+                <th class="hidden lg:table-cell text-left px-3 py-1.5 text-text-muted">{{ t('admin.dashboard.jobError') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-default">
+              <tr v-for="job in data.recent_queue" :key="job.id" class="hover:bg-bg-tertiary/50">
+                <td class="px-3 py-1.5 text-text-primary font-medium">{{ job.type }}</td>
+                <td class="px-3 py-1.5">
+                  <span
+                    class="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    :class="jobStatusClass(job.status)"
+                  >{{ job.status }}</span>
+                </td>
+                <td class="hidden sm:table-cell px-3 py-1.5 text-text-muted">{{ job.attempts }}</td>
+                <td class="hidden md:table-cell px-3 py-1.5 text-text-muted">{{ formatJobDate(job.created_at) }}</td>
+                <td class="hidden lg:table-cell px-3 py-1.5 text-red-400 truncate max-w-[200px]" :title="job.last_error">{{ job.last_error || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <div v-else class="text-xs text-text-muted">{{ t('admin.dashboard.noRecentJobs') }}</div>
       </div>
     </WowCard>
   </div>
@@ -117,7 +145,10 @@ const data = ref({
   total_characters: 0,
   total_signups: 0,
   pending_jobs: 0,
+  running_jobs: 0,
   failed_jobs: 0,
+  done_jobs: 0,
+  recent_queue: [],
   database_size_kb: 0,
 })
 
@@ -130,6 +161,21 @@ const formattedDbSize = computed(() => {
   if (kb >= KB_PER_MB) return `${(kb / KB_PER_MB).toFixed(1)} MB`
   return `${kb} KB`
 })
+
+function jobStatusClass(status) {
+  switch (status) {
+    case 'queued': return 'bg-yellow-900/50 text-yellow-300 border border-yellow-600'
+    case 'running': return 'bg-blue-900/50 text-blue-300 border border-blue-600'
+    case 'done': return 'bg-green-900/50 text-green-300 border border-green-600'
+    case 'failed': return 'bg-red-900/50 text-red-300 border border-red-600'
+    default: return 'bg-bg-tertiary text-text-muted'
+  }
+}
+
+function formatJobDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 onMounted(async () => {
   loading.value = true

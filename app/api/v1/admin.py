@@ -74,11 +74,26 @@ def dashboard_stats():
             JobQueue.status == JobStatus.QUEUED.value
         )
     )
+    running_jobs = db.session.scalar(
+        sa.select(sa.func.count()).select_from(JobQueue).where(
+            JobQueue.status == JobStatus.RUNNING.value
+        )
+    )
     failed_jobs = db.session.scalar(
         sa.select(sa.func.count()).select_from(JobQueue).where(
             JobQueue.status == JobStatus.FAILED.value
         )
     )
+    done_jobs = db.session.scalar(
+        sa.select(sa.func.count()).select_from(JobQueue).where(
+            JobQueue.status == JobStatus.DONE.value
+        )
+    )
+
+    # Recent queue items (last 10, newest first)
+    recent_queue = db.session.execute(
+        sa.select(JobQueue).order_by(JobQueue.created_at.desc()).limit(10)
+    ).scalars().all()
 
     from flask import current_app
     db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
@@ -98,7 +113,10 @@ def dashboard_stats():
         "total_characters": total_characters,
         "total_signups": total_signups,
         "pending_jobs": pending_jobs,
+        "running_jobs": running_jobs,
         "failed_jobs": failed_jobs,
+        "done_jobs": done_jobs,
+        "recent_queue": [j.to_dict() for j in recent_queue],
         "database_size_kb": database_size_kb,
     }), 200
 
