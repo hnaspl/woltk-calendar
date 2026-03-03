@@ -100,11 +100,11 @@
                 >{{ m.status }}</span>
               </td>
               <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.created_at) }}</td>
-              <td class="px-4 py-2.5 text-right">
-                <div class="flex flex-col gap-1 items-end">
-                  <WowButton v-if="!isGuildOwner(m)" variant="secondary" class="text-xs py-1 px-2 w-full sm:w-auto" @click="openTransferModal(m)">{{ t('admin.guilds.transferOwnership') }}</WowButton>
-                  <WowButton variant="secondary" class="text-xs py-1 px-2 w-full sm:w-auto" @click="openNotifyModal(m)">{{ t('admin.guilds.sendNotification') }}</WowButton>
-                  <WowButton variant="danger" class="text-xs py-1 px-2 w-full sm:w-auto" @click="confirmRemoveMember(m)">{{ t('admin.guilds.removeMember') }}</WowButton>
+              <td class="px-4 py-2.5">
+                <div class="flex flex-col gap-1.5 min-w-[140px]">
+                  <WowButton v-if="!isGuildOwner(m)" variant="secondary" class="text-xs py-1.5 px-3 w-full text-center" @click="openTransferModal(m)">{{ t('admin.guilds.transferOwnership') }}</WowButton>
+                  <WowButton variant="secondary" class="text-xs py-1.5 px-3 w-full text-center" @click="openNotifyModal(m)">{{ t('admin.guilds.sendNotification') }}</WowButton>
+                  <WowButton variant="danger" class="text-xs py-1.5 px-3 w-full text-center" @click="confirmRemoveMember(m)">{{ t('admin.guilds.removeMember') }}</WowButton>
                 </div>
               </td>
             </tr>
@@ -285,9 +285,10 @@ async function loadGuilds() {
 onMounted(async () => {
   await loadGuilds()
   // Load role objects for the dropdown (with display_name)
+  // Filter out global_admin — that should only be assigned from the Users tab
   try {
     const roles = await rolesApi.getRoles()
-    availableRoles.value = roles
+    availableRoles.value = roles.filter(r => r.name !== 'global_admin')
   } catch {
     availableRoles.value = [
       { name: 'guild_admin', display_name: 'Guild Admin' },
