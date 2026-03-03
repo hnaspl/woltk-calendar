@@ -771,6 +771,22 @@
       "created": "Definicja rajdu utworzona.",
       "updated": "Definicja rajdu zaktualizowana.",
       "deleted": "Definicja rajdu usunięta."
+    },
+    "dashboard": {
+      "title": "Przegląd systemu",
+      "totalUsers": "Użytkownicy",
+      "activeUsers": "Aktywni",
+      "adminUsers": "Administratorzy",
+      "totalGuilds": "Gildie",
+      "totalRaids": "Rajdy",
+      "upcomingRaids": "Nadchodzące",
+      "totalCharacters": "Postacie",
+      "totalSignups": "Zapisy",
+      "systemHealth": "Stan systemu",
+      "pendingJobs": "Oczekujące zadania",
+      "failedJobs": "Nieudane zadania",
+      "databaseSize": "Rozmiar bazy danych",
+      "loadError": "Nie udało się załadować danych panelu"
     }
   },
   "signup": {

@@ -771,6 +771,22 @@
       "created": "Raid definition created.",
       "updated": "Raid definition updated.",
       "deleted": "Raid definition deleted."
+    },
+    "dashboard": {
+      "title": "System Overview",
+      "totalUsers": "Total Users",
+      "activeUsers": "Active Users",
+      "adminUsers": "Admins",
+      "totalGuilds": "Guilds",
+      "totalRaids": "Total Raids",
+      "upcomingRaids": "Upcoming",
+      "totalCharacters": "Characters",
+      "totalSignups": "Signups",
+      "systemHealth": "System Health",
+      "pendingJobs": "Pending Jobs",
+      "failedJobs": "Failed Jobs",
+      "databaseSize": "Database Size",
+      "loadError": "Failed to load dashboard data"
     }
   },
   "signup": {
