@@ -929,6 +929,26 @@ class TestRolePermissionFiltering:
             })
             assert resp.status_code == 200
 
+    def test_guild_admin_cannot_update_role_above_own_level(self, seeded, app):
+        """Guild admin (level 80) cannot update a role with level above their own."""
+        # Create a role at level 90 as site admin
+        with app.test_client() as admin_client:
+            self._login(app, admin_client, seeded["site_admin"])
+            resp = admin_client.post("/api/v1/roles", json={
+                "name": "high_level_role",
+                "display_name": "High Level",
+                "level": 90,
+            })
+            role_id = resp.get_json()["id"]
+
+        # Try to update as guild admin
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.put(f"/api/v1/roles/{role_id}", json={
+                "display_name": "Hacked Name",
+            })
+            assert resp.status_code == 403
+
     def test_guild_admin_can_delete_custom_roles(self, seeded, app):
         """Guild admin can delete custom (non-system) roles."""
         # Create a custom role as site admin
