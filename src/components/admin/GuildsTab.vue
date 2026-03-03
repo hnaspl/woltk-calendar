@@ -25,6 +25,7 @@
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.guilds.name') }}</th>
               <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.guilds.realm') }}</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.guilds.members') }}</th>
+              <th class="hidden md:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.guilds.armoryConfig') }}</th>
               <th class="text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.guilds.owner') }}</th>
               <th class="hidden lg:table-cell text-left px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('admin.guilds.created') }}</th>
               <th class="text-right px-4 py-2.5 text-xs text-text-muted uppercase">{{ t('common.labels.actions') }}</th>
@@ -34,7 +35,7 @@
             <template v-for="(group, ownerName) in paginatedGroups" :key="ownerName">
               <!-- Owner group header -->
               <tr class="bg-bg-tertiary/70">
-                <td :colspan="7" class="px-4 py-1.5 text-xs text-accent-gold font-semibold uppercase tracking-wide">
+                <td :colspan="8" class="px-4 py-1.5 text-xs text-accent-gold font-semibold uppercase tracking-wide">
                   👑 {{ ownerName }}
                 </td>
               </tr>
@@ -48,6 +49,9 @@
                 <td class="px-4 py-2.5">
                   <span class="text-accent-gold font-medium">{{ g.member_count }}</span>
                 </td>
+                <td class="hidden md:table-cell px-4 py-2.5 text-text-muted text-xs">
+                  <span class="capitalize">{{ g.armory_provider || 'warmane' }}</span>
+                </td>
                 <td class="px-4 py-2.5 text-text-muted text-xs">{{ g.creator_username || '—' }}</td>
                 <td class="hidden lg:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(g.created_at) }}</td>
                 <td class="px-4 py-2.5 text-right">
@@ -60,7 +64,7 @@
               </tr>
             </template>
             <tr v-if="!guilds.length">
-              <td colspan="7" class="px-4 py-8 text-center text-text-muted">{{ t('admin.guilds.noGuilds') }}</td>
+              <td colspan="8" class="px-4 py-8 text-center text-text-muted">{{ t('admin.guilds.noGuilds') }}</td>
             </tr>
           </tbody>
         </table>

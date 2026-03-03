@@ -304,6 +304,17 @@ def create_guild():
     data = get_json()
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": _t("api.guilds.nameRequired")}), 400
+
+    # Resolve armory config if provided
+    armory_config_id = data.get("armory_config_id")
+    armory_provider = data.get("armory_provider", "warmane")
+    if armory_config_id is not None:
+        from app.models.armory_config import ArmoryConfig
+        ac = db.session.get(ArmoryConfig, armory_config_id)
+        if ac is None or ac.user_id != current_user.id:
+            return jsonify({"error": _t("armory.configNotFound")}), 400
+        armory_provider = ac.provider_name
+
     try:
         guild = guild_service.create_guild(
             name=data["name"],
@@ -314,6 +325,8 @@ def create_guild():
             allow_self_join=data.get("allow_self_join", True),
             warmane_source=bool(data.get("warmane_source", False)),
             timezone=data.get("timezone", "Europe/Warsaw"),
+            armory_provider=armory_provider,
+            armory_config_id=armory_config_id,
         )
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409

@@ -785,7 +785,10 @@
       "featureSeries": "Serie",
       "featureCharacterSync": "Synchronizacja postaci",
       "featureNotifications": "Powiadomienia",
-      "featuresUpdated": "Flagi funkcji zaktualizowane"
+      "featuresUpdated": "Flagi funkcji zaktualizowane",
+      "armoryConfig": "Armory",
+      "armoryProvider": "Dostawca Armory",
+      "noArmory": "Brak"
     },
     "raidDefinitions": {
       "tabTitle": "Definicje rajdów",
@@ -833,7 +836,9 @@
     "settings": {
       "guildLimits": "Limity gildii",
       "maxGuildsPerUser": "Maks. gildii na użytkownika",
-      "maxGuildsPerUserHelp": "Maksymalna liczba gildii, które pojedynczy użytkownik może utworzyć. Indywidualne nadpisania można ustawić w zakładce Użytkownicy."
+      "maxGuildsPerUserHelp": "Maksymalna liczba gildii, które pojedynczy użytkownik może utworzyć. Indywidualne nadpisania można ustawić w zakładce Użytkownicy.",
+      "armoryAllowedDomains": "Dozwolone domeny armory",
+      "armoryAllowedDomainsHelp": "Lista domen armory oddzielona przecinkami. Pozostaw puste, aby zezwolić na dowolną domenę."
     }
   },
   "signup": {
@@ -1311,5 +1316,12 @@
     "guild": "Zarządzanie gildią",
     "notifications": "Powiadomienia",
     "admin": "Administracja"
+  },
+  "armory": {
+    "providerRequired": "Dostawca armory jest wymagany",
+    "unknownProvider": "Nieznany dostawca armory",
+    "urlRequired": "URL API armory jest wymagany",
+    "labelRequired": "Etykieta konfiguracji armory jest wymagana",
+    "configNotFound": "Konfiguracja armory nie została znaleziona"
   }
 }

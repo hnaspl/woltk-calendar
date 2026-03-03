@@ -12,8 +12,38 @@ from app.models.armory_config import ArmoryConfig
 from app.services.armory.registry import list_providers
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
+from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+from app.i18n import _t
 
 bp = Blueprint("armory", __name__, url_prefix="/armory")
+
+
+def _validate_config_data(data: dict) -> tuple[str, str, str] | tuple[None, None, str]:
+    """Validate and extract armory config fields.
+
+    Returns (provider_name, api_base_url, label) on success,
+    or (None, None, error_message) on failure.
+    """
+    provider_name = (data.get("provider_name") or "").strip()
+    api_base_url = (data.get("api_base_url") or "").strip()
+    label = (data.get("label") or "").strip()
+
+    if not provider_name:
+        return None, None, _t("armory.providerRequired")
+    if provider_name not in list_providers():
+        return None, None, _t("armory.unknownProvider")
+    if not api_base_url:
+        return None, None, _t("armory.urlRequired")
+    if not label:
+        return None, None, _t("armory.labelRequired")
+
+    # Validate URL security
+    allowed_domains = get_allowed_domains_from_settings()
+    url_error = validate_armory_url(api_base_url, allowed_domains)
+    if url_error:
+        return None, None, url_error
+
+    return provider_name, api_base_url, label
 
 
 @bp.get("/providers")
@@ -38,11 +68,16 @@ def list_configs():
 def create_config():
     """Create a new armory config for the current user."""
     data = get_json()
+    provider_name, api_base_url, label = _validate_config_data(data)
+    if provider_name is None:
+        # label holds the error message in the failure case
+        return jsonify({"error": label}), 400
+
     config = ArmoryConfig(
         user_id=current_user.id,
-        provider_name=data.get("provider_name", ""),
-        api_base_url=data.get("api_base_url", ""),
-        label=data.get("label", ""),
+        provider_name=provider_name,
+        api_base_url=api_base_url,
+        label=label,
     )
     db.session.add(config)
     db.session.commit()
@@ -55,14 +90,22 @@ def update_config(config_id: int):
     """Update an armory config owned by the current user."""
     config = db.session.get(ArmoryConfig, config_id)
     if config is None or config.user_id != current_user.id:
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": _t("common.errors.notFound")}), 404
     data = get_json()
-    if "provider_name" in data:
-        config.provider_name = data["provider_name"]
-    if "api_base_url" in data:
-        config.api_base_url = data["api_base_url"]
-    if "label" in data:
-        config.label = data["label"]
+
+    # Build merged data for validation
+    merged = {
+        "provider_name": data.get("provider_name", config.provider_name),
+        "api_base_url": data.get("api_base_url", config.api_base_url),
+        "label": data.get("label", config.label),
+    }
+    provider_name, api_base_url, label = _validate_config_data(merged)
+    if provider_name is None:
+        return jsonify({"error": label}), 400
+
+    config.provider_name = provider_name
+    config.api_base_url = api_base_url
+    config.label = label
     db.session.commit()
     return jsonify(config.to_dict()), 200
 
@@ -73,7 +116,7 @@ def delete_config(config_id: int):
     """Delete an armory config owned by the current user."""
     config = db.session.get(ArmoryConfig, config_id)
     if config is None or config.user_id != current_user.id:
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": _t("common.errors.notFound")}), 404
     db.session.delete(config)
     db.session.commit()
     return jsonify({"message": "Deleted"}), 200
@@ -85,7 +128,7 @@ def set_default_config(config_id: int):
     """Set an armory config as the default for the current user."""
     config = db.session.get(ArmoryConfig, config_id)
     if config is None or config.user_id != current_user.id:
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": _t("common.errors.notFound")}), 404
     # Clear existing defaults for this user
     db.session.execute(
         sa.update(ArmoryConfig)

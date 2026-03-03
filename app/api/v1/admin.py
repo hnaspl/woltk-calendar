@@ -231,6 +231,16 @@ def update_system_settings():
                 existing.value = val
             else:
                 db.session.add(SystemSetting(key=key, value=val))
+    # Free-text settings — stored as-is (stripped)
+    text_keys = {"armory_allowed_domains"}
+    for key in text_keys:
+        if key in data:
+            val = str(data[key]).strip()
+            existing = db.session.get(SystemSetting, key)
+            if existing:
+                existing.value = val
+            else:
+                db.session.add(SystemSetting(key=key, value=val))
     db.session.commit()
 
     # Reschedule auto-sync if autosync settings were changed
