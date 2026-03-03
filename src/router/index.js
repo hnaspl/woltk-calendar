@@ -59,6 +59,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/admin/global',
+    name: 'global-admin',
+    component: () => import('@/views/GlobalAdminView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/admin/roles',
     redirect: '/admin'
   },

@@ -157,7 +157,10 @@
     "profile": "Profile",
     "home": "Home",
     "chars": "Chars",
-    "attend": "Attend"
+    "attend": "Attend",
+    "guildAdmin": "Guild Admin",
+    "globalAdmin": "Global Admin",
+    "administration": "Administration"
   },
   "auth": {
     "appTitle": "Raid Calendar",
@@ -710,6 +713,14 @@
         "callbackUrlHelp": "Copy this URL and paste it into your Discord application settings under OAuth2 → Redirects.",
         "callbackUrlCopied": "Redirect URL copied to clipboard"
       }
+    },
+    "guildAdmin": {
+      "title": "Guild Admin Panel",
+      "subtitle": "Manage your guild members, roles, and settings"
+    },
+    "globalAdmin": {
+      "title": "Global Admin Panel",
+      "subtitle": "Manage system-wide settings, users, and roles"
     }
   },
   "signup": {

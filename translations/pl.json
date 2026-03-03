@@ -157,7 +157,10 @@
     "profile": "Profil",
     "home": "Główna",
     "chars": "Postacie",
-    "attend": "Frekwencja"
+    "attend": "Frekwencja",
+    "guildAdmin": "Admin Gildii",
+    "globalAdmin": "Admin Globalny",
+    "administration": "Administracja"
   },
   "auth": {
     "appTitle": "Raid Calendar",
@@ -710,6 +713,14 @@
         "callbackUrlHelp": "Skopiuj ten URL i wklej go w ustawieniach aplikacji Discord pod OAuth2 → Redirects.",
         "callbackUrlCopied": "URL przekierowania skopiowany do schowka"
       }
+    },
+    "guildAdmin": {
+      "title": "Panel Admina Gildii",
+      "subtitle": "Zarządzaj członkami gildii, rolami i ustawieniami"
+    },
+    "globalAdmin": {
+      "title": "Panel Admina Globalnego",
+      "subtitle": "Zarządzaj ustawieniami systemowymi, użytkownikami i rolami"
     }
   },
   "signup": {
