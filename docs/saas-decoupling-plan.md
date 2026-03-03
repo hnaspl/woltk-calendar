@@ -915,10 +915,15 @@ tenant-aware endpoints go into v2. Existing v1 endpoints remain unchanged as
 backup. Frontend migrates to v2 endpoints in this phase.
 
 - [ ] Create `/api/v2/` blueprint structure (mirror v1 layout)
-- [ ] Create `Tenant` model (owner = user, plan, limits, settings)
+- [ ] Create `Tenant` model (owner = user, name, description, plan, limits, settings)
 - [ ] Create `TenantMembership` model (user ↔ tenant link with role)
 - [ ] Create `TenantInvitation` model (invite link, Discord, in-app; max expiry 30 days)
 - [ ] Tenant slug: randomly generated at creation, customizable from admin panel
+- [ ] **Tenant customization:**
+  - [ ] Each tenant has a customizable `name` (String, required) and `description` (Text, optional)
+  - [ ] Tenant owner/admin can update name and description from tenant settings page
+  - [ ] Tenant name displayed in sidebar switcher and top bar
+  - [ ] Tenant description shown on tenant settings page and invite accept page
 - [ ] Default guild limit: 3 per tenant (configurable by global admin; per-tenant override)
 - [ ] Default member limit: unlimited (configurable by global admin; per-tenant override)
 - [ ] Auto-create a tenant for each user on registration
@@ -933,6 +938,14 @@ backup. Frontend migrates to v2 endpoints in this phase.
 - [ ] Build tenant invitation endpoints under `/api/v2/tenants/` (create/accept/decline; max 30 day expiry)
 - [ ] Build tenant switching API + frontend sidebar component
 - [ ] Add Tenants tab to global admin panel
+- [ ] **Notification system multi-tenant isolation** (see [§10.22](#1022-notification-system--multi-tenant-isolation)):
+  - [ ] Add `tenant_id` (nullable) to `Notification` model
+  - [ ] Pass `tenant_id` in all notification-creating helpers (`notify.py`)
+  - [ ] Scope notification list endpoint to support per-tenant filtering
+  - [ ] Scope Socket.IO rooms by tenant (`tenant_{id}_user_{uid}`)
+  - [ ] Add tenant context to real-time events (signups_changed, lineup_changed, etc.)
+  - [ ] Add new notification types for tenant events (invite received, member joined tenant, etc.)
+  - [ ] Verify cross-tenant notification isolation
 - [ ] **Bench/queue multi-tenant isolation** (see [§10.21](#1021-benchqueue-system--multi-tenant-isolation)):
   - [ ] Add `tenant_id` to `JobQueue` table
   - [ ] Scope `process_job_queue()` to process all tenants fairly (round-robin or interleaved)
@@ -946,6 +959,7 @@ backup. Frontend migrates to v2 endpoints in this phase.
   - [ ] `manage_tenants` — global admin: view/suspend/delete any tenant
 - [ ] Add tests verifying cross-tenant data isolation
 - [ ] Add tests verifying bench/queue isolation across tenants
+- [ ] Add tests verifying notification isolation (tenant-scoped notifications stay scoped; system-wide notifications visible cross-tenant)
 - [ ] Regression-test all 632+ existing tests
 - [ ] **Frontend co-migration** (simultaneous with backend):
   - [ ] Create `src/api/v2/` directory with all API modules pointing to `/api/v2/`
@@ -980,7 +994,7 @@ DB-driven, pluggable expansion registry manageable from the global admin panel.
   - [ ] `GET /api/v2/meta/expansions/{slug}/specs` — specs for expansion
   - [ ] `GET /api/v2/meta/expansions/{slug}/raids` — raids for expansion
   - [ ] `GET /api/v2/meta/default-expansion` — current system default (from system_settings)
-- [ ] Add `expansion_id` field to Guild model (FK to `expansions` table; default from system setting)
+- [ ] Add `expansion_id` field to Guild model (FK to `expansions` table; default from system setting) — this is the guild's **primary** expansion; Phase 4 adds multi-expansion support via `GuildExpansion` M2M table
 - [ ] Create global admin UI to manage expansions:
   - [ ] View/add/edit/disable expansion packs
   - [ ] Set default expansion
@@ -1062,9 +1076,14 @@ guild admins can customize.
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 4: Multi-Expansion Support
-**Goal:** Support guilds running different WoW expansions. Global admin can add
-new expansion packs via the admin panel — they are DB-driven and pluggable.
+**Goal:** Support guilds running different WoW expansions, including **multiple
+expansions per guild** (primary + optional additional expansions). Global admin
+can add new expansion packs via the admin panel — they are DB-driven and
+pluggable.
 
+> **Decision §9.1 #2:** Multi-expansion per guild is in scope. A guild has one
+> primary expansion and can enable additional expansions (e.g., for alt raids).
+>
 > **Decision §9.1 #3:** When a new expansion comes, it should be pluggable
 > from the global admin panel. No code changes needed — admin uploads/configures
 > the expansion data (classes, specs, roles, raids) via the admin UI.
@@ -1074,18 +1093,27 @@ new expansion packs via the admin panel — they are DB-driven and pluggable.
   - [ ] Define classes, specs, roles, raids for the expansion
   - [ ] Enable/disable expansion packs system-wide
   - [ ] Import expansion data from JSON/CSV (optional convenience feature)
-- [ ] Create expansion selection flow in guild creation (choose from enabled expansions)
-- [ ] Update character creation to filter classes by guild's expansion (from DB)
+- [ ] **Multi-expansion per guild:**
+  - [ ] Create `GuildExpansion` model (guild ↔ expansion binding with `is_primary` flag, see §4.4.2)
+  - [ ] Guild selects primary expansion at creation; optionally enables additional expansions
+  - [ ] Character creation filters classes by guild's enabled expansion(s) — union of all enabled expansions
+  - [ ] Raid definitions filter by guild's enabled expansion(s)
+  - [ ] Class→role matrix defaults merge from all enabled expansions
+  - [ ] Guild constants endpoint returns merged class/spec/role data across enabled expansions (see §4.4.3)
+  - [ ] `class_availability` map shows which expansion(s) each class is available in
+- [ ] Create expansion selection flow in guild creation (choose primary + optional additional)
+- [ ] Update character creation to filter classes by guild's enabled expansion(s) (from DB)
 - [ ] Update raid definition seeder for multi-expansion (from DB)
 - [ ] Update frontend constants store to be fully expansion-aware
-- [ ] Add expansion selector in guild settings
+- [ ] Add expansion management in guild settings (enable/disable additional expansions)
 - [ ] **New admin permissions:**
-  - [ ] `manage_guild_expansions` — guild admin: change guild's expansion
+  - [ ] `manage_guild_expansions` — guild admin: enable/disable expansions for guild
   - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs (if not already added in Phase 1)
 - [ ] **Frontend co-migration:**
-  - [ ] Expansion selection in guild creation wizard
-  - [ ] Expansion settings in guild admin panel
-  - [ ] Dynamic class/spec/role dropdowns throughout the app
+  - [ ] Expansion selection in guild creation wizard (primary + optional additional)
+  - [ ] Expansion management in guild admin panel (enable/disable expansions)
+  - [ ] Dynamic class/spec/role dropdowns merged across guild's enabled expansions
+  - [ ] Class availability badges showing which expansion(s) each class belongs to
   - [ ] Global admin expansion management UI
 - [ ] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
   - [ ] Remove ALL remaining WotLK-only assumptions from frontend and backend
@@ -1206,11 +1234,11 @@ all subsequent phases.
 | # | Question | Decision | Rationale |
 |---|----------|----------|-----------|
 | 1 | Where to store expansion definitions? | **Database tables** | Expansions will be pluggable from the global admin panel. Hardcoding classes/roles in Python dicts or enums makes no sense in a multi-tenant system with pluggable expansions — every new expansion would require code changes and redeployment. DB-driven definitions allow global admins to add/configure expansions at runtime. |
-| 2 | Should guilds support multiple expansions simultaneously? | **Unclear / needs refinement** | The original question is ambiguous. A guild selects **one primary expansion** at creation, but the expansion system itself is pluggable — global admins install expansion packs, and guild admins choose from available expansions. |
+| 2 | Should guilds support multiple expansions simultaneously? | **Yes — multi-expansion per guild is in scope** | A guild selects a **primary expansion** at creation, and can optionally enable additional expansions (e.g., for alt raids on different servers). The `GuildExpansion` model (§4.4.2) supports multiple expansion bindings per guild with `is_primary` flag. Character creation, raid definitions, and class→role matrix all respect the guild's enabled expansion(s). Phase 4 implements this fully. |
 | 3 | How to handle spec changes across expansions? | **DB-driven, pluggable** | When a new expansion is added to the system (by global admin), its classes, specs, and roles are loaded from the expansion's DB records. No hardcoded enum — the system reads from `expansion_classes`, `expansion_specs`, `expansion_roles` tables. API endpoint returns the data for the guild's active expansion. |
 | 4 | Should class-role matrix overrides be per-raid or per-guild? | **Per-guild** with pluggable expansions | Guild admins configure the class→role matrix for their guild. The matrix defaults come from the guild's active expansion pack, and guild admins can customize. Per-raid overrides may be added as a future extension. |
 | 5 | Invitation expiry default? | **Guild admin configurable, max 30 days** | Guild admins select the expiry duration when creating an invitation. The system enforces a maximum expiration of 30 days — no invitation can live longer than that. |
-| 6 | Allow users to see guilds they're not members of? | **Configurable per guild** within the tenant (visibility setting). Hidden guilds must NOT appear in the sidebar at all times — only visible when explicitly browsing. |
+| 6 | Allow users to see guilds they're not members of? | **Configurable per guild** within the tenant (visibility setting) | Hidden guilds are NOT shown in the sidebar navigation. They are only visible on a dedicated **guild discovery/browser page** within the tenant (added in Phase 2). Open guilds appear in both sidebar and discovery page. |
 | 7 | Database name change from `wotlk_calendar.db`? | **Yes** — rename to `raid_calendar.db` | Done in Phase 0 as part of tenant migration. |
 | 8 | Should the `WowClass` Python enum remain? | **No** — replace with **expansion-dynamic DB-driven** approach | Hardcoding all classes as a Python enum makes no sense when expansions are pluggable. Classes come from the DB expansion tables. The `WowClass` enum will be removed once DB-driven class definitions are in place (Phase 1/4). |
 | 9 | Should the default expansion be a named constant? | **DB-driven** — default expansion should be a system setting returned by a proper API endpoint, because expansions are pluggable | No hardcoded `DEFAULT_EXPANSION` constant. The global admin configures which expansion is the default via the admin panel, stored in `system_settings` table, and returned by `GET /api/v2/meta/default-expansion`. |
@@ -1433,17 +1461,19 @@ Every table in the application falls into one of three categories:
 
 class Tenant(db.Model):
     """Per-user workspace — the top-level isolation boundary.
-    Auto-created when a user registers. The owner has full control."""
+    Auto-created when a user registers. The owner has full control.
+    Each tenant has a customizable name and description."""
 
     __tablename__ = "tenants"
 
     id            = Column(Integer, primary_key=True)
     name          = Column(String(100), nullable=False)
+    description   = Column(Text, nullable=True)              # Tenant description (shown in UI)
     slug          = Column(String(100), unique=True, nullable=False)
     owner_id      = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     plan          = Column(String(30), default="free")      # free / pro / enterprise
     max_guilds    = Column(Integer, default=3)               # guild limit per plan
-    max_members   = Column(Integer, default=50)              # member limit per plan
+    max_members   = Column(Integer, nullable=True)           # member limit (NULL = unlimited)
     is_active     = Column(Boolean, default=True)            # global admin can suspend
     settings_json = Column(Text, nullable=True)
     created_at    = Column(DateTime, default=utcnow)
@@ -2494,6 +2524,9 @@ in later phases:
 | 17 | **Invitation max expiry: 30 days** | No invitation lives longer than 30 days. Guild admin selects duration within this limit. |
 | 18 | **Tenant slug: random, customizable** | Auto-generated random slug at creation. Customizable from admin panel later. |
 | 19 | **Database renamed to `raid_calendar.db`** | Old name `wotlk_calendar.db` implies single-expansion. Renamed in Phase 0. |
+| 20 | **Tenant has name + description** | Each tenant has a customizable `name` (required) and `description` (optional). Displayed in UI (sidebar, invite page, settings). Owner/admin can update. |
+| 21 | **Notification `tenant_id` auto-derived from guild** | `_notify()` helper auto-derives `tenant_id` from `guild_id` — no need to change 20+ call sites. System-wide notifications keep `tenant_id=NULL`. |
+| 22 | **Socket.IO: add `tenant_{id}` room, keep guild/event rooms unchanged** | Guild rooms are implicitly tenant-scoped (guild belongs to tenant). Only tenant-level events (invite, member join) need a dedicated `tenant_{id}` room. |
 
 ### 10.21 Bench/Queue System — Multi-Tenant Isolation
 
@@ -2630,6 +2663,246 @@ grep -rn "tenant_id\|guild_id" app/services/lineup_service.py | grep -i "bench\|
 
 # Integration tests
 python -m pytest tests/test_bench_tenant_isolation.py -v
+```
+
+### 10.22 Notification System — Multi-Tenant Isolation
+
+> **Concern:** The notification system is deeply woven through the application —
+> `notify.py` has 20+ helper functions, Socket.IO pushes in real-time, and
+> notifications can be guild-scoped or system-wide. With multi-tenancy, we need
+> to ensure: (a) tenant-scoped notifications don't leak across tenants, (b)
+> system-wide notifications still reach all users, (c) Socket.IO rooms are
+> tenant-aware, and (d) the notification list can be filtered by tenant.
+
+#### 10.22.1 Current Notification Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ Notification Creation Flow:                                      │
+│   notify.py helpers (20+ functions)                              │
+│     → notification_service.create_notification()                 │
+│     → Notification row in DB                                     │
+│     → socketio.emit("notification", {}, to=f"user_{user_id}")    │
+│                                                                  │
+│ Notification Model:                                              │
+│   user_id (required) — who receives it                           │
+│   guild_id (nullable) — which guild context                      │
+│   raid_event_id (nullable) — which event context                 │
+│   type — one of 20+ types (signup_confirmed, event_created, etc) │
+│   title, body — pre-rendered English text                        │
+│   title_key, body_key, *_params — i18n translation keys          │
+│   NO tenant_id today                                             │
+│                                                                  │
+│ Socket.IO Rooms:                                                 │
+│   user_{user_id} — per-user notification room                    │
+│   event_{event_id} — per-event realtime updates                  │
+│   guild_{guild_id} — per-guild realtime updates                  │
+│   NO tenant-level rooms today                                    │
+│                                                                  │
+│ Notification Types (20+):                                        │
+│   signup_* — signup lifecycle (confirmed, benched, promoted, etc) │
+│   event_* — event lifecycle (created, updated, cancelled, etc)   │
+│   guild_* — guild membership (joined, removed, role_changed)     │
+│   officer_* — officer alerts (new signup, bench changed, etc)    │
+│   NO tenant-level types today                                    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 10.22.2 Multi-Tenant Changes
+
+**Notification model:**
+
+| Change | Details |
+|--------|---------|
+| Add `tenant_id` column | FK to `tenants.id`, **nullable**. Nullable because some notifications are system-wide (password change, account alerts). Guild-scoped notifications always have `tenant_id` set (derived from guild's tenant). |
+| Add index `(tenant_id, user_id, read_at)` | Efficient per-tenant notification queries with read/unread filtering. |
+
+**`notification_service.py` changes:**
+
+```python
+# create_notification() — add tenant_id parameter:
+def create_notification(
+    user_id: int,
+    notification_type: str,
+    title: str,
+    body: Optional[str] = None,
+    guild_id: Optional[int] = None,
+    raid_event_id: Optional[int] = None,
+    tenant_id: Optional[int] = None,          # NEW
+    *,
+    title_key: Optional[str] = None,
+    ...
+) -> Notification:
+    ...
+
+# list_notifications() — add optional tenant_id filter:
+def list_notifications(
+    user_id: int,
+    *,
+    tenant_id: Optional[int] = None,          # NEW: filter by tenant
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Notification]:
+    stmt = sa.select(Notification).where(Notification.user_id == user_id)
+    if tenant_id is not None:
+        # Show notifications for this specific tenant + system-wide (tenant_id=NULL)
+        stmt = stmt.where(
+            sa.or_(
+                Notification.tenant_id == tenant_id,
+                Notification.tenant_id.is_(None),
+            )
+        )
+    ...
+
+# unread_count() — add optional tenant_id filter:
+def unread_count(user_id: int, *, tenant_id: Optional[int] = None) -> int:
+    stmt = sa.select(sa.func.count(Notification.id)).where(
+        Notification.user_id == user_id,
+        Notification.read_at.is_(None),
+    )
+    if tenant_id is not None:
+        stmt = stmt.where(
+            sa.or_(
+                Notification.tenant_id == tenant_id,
+                Notification.tenant_id.is_(None),
+            )
+        )
+    ...
+```
+
+**`notify.py` helpers — all 20+ functions:**
+
+Every notification-creating function in `notify.py` already receives `guild_id`.
+The `tenant_id` can be derived from the guild:
+
+```python
+def _notify(
+    user_id: int,
+    notification_type: str,
+    title: str,
+    body: Optional[str] = None,
+    guild_id: Optional[int] = None,
+    raid_event_id: Optional[int] = None,
+    tenant_id: Optional[int] = None,          # NEW
+    *,
+    ...
+) -> None:
+    # Auto-derive tenant_id from guild if not provided:
+    if tenant_id is None and guild_id is not None:
+        guild = db.session.get(Guild, guild_id)
+        if guild:
+            tenant_id = guild.tenant_id
+
+    create_notification(
+        ...,
+        tenant_id=tenant_id,
+    )
+```
+
+> **Design decision:** We do NOT need to change every call site in `notify.py`.
+> Instead, the `_notify()` internal helper auto-derives `tenant_id` from
+> `guild_id`. This means all 20+ notification functions get tenant context
+> automatically without modification. Only system-wide notifications (no guild)
+> will have `tenant_id=NULL`, which is correct.
+
+**New notification types for tenant events:**
+
+| Type | When | Context |
+|------|------|---------|
+| `tenant_invite_received` | User receives a tenant invitation | `tenant_id` set, no `guild_id` |
+| `tenant_member_joined` | New member accepts invitation and joins tenant | Sent to tenant admins; `tenant_id` set |
+| `tenant_member_removed` | Member is removed from tenant | Sent to the removed user; `tenant_id` set |
+| `tenant_settings_changed` | Tenant settings updated (name, description, etc.) | Sent to tenant members; `tenant_id` set |
+
+**Notifications API (`notifications.py`) changes:**
+
+```python
+# v2 list endpoint supports tenant_id query param:
+@bp.get("")
+@login_required
+def list_notifications():
+    tenant_id = request.args.get("tenant_id", type=int)
+    # If tenant_id provided, validate user is a member of that tenant
+    if tenant_id:
+        # Verify membership...
+        pass
+    notifications = notification_service.list_notifications(
+        current_user.id, tenant_id=tenant_id, limit=limit, offset=offset
+    )
+    ...
+
+# v2 unread-count endpoint supports tenant_id query param:
+@bp.get("/unread-count")
+@login_required
+def unread_count():
+    tenant_id = request.args.get("tenant_id", type=int)
+    count = notification_service.unread_count(
+        current_user.id, tenant_id=tenant_id
+    )
+    ...
+```
+
+**Socket.IO room changes:**
+
+```
+CURRENT ROOMS:
+  user_{user_id}        — per-user notifications
+  event_{event_id}      — per-event updates
+  guild_{guild_id}      — per-guild updates
+
+AFTER TENANCY:
+  user_{user_id}        — KEEP: system-wide notifications (password, account)
+  tenant_{tenant_id}    — NEW: tenant-level events (member joined, settings changed)
+  guild_{guild_id}      — KEEP: guild-level updates (unchanged — guilds are tenant-scoped)
+  event_{event_id}      — KEEP: event-level updates (unchanged — events are guild-scoped)
+```
+
+> **Design decision:** We do NOT prefix guild/event rooms with `tenant_id`.
+> Guilds already belong to a tenant, so `guild_{guild_id}` is implicitly
+> tenant-scoped (a user can only join a guild room if they're a member of
+> that guild's tenant). Adding a `tenant_{tenant_id}` room is only needed
+> for tenant-level events (invite, member changes, settings).
+
+**Frontend changes (see also §11):**
+
+| Component | Change |
+|-----------|--------|
+| `useSocket` composable | Join `tenant_{activeTenantId}` room on connect; leave old tenant room on tenant switch |
+| Notification bell/dropdown | Pass `tenant_id` query param to filter notifications by active tenant |
+| Unread count badge | Pass `tenant_id` to unread-count endpoint for per-tenant count |
+| Notification panel | Show tenant name context for each notification (e.g., "[TenantName] Signup confirmed") |
+| Tenant settings page | Show notifications when tenant settings (name, description) are changed |
+
+#### 10.22.3 Notification Scoping Rules
+
+| Notification Category | `tenant_id` | Visible When |
+|-----------------------|-------------|--------------|
+| **Guild-scoped** (signup, event, lineup, officer) | Set (from guild's tenant) | User is in the matching tenant context, or viewing "all tenants" |
+| **Tenant-scoped** (invite, member joined, settings changed) | Set | User is in the matching tenant context, or viewing "all tenants" |
+| **System-wide** (password changed, account alerts) | NULL | Always visible, regardless of active tenant |
+
+**Query behavior:**
+- **Default (no filter):** Show all notifications for the user across all tenants + system-wide
+- **With `tenant_id` filter:** Show notifications matching that `tenant_id` + system-wide (`tenant_id IS NULL`)
+- **"All tenants" view:** Same as default — show everything
+
+#### 10.22.4 Verification
+
+```bash
+# Verify Notification model has tenant_id
+grep -rn "tenant_id" app/models/notification.py | grep -i "notif"
+
+# Verify notify.py passes tenant_id
+grep -rn "tenant_id" app/utils/notify.py
+
+# Verify notification service supports tenant_id filter
+grep -rn "tenant_id" app/services/notification_service.py
+
+# Verify Socket.IO tenant room
+grep -rn "tenant_" app/utils/realtime.py
+
+# Integration tests
+python -m pytest tests/test_notification_tenant_isolation.py -v
 ```
 
 ---
@@ -3397,10 +3670,10 @@ return { ..., joinTenant, leaveTenant }
 ```
 Features:
 - Table listing all tenants with columns:
-  ID | Name | Owner | Plan | Guilds (used/max) | Members (used/max) | Status | Actions
+  ID | Name | Description | Owner | Plan | Guilds (used/max) | Members (used/max) | Status | Actions
 - Actions per tenant:
-  - View Details → modal with tenant info + member list
-  - Edit Limits → modal to change max_guilds, max_members, plan
+  - View Details → modal with tenant info (name, description) + member list
+  - Edit → modal to change name, description, max_guilds, max_members, plan
   - Suspend → confirmation dialog → POST /admin/tenants/{id}/suspend
   - Activate → POST /admin/tenants/{id}/activate
   - Delete → confirmation dialog → DELETE /admin/tenants/{id}
@@ -3416,7 +3689,7 @@ Estimated: ~250-350 lines (similar complexity to existing GuildsTab)
 Features:
 - Public page (no auth required for viewing)
 - Fetches invite details by token: GET /api/v2/invite/{token}/details
-- Shows: tenant name, inviter name, role being assigned, expiry
+- Shows: tenant name, tenant description, inviter name, role being assigned, expiry
 - If user is logged in: "Accept" / "Decline" buttons
 - If user is NOT logged in: "Login to Accept" / "Register to Accept" buttons
   (redirect back after auth)
