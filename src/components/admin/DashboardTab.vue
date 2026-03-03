@@ -131,7 +131,7 @@ import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import { getDashboard } from '@/api/admin'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const loading = ref(true)
 const error = ref(null)
@@ -174,7 +174,7 @@ function jobStatusClass(status) {
 
 function formatJobDate(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleString(locale.value, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 onMounted(async () => {
