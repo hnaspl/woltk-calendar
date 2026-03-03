@@ -67,7 +67,7 @@
     </WowCard>
 
     <!-- Guild Members Modal -->
-    <WowModal v-model="showMembersModal" :title="selectedGuild ? `${selectedGuild.name} — ${t('common.labels.members')}` : t('common.labels.members')" size="lg">
+    <WowModal v-model="showMembersModal" :title="selectedGuild ? `${selectedGuild.name} — ${t('common.labels.members')}` : t('common.labels.members')" size="xl">
       <div v-if="membersLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="membersError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ membersError }}</div>
       <div v-else class="overflow-x-auto">
@@ -101,7 +101,7 @@
               </td>
               <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(m.created_at) }}</td>
               <td class="px-4 py-2.5">
-                <div class="flex flex-wrap gap-1.5 justify-end">
+                <div class="flex gap-1.5 justify-end whitespace-nowrap">
                   <WowButton v-if="!isGuildOwner(m)" variant="secondary" class="text-xs py-1.5 px-3" @click="openTransferModal(m)">{{ t('admin.guilds.transferOwnership') }}</WowButton>
                   <WowButton variant="secondary" class="text-xs py-1.5 px-3" @click="openNotifyModal(m)">{{ t('admin.guilds.sendNotification') }}</WowButton>
                   <WowButton variant="danger" class="text-xs py-1.5 px-3" @click="confirmRemoveMember(m)">{{ t('admin.guilds.removeMember') }}</WowButton>
