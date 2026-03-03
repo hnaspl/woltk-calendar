@@ -21,6 +21,9 @@ class Character(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)

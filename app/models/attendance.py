@@ -17,6 +17,12 @@ class AttendanceRecord(db.Model):
     __table_args__ = (sa.UniqueConstraint("raid_event_id", "user_id", name="uq_attendance_event_user"),)
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
+    guild_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
+    )
     raid_event_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False
     )

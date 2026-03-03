@@ -12,7 +12,10 @@ from app.i18n import _t
 
 
 def register_user(email: str, username: str, password: str, display_name: Optional[str] = None) -> User:
-    """Create a new user. Raises ValueError on duplicate email/username."""
+    """Create a new user and auto-provision a tenant workspace.
+
+    Raises ValueError on duplicate email/username.
+    """
     existing_email = db.session.execute(
         sa.select(User).where(User.email == email)
     ).scalar_one_or_none()
@@ -32,7 +35,12 @@ def register_user(email: str, username: str, password: str, display_name: Option
         display_name=display_name or username,
     )
     db.session.add(user)
-    db.session.commit()
+    db.session.flush()  # get user.id before creating tenant
+
+    # Auto-create tenant workspace for the new user
+    from app.services import tenant_service
+    tenant_service.create_tenant(owner=user)
+
     return user
 
 

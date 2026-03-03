@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
+import sqlalchemy as sa
 
 os.environ["FLASK_ENV"] = "testing"
 
@@ -41,7 +42,15 @@ def db(app):
         _reset_rate_limit()
         yield _db
         _db.session.rollback()
+        # Disable FK checks for SQLite during drop_all to handle circular FKs
+        # (users.active_tenant_id <-> tenants.owner_id)
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=OFF"))
+            conn.commit()
         _db.drop_all()
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+            conn.commit()
 
 
 @pytest.fixture

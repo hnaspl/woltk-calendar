@@ -15,6 +15,7 @@ def create_guild(
     name: str,
     realm_name: str,
     created_by: int,
+    tenant_id: Optional[int] = None,
     faction: Optional[str] = None,
     region: Optional[str] = None,
     allow_self_join: bool = True,
@@ -23,6 +24,15 @@ def create_guild(
     armory_provider: str = "warmane",
     armory_config_id: Optional[int] = None,
 ) -> Guild:
+    # Enforce guild limit if tenant is specified
+    if tenant_id is not None:
+        from app.services import tenant_service
+        tenant = tenant_service.get_tenant(tenant_id)
+        if tenant:
+            guild_count = tenant_service.get_guild_count(tenant_id)
+            if guild_count >= tenant.max_guilds:
+                raise ValueError(f"Tenant guild limit ({tenant.max_guilds}) reached")
+
     # Check for duplicate guild (case-insensitive name + realm)
     existing = db.session.execute(
         sa.select(Guild).where(
@@ -36,6 +46,7 @@ def create_guild(
     guild = Guild(
         name=name,
         realm_name=realm_name,
+        tenant_id=tenant_id,
         faction=faction,
         region=region,
         allow_self_join=allow_self_join,
@@ -52,6 +63,7 @@ def create_guild(
     membership = GuildMembership(
         guild_id=guild.id,
         user_id=created_by,
+        tenant_id=tenant_id,
         role="guild_admin",
         status=MemberStatus.ACTIVE.value,
     )

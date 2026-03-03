@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+import sqlalchemy as sa
 
 from app import create_app
 from app.extensions import db as _db
@@ -40,7 +41,13 @@ def db(app):
         _reset_rate_limit()
         yield _db
         _db.session.rollback()
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=OFF"))
+            conn.commit()
         _db.drop_all()
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+            conn.commit()
 
 
 @pytest.fixture

@@ -21,6 +21,12 @@ class Signup(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
+    guild_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
+    )
     raid_event_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False, index=True
     )
@@ -101,6 +107,12 @@ class LineupSlot(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
+    guild_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
+    )
     raid_event_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False, index=True
     )
@@ -165,6 +177,12 @@ class RaidBan(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
+    guild_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
+    )
     raid_event_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_events.id"), nullable=False
     )
@@ -207,6 +225,12 @@ class CharacterReplacement(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
+    guild_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
+    )
     signup_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("signups.id"), nullable=False
     )

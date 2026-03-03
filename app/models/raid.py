@@ -22,6 +22,9 @@ class RaidDefinition(db.Model):
     __tablename__ = "raid_definitions"
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
     )
@@ -93,6 +96,9 @@ class RaidTemplate(db.Model):
     __tablename__ = "raid_templates"
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
     raid_definition_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_definitions.id"), nullable=False
@@ -157,6 +163,9 @@ class EventSeries(db.Model):
     __tablename__ = "event_series"
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
     template_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_templates.id"), nullable=True
@@ -219,6 +228,9 @@ class RaidEvent(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
     series_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("event_series.id"), nullable=True

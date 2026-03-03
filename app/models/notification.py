@@ -22,6 +22,9 @@ class Notification(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     guild_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
@@ -87,6 +90,12 @@ class JobQueue(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
+    guild_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
+    )
     type: Mapped[str] = mapped_column(sa.String(80), nullable=False)
     payload_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     status: Mapped[str] = mapped_column(

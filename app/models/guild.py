@@ -20,8 +20,15 @@ if TYPE_CHECKING:
 
 class Guild(db.Model):
     __tablename__ = "guilds"
+    __table_args__ = (
+        sa.Index("ix_guilds_tenant", "tenant_id"),
+        sa.Index("ix_guilds_tenant_name", "tenant_id", "name"),
+    )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     faction: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
@@ -46,6 +53,7 @@ class Guild(db.Model):
     )
 
     # Relationships
+    tenant = relationship("Tenant", foreign_keys=[tenant_id], back_populates="guilds", lazy="select")
     memberships: Mapped[list[GuildMembership]] = relationship(
         "GuildMembership", back_populates="guild", lazy="select"
     )
@@ -64,6 +72,7 @@ class Guild(db.Model):
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "tenant_id": self.tenant_id,
             "name": self.name,
             "realm_name": self.realm_name,
             "faction": self.faction,
@@ -92,6 +101,9 @@ class GuildMembership(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(
