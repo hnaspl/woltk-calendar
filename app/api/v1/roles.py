@@ -186,10 +186,9 @@ def update_role(role_id: int):
 
     # Non-admin users cannot edit roles above their own level
     is_admin = getattr(current_user, "is_admin", False)
-    if not is_admin:
-        max_level = _caller_max_role_level()
-        if role.level > max_level:
-            return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    max_level = 0 if is_admin else _caller_max_role_level()
+    if not is_admin and role.level > max_level:
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
     data = get_json()
 
