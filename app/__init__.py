@@ -61,6 +61,8 @@ def create_app(config_override: dict | None = None) -> Flask:
         app.wsgi_app = ProxyFix(
             app.wsgi_app,
             x_for=num_proxies,
+            x_proto=num_proxies,
+            x_host=num_proxies,
         )
 
     # Enable WAL mode for SQLite (better concurrent read/write performance)
@@ -281,6 +283,7 @@ def _seed_system_settings_if_missing() -> int:
         if not existing:
             db.session.add(SystemSetting(key=key, value=default_value))
             seeded += 1
+
     db.session.commit()
     return seeded
 

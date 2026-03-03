@@ -200,12 +200,17 @@
       "emailDisposable": "Jednorazowe lub tymczasowe adresy email nie są dozwolone",
       "emailInvalidDomain": "Domena email nie wydaje się prawidłowa",
       "usernameLengthInvalid": "Nazwa użytkownika musi mieć od 2 do 80 znaków",
-      "displayNameTooLong": "Nazwa wyświetlana może mieć maksymalnie 100 znaków"
+      "displayNameTooLong": "Nazwa wyświetlana może mieć maksymalnie 100 znaków",
+      "useDiscordLogin": "To konto używa logowania przez Discord. Zaloguj się przez Discord.",
+      "discordNotConfigured": "Logowanie przez Discord nie jest skonfigurowane. Skontaktuj się z administratorem.",
+      "discordLoginFailed": "Logowanie przez Discord nie powiodło się. Spróbuj ponownie."
     },
     "messages": {
       "loggedOut": "Wylogowano",
       "passwordChanged": "Hasło zostało zmienione"
-    }
+    },
+    "orSeparator": "lub",
+    "signInWithDiscord": "Zaloguj się przez Discord"
   },
   "profile": {
     "title": "Profil użytkownika",
@@ -687,7 +692,23 @@
         "settingsSaved": "Ustawienia systemowe zapisane",
         "failedToSaveSettings": "Nie udało się zapisać ustawień systemowych",
         "syncCompleted": "Synchronizacja postaci zakończona",
-        "syncFailed": "Synchronizacja nie powiodła się"
+        "syncFailed": "Synchronizacja nie powiodła się",
+        "discordSettingsSaved": "Ustawienia Discord zapisane",
+        "failedToSaveDiscord": "Nie udało się zapisać ustawień Discord"
+      },
+      "discord": {
+        "title": "Logowanie Discord",
+        "help": "Skonfiguruj Discord OAuth2, aby umożliwić użytkownikom logowanie kontem Discord.",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "redirectUri": "Redirect URI",
+        "clientIdPlaceholder": "Client ID aplikacji Discord",
+        "clientSecretPlaceholder": "Client Secret aplikacji Discord",
+        "redirectUriPlaceholder": "https://twoja-domena.com/api/v1/auth/discord/callback",
+        "saveSettings": "Zapisz ustawienia Discord",
+        "callbackUrlLabel": "Redirect URL (dodaj to w Discord)",
+        "callbackUrlHelp": "Skopiuj ten URL i wklej go w ustawieniach aplikacji Discord pod OAuth2 → Redirects.",
+        "callbackUrlCopied": "URL przekierowania skopiowany do schowka"
       }
     }
   },
@@ -845,7 +866,8 @@
       "cannotDeletePrimary": "Nie można usunąć głównego admina",
       "userDeleted": "Użytkownik usunięty",
       "syncCompleted": "Synchronizacja zakończona",
-      "invalidInteger": "Nieprawidłowa wartość całkowita dla '{key}'"
+      "invalidInteger": "Nieprawidłowa wartość całkowita dla '{key}'",
+      "discordSettingsSaved": "Ustawienia Discord zapisane"
     },
     "attendance": {
       "benchCannotRecord": "Dla postaci na ławce nie można zapisać frekwencji"
@@ -1003,7 +1025,7 @@
     "lastSynced": "Ostatnia synchronizacja:",
     "equipment": "Ekwipunek ({count} przedmiotów)",
     "enchanted": "Zaczarowany",
-    "armory": "Zbrojownia ↗",
+    "armory": "Armory ↗",
     "closeDetails": "Zamknij szczegóły postaci",
     "achievements": "Osiągnięcia",
     "honorableKillsShort": "HKs"

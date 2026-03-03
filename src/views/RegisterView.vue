@@ -18,6 +18,23 @@
           {{ error }}
         </div>
 
+        <!-- Discord Login Button -->
+        <button
+          v-if="discordEnabled"
+          @click="handleDiscordLogin"
+          :disabled="discordLoading"
+          class="w-full flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white font-medium py-2.5 px-4 rounded transition-colors mb-4 disabled:opacity-50"
+        >
+          <img :src="discordIcon" alt="Discord" class="w-5 h-5" />
+          {{ t('auth.signInWithDiscord') }}
+        </button>
+
+        <div v-if="discordEnabled" class="flex items-center gap-3 mb-4">
+          <div class="flex-1 border-t border-border-default"></div>
+          <span class="text-text-muted text-xs uppercase">{{ t('auth.orSeparator') }}</span>
+          <div class="flex-1 border-t border-border-default"></div>
+        </div>
+
         <form @submit.prevent="handleRegister" class="space-y-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.username') }}</label>
@@ -86,11 +103,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/composables/useAuth'
 import { useWowIcons } from '@/composables/useWowIcons'
+import * as authApi from '@/api/auth'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 
@@ -106,6 +125,17 @@ const password = ref('')
 const confirmPassword = ref('')
 const error = ref(null)
 const loading = ref(false)
+const discordEnabled = ref(false)
+const discordLoading = ref(false)
+
+onMounted(async () => {
+  try {
+    const data = await authApi.getDiscordEnabled()
+    discordEnabled.value = data.enabled
+  } catch {
+    // Discord not available – hide button
+  }
+})
 
 async function handleRegister() {
   error.value = null
@@ -121,5 +151,10 @@ async function handleRegister() {
   } finally {
     loading.value = false
   }
+}
+
+async function handleDiscordLogin() {
+  // Direct navigation to backend endpoint which returns HTTP 302 to Discord
+  window.location.href = '/api/v1/auth/discord/login'
 }
 </script>

@@ -150,3 +150,74 @@ def update_system_settings():
         _apply_autosync_schedule(get_autosync_config())
 
     return _system_settings_response()
+
+
+# ---------------------------------------------------------------------------
+# Discord OAuth configuration
+# ---------------------------------------------------------------------------
+
+@bp.get("/settings/discord")
+@login_required
+def get_discord_settings():
+    """Return Discord OAuth settings (client_secret is masked). Global admin only.
+
+    Includes ``callback_url``: the exact URL the admin must register in the
+    Discord Developer Portal under *Redirects*.  It is auto-generated from
+    the current request so the admin cannot mis-type the path.
+    """
+    if not current_user.is_admin:
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    from flask import request
+    from app.models.system_setting import SystemSetting
+    keys = ["discord_client_id", "discord_client_secret"]
+    rows = db.session.execute(
+        db.select(SystemSetting).where(SystemSetting.key.in_(keys))
+    ).scalars().all()
+    settings = {r.key: r.value for r in rows}
+
+    # Mask the client secret for display
+    secret = settings.get("discord_client_secret", "")
+    if secret:
+        settings["discord_client_secret"] = "••••••••"
+
+    # Auto-generated callback URL – this is what goes into Discord "Redirects"
+    from app.services.discord_service import DISCORD_CALLBACK_PATH
+    settings["callback_url"] = f"{request.scheme}://{request.host}{DISCORD_CALLBACK_PATH}"
+
+    return jsonify(settings), 200
+
+
+@bp.put("/settings/discord")
+@login_required
+def update_discord_settings():
+    """Update Discord OAuth settings. Client secret is encrypted before storage. Global admin only."""
+    if not current_user.is_admin:
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    from app.models.system_setting import SystemSetting
+    from app.utils.encryption import encrypt_value
+
+    data = get_json()
+    allowed_keys = {"discord_client_id"}
+    for key in allowed_keys:
+        if key in data:
+            val = str(data[key]).strip()
+            existing = db.session.get(SystemSetting, key)
+            if existing:
+                existing.value = val
+            else:
+                db.session.add(SystemSetting(key=key, value=val))
+
+    # Encrypt the client secret before storing
+    if "discord_client_secret" in data:
+        raw_secret = str(data["discord_client_secret"]).strip()
+        # Skip if placeholder (masked value from frontend)
+        if raw_secret and raw_secret != "••••••••":
+            encrypted = encrypt_value(raw_secret)
+            existing = db.session.get(SystemSetting, "discord_client_secret")
+            if existing:
+                existing.value = encrypted
+            else:
+                db.session.add(SystemSetting(key="discord_client_secret", value=encrypted))
+
+    db.session.commit()
+    return jsonify({"message": _t("api.admin.discordSettingsSaved")}), 200
