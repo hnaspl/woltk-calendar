@@ -938,7 +938,8 @@
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
       "notWarmane": "Gildia nie pochodzi z Warmane",
       "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API",
-      "messageRequired": "Wiadomość jest wymagana."
+      "messageRequired": "Wiadomość jest wymagana.",
+      "guildLimitReached": "Osiągnięto maksymalną liczbę gildii ({limit})"
     },
     "characters": {
       "notFound": "Postać nie znaleziona",

@@ -938,7 +938,8 @@
       "targetNotActive": "Target user is not an active member of this guild",
       "notWarmane": "Guild is not sourced from Warmane",
       "rosterFetchFailed": "Could not fetch roster from Warmane API",
-      "messageRequired": "Message is required."
+      "messageRequired": "Message is required.",
+      "guildLimitReached": "You have reached the maximum number of guilds you can create ({limit})"
     },
     "characters": {
       "notFound": "Character not found",

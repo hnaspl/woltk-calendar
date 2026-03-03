@@ -287,6 +287,20 @@ def available_users(guild_id: int, membership):
 def create_guild():
     if not has_any_guild_permission(current_user.id, "create_guild"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    # --- Guild creation limit enforcement ---
+    if not getattr(current_user, "is_admin", False):
+        from app.models.system_setting import SystemSetting
+        limit = current_user.max_guilds_override
+        if limit is None:
+            setting = db.session.get(SystemSetting, "max_guilds_per_user")
+            limit = int(setting.value) if setting else 5
+        count = db.session.execute(
+            sa.select(sa.func.count()).select_from(Guild).where(Guild.created_by == current_user.id)
+        ).scalar()
+        if count >= limit:
+            return jsonify({"error": _t("api.guilds.guildLimitReached", limit=limit)}), 403
+
     data = get_json()
     if not data.get("name") or not data.get("realm_name"):
         return jsonify({"error": _t("api.guilds.nameRequired")}), 400

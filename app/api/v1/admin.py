@@ -219,11 +219,11 @@ def update_system_settings():
             else:
                 db.session.add(SystemSetting(key=key, value=val))
     # Integer settings
-    int_keys = {"autosync_interval_minutes"}
-    for key in int_keys:
+    int_keys = {"autosync_interval_minutes": 5, "max_guilds_per_user": 1}
+    for key, min_val in int_keys.items():
         if key in data:
             try:
-                val = str(max(5, int(data[key])))
+                val = str(max(min_val, int(data[key])))
             except (ValueError, TypeError):
                 return jsonify({"error": _t("api.admin.invalidInteger", key=key)}), 400
             existing = db.session.get(SystemSetting, key)
@@ -310,3 +310,60 @@ def update_discord_settings():
 
     db.session.commit()
     return jsonify({"message": _t("api.admin.discordSettingsSaved")}), 200
+
+
+# ---------------------------------------------------------------------------
+# User guild-limit override
+# ---------------------------------------------------------------------------
+
+@bp.put("/users/<int:user_id>/guild-limit")
+@login_required
+def set_user_guild_limit(user_id: int):
+    """Set max_guilds_override on a user. Requires manage_system_users permission."""
+    err = _require_permission("manage_system_users")
+    if err:
+        return err
+    from app.models.user import User
+    user = db.session.get(User, user_id)
+    if user is None:
+        return jsonify({"error": _t("api.admin.userNotFound")}), 404
+    data = get_json()
+    value = data.get("max_guilds")
+    if value is not None:
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            return jsonify({"error": _t("api.admin.invalidInteger", key="max_guilds")}), 400
+    user.max_guilds_override = value
+    db.session.commit()
+    return jsonify(user.to_dict()), 200
+
+
+# ---------------------------------------------------------------------------
+# Guild feature flags (admin)
+# ---------------------------------------------------------------------------
+
+@bp.get("/guilds/<int:guild_id>/features")
+@login_required
+def get_guild_features(guild_id: int):
+    """Get feature flags for a guild. Requires manage_system_settings permission."""
+    err = _require_permission("manage_system_settings")
+    if err:
+        return err
+    from app.services.feature_service import get_guild_features as _get_features
+    return jsonify(_get_features(guild_id)), 200
+
+
+@bp.put("/guilds/<int:guild_id>/features")
+@login_required
+def update_guild_features(guild_id: int):
+    """Update feature flags for a guild. Requires manage_system_settings permission."""
+    err = _require_permission("manage_system_settings")
+    if err:
+        return err
+    from app.services.feature_service import set_feature
+    data = get_json()
+    for key, enabled in data.items():
+        set_feature(guild_id, str(key), bool(enabled))
+    from app.services.feature_service import get_guild_features as _get_features
+    return jsonify(_get_features(guild_id)), 200

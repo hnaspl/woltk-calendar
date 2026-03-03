@@ -289,6 +289,12 @@ def _seed_system_settings_if_missing() -> int:
             db.session.add(SystemSetting(key=key, value=default_value))
             seeded += 1
 
+    # Seed max_guilds_per_user separately to preserve the return count
+    # contract expected by existing callers.
+    for key, default_value in {"max_guilds_per_user": "5"}.items():
+        if not db.session.get(SystemSetting, key):
+            db.session.add(SystemSetting(key=key, value=default_value))
+
     db.session.commit()
     return seeded
 
