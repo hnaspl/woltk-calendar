@@ -181,6 +181,11 @@ def create_app(config_override: dict | None = None) -> Flask:
 
     # --------------------------------------------------------- Scheduler
     with app.app_context():
+        # Ensure the database directory + tables exist before anything else
+        if not app.config.get("TESTING", False):
+            _ensure_db_dir()
+            db.create_all()
+
         if app.config.get("SCHEDULER_ENABLED", True) and not app.config.get("TESTING", False):
             from app.jobs.scheduler import init_scheduler
             init_scheduler(app)
