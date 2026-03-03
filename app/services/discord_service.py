@@ -93,8 +93,8 @@ def exchange_code(code: str) -> Optional[dict]:
         return None
 
     if token_resp.status_code != 200:
-        logger.warning("Discord token exchange returned %s: %s",
-                        token_resp.status_code, token_resp.text[:200])
+        logger.warning("Discord token exchange returned status %s",
+                        token_resp.status_code)
         return None
 
     token_data = token_resp.json()
@@ -115,8 +115,8 @@ def exchange_code(code: str) -> Optional[dict]:
         return None
 
     if user_resp.status_code != 200:
-        logger.warning("Discord user info returned %s: %s",
-                        user_resp.status_code, user_resp.text[:200])
+        logger.warning("Discord user info returned status %s",
+                        user_resp.status_code)
         return None
 
     return user_resp.json()
