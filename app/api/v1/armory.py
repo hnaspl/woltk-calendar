@@ -18,32 +18,32 @@ from app.i18n import _t
 bp = Blueprint("armory", __name__, url_prefix="/armory")
 
 
-def _validate_config_data(data: dict) -> tuple[str, str, str] | tuple[None, None, str]:
+def _validate_config_data(data: dict) -> tuple[str, str, str, str | None]:
     """Validate and extract armory config fields.
 
-    Returns (provider_name, api_base_url, label) on success,
-    or (None, None, error_message) on failure.
+    Returns (provider_name, api_base_url, label, error).
+    *error* is ``None`` on success, or an error message on failure.
     """
     provider_name = (data.get("provider_name") or "").strip()
     api_base_url = (data.get("api_base_url") or "").strip()
     label = (data.get("label") or "").strip()
 
     if not provider_name:
-        return None, None, _t("armory.providerRequired")
+        return "", "", "", _t("armory.providerRequired")
     if provider_name not in list_providers():
-        return None, None, _t("armory.unknownProvider")
+        return "", "", "", _t("armory.unknownProvider")
     if not api_base_url:
-        return None, None, _t("armory.urlRequired")
+        return "", "", "", _t("armory.urlRequired")
     if not label:
-        return None, None, _t("armory.labelRequired")
+        return "", "", "", _t("armory.labelRequired")
 
     # Validate URL security
     allowed_domains = get_allowed_domains_from_settings()
     url_error = validate_armory_url(api_base_url, allowed_domains)
     if url_error:
-        return None, None, url_error
+        return "", "", "", url_error
 
-    return provider_name, api_base_url, label
+    return provider_name, api_base_url, label, None
 
 
 @bp.get("/providers")
@@ -68,10 +68,9 @@ def list_configs():
 def create_config():
     """Create a new armory config for the current user."""
     data = get_json()
-    provider_name, api_base_url, label = _validate_config_data(data)
-    if provider_name is None:
-        # label holds the error message in the failure case
-        return jsonify({"error": label}), 400
+    provider_name, api_base_url, label, error = _validate_config_data(data)
+    if error:
+        return jsonify({"error": error}), 400
 
     config = ArmoryConfig(
         user_id=current_user.id,
@@ -99,9 +98,9 @@ def update_config(config_id: int):
         "api_base_url": data.get("api_base_url", config.api_base_url),
         "label": data.get("label", config.label),
     }
-    provider_name, api_base_url, label = _validate_config_data(merged)
-    if provider_name is None:
-        return jsonify({"error": label}), 400
+    provider_name, api_base_url, label, error = _validate_config_data(merged)
+    if error:
+        return jsonify({"error": error}), 400
 
     config.provider_name = provider_name
     config.api_base_url = api_base_url
