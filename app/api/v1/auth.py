@@ -108,6 +108,10 @@ def update_profile():
 @bp.post("/change-password")
 @login_required
 def change_password():
+    # Discord users have no password to change
+    if getattr(current_user, "auth_provider", "local") != "local":
+        return jsonify({"error": _t("auth.errors.useDiscordLogin")}), 400
+
     data = get_json()
     current_password = data.get("current_password") or ""
     new_password = data.get("new_password") or ""

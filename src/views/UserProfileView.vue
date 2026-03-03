@@ -38,8 +38,8 @@
         </form>
       </WowCard>
 
-      <!-- Change password -->
-      <WowCard>
+      <!-- Change password (local accounts only – Discord users have no password) -->
+      <WowCard v-if="authStore.user?.auth_provider === 'local'">
         <h2 class="wow-heading text-base mb-4">{{ t('profile.changePassword') }}</h2>
         <form @submit.prevent="changePassword" class="space-y-4 max-w-lg">
           <div>

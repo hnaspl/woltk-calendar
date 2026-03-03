@@ -175,6 +175,25 @@ class TestDiscordLoginBlocking:
         resp = _login(client, discord_user.email, "password")
         assert resp.status_code in (400, 401)
 
+    def test_discord_user_cannot_change_password(self, app, client, db):
+        """Discord users must be blocked from the change-password endpoint."""
+        from flask_login import login_user
+        user = User(
+            email="dcp@discord.user", username="dcpuser",
+            password_hash="!discord-oauth", discord_id="987654321",
+            auth_provider="discord",
+        )
+        db.session.add(user)
+        db.session.commit()
+        # Log in as the Discord user via session manipulation
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+        resp = client.post("/api/v1/auth/change-password", json={
+            "current_password": "anything",
+            "new_password": "newpass123",
+        })
+        assert resp.status_code == 400
+
 
 # ---------------------------------------------------------------------------
 # Discord enabled endpoint
