@@ -892,6 +892,14 @@ export const pluginRegistry = {
 
 ## 7. Phased Implementation Roadmap
 
+> **Key decisions applied to all phases:**
+> - All new endpoints use **`/api/v2/`** prefix; existing `/api/v1/` stays as backup (§8.2)
+> - Frontend + backend changes happen **simultaneously** per phase — no phase ships one without the other (§9.4 #4)
+> - Each phase must define and document **all new admin permissions** it introduces (§9.4 #5)
+> - Classes, roles, and specs are **DB-driven** — no hardcoded Python enums for expansion data (§9.1 #1, #8)
+> - Expansions are **pluggable from global admin panel** — global admin adds/configures expansion packs (§9.1 #3)
+> - Database renamed from `wotlk_calendar.db` to `raid_calendar.db` in Phase 0 (§9.1 #7)
+
 ### Phase 0: Per-User Tenancy (`tenant_id` on every table)
 **Goal:** Introduce a per-user tenant model and remodel the entire application to
 enforce row-level tenant isolation (`tenant_id` on every guild-scoped table)
@@ -902,22 +910,47 @@ all data is scoped by `tenant_id`.
 > [Section 10](#10-phase-0-per-user-tenancy--detailed-plan) for the
 > complete table-by-table, query-by-query, file-by-file change plan.
 
+**API versioning:** Create `/api/v2/` blueprint structure mirroring v1. All new
+tenant-aware endpoints go into v2. Existing v1 endpoints remain unchanged as
+backup. Frontend migrates to v2 endpoints in this phase.
+
+- [ ] Create `/api/v2/` blueprint structure (mirror v1 layout)
 - [ ] Create `Tenant` model (owner = user, plan, limits, settings)
 - [ ] Create `TenantMembership` model (user ↔ tenant link with role)
-- [ ] Create `TenantInvitation` model (invite link, Discord, in-app)
+- [ ] Create `TenantInvitation` model (invite link, Discord, in-app; max expiry 30 days)
+- [ ] Tenant slug: randomly generated at creation, customizable from admin panel
+- [ ] Default guild limit: 3 per tenant (configurable by global admin; per-tenant override)
+- [ ] Default member limit: unlimited (configurable by global admin; per-tenant override)
 - [ ] Auto-create a tenant for each user on registration
 - [ ] Add `tenant_id` FK to `guilds` table (Guild belongs to Tenant)
 - [ ] Add `tenant_id` FK to all guild-child tables (characters, events, signups, lineup_slots, raid_bans, attendance_records, character_replacements, etc.)
 - [ ] Data migration: backfill `tenant_id` from owner relationships
+- [ ] Rename database file from `wotlk_calendar.db` to `raid_calendar.db`
 - [ ] Add composite indexes on `(tenant_id, ...)` for all tenant-scoped tables
 - [ ] Update every service-layer query to include `tenant_id` filter
-- [ ] Update every API route to pass `tenant_id` through the call chain
+- [ ] Update every API route to pass `tenant_id` through the call chain (v2 routes)
 - [ ] Add `TenantMixin` for models with automatic `tenant_id` column
-- [ ] Build tenant invitation endpoints (create/accept/decline invite links)
+- [ ] Build tenant invitation endpoints under `/api/v2/tenants/` (create/accept/decline; max 30 day expiry)
 - [ ] Build tenant switching API + frontend sidebar component
 - [ ] Add Tenants tab to global admin panel
+- [ ] **Bench/queue multi-tenant isolation** (see [§10.21](#1021-benchqueue-system--multi-tenant-isolation)):
+  - [ ] Add `tenant_id` to `JobQueue` table
+  - [ ] Scope `process_job_queue()` to process all tenants fairly (round-robin or interleaved)
+  - [ ] Scope `auto_lock_upcoming_events()` to include `tenant_id` filter
+  - [ ] Scope `handle_sync_all_characters()` to include `tenant_id` filter
+  - [ ] Scope `auto_promote_bench()` — bench queue logic must be scoped by `tenant_id` and `guild_id`
+  - [ ] Verify bench queue ordering is tenant-isolated (no cross-tenant queue position leaks)
+- [ ] **New admin permissions for this phase:**
+  - [ ] `manage_tenant_members` — invite/remove members from tenant
+  - [ ] `manage_tenant_settings` — change tenant name, limits, settings
+  - [ ] `manage_tenants` — global admin: view/suspend/delete any tenant
 - [ ] Add tests verifying cross-tenant data isolation
+- [ ] Add tests verifying bench/queue isolation across tenants
 - [ ] Regression-test all 632+ existing tests
+- [ ] **Frontend co-migration** (simultaneous with backend):
+  - [ ] Create `src/api/v2/` directory with all API modules pointing to `/api/v2/`
+  - [ ] Migrate all frontend API calls from v1 to v2
+  - [ ] Create tenant store, tenant switcher, and all frontend tenant components (see [§11](#11-frontend-multi-tenant-migration--complete-plan))
 - [ ] **🧹 Phase 0 cleanup** (see [§13.3.1](#1331-phase-0-cleanup-checklist)):
   - [ ] Delete orphaned `src/components/admin/SystemTab.vue` (unused, replaced by UsersTab + SettingsTab)
   - [ ] Remove pre-tenant `allow_self_join` guild-level self-join flow from AppSidebar (replaced by tenant invitation system)
@@ -926,36 +959,74 @@ all data is scoped by `tenant_id`.
   - [ ] Verify no dead imports remain after model/service changes
   - [ ] Run full lint + build + test suite on clean branch
 
-### Phase 1: Foundation Decoupling (No Breaking Changes)
-**Goal:** Restructure internals without changing any external behavior.
+### Phase 1: Foundation Decoupling — DB-Driven Expansion Registry
+**Goal:** Replace hardcoded class/role/spec Python enums and dicts with a
+DB-driven, pluggable expansion registry manageable from the global admin panel.
 
-- [ ] Create `app/expansions/` directory with expansion registry
-- [ ] Move `CLASS_ROLES`, `CLASS_SPECS`, `WOTLK_RAIDS` from `constants.py` into expansion-specific config files
-- [ ] Keep backward compatibility: `constants.py` imports from `app/expansions/wotlk.py`
-- [ ] Add `expansion` field to Guild model (default: `"wotlk"`)
-- [ ] Make `meta.py` constants endpoint expansion-aware (with backward-compatible default)
-- [ ] Add expansion-aware validation in character service
-- [ ] All existing tests must pass unchanged
+> **Decision §9.1 #1, #8:** Expansion definitions are stored in DB tables,
+> not Python dicts or enums. This allows global admins to add new expansions
+> without code changes.
+
+- [ ] Create expansion DB tables:
+  - [ ] `expansions` — id, name, slug, sort_order, is_active, metadata
+  - [ ] `expansion_classes` — id, expansion_id, name, icon, sort_order
+  - [ ] `expansion_specs` — id, class_id, name, role (tank/healer/dps), icon
+  - [ ] `expansion_roles` — id, expansion_id, name (tank/healer/melee_dps/range_dps)
+  - [ ] `expansion_raids` — id, expansion_id, name, slug, raid_size, icon
+- [ ] Seed WotLK expansion data into DB tables (migrate from `constants.py`)
+- [ ] Create v2 API endpoints for expansion data:
+  - [ ] `GET /api/v2/meta/expansions` — list all available expansions
+  - [ ] `GET /api/v2/meta/expansions/{slug}/classes` — classes for expansion
+  - [ ] `GET /api/v2/meta/expansions/{slug}/specs` — specs for expansion
+  - [ ] `GET /api/v2/meta/expansions/{slug}/raids` — raids for expansion
+  - [ ] `GET /api/v2/meta/default-expansion` — current system default (from system_settings)
+- [ ] Add `expansion_id` field to Guild model (FK to `expansions` table; default from system setting)
+- [ ] Create global admin UI to manage expansions:
+  - [ ] View/add/edit/disable expansion packs
+  - [ ] Set default expansion
+- [ ] Make `meta.py` v2 constants endpoint return data from DB instead of Python dicts
+- [ ] Add expansion-aware validation in character service (read from DB, not enum)
+- [ ] **New admin permissions:**
+  - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs
+- [ ] All existing v1 tests must still pass (v1 backward compat)
+- [ ] **Frontend co-migration:**
+  - [ ] Update constants store to fetch from v2 expansion endpoints
+  - [ ] Remove hardcoded `WOW_CLASSES`, `CLASS_SPECS` fallbacks from `src/constants.js`
+  - [ ] Character creation dropdown reads from expansion-aware store
 - [ ] **🧹 Phase 1 cleanup** (see [§13.3.2](#1332-phase-1-cleanup-checklist)):
-  - [ ] Remove hardcoded `WOTLK_RAIDS` from `app/constants.py` after moving to `app/expansions/wotlk.py`
-  - [ ] Remove hardcoded `CLASS_ROLES` / `CLASS_SPECS` from `app/constants.py` (keep backward-compat re-exports only)
-  - [ ] Delete any temporary backward-compat shims that are no longer needed
-  - [ ] Verify no file imports the old location directly (all go through expansion registry)
+  - [ ] Remove hardcoded `WOTLK_RAIDS` from `app/constants.py`
+  - [ ] Remove hardcoded `CLASS_ROLES` / `CLASS_SPECS` from `app/constants.py`
+  - [ ] Remove `WowClass` Python enum if all references now use DB-driven data
+  - [ ] Delete any temporary backward-compat shims
+  - [ ] Remove hardcoded class/spec lists from frontend `src/constants.js`
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 2: Guild Membership Hardening (Within Tenant)
 **Goal:** Give guild admins control over guild membership within their tenant.
 
+> **Decision §9.1 #5:** Invitation expiry is guild admin configurable, max 30 days.
+> **Decision §9.1 #6:** Guild visibility is configurable per guild within tenant;
+> hidden guilds do NOT appear in the sidebar.
+
 - [ ] Add `GuildVisibility` enum and `visibility` field to Guild model
+- [ ] Ensure hidden guilds are NOT shown in sidebar navigation (only visible in explicit guild browser)
 - [ ] Add `GuildInvitation` model (guild-level invites within a tenant)
+- [ ] Invitation expiry: guild admin selects duration; system enforces max 30 days
 - [ ] Extend `MemberStatus` with `APPLIED` and `DECLINED`
-- [ ] Create guild invitation endpoints (send, accept, decline, list)
-- [ ] Create application endpoints (apply, approve, decline)
-- [ ] Add `invite_members` and `approve_applications` permissions
+- [ ] Create v2 guild invitation endpoints (send, accept, decline, list)
+- [ ] Create v2 application endpoints (apply, approve, decline)
+- [ ] **New admin permissions:**
+  - [ ] `invite_members` — send guild invitations within tenant
+  - [ ] `approve_applications` — approve/decline membership applications
+  - [ ] `manage_guild_visibility` — change guild visibility within tenant
 - [ ] Update guild list endpoint to respect visibility settings within tenant
 - [ ] Change `allow_self_join` default to `False`
 - [ ] Build invitation management UI (guild admin panel)
 - [ ] Add guild discovery page (open guilds within tenant only)
+- [ ] **Frontend co-migration:**
+  - [ ] Guild invitation management UI in guild admin panel
+  - [ ] Guild discovery/browser page
+  - [ ] Sidebar: do NOT show hidden guilds in navigation
 - [ ] **🧹 Phase 2 cleanup** (see [§13.3.3](#1333-phase-2-cleanup-checklist)):
   - [ ] Remove or deprecate `allow_self_join` field from Guild model if fully replaced by invitation system
   - [ ] Remove any remaining direct-join logic (old `POST /guilds/{id}/join` flow without invitation)
@@ -965,39 +1036,63 @@ all data is scoped by `tenant_id`.
 
 ### Phase 3: Class-Role Matrix
 **Goal:** Give guild admins a visual matrix to control class-role assignments.
+Matrix defaults come from the guild's active expansion pack (DB-driven),
+guild admins can customize.
 
-- [ ] Create `GuildClassRoleOverride` model
-- [ ] Create matrix API endpoints (GET/PUT/DELETE)
-- [ ] Add matrix resolution logic (defaults + overrides)
+> **Decision §9.1 #4:** Class-role matrix is per-guild. Defaults from expansion
+> DB data, with guild-level overrides.
+
+- [ ] Create `GuildClassRoleOverride` model (references `expansion_classes`, `expansion_roles`)
+- [ ] Create v2 matrix API endpoints (GET/PUT/DELETE)
+- [ ] Add matrix resolution logic: expansion defaults → guild overrides → final matrix
 - [ ] Build matrix editor UI component
-- [ ] Integrate matrix checks into character creation
-- [ ] Integrate matrix checks into signup validation
-- [ ] Integrate matrix checks into lineup assignment
-- [ ] Add `manage_class_role_matrix` permission
+- [ ] Integrate matrix checks into character creation (reads from DB matrix, not hardcoded)
+- [ ] Integrate matrix checks into signup validation (DB matrix resolver)
+- [ ] Integrate matrix checks into lineup assignment (DB matrix resolver)
+- [ ] **New admin permissions:**
+  - [ ] `manage_class_role_matrix` — edit class-role assignment matrix
+- [ ] **Frontend co-migration:**
+  - [ ] Matrix editor component
+  - [ ] Character creation uses dynamic matrix data
+  - [ ] Signup form respects matrix constraints
 - [ ] **🧹 Phase 3 cleanup** (see [§13.3.4](#1334-phase-3-cleanup-checklist)):
-  - [ ] Remove hardcoded class→role validation from signup/lineup services (replaced by matrix resolution)
-  - [ ] Remove static `CLASS_ROLES` usage in signup validation (should use guild-specific matrix)
+  - [ ] Remove hardcoded class→role validation from signup/lineup services
+  - [ ] Remove static `CLASS_ROLES` usage in signup validation (all go through matrix resolver)
   - [ ] Clean up any compatibility shims between old static mapping and new matrix system
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 4: Multi-Expansion Support
-**Goal:** Support guilds running different WoW expansions.
+**Goal:** Support guilds running different WoW expansions. Global admin can add
+new expansion packs via the admin panel — they are DB-driven and pluggable.
 
-- [ ] Create `GuildExpansion` model (guild ↔ expansion binding)
-- [ ] Define expansion packs: Classic, TBC, WotLK, Cata, MoP, WoD, Legion, BfA, SL, DF, TWW
-- [ ] Add class/spec/role definitions for each expansion
-- [ ] Add raid definitions for each expansion
-- [ ] Create expansion selection flow in guild creation
-- [ ] Update character creation to filter classes by guild expansion
-- [ ] Update raid definition seeder for multi-expansion
-- [ ] Update frontend constants store for expansion-awareness
+> **Decision §9.1 #3:** When a new expansion comes, it should be pluggable
+> from the global admin panel. No code changes needed — admin uploads/configures
+> the expansion data (classes, specs, roles, raids) via the admin UI.
+
+- [ ] Seed additional expansion packs into DB: Classic, TBC, Cata, MoP, WoD, Legion, BfA, SL, DF, TWW
+- [ ] Global admin UI to add new expansion packs:
+  - [ ] Define classes, specs, roles, raids for the expansion
+  - [ ] Enable/disable expansion packs system-wide
+  - [ ] Import expansion data from JSON/CSV (optional convenience feature)
+- [ ] Create expansion selection flow in guild creation (choose from enabled expansions)
+- [ ] Update character creation to filter classes by guild's expansion (from DB)
+- [ ] Update raid definition seeder for multi-expansion (from DB)
+- [ ] Update frontend constants store to be fully expansion-aware
 - [ ] Add expansion selector in guild settings
+- [ ] **New admin permissions:**
+  - [ ] `manage_guild_expansions` — guild admin: change guild's expansion
+  - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs (if not already added in Phase 1)
+- [ ] **Frontend co-migration:**
+  - [ ] Expansion selection in guild creation wizard
+  - [ ] Expansion settings in guild admin panel
+  - [ ] Dynamic class/spec/role dropdowns throughout the app
+  - [ ] Global admin expansion management UI
 - [ ] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
-  - [ ] Remove WotLK-only assumptions from `src/constants.js` (static `WOW_CLASSES`, `RAID_TYPES`)
-  - [ ] Remove Phase 1 backward-compat re-exports in `app/constants.py` if no longer used
-  - [ ] Remove hardcoded WotLK class list from `CharacterManagerView.vue` (should come from expansion-aware constants store)
-  - [ ] Verify `normalizeSpecName()` handles all expansion specs, remove any WotLK-only branches
-  - [ ] Clean up dead expansion-related code paths (e.g., `if expansion === 'wotlk'` branches that are now generic)
+  - [ ] Remove ALL remaining WotLK-only assumptions from frontend and backend
+  - [ ] Remove any `app/constants.py` re-exports that still exist
+  - [ ] Remove hardcoded WotLK class/raid lists from any component
+  - [ ] Verify `normalizeSpecName()` handles all expansion specs from DB
+  - [ ] Clean up dead expansion-related code paths
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 5: Plugin Architecture
@@ -1006,10 +1101,15 @@ all data is scoped by `tenant_id`.
 - [ ] Create `app/plugins/` framework (BasePlugin, PluginRegistry)
 - [ ] Refactor Warmane integration into a plugin
 - [ ] Refactor Discord integration into a plugin
-- [ ] Create plugin enable/disable API
+- [ ] Create v2 plugin enable/disable API
 - [ ] Build plugin management UI (guild settings)
 - [ ] Create plugin developer documentation
 - [ ] Frontend dynamic component loading for plugins
+- [ ] **New admin permissions:**
+  - [ ] `manage_plugins` — global admin: enable/disable system plugins
+- [ ] **Frontend co-migration:**
+  - [ ] Plugin management UI in guild settings
+  - [ ] Dynamic component loading for plugin-provided UI
 - [ ] **🧹 Phase 5 cleanup** (see [§13.3.6](#1336-phase-5-cleanup-checklist)):
   - [ ] Remove inline Warmane API calls from services — all go through plugin interface
   - [ ] Remove inline Discord integration from services — all go through plugin interface
@@ -1020,20 +1120,42 @@ all data is scoped by `tenant_id`.
   - [ ] Run full lint + build + test suite on clean branch
 
 ### Phase 6: SaaS Infrastructure
-**Goal:** Add billing and tenant management.
+**Goal:** Add billing, plan management, and tenant management from the global
+admin panel.
+
+> **Decision §9.4 #1:** Global admin must be able to create and configure
+> subscription plans (one free plan, multiple paid plans with different limits).
+> Global admin can assign plans to specific tenants.
 
 - [x] ~~Evaluate need for row-level tenancy (tenant_id enforcement)~~ → **Moved to Phase 0**
+- [ ] Create `Plan` model (name, slug, limits, features, is_free, price_info)
+- [ ] Seed default free plan with configurable limits
+- [ ] Global admin UI for plan management:
+  - [ ] Create/edit/delete plans
+  - [ ] Configure plan limits (guilds, members, events, features)
+  - [ ] Mark one plan as the free/default plan
+  - [ ] Create multiple paid plans with different feature sets
+  - [ ] Assign plans to specific tenants (override default)
 - [ ] Add subscription/billing model per tenant (free / pro / enterprise plans)
 - [ ] Add usage tracking per tenant (guilds, members, events)
-- [ ] Add API rate limiting per tenant
+- [ ] Add API rate limiting per tenant (based on plan)
 - [ ] Add data export/import for tenant portability
 - [ ] Add tenant deletion with full data cleanup
 - [ ] Add tenant suspension/reactivation by global admin
+- [ ] **New admin permissions:**
+  - [ ] `manage_plans` — global admin: create/edit/delete subscription plans
+  - [ ] `manage_billing` — global admin: view/manage tenant billing
+- [ ] **Frontend co-migration:**
+  - [ ] Plan management UI in global admin panel
+  - [ ] Tenant plan assignment UI
+  - [ ] Plan usage dashboard for tenant owners
+  - [ ] Plan limits enforcement in frontend (show upgrade prompts)
 - [ ] **🧹 Phase 6 cleanup** (see [§13.3.7](#1337-phase-6-cleanup-checklist)):
   - [ ] Remove free-plan hardcoded defaults if plan limits now come from billing model
   - [ ] Remove any manual guild/member counting if usage tracking replaces it
   - [ ] Clean up Phase 0 `max_guilds`/`max_members` defaults if billing system overrides them
   - [ ] Final full-codebase dead-code audit (see §13.4)
+  - [ ] **v1 API deprecation review:** Assess if v1 endpoints can now be fully removed or if they need to remain for any legacy integrations
   - [ ] Run full lint + build + test suite on clean branch
 
 ---
@@ -1053,9 +1175,18 @@ All schema changes should use incremental migrations (Alembic or Flask-Migrate):
 
 Current API is `/api/v1/`. Strategy:
 
-- **v1 stays backward compatible** — no breaking changes
-- **New endpoints** added to v1 with new prefixes
-- **v2** only when breaking changes are necessary (Phase 5+)
+- **v1 stays intact as backup** — the existing `/api/v1/` endpoints remain
+  functional and unchanged even on the migration branch. This provides a
+  rollback path and avoids breaking any existing integrations.
+- **v2 for all new work** — all new multi-tenant endpoints, tenant-scoped
+  routes, and refactored endpoints use `/api/v2/` prefix. Both v1 and v2
+  coexist during migration.
+- **v1 deprecation** — once all v2 endpoints are stable, tested, and the
+  frontend has fully migrated to v2, the v1 blueprints can be deprecated
+  and eventually removed in a future cleanup phase.
+- **Blueprint structure:** `app/api/v2/` mirrors `app/api/v1/` structure
+  but with tenant-aware routes. v2 blueprints register under `/api/v2/`
+  prefix.
 
 ### 8.3 Frontend Compatibility
 
@@ -1067,23 +1198,26 @@ Current API is `/api/v1/`. Strategy:
 
 ## 9. Open Questions & Decisions
 
-### 9.1 Decisions Needed
+### 9.1 Resolved Decisions
 
-| # | Question | Options | Recommendation |
-|---|----------|---------|----------------|
-| 1 | Where to store expansion definitions? | Python dicts / JSON files / DB tables | **Python dicts** (fast, type-safe, version-controlled) with DB-level overrides |
-| 2 | Should guilds support multiple expansions simultaneously? | Single / Multiple | **Single primary** with optional multi-expansion for alt raids |
-| 3 | How to handle spec changes across expansions? | Single enum / Expansion-keyed map | **Expansion-keyed map** (specs differ too much between expansions) |
-| 4 | Should class-role matrix overrides be per-raid or per-guild? | Per-raid / Per-guild / Both | **Per-guild first**, per-raid as Phase 3 extension |
-| 5 | Invitation expiry default? | 24h / 7d / 30d / Never | **7 days** with tenant/guild admin override |
-| 6 | Allow users to see guilds they're not members of? | Yes (listed) / No (private) | **Configurable** per guild within the tenant (visibility setting) |
-| 7 | Database name change from `wotlk_calendar.db`? | Yes / No | **Yes** — rename to `raid_calendar.db` or `guild_calendar.db` in a future phase |
-| 8 | Should the `WowClass` Python enum remain? | Keep as universal / Replace with expansion-dynamic | **Keep as superset** of all classes; filter at runtime by expansion |
-| 9 | Should the default expansion be a named constant? | Hardcoded / Constant | **Named constant** (`DEFAULT_EXPANSION = "wotlk"`) to avoid scattered magic strings |
-| 10 | Default guild limit per tenant? | 1 / 3 / 5 / 10 | **3** for free plan, higher for paid plans (future) |
-| 11 | Default member limit per tenant? | 25 / 50 / 100 / unlimited | **50** for free plan, higher for paid plans (future) |
-| 12 | Should tenant invitations be shareable (multi-use) by default? | Single-use / Multi-use / Configurable | **Configurable** — single-use for security, multi-use for convenience, with expiry |
-| 13 | How should tenant slug be generated? | From username / Custom / Auto-generated | **From username** at creation, customizable later |
+All questions have been decided. These are the **final answers** that inform
+all subsequent phases.
+
+| # | Question | Decision | Rationale |
+|---|----------|----------|-----------|
+| 1 | Where to store expansion definitions? | **Database tables** | Expansions will be pluggable from the global admin panel. Hardcoding classes/roles in Python dicts or enums makes no sense in a multi-tenant system with pluggable expansions — every new expansion would require code changes and redeployment. DB-driven definitions allow global admins to add/configure expansions at runtime. |
+| 2 | Should guilds support multiple expansions simultaneously? | **Unclear / needs refinement** | The original question is ambiguous. A guild selects **one primary expansion** at creation, but the expansion system itself is pluggable — global admins install expansion packs, and guild admins choose from available expansions. |
+| 3 | How to handle spec changes across expansions? | **DB-driven, pluggable** | When a new expansion is added to the system (by global admin), its classes, specs, and roles are loaded from the expansion's DB records. No hardcoded enum — the system reads from `expansion_classes`, `expansion_specs`, `expansion_roles` tables. API endpoint returns the data for the guild's active expansion. |
+| 4 | Should class-role matrix overrides be per-raid or per-guild? | **Per-guild** with pluggable expansions | Guild admins configure the class→role matrix for their guild. The matrix defaults come from the guild's active expansion pack, and guild admins can customize. Per-raid overrides may be added as a future extension. |
+| 5 | Invitation expiry default? | **Guild admin configurable, max 30 days** | Guild admins select the expiry duration when creating an invitation. The system enforces a maximum expiration of 30 days — no invitation can live longer than that. |
+| 6 | Allow users to see guilds they're not members of? | **Configurable per guild** within the tenant (visibility setting). Hidden guilds must NOT appear in the sidebar at all times — only visible when explicitly browsing. |
+| 7 | Database name change from `wotlk_calendar.db`? | **Yes** — rename to `raid_calendar.db` | Done in Phase 0 as part of tenant migration. |
+| 8 | Should the `WowClass` Python enum remain? | **No** — replace with **expansion-dynamic DB-driven** approach | Hardcoding all classes as a Python enum makes no sense when expansions are pluggable. Classes come from the DB expansion tables. The `WowClass` enum will be removed once DB-driven class definitions are in place (Phase 1/4). |
+| 9 | Should the default expansion be a named constant? | **DB-driven** — default expansion should be a system setting returned by a proper API endpoint, because expansions are pluggable | No hardcoded `DEFAULT_EXPANSION` constant. The global admin configures which expansion is the default via the admin panel, stored in `system_settings` table, and returned by `GET /api/v2/meta/default-expansion`. |
+| 10 | Default guild limit per tenant? | **3** (configurable by global admin, with ability to override per-tenant) | Global admin can change the system-wide default and also override for specific tenants. |
+| 11 | Default member limit per tenant? | **Unlimited** for now (configurable from global admin panel) | No artificial member cap initially. Global admin can set/change limits per plan or per tenant. |
+| 12 | Should tenant invitations be shareable (multi-use) by default? | **Configurable** with expiry, max 30 days | Invitations can be single-use or multi-use. All invitations expire — max allowed expiry is 30 days. |
+| 13 | How should tenant slug be generated? | **Randomly generated**, customizable in guild admin panel | Auto-generated random slug at creation; guild admins can customize it later from the admin panel. |
 
 ### 9.2 Research Items
 
@@ -1098,6 +1232,20 @@ Before starting Phase 1, complete these from the existing cleanup plan:
 - [ ] Consolidate frontend role label maps (7 duplicates)
 - [ ] Consolidate CLASS_ROLES/CLASS_SPECS between frontend and backend
 - [ ] Add service layers for modules that access DB directly (raid_definitions, templates, series, roles)
+
+### 9.4 Additional Requirements (Future Implementation Points)
+
+These requirements were identified during decision review and must be
+incorporated into the appropriate phases:
+
+| # | Requirement | Affects Phase(s) | Details |
+|---|-------------|-----------------|---------|
+| 1 | **Global admin: paid/free plan configuration** | Phase 6 | Global admin must be able to create and configure subscription plans (one free plan, multiple paid plans). Plans define limits (guilds, members, features). Global admin can assign plans to tenants. |
+| 2 | **DB-driven classes/roles/specs** (no hardcoded enums) | Phase 1, 3, 4 | Hardcoding all classes and roles will not work in a multi-tenant system with pluggable expansions. Every class, role, and spec must come from DB tables tied to expansion packs. The `WowClass` enum and `CLASS_ROLES`/`CLASS_SPECS` dicts must be replaced with DB-driven definitions. |
+| 3 | **v1 API preserved as backup; v2 for all new work** | Phase 0+ | Keep the existing `/api/v1/` endpoints intact as a fallback even on the migration branch. All new multi-tenant endpoints use `/api/v2/` prefix. This provides a rollback path and avoids breaking any existing integrations during migration. |
+| 4 | **Frontend + backend co-migration per phase** | All phases | Frontend and backend changes for each phase must happen simultaneously in the same branch/PR. No phase should ship backend changes without the matching frontend changes — this prevents drift and integration bugs. |
+| 5 | **Admin permissions and references** | Phase 0+ | Each phase must define and document the new admin permissions it introduces, add them to the permission seed, and reference them in the phase checklist. No implicit permissions. |
+| 6 | **Bench/queue system multi-tenant isolation** | Phase 0 | The bench/queue system is a critical concern. Each tenant must have its own isolated job queue, bench queue, and auto-promotion logic. The current `JobQueue` table and `process_job_queue()` scheduler must be tenant-aware. Auto-lock, auto-promote, and character sync jobs must all be scoped by `tenant_id`. See §10.21 for detailed plan. |
 
 ---
 
@@ -1682,32 +1830,36 @@ for "show notifications from this tenant only" feature. ✅
 
 ### 10.9 API Layer — Route Changes
 
+> **Note:** Per §8.2 and §9.4 #3, all new tenant-aware endpoints use `/api/v2/`
+> prefix. The existing `/api/v1/` endpoints remain unchanged as backup. The v2
+> routes below mirror the v1 structure but with tenant-scoped logic.
+
 #### 10.9.1 New Tenant Routes
 
 ```python
-# app/api/v1/tenants.py (NEW BLUEPRINT)
+# app/api/v2/tenants.py (NEW BLUEPRINT — under /api/v2/)
 
 # Tenant CRUD (for tenant owners):
-GET    /api/v1/tenants                           # List user's tenants (owned + member)
-GET    /api/v1/tenants/<int:tenant_id>            # Get tenant details
-PUT    /api/v1/tenants/<int:tenant_id>            # Update tenant settings
-DELETE /api/v1/tenants/<int:tenant_id>            # Delete tenant (owner only)
+GET    /api/v2/tenants                           # List user's tenants (owned + member)
+GET    /api/v2/tenants/<int:tenant_id>            # Get tenant details
+PUT    /api/v2/tenants/<int:tenant_id>            # Update tenant settings
+DELETE /api/v2/tenants/<int:tenant_id>            # Delete tenant (owner only)
 
 # Tenant members:
-GET    /api/v1/tenants/<int:tenant_id>/members                    # List members
-POST   /api/v1/tenants/<int:tenant_id>/members                    # Add member directly
-PUT    /api/v1/tenants/<int:tenant_id>/members/<int:user_id>      # Update member role
-DELETE /api/v1/tenants/<int:tenant_id>/members/<int:user_id>      # Remove member
+GET    /api/v2/tenants/<int:tenant_id>/members                    # List members
+POST   /api/v2/tenants/<int:tenant_id>/members                    # Add member directly
+PUT    /api/v2/tenants/<int:tenant_id>/members/<int:user_id>      # Update member role
+DELETE /api/v2/tenants/<int:tenant_id>/members/<int:user_id>      # Remove member
 
-# Tenant invitations:
-GET    /api/v1/tenants/<int:tenant_id>/invitations                # List invitations
-POST   /api/v1/tenants/<int:tenant_id>/invitations                # Create invite (link/discord/direct)
-DELETE /api/v1/tenants/<int:tenant_id>/invitations/<int:inv_id>   # Revoke invitation
-POST   /api/v1/invite/<token>                                     # Accept invite (public endpoint)
+# Tenant invitations (max expiry: 30 days):
+GET    /api/v2/tenants/<int:tenant_id>/invitations                # List invitations
+POST   /api/v2/tenants/<int:tenant_id>/invitations                # Create invite (link/discord/direct)
+DELETE /api/v2/tenants/<int:tenant_id>/invitations/<int:inv_id>   # Revoke invitation
+POST   /api/v2/invite/<token>                                     # Accept invite (public endpoint)
 
 # Tenant switching:
-PUT    /api/v1/auth/active-tenant                                 # Switch active tenant
-GET    /api/v1/auth/active-tenant                                 # Get current active tenant
+PUT    /api/v2/auth/active-tenant                                 # Switch active tenant
+GET    /api/v2/auth/active-tenant                                 # Get current active tenant
 ```
 
 #### 10.9.2 Existing Routes — Add `tenant_id` Context
@@ -1744,15 +1896,15 @@ def require_guild_permission(permission_code):
 #### 10.9.3 Admin Routes — Tenant Management
 
 ```python
-# app/api/v1/admin.py — New endpoints:
+# app/api/v2/admin.py — New endpoints (under /api/v2/):
 
-GET    /api/v1/admin/tenants                                      # List all tenants (with stats)
-GET    /api/v1/admin/tenants/<int:tenant_id>                      # Get tenant details
-PUT    /api/v1/admin/tenants/<int:tenant_id>                      # Update tenant (limits, plan)
-POST   /api/v1/admin/tenants/<int:tenant_id>/suspend              # Suspend tenant
-POST   /api/v1/admin/tenants/<int:tenant_id>/activate             # Reactivate tenant
-DELETE /api/v1/admin/tenants/<int:tenant_id>                      # Delete tenant + all data
-PUT    /api/v1/admin/tenants/<int:tenant_id>/limits               # Override guild/member limits
+GET    /api/v2/admin/tenants                                      # List all tenants (with stats)
+GET    /api/v2/admin/tenants/<int:tenant_id>                      # Get tenant details
+PUT    /api/v2/admin/tenants/<int:tenant_id>                      # Update tenant (limits, plan)
+POST   /api/v2/admin/tenants/<int:tenant_id>/suspend              # Suspend tenant
+POST   /api/v2/admin/tenants/<int:tenant_id>/activate             # Reactivate tenant
+DELETE /api/v2/admin/tenants/<int:tenant_id>                      # Delete tenant + all data
+PUT    /api/v2/admin/tenants/<int:tenant_id>/limits               # Override guild/member limits
 ```
 
 ### 10.10 Frontend Changes
@@ -1787,7 +1939,7 @@ Users who belong to multiple tenants see a tenant switcher in the sidebar:
 
 **Behavior on tenant switch:**
 1. User clicks a different tenant in the dropdown
-2. Frontend calls `PUT /api/v1/auth/active-tenant` with new `tenant_id`
+2. Frontend calls `PUT /api/v2/auth/active-tenant` with new `tenant_id`
 3. Server validates user is a member of that tenant
 4. Server updates session/JWT with new active tenant
 5. Frontend reloads guild store, calendar store, character store
@@ -2267,7 +2419,7 @@ Execute these steps **in order**. Each step must be verified before proceeding.
 - [ ] **Step 0.13:** Update all service-layer queries — add `tenant_id` filters
 - [ ] **Step 0.14:** Update all API routes — pass `tenant_id` through call chain
 - [ ] **Step 0.15:** Run full test suite ✅
-- [ ] **Step 0.16:** Create tenant API blueprint (`app/api/v1/tenants.py`)
+- [ ] **Step 0.16:** Create tenant API blueprint (`app/api/v2/tenants.py`)
 - [ ] **Step 0.17:** Create tenant invitation endpoints
 - [ ] **Step 0.18:** Add tenant switching endpoint (`PUT /auth/active-tenant`)
 - [ ] **Step 0.19:** Build frontend tenant switcher sidebar component
@@ -2293,7 +2445,7 @@ Execute these steps **in order**. Each step must be verified before proceeding.
 
 | Area | Files | Estimated changes |
 |------|-------|-------------------|
-| **New files** | `app/models/tenant.py`, `app/models/mixins.py`, `app/api/v1/tenants.py`, `src/components/admin/TenantsTab.vue`, `src/components/sidebar/TenantSwitcher.vue` | 5 new files |
+| **New files** | `app/models/tenant.py`, `app/models/mixins.py`, `app/api/v2/tenants.py`, `src/components/admin/TenantsTab.vue`, `src/components/sidebar/TenantSwitcher.vue` | 5 new files |
 | **Model changes** | `user.py` (+1 field), `guild.py` (+tenant_id), `signup.py` (Signup, LineupSlot, RaidBan, CharacterReplacement +tenant_id +guild_id), `attendance.py` (+tenant_id +guild_id), all other guild-child models | ~30 lines per model |
 | **Service changes** | `guild_service.py`, `event_service.py`, `signup_service.py`, `lineup_service.py`, `attendance_service.py`, `character_service.py`, `raid_service.py`, `auth_service.py` | ~80-100 query updates |
 | **API changes** | `tenants.py` (new), `admin.py`, `guilds.py`, `signups.py`, `lineup.py`, `attendance.py` | ~30-40 route updates |
@@ -2335,6 +2487,150 @@ in later phases:
 | 10 | **Keep notifications `tenant_id` nullable** | Some notifications are system-wide (password change, etc.). User-scoped queries are correct. |
 | 11 | **`active_tenant_id` on User model** | Simplest approach — server always knows which tenant context the user is in. Alternative (JWT claim) adds complexity. |
 | 12 | **Configurable guild limit per tenant (`max_guilds`)** | Different plans can have different limits. Global admin can override per-tenant. Default: 3 for free plan. |
+| 13 | **v1 API preserved; v2 for new work** | Keep existing v1 endpoints unchanged as backup/rollback path. All new tenant-aware endpoints use `/api/v2/` prefix. Frontend migrates to v2. v1 deprecated in Phase 6. |
+| 14 | **Frontend + backend co-migration** | No phase ships backend changes without matching frontend. Both sides migrate simultaneously to prevent drift and integration bugs. |
+| 15 | **DB-driven expansion data** (not Python dicts/enums) | Hardcoded classes/roles/specs cannot work with pluggable expansions. All expansion data comes from DB tables. Global admin adds expansions at runtime without code changes. |
+| 16 | **Tenant member limit: unlimited** (default) | No artificial member cap initially. Global admin configures limits per-plan or per-tenant as needed. |
+| 17 | **Invitation max expiry: 30 days** | No invitation lives longer than 30 days. Guild admin selects duration within this limit. |
+| 18 | **Tenant slug: random, customizable** | Auto-generated random slug at creation. Customizable from admin panel later. |
+| 19 | **Database renamed to `raid_calendar.db`** | Old name `wotlk_calendar.db` implies single-expansion. Renamed in Phase 0. |
+
+### 10.21 Bench/Queue System — Multi-Tenant Isolation
+
+> **Concern:** The bench/queue system is one of the most complex parts of the
+> application. It involves background jobs (APScheduler), the `JobQueue` table,
+> bench queue ordering (`LineupSlot` with `slot_group="bench"`), auto-promotion
+> logic, and auto-lock scheduling. Each of these must be tenant-aware.
+
+#### 10.21.1 Current Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ APScheduler (BackgroundScheduler)                                │
+│   ├── process_job_queue()  — polls JobQueue table every 30s      │
+│   ├── auto_lock_upcoming_events() — locks events every 5 min     │
+│   └── autosync_characters() — syncs armory data (configurable)   │
+│                                                                  │
+│ JobQueue table (in-DB queue)                                     │
+│   ├── type: "send_notification" / "sync_all_characters"          │
+│   ├── payload: JSON dict with context (user_id, guild_id, etc.)  │
+│   ├── status: queued / running / done / failed                   │
+│   └── NO tenant_id today — global queue                          │
+│                                                                  │
+│ Bench Queue (LineupSlots with slot_group="bench")                │
+│   ├── Ordered by slot_index within a raid event                  │
+│   ├── auto_promote_bench() — promotes bench → lineup on cancel   │
+│   └── Scoped by raid_event_id (which is guild-scoped)            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 10.21.2 Multi-Tenant Changes
+
+**JobQueue table:**
+
+| Change | Details |
+|--------|---------|
+| Add `tenant_id` column | FK to `tenants.id`, NOT NULL for tenant-scoped jobs. Nullable for system-wide jobs (e.g., global maintenance). |
+| Add `guild_id` column | FK to `guilds.id`, nullable. For guild-scoped jobs (character sync, notifications). |
+| Index `(tenant_id, status)` | Efficient polling per-tenant. |
+
+**`process_job_queue()` changes:**
+
+```python
+# Current: claims ANY queued job globally
+# After: still processes all tenants, but adds tenant_id to context
+
+def process_job_queue(app: Flask) -> None:
+    """Drain queued jobs — processes all tenants fairly."""
+    with app.app_context():
+        # Jobs are processed in order regardless of tenant (FIFO).
+        # tenant_id is included in the job payload for handler context.
+        # Each handler must scope its operations by tenant_id.
+        ...
+```
+
+> **Design decision:** The job queue processor does NOT run per-tenant
+> schedulers. A single scheduler processes all jobs in FIFO order. The
+> `tenant_id` on each job ensures handlers scope their operations correctly.
+> This is simpler than running N schedulers and avoids resource issues.
+
+**`auto_lock_upcoming_events()` changes:**
+
+```python
+# Current:
+RaidEvent.status == "open"
+
+# After: add tenant scope via guild → tenant join
+sa.select(RaidEvent)
+  .join(Guild, RaidEvent.guild_id == Guild.id)
+  .where(
+    RaidEvent.status == "open",
+    Guild.tenant_id.isnot(None),  # Only process tenant-scoped events
+    ...
+  )
+```
+
+This is already implicitly tenant-scoped (events belong to guilds, guilds
+belong to tenants), but the explicit join ensures no orphaned events from
+deleted tenants are processed.
+
+**`handle_sync_all_characters()` changes:**
+
+```python
+# Current: syncs ALL active characters globally
+# After: scope by tenant_id from job payload
+
+guild_id = payload.get("guild_id")
+tenant_id = payload.get("tenant_id")
+
+stmt = sa.select(Character).where(Character.is_active.is_(True))
+if tenant_id:
+    stmt = stmt.join(Guild, Character.guild_id == Guild.id) \
+               .where(Guild.tenant_id == tenant_id)
+if guild_id:
+    stmt = stmt.where(Character.guild_id == guild_id)
+```
+
+**Bench queue (`auto_promote_bench()`) changes:**
+
+The bench queue is already scoped by `raid_event_id`, which belongs to a
+guild, which belongs to a tenant. No direct changes needed to the bench
+promotion logic itself. However:
+
+- [ ] Verify `_auto_promote_bench()` never queries LineupSlots without
+  a `raid_event_id` filter (preventing cross-event/cross-guild leaks)
+- [ ] Verify `get_bench_info()` in `lineup_service.py` is scoped correctly
+- [ ] Verify `reorder_bench()` in `lineup_service.py` is scoped correctly
+- [ ] Add integration tests that create bench queues in two different
+  tenants and verify no cross-tenant data leaks in promotion
+
+**Autosync schedule — per-tenant:**
+
+Currently autosync is a global setting (`SystemSetting` table). With
+multi-tenancy, autosync could be:
+- **Option A:** Global setting only — platform admin controls sync schedule.
+  All tenants' characters sync on the same schedule.
+- **Option B:** Per-tenant setting — each tenant owner can configure their
+  own sync interval (within platform limits).
+
+**Recommendation:** Start with **Option A** (global) in Phase 0. Evaluate
+per-tenant sync in Phase 5 (plugin architecture) if needed.
+
+#### 10.21.3 Verification
+
+```bash
+# Verify JobQueue has tenant_id
+grep -rn "tenant_id" app/models/notification.py  # JobQueue model
+
+# Verify handlers scope by tenant_id
+grep -rn "tenant_id" app/jobs/handlers.py
+
+# Verify bench queue isolation
+grep -rn "tenant_id\|guild_id" app/services/lineup_service.py | grep -i "bench\|queue"
+
+# Integration tests
+python -m pytest tests/test_bench_tenant_isolation.py -v
+```
 
 ---
 
@@ -2388,7 +2684,9 @@ User logs in → auth store (user + activeTenantId + tenants[])
             → tenant store (active tenant details, members, invitations)
             → guild store (guilds within active tenant)
             → calendar store (events for currentGuild within active tenant)
-            → constants store (no change — global)
+            → constants store (expansion data from DB via /api/v2/meta/*)
+
+All API calls migrate from /api/v1/* to /api/v2/* (v1 stays as backup).
 
 Tenant switch → tenant store updates activeTenantId
              → guild store reloads (different guilds)
@@ -3117,7 +3415,7 @@ Estimated: ~250-350 lines (similar complexity to existing GuildsTab)
 ```
 Features:
 - Public page (no auth required for viewing)
-- Fetches invite details by token: GET /api/v1/invite/{token}/details
+- Fetches invite details by token: GET /api/v2/invite/{token}/details
 - Shows: tenant name, inviter name, role being assigned, expiry
 - If user is logged in: "Accept" / "Decline" buttons
 - If user is NOT logged in: "Login to Accept" / "Register to Accept" buttons
@@ -3643,21 +3941,28 @@ grep -rn "^\s*print(" app/ --include="*.py" | grep -v "test"
 
 #### 13.3.2 Phase 1 Cleanup Checklist
 
-Phase 1 moves constants to expansion-specific files. Cleanup the old locations.
+Phase 1 moves classes/specs/roles/raids into **DB-driven expansion tables**
+(not Python dict files). Clean up all hardcoded expansion data.
 
 **Code to remove/refactor:**
 
 | Location | What | Action |
 |----------|------|--------|
-| `app/constants.py` | Hardcoded `WOTLK_RAIDS`, `CLASS_ROLES`, `CLASS_SPECS` | **Move** to `app/expansions/wotlk.py`; keep only re-export wrappers in `constants.py` for exactly one phase of backward compat |
-| `app/constants.py` re-exports | Backward-compat imports from `constants.py` → `expansions/wotlk.py` | These are **allowed in Phase 1 only** — mark with `# COMPAT: Remove in Phase 2` comment |
-| Test files | Tests importing directly from `app/constants` for class/spec data | **Update** to import from `app/expansions/` or use the new expansion registry |
+| `app/constants.py` | Hardcoded `WOTLK_RAIDS`, `CLASS_ROLES`, `CLASS_SPECS` | **Remove** — data now lives in DB expansion tables; seed script populates it |
+| `WowClass` Python enum | Hardcoded class enum | **Remove** — classes come from `expansion_classes` DB table |
+| `src/constants.js` | Static `WOW_CLASSES`, `CLASS_ROLES`, `CLASS_SPECS` | **Remove** — frontend fetches from `GET /api/v2/meta/expansions/{slug}/classes` |
+| Test files | Tests importing directly from `app/constants` for class/spec data | **Update** to use the new DB-driven expansion registry or test helpers |
+| `meta.py` v1 constants endpoint | Hardcoded class/spec response | **Keep v1 unchanged** (backward compat); v2 endpoint reads from DB |
 
 **Dead code detection:**
 ```bash
 # Find any remaining direct import of CLASS_ROLES from constants.py
 grep -rn "from app.constants import.*CLASS_ROLES\|from app.constants import.*CLASS_SPECS\|from app.constants import.*WOTLK_RAIDS" app/ tests/
-# Expected: only re-export wrappers in constants.py, nothing else
+# Expected: empty — all references should use DB-driven expansion registry
+
+# Verify WowClass enum is gone
+grep -rn "WowClass" app/ tests/
+# Expected: empty (or only in migration/seed scripts)
 ```
 
 #### 13.3.3 Phase 2 Cleanup Checklist
@@ -3696,7 +4001,7 @@ Phase 3 introduces the class-role matrix, replacing static mappings.
 | `app/expansions/*.py` static `CLASS_ROLES` | Static class→role mappings | **Keep as defaults** but remove any code that reads them directly for validation (should go through matrix resolver) |
 | `signup_service.py` hardcoded validation | `if char.role not in CLASS_ROLES[char.wow_class]` | **Replace** with `matrix.is_valid_role(guild_id, char.wow_class, char.role)` |
 | `lineup_service.py` hardcoded validation | Similar static class→role check | **Replace** with matrix resolver |
-| `src/constants.js` `CLASS_ROLES` | Static frontend mapping | **Replace** with dynamic data from `GET /api/v1/guilds/{id}/class-role-matrix` |
+| `src/constants.js` `CLASS_ROLES` | Static frontend mapping | **Replace** with dynamic data from `GET /api/v2/guilds/{id}/class-role-matrix` (DB-driven) |
 
 **Verification:**
 ```bash
@@ -3766,14 +4071,16 @@ Phase 6 adds billing. Clean up hardcoded plan defaults.
 
 | Location | What | Action |
 |----------|------|--------|
-| `Tenant` model `max_guilds` default=3, `max_members` default=50 | Hardcoded limits | **Replace** with limits from billing/subscription model. Defaults should come from plan definition, not model defaults |
+| `Tenant` model `max_guilds` default=3, `max_members` unlimited | Hardcoded limits | **Replace** with limits from billing/subscription model. Defaults should come from plan definition, not model defaults |
 | `tenant_service.py` guild limit check | `if guild_count >= tenant.max_guilds` | **Replace** with `billing_service.check_limit(tenant, 'guilds')` if billing manages limits |
 | Phase 0 manual limit checks | Anywhere `tenant.max_guilds` is checked directly | **Consolidate** into billing service |
+| `/api/v1/` blueprints | All v1 endpoints | **Deprecation review** — assess if v1 can be fully removed now that v2 is stable, or if legacy integrations still need it. Remove if safe. |
 
 **Final full-codebase audit (see §13.4):**
 ```bash
 # Run all verification commands from all previous phases
 # Confirm zero orphans, zero dead imports, zero stale tests
+# Verify no v1 endpoints are still referenced by frontend (all should use v2)
 ```
 
 ---
@@ -3922,7 +4229,12 @@ phase:
 | 1 | `SystemTab.vue` (394 lines) | Orphaned — not imported anywhere | **Phase 0** | Delete |
 | 2 | `codebase-cleanup-plan.md` | Contains cleanup tasks — unclear which are done | **Phase 0** | Audit; mark completed items ✅; create issues for remaining |
 | 3 | `allow_self_join` on Guild model | Active — used in sidebar for direct guild join | **Phase 2** | Remove or deprecate when invitation system replaces it |
-| 4 | Static `WOW_CLASSES` in `src/constants.js` | Active — hardcoded 10 WotLK classes | **Phase 4** | Remove when constants store fetches expansion-aware data |
-| 5 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | Active — hardcoded Warmane realm list | **Phase 5** | Remove when provider plugins manage realm lists |
-| 6 | `i18n-plan.md` | Planning doc — may become stale | **Phase 0** | Review; integrate remaining items into this plan or archive |
-| 7 | Hardcoded `max_guilds=3`, `max_members=50` on Tenant model | Will be introduced in Phase 0 | **Phase 6** | Replace with billing-managed limits |
+| 4 | Static `WOW_CLASSES` in `src/constants.js` | Active — hardcoded 10 WotLK classes | **Phase 1** | Remove when DB-driven expansion data replaces it |
+| 5 | `WowClass` Python enum in `app/enums.py` | Active — hardcoded class enum | **Phase 1** | Remove when DB-driven `expansion_classes` table replaces it |
+| 6 | `CLASS_ROLES` / `CLASS_SPECS` in `app/constants.py` | Active — hardcoded WotLK mappings | **Phase 1** | Remove when DB-driven expansion registry replaces it |
+| 7 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | Active — hardcoded Warmane realm list | **Phase 5** | Remove when provider plugins manage realm lists |
+| 8 | `i18n-plan.md` | Planning doc — may become stale | **Phase 0** | Review; integrate remaining items into this plan or archive |
+| 9 | Hardcoded `max_guilds=3`, `max_members=unlimited` on Tenant model | Will be introduced in Phase 0 | **Phase 6** | Replace with billing-managed plan limits |
+| 10 | Database file `wotlk_calendar.db` | Active — WotLK-specific name | **Phase 0** | Rename to `raid_calendar.db` |
+| 11 | `/api/v1/` endpoints | Active — all current API | **Phase 6** | Review for removal after all frontend migrates to v2 |
+| 12 | `JobQueue` table without `tenant_id` | Active — global queue | **Phase 0** | Add `tenant_id` column; scope all job handlers |
