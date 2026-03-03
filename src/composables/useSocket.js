@@ -54,6 +54,16 @@ export function useSocket() {
     s.emit('leave_guild', { guild_id: Number(guildId) })
   }
 
+  /** Join the Socket.IO room for a given tenant (tenant-level events). */
+  function joinTenant(tenantId) {
+    s.emit('join_tenant', { tenant_id: Number(tenantId) })
+  }
+
+  /** Leave the Socket.IO room for a given tenant. */
+  function leaveTenant(tenantId) {
+    s.emit('leave_tenant', { tenant_id: Number(tenantId) })
+  }
+
   /** Register a listener for a Socket.IO event. */
   function on(event, handler) {
     s.on(event, handler)
@@ -74,5 +84,5 @@ export function useSocket() {
     }
   })
 
-  return { connected, joinEvent, leaveEvent, joinGuild, leaveGuild, on, off }
+  return { connected, joinEvent, leaveEvent, joinGuild, leaveGuild, joinTenant, leaveTenant, on, off }
 }

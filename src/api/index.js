@@ -6,6 +6,21 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
+// Request interceptor – inject X-Tenant-Id header from tenant store
+api.interceptors.request.use(config => {
+  // Lazy import to avoid circular dependency at module load time
+  try {
+    const { useTenantStore } = require('@/stores/tenant')
+    const tenantStore = useTenantStore()
+    if (tenantStore.activeTenantId) {
+      config.headers['X-Tenant-Id'] = tenantStore.activeTenantId
+    }
+  } catch {
+    // Store not yet initialized — skip header
+  }
+  return config
+})
+
 // Response interceptor – unwrap data
 api.interceptors.response.use(
   res => res.data,

@@ -17,7 +17,10 @@
         <h1 class="text-sm font-bold text-accent-gold font-wow leading-tight">
           {{ guildStore.currentGuild?.name ?? t('topBar.noGuild') }}
         </h1>
-        <p class="text-xs text-text-muted leading-tight">{{ guildStore.currentGuild?.realm ?? '' }}</p>
+        <p class="text-xs text-text-muted leading-tight">
+          <span v-if="tenantStore.activeTenant" class="mr-1">{{ tenantStore.activeTenant.name }} ·</span>
+          {{ guildStore.currentGuild?.realm ?? '' }}
+        </p>
       </div>
     </div>
 
@@ -159,6 +162,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+import { useTenantStore } from '@/stores/tenant'
 import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
 import * as notifApi from '@/api/notifications'
@@ -168,6 +172,7 @@ const { t } = useI18n()
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
+const tenantStore = useTenantStore()
 const uiStore = useUiStore()
 const router = useRouter()
 const { on, off } = useSocket()

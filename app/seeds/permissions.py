@@ -75,6 +75,11 @@ ALL_PERMISSIONS = [
     # Notifications
     ("view_notifications", "View Notifications", "View own notifications", "notifications"),
 
+    # Tenant management
+    ("manage_tenant_members", "Manage Tenant Members", "Invite/remove members from tenant workspace", "tenant"),
+    ("manage_tenant_settings", "Manage Tenant Settings", "Change tenant name, limits, and settings", "tenant"),
+    ("manage_tenants", "Manage Tenants", "Global admin: view/suspend/delete any tenant", "tenant"),
+
     # Admin
     ("list_system_users", "List System Users", "View all system users", "admin"),
     ("manage_system_users", "Manage System Users", "Activate/deactivate/delete users", "admin"),
@@ -137,6 +142,8 @@ ROLE_PERMISSIONS = {
         "update_guild_settings",
         # Guild admin specifics
         "create_guild", "delete_guild", "manage_guild_roles",
+        # Tenant management (guild admin = tenant admin for their workspace)
+        "manage_tenant_members", "manage_tenant_settings",
     ],
     "global_admin": [
         # All permissions
@@ -159,6 +166,8 @@ ROLE_PERMISSIONS = {
         "list_system_users", "manage_system_users",
         "trigger_sync", "manage_autosync",
         "manage_system_settings",
+        # Tenant management (global admin can manage all tenants)
+        "manage_tenant_members", "manage_tenant_settings", "manage_tenants",
     ],
 }
 

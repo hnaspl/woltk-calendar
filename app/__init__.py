@@ -270,6 +270,27 @@ def _register_socketio_handlers() -> None:
         if guild_id is not None:
             leave_room(f"guild_{guild_id}")
 
+    @socketio.on("join_tenant")
+    def handle_join_tenant(data):
+        if not current_user.is_authenticated:
+            return
+        tenant_id = data.get("tenant_id")
+        if tenant_id is None:
+            return
+        # Validate user is a member of this tenant
+        from app.services import tenant_service
+        if not tenant_service.is_tenant_member(tenant_id, current_user.id) and not getattr(current_user, "is_admin", False):
+            return
+        join_room(f"tenant_{tenant_id}")
+
+    @socketio.on("leave_tenant")
+    def handle_leave_tenant(data):
+        if not current_user.is_authenticated:
+            return
+        tenant_id = data.get("tenant_id")
+        if tenant_id is not None:
+            leave_room(f"tenant_{tenant_id}")
+
     @socketio.on("connect")
     def handle_connect():
         """Auto-join the user's personal notification room on connect."""

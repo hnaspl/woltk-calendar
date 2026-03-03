@@ -122,3 +122,27 @@ def seed(db, ctx):
         "char1": char1, "char2": char2, "char3": char3,
         "raid_def": raid_def, "event": event,
     }
+
+
+@pytest.fixture
+def tenant_with_owner(db, ctx):
+    """Create a user with an auto-provisioned tenant workspace."""
+    from app.services import tenant_service
+    user = User(username="tenant_owner", email="towner@test.com", password_hash="x", is_active=True)
+    db.session.add(user)
+    db.session.flush()
+    tenant = tenant_service.create_tenant(owner=user, name="Test Workspace")
+    return {"user": user, "tenant": tenant}
+
+
+@pytest.fixture
+def guild_in_tenant(db, ctx, tenant_with_owner):
+    """Create a guild within a tenant context."""
+    from app.services import guild_service
+    user = tenant_with_owner["user"]
+    tenant = tenant_with_owner["tenant"]
+    guild = guild_service.create_guild(
+        name="Tenant Guild", realm_name="Icecrown",
+        created_by=user.id, tenant_id=tenant.id,
+    )
+    return {"user": user, "tenant": tenant, "guild": guild}

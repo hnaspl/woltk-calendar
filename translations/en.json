@@ -1378,6 +1378,7 @@
     "inviteAcceptedMsg": "You have been added to the workspace.",
     "goToDashboard": "Go to Dashboard",
     "invalidToken": "Invalid invitation link.",
-    "inviteFailed": "Failed to accept invitation."
+    "inviteFailed": "Failed to accept invitation.",
+    "autoCreateNote": "A personal workspace will be created for you automatically."
   }
 }

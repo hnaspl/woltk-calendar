@@ -89,12 +89,24 @@ def _notify(
     guild_id: Optional[int] = None,
     raid_event_id: Optional[int] = None,
     *,
+    tenant_id: Optional[int] = None,
     title_key: Optional[str] = None,
     body_key: Optional[str] = None,
     title_params: Optional[dict] = None,
     body_params: Optional[dict] = None,
 ) -> None:
     """Create a notification and push it in real time."""
+    # Auto-derive tenant_id from guild if not provided
+    resolved_tenant_id = tenant_id
+    if resolved_tenant_id is None and guild_id is not None:
+        try:
+            from app.models.guild import Guild
+            guild = db.session.get(Guild, guild_id)
+            if guild and guild.tenant_id:
+                resolved_tenant_id = guild.tenant_id
+        except Exception:
+            pass
+
     try:
         create_notification(
             user_id=user_id,
@@ -103,6 +115,7 @@ def _notify(
             body=body,
             guild_id=guild_id,
             raid_event_id=raid_event_id,
+            tenant_id=resolved_tenant_id,
             title_key=title_key,
             body_key=body_key,
             title_params=title_params,

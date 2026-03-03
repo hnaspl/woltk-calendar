@@ -89,6 +89,7 @@
           <WowButton type="submit" :loading="loading" class="w-full mt-2">
             {{ t('auth.createAccount') }}
           </WowButton>
+          <p class="text-xs text-text-muted text-center mt-2">{{ t('tenant.autoCreateNote') }}</p>
         </form>
 
         <p class="text-center text-sm text-text-muted mt-6">

@@ -32,26 +32,6 @@
         >{{ g.name }} ({{ g.realm_name }})</option>
       </select>
 
-      <!-- Available guilds to join -->
-      <div v-if="availableGuilds.length > 0" class="mt-2">
-        <label class="text-[10px] text-text-muted uppercase tracking-wider mb-1 block">{{ t('guild.availableGuilds') }}</label>
-        <div class="space-y-1 max-h-32 overflow-y-auto">
-          <div
-            v-for="g in availableGuilds"
-            :key="g.id"
-            class="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded bg-bg-tertiary/50 border border-border-default"
-          >
-            <span class="text-text-muted truncate">{{ g.name }} <span class="text-[10px]">({{ g.realm_name }})</span></span>
-            <button
-              type="button"
-              class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors whitespace-nowrap font-medium"
-              :disabled="joiningGuildId === g.id"
-              @click="doJoinGuild(g)"
-            >{{ joiningGuildId === g.id ? t('common.labels.joining') : t('guild.join') }}</button>
-          </div>
-        </div>
-      </div>
-
       <button
         v-if="canCreateGuild"
         type="button"
@@ -235,18 +215,8 @@ const canCreateGuild = computed(() => permissions.can('create_guild'))
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
-// Available guilds = all guilds minus the ones user is already in, excluding invite-only guilds
-// Use the is_member flag from the /guilds/all API response as the primary filter
-const availableGuilds = computed(() => {
-  const memberIds = new Set(guildStore.guilds.map(g => g.id))
-  return guildStore.allGuilds.filter(g => !g.is_member && !memberIds.has(g.id) && g.allow_self_join !== false)
-})
-
-const joiningGuildId = ref(null)
-
-// Load all guilds on mount so available guilds are visible
+// Load guilds on mount and listen for real-time updates
 onMounted(() => {
-  guildStore.fetchAllGuilds()
   on('guilds_changed', handleGuildsChanged)
   on('guild_changed', handleGuildChanged)
 })
@@ -258,26 +228,10 @@ onUnmounted(() => {
 
 function handleGuildsChanged() {
   guildStore.fetchGuilds()
-  guildStore.fetchAllGuilds()
 }
 
 function handleGuildChanged() {
   guildStore.fetchGuilds()
-}
-
-async function doJoinGuild(guild) {
-  joiningGuildId.value = guild.id
-  try {
-    await guildsApi.joinGuild(guild.id)
-    await guildStore.fetchGuilds()
-    await guildStore.fetchAllGuilds()
-    if (!guildStore.currentGuild) guildStore.setCurrentGuild(guild)
-    uiStore.showToast(t('guild.toasts.joined', { name: guild.name }), 'success')
-  } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('guild.toasts.failedToJoin'), 'error')
-  } finally {
-    joiningGuildId.value = null
-  }
 }
 
 // Simple SVG icon components using render functions
@@ -510,7 +464,6 @@ async function doCreateGuild() {
       timezone: newGuild.timezone,
     })
     await guildStore.fetchGuilds()
-    await guildStore.fetchAllGuilds()
     guildStore.setCurrentGuild(guild)
     showCreateGuild.value = false
     newGuild.name = ''

@@ -1378,6 +1378,7 @@
     "inviteAcceptedMsg": "Zostałeś dodany do przestrzeni roboczej.",
     "goToDashboard": "Przejdź do panelu",
     "invalidToken": "Nieprawidłowy link z zaproszeniem.",
-    "inviteFailed": "Nie udało się przyjąć zaproszenia."
+    "inviteFailed": "Nie udało się przyjąć zaproszenia.",
+    "autoCreateNote": "Osobista przestrzeń robocza zostanie utworzona automatycznie."
   }
 }

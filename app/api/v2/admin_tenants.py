@@ -107,3 +107,23 @@ def delete_tenant(tenant_id: int):
         return jsonify({"error": "Tenant not found"}), 404
     tenant_service.delete_tenant(tenant)
     return jsonify({"message": "Tenant deleted"}), 200
+
+
+@bp.put("/<int:tenant_id>/limits")
+@login_required
+def update_limits(tenant_id: int):
+    """Override guild/member limits for a tenant (global admin only)."""
+    err = _require_admin()
+    if err:
+        return err
+    tenant = tenant_service.get_tenant(tenant_id)
+    if not tenant:
+        return jsonify({"error": "Tenant not found"}), 404
+    data = get_json()
+    allowed = {"max_guilds", "max_members"}
+    for key in allowed:
+        if key in data and data[key] is not None:
+            setattr(tenant, key, data[key])
+    from app.extensions import db
+    db.session.commit()
+    return jsonify(tenant.to_dict()), 200
