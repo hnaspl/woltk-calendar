@@ -766,7 +766,7 @@ class TestDiscordCallback:
             "/api/v1/auth/discord/callback?error=access_denied&state=denied-state")
         assert resp.status_code == 302
         location = resp.headers["Location"]
-        assert "discord.com" in location
+        assert location.startswith("https://discord.com/oauth2/authorize")
         # The retry must NOT include prompt=none
         assert "prompt=none" not in location
         assert "prompt=consent" not in location
