@@ -197,8 +197,9 @@ class MemberStatus(str, Enum):
     ACTIVE = "active"          # Full member (existing)
     INVITED = "invited"        # Invited, pending acceptance (existing)
     BANNED = "banned"          # Banned from guild (existing)
-    APPLIED = "applied"        # NEW: User applied, pending admin approval
-    DECLINED = "declined"      # NEW: Application or invitation was declined
+    APPLIED = "applied"              # NEW: User applied, pending admin approval
+    INVITE_DECLINED = "invite_declined"   # NEW: User declined an invitation
+    APPLICATION_REJECTED = "application_rejected"  # NEW: Admin rejected an application
 ```
 
 #### 3.2.3 Guild Visibility Settings
@@ -222,10 +223,11 @@ GuildInvitation
 ├── guild_id (FK → Guild)
 ├── inviter_id (FK → User)         # Who sent the invite
 ├── invitee_email (String)         # Email of invitee (may not have account yet)
-├── invitee_user_id (FK → User)    # Resolved when user accepts (nullable)
+├── invitee_user_id (FK → User)    # Auto-resolved if email matches existing user;
+│                                  #   otherwise set when invitee registers & accepts
 ├── invite_token (String, unique)  # Unique token for invite link
 ├── role (String)                  # Role to assign on acceptance
-├── status (Enum)                  # pending / accepted / declined / expired
+├── status (Enum)                  # pending / accepted / invite_declined / expired
 ├── expires_at (DateTime)          # Invitation expiry
 ├── created_at (DateTime)
 ├── accepted_at (DateTime)
@@ -895,6 +897,7 @@ Current API is `/api/v1/`. Strategy:
 | 6 | Allow users to see guilds they're not members of? | Yes (listed) / No (private) | **Configurable** per guild (visibility setting) |
 | 7 | Database name change from `wotlk_calendar.db`? | Yes / No | **Yes** — rename to `raid_calendar.db` or `guild_calendar.db` in a future phase |
 | 8 | Should the `WowClass` Python enum remain? | Keep as universal / Replace with expansion-dynamic | **Keep as superset** of all classes; filter at runtime by expansion |
+| 9 | Should the default expansion be a named constant? | Hardcoded / Constant | **Named constant** (`DEFAULT_EXPANSION = "wotlk"`) to avoid scattered magic strings |
 
 ### 9.2 Research Items
 
