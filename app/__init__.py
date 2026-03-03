@@ -61,6 +61,8 @@ def create_app(config_override: dict | None = None) -> Flask:
         app.wsgi_app = ProxyFix(
             app.wsgi_app,
             x_for=num_proxies,
+            x_proto=num_proxies,
+            x_host=num_proxies,
         )
 
     # Enable WAL mode for SQLite (better concurrent read/write performance)

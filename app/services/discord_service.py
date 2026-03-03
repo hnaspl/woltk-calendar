@@ -7,6 +7,7 @@ Key requirements from Discord docs:
 - Scopes in the authorize URL are separated by url-encoded spaces (%20)
 - Token exchange uses HTTP Basic auth (client_id, client_secret)
 - redirect_uri in token exchange must match the authorize URL exactly
+- redirect_uri must match a URL registered in the Discord Developer Portal
 """
 
 from __future__ import annotations
@@ -39,9 +40,17 @@ DISCORD_API_BASE = "https://discord.com/api/v10"
 DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize"
 DISCORD_TOKEN_URL = f"{DISCORD_API_BASE}/oauth2/token"
 
+# The fixed path of the Discord OAuth2 callback endpoint.
+DISCORD_CALLBACK_PATH = "/api/v1/auth/discord/callback"
+
 
 def _get_discord_settings() -> dict:
-    """Load and decrypt Discord OAuth settings from the database."""
+    """Load and decrypt Discord OAuth settings from the database.
+
+    Only ``discord_client_id`` and ``discord_client_secret`` are required.
+    ``discord_redirect_uri`` is optional – when absent the callback URL is
+    auto-generated from the current request so the admin cannot mis-type it.
+    """
     keys = ["discord_client_id", "discord_client_secret", "discord_redirect_uri"]
     rows = db.session.execute(
         sa.select(SystemSetting).where(SystemSetting.key.in_(keys))
@@ -49,7 +58,7 @@ def _get_discord_settings() -> dict:
     settings = {r.key: r.value for r in rows}
 
     result: dict[str, str] = {}
-    for key in keys:
+    for key in ["discord_client_id", "discord_client_secret"]:
         val = settings.get(key, "")
         if not val:
             return {}
@@ -59,7 +68,28 @@ def _get_discord_settings() -> dict:
             except ValueError:
                 return {}
         result[key] = val
+
+    # redirect_uri is optional – include it only when explicitly configured
+    redirect_uri = (settings.get("discord_redirect_uri") or "").strip()
+    if redirect_uri:
+        result["discord_redirect_uri"] = redirect_uri
+
     return result
+
+
+def _build_callback_url() -> str:
+    """Auto-generate the Discord OAuth2 callback URL from the current request.
+
+    Uses ``request.host_url`` which includes scheme, host, and port.
+    ProxyFix ensures this reflects the real client-facing URL behind proxies.
+    """
+    from flask import request
+    return f"{request.scheme}://{request.host}{DISCORD_CALLBACK_PATH}"
+
+
+def _effective_redirect_uri(settings: dict) -> str:
+    """Return the redirect_uri to use: manual override or auto-generated."""
+    return settings.get("discord_redirect_uri") or _build_callback_url()
 
 
 def is_discord_enabled() -> bool:
@@ -68,9 +98,11 @@ def is_discord_enabled() -> bool:
 
 
 def get_redirect_uri() -> Optional[str]:
-    """Return the configured redirect URI, or None if not configured."""
+    """Return the effective redirect URI, or None if Discord is not configured."""
     settings = _get_discord_settings()
-    return settings.get("discord_redirect_uri") if settings else None
+    if not settings:
+        return None
+    return _effective_redirect_uri(settings)
 
 
 def get_authorize_url(state: str) -> Optional[str]:
@@ -82,9 +114,10 @@ def get_authorize_url(state: str) -> Optional[str]:
     settings = _get_discord_settings()
     if not settings:
         return None
+    redirect_uri = _effective_redirect_uri(settings)
     params = {
         "client_id": settings["discord_client_id"],
-        "redirect_uri": settings["discord_redirect_uri"],
+        "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": "identify email",
         "state": state,
@@ -138,7 +171,7 @@ def _do_exchange(code: str, settings: dict) -> Optional[dict]:
 
     client_id = settings["discord_client_id"]
     client_secret = settings["discord_client_secret"]
-    redirect_uri = settings["discord_redirect_uri"]
+    redirect_uri = _effective_redirect_uri(settings)
 
     try:
         token_resp = requests.post(

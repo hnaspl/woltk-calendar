@@ -159,9 +159,15 @@ def update_system_settings():
 @bp.get("/settings/discord")
 @login_required
 def get_discord_settings():
-    """Return Discord OAuth settings (client_secret is masked). Global admin only."""
+    """Return Discord OAuth settings (client_secret is masked). Global admin only.
+
+    Includes ``callback_url``: the exact URL the admin must register in the
+    Discord Developer Portal under *Redirects*.  It is auto-generated from
+    the current request so the admin cannot mis-type the path.
+    """
     if not current_user.is_admin:
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    from flask import request
     from app.models.system_setting import SystemSetting
     keys = ["discord_client_id", "discord_client_secret", "discord_redirect_uri"]
     rows = db.session.execute(
@@ -173,6 +179,10 @@ def get_discord_settings():
     secret = settings.get("discord_client_secret", "")
     if secret:
         settings["discord_client_secret"] = "••••••••"
+
+    # Auto-generated callback URL – this is what goes into Discord "Redirects"
+    from app.services.discord_service import DISCORD_CALLBACK_PATH
+    settings["callback_url"] = f"{request.scheme}://{request.host}{DISCORD_CALLBACK_PATH}"
 
     return jsonify(settings), 200
 

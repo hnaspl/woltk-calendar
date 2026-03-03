@@ -154,6 +154,20 @@
 
       <div v-if="discordLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" aria-label="Loading Discord settings" />
       <div v-else class="space-y-4 max-w-lg">
+        <!-- Callback URL (auto-generated, read-only) -->
+        <div v-if="discordCallbackUrl" class="p-3 rounded bg-bg-secondary border border-border-gold/50">
+          <label class="block text-xs text-accent-gold font-semibold mb-1">{{ t('admin.system.discord.callbackUrlLabel') }}</label>
+          <p class="text-text-muted text-xs mb-2">{{ t('admin.system.discord.callbackUrlHelp') }}</p>
+          <div class="flex items-center gap-2">
+            <code class="flex-1 text-xs text-text-primary bg-bg-tertiary border border-border-default rounded px-2 py-1.5 select-all break-all">{{ discordCallbackUrl }}</code>
+            <button
+              @click="copyCallbackUrl"
+              class="shrink-0 text-xs bg-bg-tertiary border border-border-default hover:border-border-gold text-text-muted hover:text-text-primary rounded px-2 py-1.5 transition-colors"
+              :title="t('common.buttons.copy')"
+            >📋</button>
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.discord.clientId') }}</label>
           <input
@@ -170,16 +184,6 @@
             v-model="discordForm.discord_client_secret"
             type="password"
             :placeholder="t('admin.system.discord.clientSecretPlaceholder')"
-            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('admin.system.discord.redirectUri') }}</label>
-          <input
-            v-model="discordForm.discord_redirect_uri"
-            type="text"
-            :placeholder="t('admin.system.discord.redirectUriPlaceholder')"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
           />
         </div>
@@ -239,10 +243,10 @@ const settingsForm = ref({
 // Discord OAuth settings state
 const discordLoading = ref(true)
 const discordSaving = ref(false)
+const discordCallbackUrl = ref('')
 const discordForm = ref({
   discord_client_id: '',
   discord_client_secret: '',
-  discord_redirect_uri: '',
 })
 
 onMounted(async () => {
@@ -275,10 +279,10 @@ onMounted(async () => {
     discordLoading.value = true
     try {
       const discord = await adminApi.getDiscordSettings()
+      discordCallbackUrl.value = discord.callback_url || ''
       discordForm.value = {
         discord_client_id: discord.discord_client_id || '',
         discord_client_secret: discord.discord_client_secret || '',
-        discord_redirect_uri: discord.discord_redirect_uri || '',
       }
     } catch {
       // ignore – defaults are fine
@@ -376,6 +380,15 @@ async function saveDiscordSettings() {
     uiStore.showToast(t('admin.system.toasts.failedToSaveDiscord'), 'error')
   } finally {
     discordSaving.value = false
+  }
+}
+
+async function copyCallbackUrl() {
+  try {
+    await navigator.clipboard.writeText(discordCallbackUrl.value)
+    uiStore.showToast(t('admin.system.discord.callbackUrlCopied'), 'success')
+  } catch {
+    // Fallback: select the text
   }
 }
 </script>

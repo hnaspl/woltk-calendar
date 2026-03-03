@@ -200,6 +200,19 @@ class TestDiscordEnabled:
         assert resp.status_code == 200
         assert resp.get_json()["enabled"] is True
 
+    def test_discord_enabled_without_redirect_uri(self, app, client, db):
+        """Discord should be enabled with just client_id and client_secret (redirect_uri is auto-generated)."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="test-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                         value=encrypt_value("test-secret")))
+            db.session.commit()
+
+        resp = client.get("/api/v1/auth/discord/enabled")
+        assert resp.status_code == 200
+        assert resp.get_json()["enabled"] is True
+
 
 # ---------------------------------------------------------------------------
 # Discord login URL
@@ -257,6 +270,36 @@ class TestDiscordLoginUrl:
         resp = client.get("/api/v1/auth/discord/login")
         location = resp.headers["Location"]
         assert "prompt=consent" in location
+
+    def test_auto_generates_redirect_uri_when_not_configured(self, app, client, db):
+        """When discord_redirect_uri is not set, the callback URL is auto-generated."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="auto-id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                         value=encrypt_value("auto-sec")))
+            db.session.commit()
+
+        resp = client.get("/api/v1/auth/discord/login")
+        assert resp.status_code == 302
+        location = resp.headers["Location"]
+        assert "discord.com" in location
+        # The auto-generated URI should contain the correct callback path
+        assert "%2Fapi%2Fv1%2Fauth%2Fdiscord%2Fcallback" in location
+
+    def test_auto_generated_uri_uses_correct_path(self, app, client, db):
+        """Auto-generated redirect_uri must use /api/v1/auth/discord/callback path."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            db.session.add(SystemSetting(key="discord_client_id", value="pid"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                         value=encrypt_value("psec")))
+            db.session.commit()
+
+            from app.services.discord_service import get_redirect_uri
+            with app.test_request_context("/", base_url="http://mysite.com:5000"):
+                uri = get_redirect_uri()
+                assert uri == "http://mysite.com:5000/api/v1/auth/discord/callback"
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +384,15 @@ class TestAdminDiscordSettings:
             setting = db.session.get(SystemSetting, "discord_client_secret")
             # Value should remain unchanged
             assert setting.value == original_encrypted
+
+    def test_get_returns_callback_url(self, client, admin_user):
+        """GET discord settings includes auto-generated callback_url."""
+        _login(client, "admin@test.com", "admin123pass")
+        resp = client.get("/api/v1/admin/settings/discord")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "callback_url" in data
+        assert data["callback_url"].endswith("/api/v1/auth/discord/callback")
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +520,7 @@ class TestDiscordService:
                 assert "client_secret" not in post_data
 
     def test_get_redirect_uri_returns_configured(self, app, db):
-        """get_redirect_uri returns the configured redirect URI."""
+        """get_redirect_uri returns the manually configured redirect URI when set."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             from app.services.discord_service import get_redirect_uri
@@ -478,13 +530,28 @@ class TestDiscordService:
             db.session.add(SystemSetting(key="discord_redirect_uri",
                                           value="http://myhost:5000/api/v1/auth/discord/callback"))
             db.session.commit()
-            assert get_redirect_uri() == "http://myhost:5000/api/v1/auth/discord/callback"
+            with app.test_request_context("/"):
+                assert get_redirect_uri() == "http://myhost:5000/api/v1/auth/discord/callback"
 
     def test_get_redirect_uri_returns_none_when_not_configured(self, app):
         """get_redirect_uri returns None when settings are missing."""
         with app.app_context():
             from app.services.discord_service import get_redirect_uri
-            assert get_redirect_uri() is None
+            with app.test_request_context("/"):
+                assert get_redirect_uri() is None
+
+    def test_get_redirect_uri_auto_generates_when_no_manual(self, app, db):
+        """get_redirect_uri auto-generates from request context when no manual URI is set."""
+        with app.app_context():
+            from app.utils.encryption import encrypt_value
+            from app.services.discord_service import get_redirect_uri
+            db.session.add(SystemSetting(key="discord_client_id", value="id"))
+            db.session.add(SystemSetting(key="discord_client_secret",
+                                          value=encrypt_value("secret")))
+            db.session.commit()
+            with app.test_request_context("/", base_url="http://example.com:8080"):
+                uri = get_redirect_uri()
+                assert uri == "http://example.com:8080/api/v1/auth/discord/callback"
 
 
 # ---------------------------------------------------------------------------
