@@ -3,7 +3,7 @@
     <!-- Roles list -->
     <WowCard>
       <div class="flex items-center justify-between mb-4">
-        <h2 class="wow-heading text-base">{{ t('roles.allRoles') }} ({{ roles.length }})</h2>
+        <h2 class="wow-heading text-base">{{ t('roles.allRoles') }} ({{ displayedRoles.length }})</h2>
         <WowButton v-if="isGlobalAdmin" @click="openCreateRole">{{ t('roles.newRole') }}</WowButton>
       </div>
 
@@ -23,7 +23,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
-            <tr v-for="role in roles" :key="role.id" class="hover:bg-bg-tertiary/50 transition-colors">
+            <tr v-for="role in displayedRoles" :key="role.id" class="hover:bg-bg-tertiary/50 transition-colors">
               <td class="px-4 py-2.5">
                 <div class="text-text-primary font-medium">{{ role.display_name }}</div>
                 <div class="text-xs text-text-muted">{{ role.name }}</div>
@@ -67,7 +67,7 @@
 
     <!-- All permissions reference -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">{{ t('roles.availablePermissions') }} ({{ allPermissions.length }})</h2>
+      <h2 class="wow-heading text-base mb-4">{{ t('roles.availablePermissions') }} ({{ displayedPermissions.length }})</h2>
 
       <div v-if="permissionsLoading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else>
@@ -87,8 +87,8 @@
       </div>
     </WowCard>
 
-    <!-- Grant Rules — only visible to global admins -->
-    <WowCard v-if="isGlobalAdmin">
+    <!-- Grant Rules — only visible in global admin panel -->
+    <WowCard v-if="isGlobalAdmin && !isGuildMode">
       <div class="flex items-center justify-between mb-4">
         <h2 class="wow-heading text-base">{{ t('roles.grantRules') }}</h2>
         <WowButton @click="showGrantRuleModal = true">{{ t('roles.addRule') }}</WowButton>
@@ -262,10 +262,15 @@ import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import * as rolesApi from '@/api/roles'
 
+const props = defineProps({
+  mode: { type: String, default: 'global', validator: v => ['guild', 'global'].includes(v) }
+})
+
 const { t } = useI18n()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
 
+const isGuildMode = computed(() => props.mode === 'guild')
 const isGlobalAdmin = computed(() => !!authStore.user?.is_admin)
 
 // Roles state
@@ -308,14 +313,29 @@ const grantRuleForm = reactive({
   grantee_role_id: null
 })
 
+// Computed — filtered views for guild vs global mode
+const displayedRoles = computed(() => {
+  if (isGuildMode.value) {
+    return roles.value.filter(r => r.name !== 'global_admin')
+  }
+  return roles.value
+})
+
+const displayedPermissions = computed(() => {
+  if (isGuildMode.value) {
+    return allPermissions.value.filter(p => p.category !== 'admin')
+  }
+  return allPermissions.value
+})
+
 // Computed
 const permissionCategories = computed(() => {
-  const cats = [...new Set(allPermissions.value.map(p => p.category))]
+  const cats = [...new Set(displayedPermissions.value.map(p => p.category))]
   return cats.sort()
 })
 
 function permissionsByCategory(category) {
-  return allPermissions.value.filter(p => p.category === category)
+  return displayedPermissions.value.filter(p => p.category === category)
 }
 
 function permLabel(code, fallback) {

@@ -51,7 +51,7 @@
         <!-- Tab content -->
         <KeepAlive>
           <MembersTab v-if="activeTab === 'members'" />
-          <RolesTab v-else-if="activeTab === 'roles'" />
+          <RolesTab v-else-if="activeTab === 'roles'" mode="guild" />
           <GuildSettingsTab v-else-if="activeTab === 'guild'" />
         </KeepAlive>
       </template>

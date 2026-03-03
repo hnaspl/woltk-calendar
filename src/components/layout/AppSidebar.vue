@@ -335,8 +335,8 @@ const navGroups = computed(() => {
     }
   ]
 
-  // Guild management visible to users with relevant permissions
-  if (canManageGuild.value || hasGuildAdminAccess.value) {
+  // Guild management visible to users with relevant permissions (requires a guild)
+  if ((canManageGuild.value || hasGuildAdminAccess.value) && guildStore.currentGuild) {
     const guildItems = []
     if (canManageGuild.value) {
       guildItems.push(
