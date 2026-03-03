@@ -34,3 +34,8 @@ export const getWarmaneRoster = (guildId) =>
 
 export const transferOwnership = (guildId, userId) =>
   api.post(`/guilds/${guildId}/transfer-ownership`, { user_id: userId })
+
+// Admin-only endpoints
+export const adminGetAllGuilds = () => api.get('/guilds/admin/all')
+
+export const adminGetGuildMembers = (guildId) => api.get(`/guilds/admin/${guildId}/members`)

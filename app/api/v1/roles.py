@@ -299,8 +299,12 @@ def list_grant_rules():
 @bp.post("/grant-rules")
 @login_required
 def create_grant_rule():
-    """Create a new grant rule (which role can assign which role). Global admin only."""
-    err = _require_global_admin()
+    """Create a new grant rule (which role can assign which role).
+
+    Requires manage_roles or manage_guild_roles.  Non-admin callers may
+    only create rules involving roles at or below their own level.
+    """
+    err = _require_manage_roles()
     if err:
         return err
 
@@ -316,6 +320,12 @@ def create_grant_rule():
     grantee = db.session.get(SystemRole, grantee_id)
     if not granter or not grantee:
         return jsonify({"error": _t("api.roles.grantRolesNotFound")}), 404
+
+    # Non-admin callers cannot reference roles above their own level
+    if not getattr(current_user, "is_admin", False):
+        max_level = _caller_max_role_level()
+        if granter.level > max_level or grantee.level > max_level:
+            return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
     # Check uniqueness
     existing = db.session.execute(
@@ -337,14 +347,26 @@ def create_grant_rule():
 @bp.delete("/grant-rules/<int:rule_id>")
 @login_required
 def delete_grant_rule(rule_id: int):
-    """Delete a grant rule. Global admin only."""
-    err = _require_global_admin()
+    """Delete a grant rule.
+
+    Requires manage_roles or manage_guild_roles.  Non-admin callers may
+    only delete rules involving roles at or below their own level.
+    """
+    err = _require_manage_roles()
     if err:
         return err
 
     rule = db.session.get(RoleGrantRule, rule_id)
     if rule is None:
         return jsonify({"error": _t("api.roles.grantNotFound")}), 404
+
+    # Non-admin callers cannot touch rules involving roles above their level
+    if not getattr(current_user, "is_admin", False):
+        max_level = _caller_max_role_level()
+        granter = db.session.get(SystemRole, rule.granter_role_id)
+        grantee = db.session.get(SystemRole, rule.grantee_role_id)
+        if (granter and granter.level > max_level) or (grantee and grantee.level > max_level):
+            return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
     db.session.delete(rule)
     db.session.commit()

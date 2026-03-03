@@ -46,6 +46,45 @@ def list_all_guilds():
     return jsonify(result), 200
 
 
+@bp.get("/admin/all")
+@login_required
+def admin_list_all_guilds():
+    """List all guilds with member counts (global admin only)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guilds = guild_service.list_all_guilds()
+    result = []
+    for g in guilds:
+        d = g.to_dict()
+        d["member_count"] = db.session.execute(
+            sa.select(sa.func.count(GuildMembership.id)).where(
+                GuildMembership.guild_id == g.id,
+                GuildMembership.status == "active",
+            )
+        ).scalar() or 0
+        # Include creator username
+        if g.creator:
+            d["creator_username"] = g.creator.username
+        result.append(d)
+    return jsonify(result), 200
+
+
+@bp.get("/admin/<int:guild_id>/members")
+@login_required
+def admin_list_members(guild_id: int):
+    """List guild members (global admin only — no membership required)."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    members = guild_service.list_members(guild_id)
+    return jsonify([m.to_dict() for m in members]), 200
+
+
 @bp.post("/<int:guild_id>/join")
 @login_required
 def join_guild(guild_id: int):
@@ -128,7 +167,8 @@ def get_guild(guild_id: int):
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
-    if get_membership(guild_id, current_user.id) is None:
+    # Global admins can view any guild
+    if not getattr(current_user, "is_admin", False) and get_membership(guild_id, current_user.id) is None:
         return jsonify({"error": _t("common.errors.forbidden")}), 403
     return jsonify(guild.to_dict()), 200
 

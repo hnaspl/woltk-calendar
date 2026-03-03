@@ -995,33 +995,101 @@ class TestRolePermissionFiltering:
             })
             assert resp.status_code == 403
 
-    def test_guild_admin_cannot_create_grant_rules(self, seeded, app):
-        """Guild admin cannot create grant rules — global admin only."""
+    def test_guild_admin_can_create_grant_rules_at_own_level(self, seeded, app):
+        """Guild admin CAN create grant rules for roles at/below their level."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            # Get role IDs
+            # Get role IDs — guild admin sees roles at/below level 80
             resp = client.get("/api/v1/roles")
             roles = resp.get_json()
-            if len(roles) >= 2:
-                resp = client.post("/api/v1/roles/grant-rules", json={
-                    "granter_role_id": roles[0]["id"],
-                    "grantee_role_id": roles[1]["id"],
-                })
-                assert resp.status_code == 403
+            # Find two distinct roles at/below guild admin level
+            assert len(roles) >= 2
+            # Create a unique rule using officer → member (or whatever is available)
+            granter = next(r for r in roles if r["name"] == "officer")
+            grantee = next(r for r in roles if r["name"] == "member")
+            # First ensure rule does not exist
+            resp = client.get("/api/v1/roles/grant-rules")
+            existing_rules = resp.get_json()
+            existing_pair = {
+                (r["granter_role_name"], r["grantee_role_name"]) for r in existing_rules
+            }
+            if (granter["name"], grantee["name"]) in existing_pair:
+                # Already exists as seeded — delete it first, then recreate
+                rule_id = next(
+                    r["id"] for r in existing_rules
+                    if r["granter_role_name"] == granter["name"]
+                    and r["grantee_role_name"] == grantee["name"]
+                )
+                client.delete(f"/api/v1/roles/grant-rules/{rule_id}")
+            resp = client.post("/api/v1/roles/grant-rules", json={
+                "granter_role_id": granter["id"],
+                "grantee_role_id": grantee["id"],
+            })
+            assert resp.status_code == 201
 
-    def test_guild_admin_cannot_delete_grant_rules(self, seeded, app):
-        """Guild admin cannot delete grant rules — global admin only."""
-        # Get existing grant rules as site admin
+    def test_guild_admin_can_delete_grant_rules_at_own_level(self, seeded, app):
+        """Guild admin CAN delete grant rules for roles at/below their level."""
+        # Create a deletable rule as site admin
+        with app.test_client() as admin_client:
+            self._login(app, admin_client, seeded["site_admin"])
+            # Create a custom role at low level
+            resp = admin_client.post("/api/v1/roles", json={
+                "name": "deletable_rule_role",
+                "display_name": "Deletable Rule Role",
+                "level": 10,
+            })
+            custom_id = resp.get_json()["id"]
+            member = _db.session.execute(
+                _db.select(SystemRole).where(SystemRole.name == "member")
+            ).scalar_one()
+            resp = admin_client.post("/api/v1/roles/grant-rules", json={
+                "granter_role_id": custom_id,
+                "grantee_role_id": member.id,
+            })
+            assert resp.status_code == 201
+            rule_id = resp.get_json()["id"]
+
+        # Delete as guild admin
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            resp = client.delete(f"/api/v1/roles/grant-rules/{rule_id}")
+            assert resp.status_code == 200
+
+    def test_guild_admin_cannot_create_grant_rules_above_level(self, seeded, app):
+        """Guild admin CANNOT create grant rules involving roles above their level."""
+        # Get the global_admin role (level 100)
+        global_admin = _db.session.execute(
+            _db.select(SystemRole).where(SystemRole.name == "global_admin")
+        ).scalar_one()
+        member = _db.session.execute(
+            _db.select(SystemRole).where(SystemRole.name == "member")
+        ).scalar_one()
+
+        with app.test_client() as client:
+            self._login(app, client, seeded["guild_admin_user"])
+            # Try to create a rule with global_admin as granter (level 100 > 80)
+            resp = client.post("/api/v1/roles/grant-rules", json={
+                "granter_role_id": global_admin.id,
+                "grantee_role_id": member.id,
+            })
+            assert resp.status_code == 403
+
+    def test_guild_admin_cannot_delete_grant_rules_above_level(self, seeded, app):
+        """Guild admin CANNOT delete grant rules involving roles above their level."""
+        # Get global_admin grant rules as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
             resp = admin_client.get("/api/v1/roles/grant-rules")
             rules = resp.get_json()
+            # Find a rule involving global_admin
+            ga_rule = next(
+                (r for r in rules if r["granter_role_name"] == "global_admin"), None
+            )
 
-        if rules:
-            # Try to delete as guild admin in a fresh session
+        if ga_rule:
             with app.test_client() as client:
                 self._login(app, client, seeded["guild_admin_user"])
-                resp = client.delete(f"/api/v1/roles/grant-rules/{rules[0]['id']}")
+                resp = client.delete(f"/api/v1/roles/grant-rules/{ga_rule['id']}")
                 assert resp.status_code == 403
 
     def test_global_admin_can_create_roles(self, seeded, app):
@@ -1039,6 +1107,122 @@ class TestRolePermissionFiltering:
             assert data["level"] == 50
             # Admin CAN assign admin-category permissions
             assert "list_system_users" in data["permissions"]
+
+    def test_delete_role_cascades_grant_rules(self, seeded, app):
+        """Deleting a role should also remove its grant rules."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            # Create a custom role
+            resp = client.post("/api/v1/roles", json={
+                "name": "cascade_test",
+                "display_name": "Cascade Test",
+                "level": 15,
+            })
+            role_id = resp.get_json()["id"]
+
+            # Create a grant rule involving it
+            member = _db.session.execute(
+                _db.select(SystemRole).where(SystemRole.name == "member")
+            ).scalar_one()
+            resp = client.post("/api/v1/roles/grant-rules", json={
+                "granter_role_id": role_id,
+                "grantee_role_id": member.id,
+            })
+            assert resp.status_code == 201
+            rule_id = resp.get_json()["id"]
+
+            # Delete the role
+            resp = client.delete(f"/api/v1/roles/{role_id}")
+            assert resp.status_code == 200
+
+            # Grant rule should be gone
+            rule = _db.session.get(RoleGrantRule, rule_id)
+            assert rule is None
+
+    def test_officer_cannot_manage_grant_rules(self, seeded, app):
+        """Officer (without manage_guild_roles) cannot create grant rules."""
+        member = _db.session.execute(
+            _db.select(SystemRole).where(SystemRole.name == "member")
+        ).scalar_one()
+        raid_leader = _db.session.execute(
+            _db.select(SystemRole).where(SystemRole.name == "raid_leader")
+        ).scalar_one()
+
+        with app.test_client() as client:
+            self._login(app, client, seeded["officer_user"])
+            resp = client.post("/api/v1/roles/grant-rules", json={
+                "granter_role_id": raid_leader.id,
+                "grantee_role_id": member.id,
+            })
+            assert resp.status_code == 403
+
+
+# ===========================================================================
+# Test: Admin guild management
+# ===========================================================================
+
+class TestAdminGuildManagement:
+    """Global admin can manage all guilds."""
+
+    @staticmethod
+    def _login(app, client, user):
+        with app.test_request_context():
+            from flask_login import login_user
+            login_user(user)
+            from flask import session as flask_session
+            sess_data = dict(flask_session)
+        with client.session_transaction() as s:
+            s.update(sess_data)
+
+    def test_admin_can_list_all_guilds(self, seeded, app):
+        """Global admin can list all guilds with member counts."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.get("/api/v1/guilds/admin/all")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert len(data) >= 1
+            guild_data = data[0]
+            assert "member_count" in guild_data
+            assert guild_data["member_count"] >= 1
+
+    def test_non_admin_cannot_list_admin_guilds(self, seeded, app):
+        """Non-admin users cannot access admin guild listing."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["member_user"])
+            resp = client.get("/api/v1/guilds/admin/all")
+            assert resp.status_code == 403
+
+    def test_admin_can_view_guild_members(self, seeded, app):
+        """Global admin can view members of any guild."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.get(f"/api/v1/guilds/admin/{seeded['guild'].id}/members")
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert len(data) >= 1
+
+    def test_non_admin_cannot_view_admin_guild_members(self, seeded, app):
+        """Non-admin users cannot access admin guild members endpoint."""
+        with app.test_client() as client:
+            self._login(app, client, seeded["member_user"])
+            resp = client.get(f"/api/v1/guilds/admin/{seeded['guild'].id}/members")
+            assert resp.status_code == 403
+
+    def test_admin_can_view_any_guild(self, seeded, app):
+        """Global admin can view any guild even without membership."""
+        # Create a second guild and don't add admin to it
+        from app.models.guild import Guild as GuildModel
+        g2 = GuildModel(name="Private Guild", realm_name="Lordaeron",
+                        created_by=seeded["member_user"].id)
+        _db.session.add(g2)
+        _db.session.commit()
+
+        with app.test_client() as client:
+            self._login(app, client, seeded["site_admin"])
+            resp = client.get(f"/api/v1/guilds/{g2.id}")
+            assert resp.status_code == 200
+            assert resp.get_json()["name"] == "Private Guild"
 
 
 # ===========================================================================

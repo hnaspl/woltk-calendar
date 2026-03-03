@@ -87,8 +87,8 @@
       </div>
     </WowCard>
 
-    <!-- Grant Rules — only visible in global admin panel -->
-    <WowCard v-if="isGlobalAdmin && !isGuildMode">
+    <!-- Grant Rules — visible when user can manage roles -->
+    <WowCard v-if="canManageRoles">
       <div class="flex items-center justify-between mb-4">
         <h2 class="wow-heading text-base">{{ t('roles.grantRules') }}</h2>
         <WowButton @click="showGrantRuleModal = true">{{ t('roles.addRule') }}</WowButton>
@@ -107,7 +107,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-border-default">
-            <tr v-for="rule in grantRules" :key="rule.id" class="hover:bg-bg-tertiary/50 transition-colors">
+            <tr v-for="rule in displayedGrantRules" :key="rule.id" class="hover:bg-bg-tertiary/50 transition-colors">
               <td class="px-4 py-2.5 text-text-primary font-medium">{{ roleDisplayName(rule.granter_role_name) }}</td>
               <td class="px-4 py-2.5 text-center text-accent-gold">→</td>
               <td class="px-4 py-2.5 text-text-primary">{{ roleDisplayName(rule.grantee_role_name) }}</td>
@@ -115,7 +115,7 @@
                 <WowButton variant="danger" class="text-xs py-1 px-2" @click="doDeleteGrantRule(rule)">{{ t('common.buttons.remove') }}</WowButton>
               </td>
             </tr>
-            <tr v-if="!grantRules.length">
+            <tr v-if="!displayedGrantRules.length">
               <td colspan="4" class="px-4 py-4 text-center text-text-muted text-sm">{{ t('roles.noGrantRules') }}</td>
             </tr>
           </tbody>
@@ -229,14 +229,14 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granterLabel') }}</label>
           <select v-model="grantRuleForm.granter_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
+            <option v-for="r in displayedRoles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('roles.granteeLabel') }}</label>
           <select v-model="grantRuleForm.grantee_role_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
             <option :value="null" disabled>{{ t('common.fields.selectRole') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
+            <option v-for="r in displayedRoles" :key="r.id" :value="r.id">{{ r.display_name }} ({{ t('common.fields.level') }} {{ r.level }})</option>
           </select>
         </div>
         <div v-if="grantRuleError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ grantRuleError }}</div>
@@ -334,6 +334,17 @@ const displayedPermissions = computed(() => {
     return allPermissions.value.filter(p => p.category !== 'admin')
   }
   return allPermissions.value
+})
+
+// In guild mode, only show grant rules involving visible roles
+const displayedGrantRules = computed(() => {
+  if (isGuildMode.value) {
+    const visibleNames = new Set(displayedRoles.value.map(r => r.name))
+    return grantRules.value.filter(
+      r => visibleNames.has(r.granter_role_name) && visibleNames.has(r.grantee_role_name)
+    )
+  }
+  return grantRules.value
 })
 
 // Computed

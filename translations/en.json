@@ -721,6 +721,20 @@
     "globalAdmin": {
       "title": "Global Admin Panel",
       "subtitle": "Manage system-wide settings, users, and roles"
+    },
+    "guilds": {
+      "tabTitle": "Guilds",
+      "title": "All Guilds ({count})",
+      "name": "Guild Name",
+      "realm": "Realm",
+      "members": "Members",
+      "owner": "Owner",
+      "created": "Created",
+      "joined": "Joined",
+      "viewMembers": "View Members",
+      "noGuilds": "No guilds found.",
+      "noMembers": "No members in this guild.",
+      "loadError": "Failed to load guilds."
     }
   },
   "signup": {

@@ -721,6 +721,20 @@
     "globalAdmin": {
       "title": "Panel Admina Globalnego",
       "subtitle": "Zarządzaj ustawieniami systemowymi, użytkownikami i rolami"
+    },
+    "guilds": {
+      "tabTitle": "Gildie",
+      "title": "Wszystkie gildie ({count})",
+      "name": "Nazwa gildii",
+      "realm": "Realm",
+      "members": "Członkowie",
+      "owner": "Właściciel",
+      "created": "Utworzona",
+      "joined": "Dołączył",
+      "viewMembers": "Pokaż członków",
+      "noGuilds": "Nie znaleziono gildii.",
+      "noMembers": "Brak członków w tej gildii.",
+      "loadError": "Nie udało się załadować gildii."
     }
   },
   "signup": {
