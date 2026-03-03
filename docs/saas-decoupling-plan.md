@@ -791,9 +791,9 @@ export const pluginRegistry = {
 
 ## 7. Phased Implementation Roadmap
 
-### Phase 0: Row-Level Tenancy (`tenant_id` on every table)
+### Phase 0: Row-Level Tenancy (`guild_id` on every table)
 **Goal:** Remodel the entire application to enforce row-level tenant isolation
-(`guild_id` / `tenant_id` on every guild-scoped table) **before** any feature work.
+(`guild_id` on every guild-scoped table) **before** any feature work.
 
 > **This phase is a prerequisite for all other phases.** See
 > [Section 10](#10-phase-0-row-level-tenancy-guild_id--detailed-plan) for the
@@ -1754,7 +1754,7 @@ The migration must be executed as a **single Alembic migration** to maintain
 atomicity. Here is the exact sequence:
 
 ```python
-# migrations/versions/xxxx_add_tenant_id_to_child_tables.py
+# migrations/versions/xxxx_add_guild_id_to_child_tables.py
 
 def upgrade():
     # Step 1: Add guild_id columns (nullable initially for backfill)
@@ -1976,7 +1976,7 @@ signup = Signup(
     chosen_role="melee_dps",
 )
 
-# After (with tenant_id):
+# After (with guild_id):
 signup = Signup(
     guild_id=guild.id,          # NEW — required
     raid_event_id=event.id,
