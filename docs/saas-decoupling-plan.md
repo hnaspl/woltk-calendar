@@ -2683,10 +2683,11 @@ api.interceptors.request.use(config => {
 ```
 
 > **Note:** The backend already knows the active tenant from `user.active_tenant_id`
-> (session/cookie). The `X-Tenant-Id` header is an **additional safety check** —
-> if the header doesn't match the user's active tenant, the backend rejects the
-> request. This prevents stale tenant context from a browser tab that missed a
-> tenant switch.
+> (session/cookie). The `X-Tenant-Id` header is an **additional safety check**:
+> on every request the backend **validates** that the header value matches
+> `user.active_tenant_id` and **rejects with 409 Conflict** if they differ.
+> This prevents a stale browser tab (that missed a tenant switch in another
+> tab) from accidentally writing data to the wrong tenant.
 
 #### 11.3.3 Changes to `src/api/admin.js`
 
