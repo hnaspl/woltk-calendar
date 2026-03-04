@@ -25,7 +25,7 @@ def seed_plans() -> int:
             description="Basic plan with essential features",
             is_free=True,
             is_active=True,
-            max_guilds=3,
+            max_guilds=5,
             max_members=None,
             max_events_per_month=None,
             price_info="Free forever",

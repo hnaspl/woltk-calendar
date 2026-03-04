@@ -34,7 +34,14 @@
                 <div class="text-xs text-text-muted">{{ tenant.slug }}</div>
               </div>
             </td>
-            <td class="px-3 py-2 text-text-muted">{{ tenant.owner_id }}</td>
+            <td class="px-3 py-2">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-bg-tertiary border border-border-default flex items-center justify-center text-xs text-accent-gold font-bold uppercase">
+                  {{ (tenant.owner_name || '?')[0] }}
+                </div>
+                <span class="text-text-primary text-sm">{{ tenant.owner_name || `#${tenant.owner_id}` }}</span>
+              </div>
+            </td>
             <td class="px-3 py-2">
               <button
                 type="button"
@@ -55,24 +62,24 @@
               <div class="flex gap-1.5">
                 <button
                   type="button"
-                  class="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  class="px-2 py-1 rounded text-xs font-medium bg-blue-900/30 text-blue-400 border border-blue-700/50 hover:bg-blue-900/50 transition-colors"
                   @click="showUsage(tenant)"
                 >{{ t('admin.tenants.usage') }}</button>
                 <button
                   v-if="tenant.is_active"
                   type="button"
-                  class="text-xs text-yellow-400 hover:text-yellow-300 transition-colors"
+                  class="px-2 py-1 rounded text-xs font-medium bg-yellow-900/30 text-yellow-400 border border-yellow-700/50 hover:bg-yellow-900/50 transition-colors"
                   @click="doSuspend(tenant)"
                 >{{ t('admin.tenants.suspend') }}</button>
                 <button
                   v-else
                   type="button"
-                  class="text-xs text-green-400 hover:text-green-300 transition-colors"
+                  class="px-2 py-1 rounded text-xs font-medium bg-green-900/30 text-green-400 border border-green-700/50 hover:bg-green-900/50 transition-colors"
                   @click="doActivate(tenant)"
                 >{{ t('admin.tenants.activate') }}</button>
                 <button
                   type="button"
-                  class="text-xs text-red-400 hover:text-red-300 transition-colors"
+                  class="px-2 py-1 rounded text-xs font-medium bg-red-900/30 text-red-400 border border-red-700/50 hover:bg-red-900/50 transition-colors"
                   @click="doDelete(tenant)"
                 >{{ t('common.buttons.delete') }}</button>
               </div>

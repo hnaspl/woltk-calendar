@@ -58,7 +58,7 @@ def create_plan():
             description=data.get("description"),
             is_free=data.get("is_free", False),
             is_active=data.get("is_active", True),
-            max_guilds=data.get("max_guilds", 3),
+            max_guilds=data.get("max_guilds", 5),
             max_members=data.get("max_members"),
             max_events_per_month=data.get("max_events_per_month"),
             features_json=data.get("features_json"),

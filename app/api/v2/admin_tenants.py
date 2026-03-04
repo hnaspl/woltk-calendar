@@ -35,6 +35,11 @@ def list_tenants():
         d = t.to_dict()
         d["guild_count"] = tenant_service.get_guild_count(t.id)
         d["member_count"] = len(tenant_service.list_members(t.id))
+        # Include owner name for admin display
+        if t.owner:
+            d["owner_name"] = t.owner.username or t.owner.email or f"User #{t.owner_id}"
+        else:
+            d["owner_name"] = f"User #{t.owner_id}"
         result.append(d)
     return jsonify(result), 200
 

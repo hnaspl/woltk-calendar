@@ -159,8 +159,7 @@ async function loadInvitations() {
   if (!guildId) return
   loading.value = true
   try {
-    const { data } = await guildsApi.getGuildInvitations(guildId)
-    invitations.value = data
+    invitations.value = await guildsApi.getGuildInvitations(guildId)
   } catch { /* ignore */ }
   loading.value = false
 }
@@ -169,8 +168,7 @@ async function loadApplications() {
   const guildId = guildStore.currentGuildId
   if (!guildId) return
   try {
-    const { data } = await guildsApi.getGuildApplications(guildId)
-    applications.value = data
+    applications.value = await guildsApi.getGuildApplications(guildId)
   } catch { /* ignore */ }
 }
 
@@ -181,8 +179,8 @@ async function doCreate() {
   try {
     const payload = { ...form.value }
     if (!payload.max_uses) delete payload.max_uses
-    const { data } = await guildsApi.createGuildInvitation(guildId, payload)
-    generatedToken.value = data.invite_token
+    const result = await guildsApi.createGuildInvitation(guildId, payload)
+    generatedToken.value = result.invite_token
     await loadInvitations()
     uiStore.showToast(t('guild.linkGenerated'), 'success')
   } catch (err) {

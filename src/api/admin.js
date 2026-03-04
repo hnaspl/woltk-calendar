@@ -19,13 +19,13 @@ export const updateDiscordSettings = (data) => api.put('/admin/settings/discord'
 export const getDashboard = () => api.get('/admin/dashboard')
 
 export const setUserGuildLimit = (userId, maxGuilds) =>
-  api.put(`/admin/users/${userId}/guild-limit`, { max_guilds: maxGuilds }).then(r => r.data)
+  api.put(`/admin/users/${userId}/guild-limit`, { max_guilds: maxGuilds })
 
 export const getGuildFeatures = (guildId) =>
-  api.get(`/admin/guilds/${guildId}/features`).then(r => r.data)
+  api.get(`/admin/guilds/${guildId}/features`)
 
 export const updateGuildFeatures = (guildId, features) =>
-  api.put(`/admin/guilds/${guildId}/features`, features).then(r => r.data)
+  api.put(`/admin/guilds/${guildId}/features`, features)
 
 // ── Tenant admin endpoints ──
 export const getAdminTenants = () => api.get('/admin/tenants')

@@ -1,8 +1,5 @@
 import api from './index'
 
-// v2 API base
-const v2 = '/v2'
-
 export const getGuilds = () => api.get('/guilds')
 
 export const getAllGuilds = () => api.get('/guilds/all')
@@ -32,8 +29,6 @@ export const getMemberCharacters = (guildId, userId) =>
 
 export const getArmoryRoster = (guildId) =>
   api.get(`/guilds/${guildId}/armory-roster`)
-
-/** @deprecated Use getArmoryRoster instead */
 
 export const transferOwnership = (guildId, userId) =>
   api.post(`/guilds/${guildId}/transfer-ownership`, { user_id: userId })
@@ -73,63 +68,63 @@ export const unbanGuildMember = (guildId, userId) =>
   api.post(`/guilds/${guildId}/unban/${userId}`)
 
 // ---------------------------------------------------------------------------
-// Guild invitations (v2 API)
+// Guild invitations
 // ---------------------------------------------------------------------------
 
 export const getGuildInvitations = (guildId) =>
-  api.get(`${v2}/guilds/${guildId}/invitations`)
+  api.get(`/guilds/${guildId}/invitations`)
 
 export const createGuildInvitation = (guildId, payload) =>
-  api.post(`${v2}/guilds/${guildId}/invitations`, payload)
+  api.post(`/guilds/${guildId}/invitations`, payload)
 
 export const revokeGuildInvitation = (guildId, invitationId) =>
-  api.delete(`${v2}/guilds/${guildId}/invitations/${invitationId}`)
+  api.delete(`/guilds/${guildId}/invitations/${invitationId}`)
 
 export const acceptGuildInvite = (token) =>
-  api.post(`${v2}/guild-invite/${token}`)
+  api.post(`/guild-invite/${token}`)
 
 // ---------------------------------------------------------------------------
-// Guild applications (v2 API)
+// Guild applications
 // ---------------------------------------------------------------------------
 
 export const applyToGuild = (guildId) =>
-  api.post(`${v2}/guilds/${guildId}/apply`)
+  api.post(`/guilds/${guildId}/apply`)
 
 export const getGuildApplications = (guildId) =>
-  api.get(`${v2}/guilds/${guildId}/applications`)
+  api.get(`/guilds/${guildId}/applications`)
 
 export const approveApplication = (guildId, userId) =>
-  api.post(`${v2}/guilds/${guildId}/applications/${userId}/approve`)
+  api.post(`/guilds/${guildId}/applications/${userId}/approve`)
 
 export const declineApplication = (guildId, userId) =>
-  api.post(`${v2}/guilds/${guildId}/applications/${userId}/decline`)
+  api.post(`/guilds/${guildId}/applications/${userId}/decline`)
 
 // ---------------------------------------------------------------------------
-// Guild visibility (v2 API)
+// Guild visibility
 // ---------------------------------------------------------------------------
 
 export const updateGuildVisibility = (guildId, visibility) =>
-  api.put(`${v2}/guilds/${guildId}/visibility`, { visibility })
+  api.put(`/guilds/${guildId}/visibility`, { visibility })
 
 // ---------------------------------------------------------------------------
-// Guild discovery (v2 API)
+// Guild discovery
 // ---------------------------------------------------------------------------
 
 export const discoverGuilds = () =>
-  api.get(`${v2}/discover-guilds/`)
+  api.get(`/discover-guilds/`)
 
 // ---------------------------------------------------------------------------
-// Class-role matrix (v2 API)
+// Class-role matrix
 // ---------------------------------------------------------------------------
 
 export const getClassRoleMatrix = (guildId) =>
-  api.get(`${v2}/guilds/${guildId}/class-role-matrix`)
+  api.get(`/guilds/${guildId}/class-role-matrix`)
 
 export const setClassRoleOverrides = (guildId, className, roles) =>
-  api.put(`${v2}/guilds/${guildId}/class-role-matrix/${className}`, { roles })
+  api.put(`/guilds/${guildId}/class-role-matrix/${className}`, { roles })
 
 export const resetClassRoleOverrides = (guildId, className) =>
-  api.delete(`${v2}/guilds/${guildId}/class-role-matrix/${className}`)
+  api.delete(`/guilds/${guildId}/class-role-matrix/${className}`)
 
 export const resetClassRoleMatrix = (guildId) =>
-  api.delete(`${v2}/guilds/${guildId}/class-role-matrix`)
+  api.delete(`/guilds/${guildId}/class-role-matrix`)
