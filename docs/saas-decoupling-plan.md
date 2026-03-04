@@ -1004,9 +1004,9 @@ backup. Frontend migrates to v2 endpoints in this phase.
 - [x] Auto-create a tenant for each user on registration
 - [x] Add `tenant_id` FK to `guilds` table (Guild belongs to Tenant)
 - [x] Add `tenant_id` FK to all guild-child tables (characters, events, signups, lineup_slots, raid_bans, attendance_records, character_replacements, etc.)
-- [ ] Data migration: backfill `tenant_id` from owner relationships *(Deferred: not needed while app is single-tenant in practice. Required before production multi-tenant deployment.)*
-- [ ] Rename database file from `wotlk_calendar.db` to `raid_calendar.db` *(Deferred: cosmetic change, can be done during deployment. Not blocking any phase.)*
-- [ ] Add composite indexes on `(tenant_id, ...)` for all tenant-scoped tables *(Deferred: performance optimization. Required before production multi-tenant deployment with significant data.)*
+- [x] ~~Data migration: backfill `tenant_id` from owner relationships~~ *(Deferred — not needed while app is single-tenant in practice. Required before production multi-tenant deployment. Will be addressed as part of Phase 6 SaaS infrastructure.)*
+- [x] ~~Rename database file from `wotlk_calendar.db` to `raid_calendar.db`~~ *(Deferred — cosmetic change, can be done during deployment. Not blocking any phase.)*
+- [x] ~~Add composite indexes on `(tenant_id, ...)` for all tenant-scoped tables~~ *(Deferred — performance optimization. Required before production multi-tenant deployment with significant data. Will be addressed in Phase 6.)*
 - [x] Update every service-layer query to include `tenant_id` filter
 - [x] Update every API route to pass `tenant_id` through the call chain (v2 routes)
 - [x] Add `TenantMixin` for models with automatic `tenant_id` column
@@ -1240,7 +1240,7 @@ the admin panel — they are DB-driven and pluggable.
 - [x] Global admin UI to add new expansion packs: *(Done: `ExpansionsTab.vue` in GlobalAdminView provides full CRUD — create/edit/delete expansions, enable/disable system-wide, manage raids per expansion. Secured by `manage_expansions` permission.)*
   - [x] Define classes, specs, roles, raids for the expansion *(Partially done: Raids are fully manageable via admin UI. Classes/specs currently managed via DB seeds — admin UI for class/spec CRUD is deferred to Phase 6 or later as a convenience enhancement.)*
   - [x] Enable/disable expansion packs system-wide *(Done: `is_active` toggle in ExpansionsTab)*
-  - [ ] Import expansion data from JSON/CSV (optional convenience feature) *(Deferred: optional convenience — not blocking Phase 4)*
+  - [x] ~~Import expansion data from JSON/CSV (optional convenience feature)~~ *(Deferred to Phase 6 — optional convenience, not blocking any phase)*
 - [x] **Per-guild expansion management (cumulative):** *(Done: all core sub-items completed)*
   - [x] Create `GuildExpansion` model (guild ↔ expansion binding, see §4.4.2)
   - [x] Guild owner/admin enables expansions from guild settings
@@ -1256,7 +1256,7 @@ the admin panel — they are DB-driven and pluggable.
   - [x] Character creation realm dropdown reads from guild's configured realms
   - [x] Remove hardcoded `WARMANE_REALMS` dependency from guild/character creation
   - [x] Warmane-specific realm list moves into Warmane plugin (Phase 5) as default/suggestion
-- [ ] Create expansion selection flow in guild creation (guild admin picks highest expansion; cumulative auto-fill) *(Deferred: guild creation currently uses system defaults; expansion selection happens post-creation in guild settings. This is a UX enhancement for Phase 6 or later.)*
+- [x] ~~Create expansion selection flow in guild creation (guild admin picks highest expansion; cumulative auto-fill)~~ *(Deferred to Phase 6 — guild creation currently uses system defaults; expansion selection happens post-creation in guild settings. This is a UX enhancement.)*
 - [x] Update character creation to filter classes by guild's enabled expansions (from DB) *(Done: `CharacterManagerView.vue` loads guild-scoped constants via `getGuildConstants()` API, with fallback to system-wide expansion data)*
 - [x] Update raid definition seeder for multi-expansion — dynamic sync on expansion enable/disable
 - [x] Update frontend constants store to be fully expansion-aware *(Done: `src/stores/constants.js` fetches from backend `GET /api/v1/meta/constants` which returns expansion-aware data. Guild-scoped data available via `GET /api/v2/guilds/<id>/constants`. `useExpansionData` composable provides expansion store data.)*
@@ -1267,7 +1267,7 @@ the admin panel — they are DB-driven and pluggable.
   - [x] `manage_expansions` — global admin: add/edit/disable expansion packs *(Done: added in Phase 1, `app/seeds/permissions.py` line 90, assigned to global_admin role, secures all v2 expansion admin endpoints)*
 - [x] **Frontend co-migration:**
   - [x] Expansion management in guild settings (`GuildExpansionsTab.vue`)
-  - [ ] Expansion selection in guild creation wizard (pick highest → auto-fill cumulative) *(Deferred: post-creation expansion selection in guild settings covers the use case. Wizard enhancement for Phase 6 or later.)*
+  - [x] ~~Expansion selection in guild creation wizard (pick highest → auto-fill cumulative)~~ *(Deferred to Phase 6 — post-creation expansion selection in guild settings covers the use case.)*
   - [x] Realm configuration in guild settings (`GuildRealmsTab.vue`)
   - [x] Dynamic class/spec/role dropdowns merged across guild's enabled expansions *(Done: `CharacterManagerView.vue` fetches guild constants via `getGuildConstants()` API; guild constants endpoint returns merged class/spec/role data from enabled expansions)*
   - [x] Global admin expansion management UI *(Done: `ExpansionsTab.vue` in GlobalAdminView — full CRUD for expansions and raids, enable/disable, set default)*
@@ -1330,13 +1330,13 @@ the admin panel — they are DB-driven and pluggable.
 - [x] Migrate all service-layer hardcoded English strings to `_t()` i18n (guild_service, tenant_service, signup_service — 30+ strings)
 - [x] Add 60+ i18n keys (plugin, guild.errors, tenant.errors, signup.errors) in en.json + pl.json
 - [x] 25 plugin tests (ArmoryPlugin, PluginRegistry, v2 API, provider tests) — now 27 tests
-- [ ] Create plugin developer documentation *(Deferred: plugin architecture is stable but documentation is a Phase 6+ deliverable)*
+- [x] ~~Create plugin developer documentation~~ *(Deferred to Phase 6 — plugin architecture is stable but documentation is a Phase 6+ deliverable)*
 - [x] **New admin permissions:**
   - [x] `manage_plugins` — global admin: enable/disable system plugins (added to seeds/permissions.py and assigned to global_admin role; plugin config endpoint protected)
 - [x] **🧹 Phase 5 cleanup** (see [§13.3.6](#1336-phase-5-cleanup-checklist)):
   - [x] Remove all hardcoded realm lists (WARMANE_REALMS → zero references in codebase)
-  - [ ] Remove inline Warmane API calls from services — all go through plugin interface *(Deferred: existing armory provider system already provides sufficient abstraction; warmane.py is a provider, not a direct integration)*
-  - [ ] Remove inline Discord integration from services — all go through plugin interface *(Deferred: Discord OAuth is auth-layer, not guild-level plugin concern)*
+  - [x] ~~Remove inline Warmane API calls from services — all go through plugin interface~~ *(Not applicable — armory provider system already provides sufficient abstraction. `warmane.py` is a provider/API parser, not a direct integration. Future architecture: guild admins select a provider by armory URL, then realms auto-fill or manual realms are configured per-guild. There is no need for per-server providers — there are thousands of private servers.)*
+  - [x] ~~Remove inline Discord integration from services — all go through plugin interface~~ *(Not applicable — Discord OAuth is auth-layer, not a guild-level plugin concern. Discord integration is already properly abstracted.)*
   - [x] Run full lint + build + test suite on clean branch (823 tests pass, frontend builds)
 
 > **📊 Phase 5 Completion Summary (823 tests, frontend builds):**
@@ -1362,7 +1362,7 @@ admin panel.
 > - **Phase 6 ← Phase 0:** Tenant model is the billing unit. `max_guilds`/`max_members` fields on Tenant (Phase 0) become plan-driven.
 > - **Phase 6 ← Phase 0 (deferred items):** Notification multi-tenant isolation, bench/queue multi-tenant isolation, data migration backfill, composite indexes, DB rename, v1→v2 API migration — all deferred from Phase 0 to Phase 6.
 > - **Phase 6 ← Phase 4 (deferred items):** Expansion selection in guild creation wizard, JSON/CSV expansion import, admin class/spec CRUD UI — deferred from Phase 4 as UX enhancements.
-> - **Phase 6 ← Phase 5 (deferred items):** Plugin developer documentation, inline Warmane/Discord service refactoring — deferred from Phase 5.
+> - **Phase 6 ← Phase 5 (deferred items):** Plugin developer documentation — deferred from Phase 5. *(Inline Warmane/Discord service refactoring is NOT applicable — armory provider system already provides sufficient abstraction; guild admins select provider by armory URL, then realms auto-fill or manual realms. Discord OAuth is auth-layer, not guild-level plugin.)*
 > - **Phase 6 ← Phase 5:** Plugin system provides the feature toggle mechanism for plan-based feature gating.
 > - **Phase 6 completes:** v1 API deprecation review — assess if v1 endpoints can be fully removed.
 
@@ -1409,8 +1409,8 @@ admin panel.
   - [ ] *Phase 4 → Phase 6:* Import expansion data from JSON/CSV (optional convenience feature)
   - [ ] *Phase 4 → Phase 6:* Global admin UI for expansion class/spec CRUD (currently managed via DB seeds)
   - [ ] *Phase 5 → Phase 6:* Create plugin developer documentation
-  - [ ] *Phase 5 → Phase 6:* Remove inline Warmane API calls from services — route through plugin interface
-  - [ ] *Phase 5 → Phase 6:* Remove inline Discord integration from services — route through plugin interface
+  - [x] ~~*Phase 5 → Phase 6:* Remove inline Warmane API calls from services — route through plugin interface~~ *(Not applicable — guild admins select provider by armory URL, then realms auto-fill or manual realms fill. No per-server providers needed.)*
+  - [x] ~~*Phase 5 → Phase 6:* Remove inline Discord integration from services — route through plugin interface~~ *(Not applicable — Discord OAuth is auth-layer, not guild-level plugin concern.)*
 
 ---
 
