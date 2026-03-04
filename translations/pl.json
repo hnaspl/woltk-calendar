@@ -668,6 +668,8 @@
     "matrixReset": "Zresetowano do domyślnych",
     "matrixAllReset": "Macierz zresetowana do domyślnych",
     "matrixNoOverrides": "Brak nadpisań gildii — używane domyślne",
+    "matrixNoData": "Brak danych macierzy klas-ról",
+    "matrixNoDataHelp": "Włącz dodatki dla swojej gildii, aby zobaczyć macierz klas-ról.",
     "matrixCustomized": "Zmienione",
     "matrixDefault": "Domyślne",
     "matrixSelectAtLeastOne": "Wybierz co najmniej jedną rolę",
@@ -729,7 +731,7 @@
     "armoryUrl": "URL Armory serwera",
     "armoryUrlHelp": "Podaj link do Armory swojego serwera (np. http://armory.example.com/api) lub pozostaw puste, aby wprowadzić dane ręcznie",
     "expansion": "Dodatek WoW",
-    "expansionHelp": "Wybierz dodatek, w który gra Twoja gildia. Określa dostępne klasy, specjalizacje i rajdy.",
+    "expansionHelp": "Wybierz najwyższy dodatek, w który gra Twoja gildia. Dane z wcześniejszych dodatków (klasy, specjalizacje, rajdy) zostaną automatycznie uwzględnione.",
     "providerDetected": "Wykryto dostawcę: {provider}",
     "noProviderDetected": "Nie wykryto znanego dostawcy. Gildia zostanie utworzona w trybie ręcznym.",
     "armoryUrlPlaceholder": "http://armory.example.com/api"
@@ -818,7 +820,10 @@
       "jobAttempts": "Próby",
       "jobCreated": "Utworzono",
       "jobError": "Błąd",
-      "noRecentJobs": "Brak zadań w kolejce."
+      "noRecentJobs": "Brak zadań w kolejce.",
+      "totalTenants": "Najemcy",
+      "activeTenants": "Aktywni",
+      "suspendedTenants": "Zawieszeni"
     },
     "expansions": {
       "title": "Rozszerzenia",

@@ -21,8 +21,9 @@
         <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin mx-auto" />
       </div>
 
-      <div v-else-if="!matrix" class="py-6 text-center">
-        <p class="text-sm text-text-muted">{{ t('guild.matrixNoOverrides') }}</p>
+      <div v-else-if="!matrix || !sortedClasses.length" class="py-6 text-center">
+        <p class="text-sm text-text-muted">{{ t('guild.matrixNoData') }}</p>
+        <p class="text-xs text-text-muted mt-1">{{ t('guild.matrixNoDataHelp') }}</p>
       </div>
 
       <div v-else class="space-y-3">
@@ -146,11 +147,11 @@ async function loadMatrix() {
   if (!guildId) return
   loading.value = true
   try {
-    const { data } = await guildsApi.getClassRoleMatrix(guildId)
-    matrix.value = data.matrix
-    defaults.value = data.defaults
-    overrides.value = data.overrides
-    hasOverrides.value = data.has_overrides
+    const result = await guildsApi.getClassRoleMatrix(guildId)
+    matrix.value = result.matrix
+    defaults.value = result.defaults
+    overrides.value = result.overrides
+    hasOverrides.value = result.has_overrides
     // Clear local edits
     Object.keys(localEdits).forEach(k => delete localEdits[k])
   } catch { /* ignore */ }

@@ -7,7 +7,7 @@
       <div v-if="loading" class="h-48 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
 
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Total Users -->
         <div class="p-4 rounded-lg bg-bg-secondary border border-border-default">
           <div class="text-lg mb-1">👥</div>
@@ -16,6 +16,17 @@
           <div class="text-xs text-text-muted mt-2 space-y-0.5">
             <div>{{ t('admin.dashboard.activeUsers') }}: {{ data.active_users }}</div>
             <div>{{ t('admin.dashboard.adminUsers') }}: {{ data.admin_users }}</div>
+          </div>
+        </div>
+
+        <!-- Tenants -->
+        <div class="p-4 rounded-lg bg-bg-secondary border border-border-default">
+          <div class="text-lg mb-1">🏠</div>
+          <div class="text-xs text-text-muted uppercase">{{ t('admin.dashboard.totalTenants') }}</div>
+          <div class="text-2xl font-bold text-accent-gold mt-1">{{ data.total_tenants ?? 0 }}</div>
+          <div class="text-xs text-text-muted mt-2 space-y-0.5">
+            <div>{{ t('admin.dashboard.activeTenants') }}: {{ data.active_tenants ?? 0 }}</div>
+            <div v-if="data.suspended_tenants" class="text-yellow-400">{{ t('admin.dashboard.suspendedTenants') }}: {{ data.suspended_tenants }}</div>
           </div>
         </div>
 
@@ -150,6 +161,9 @@ const data = ref({
   done_jobs: 0,
   recent_queue: [],
   database_size_kb: 0,
+  total_tenants: 0,
+  active_tenants: 0,
+  suspended_tenants: 0,
 })
 
 const KB_PER_MB = 1024

@@ -668,6 +668,8 @@
     "matrixReset": "Reset to expansion defaults",
     "matrixAllReset": "Matrix reset to expansion defaults",
     "matrixNoOverrides": "No guild overrides — using expansion defaults",
+    "matrixNoData": "No class-role data available",
+    "matrixNoDataHelp": "Enable expansions for your guild to see the class-role matrix.",
     "matrixCustomized": "Customized",
     "matrixDefault": "Default",
     "matrixSelectAtLeastOne": "Select at least one role",
@@ -729,7 +731,7 @@
     "armoryUrl": "Server Armory URL",
     "armoryUrlHelp": "Provide your server's armory link (e.g. http://armory.example.com/api) or leave empty for manual entry",
     "expansion": "WoW Expansion",
-    "expansionHelp": "Select the expansion your guild plays. This determines available classes, specs, and raids.",
+    "expansionHelp": "Select the highest expansion your guild plays. All prior expansion data (classes, specs, raids) will be automatically included.",
     "providerDetected": "Provider detected: {provider}",
     "noProviderDetected": "No known provider detected. Guild will be created in manual mode.",
     "armoryUrlPlaceholder": "http://armory.example.com/api"
@@ -818,7 +820,10 @@
       "jobAttempts": "Attempts",
       "jobCreated": "Created",
       "jobError": "Error",
-      "noRecentJobs": "No recent jobs in queue."
+      "noRecentJobs": "No recent jobs in queue.",
+      "totalTenants": "Tenants",
+      "activeTenants": "Active",
+      "suspendedTenants": "Suspended"
     },
     "expansions": {
       "title": "Expansions",

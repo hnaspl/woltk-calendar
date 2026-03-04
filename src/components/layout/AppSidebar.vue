@@ -116,6 +116,12 @@
               <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
             </select>
             <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
+            <div v-if="newGuild.expansion_id && sortedExpansions.length > 1" class="mt-2 flex flex-wrap gap-1">
+              <span v-for="exp in includedExpansions" :key="exp.id"
+                class="px-2 py-0.5 rounded text-xs font-medium bg-green-900/30 text-green-300 border border-green-700/50">
+                ✓ {{ exp.name }}
+              </span>
+            </div>
           </div>
           <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
           <div v-if="guildLookupNotFound" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
@@ -434,6 +440,16 @@ const selectedProviderRealms = computed(() => detectedProviderRealms.value)
 // Expansions sorted by sort_order descending (highest first)
 const sortedExpansions = computed(() => {
   return [...constantsStore.expansions].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
+})
+
+// Expansions that will be included when the selected expansion is chosen
+const includedExpansions = computed(() => {
+  const selected = sortedExpansions.value.find(e => e.id === newGuild.expansion_id)
+  if (!selected) return []
+  const selectedOrder = selected.sort_order ?? 0
+  return [...constantsStore.expansions]
+    .filter(e => (e.sort_order ?? 0) <= selectedOrder)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 })
 
 // Set default expansion to highest sort_order

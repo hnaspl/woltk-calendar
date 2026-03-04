@@ -95,6 +95,16 @@ def dashboard_stats():
     except OSError:
         database_size_kb = None
 
+    # Tenant statistics
+    from app.models.tenant import Tenant
+    total_tenants = db.session.scalar(sa.select(sa.func.count()).select_from(Tenant))
+    active_tenants = db.session.scalar(
+        sa.select(sa.func.count()).select_from(Tenant).where(Tenant.is_active.is_(True))
+    )
+    suspended_tenants = db.session.scalar(
+        sa.select(sa.func.count()).select_from(Tenant).where(Tenant.is_active.is_(False))
+    )
+
     return jsonify({
         "total_users": total_users,
         "active_users": active_users,
@@ -110,6 +120,9 @@ def dashboard_stats():
         "done_jobs": done_jobs,
         "recent_queue": [j.to_dict() for j in recent_queue],
         "database_size_kb": database_size_kb,
+        "total_tenants": total_tenants,
+        "active_tenants": active_tenants,
+        "suspended_tenants": suspended_tenants,
     }), 200
 
 

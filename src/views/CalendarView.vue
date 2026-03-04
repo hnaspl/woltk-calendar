@@ -86,7 +86,7 @@
     </div>
 
     <!-- Schedule Raid Modal -->
-    <WowModal v-model="showCreateModal" :title="t('calendar.scheduleRaid')" size="md">
+    <WowModal v-model="showCreateModal" :title="t('calendar.scheduleRaid')" size="lg">
       <form @submit.prevent="createEvent" class="space-y-4">
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('calendar.guild') }}</label>
