@@ -1264,8 +1264,8 @@ the admin panel — they are DB-driven and pluggable.
   - [ ] Global admin expansion management UI
 
 > **⚡ Phase 4 → Phase 5 Interconnection (carried forward):**
-> - ✅ `WARMANE_REALMS` moved to Warmane plugin config (`app/plugins/warmane/plugin.py`). `app/constants.py` re-exports for backwards compatibility. `src/constants.js` retains static fallback until constants store loads.
-> - ✅ `CharacterManagerView.vue`, `GuildSettingsTab.vue`, `GuildSettingsView.vue`, and `AppSidebar.vue` now use guild-scoped realm API (`getGuildRealms()`) or `constantsStore.warmaneRealms` instead of importing `WARMANE_REALMS` directly.
+> - ✅ All hardcoded realm lists removed. `WARMANE_REALMS` no longer exists anywhere in the codebase. Realms are fully dynamic — provided by armory providers via `fetch_realms()` API or managed manually per-guild via GuildRealmsTab.
+> - ✅ `CharacterManagerView.vue`, `GuildSettingsTab.vue`, `GuildSettingsView.vue`, and `AppSidebar.vue` use guild-scoped realm API (`getGuildRealms()`) or `constantsStore.allRealms` (provider-based, dynamic).
 > - ✅ Service-layer `ValueError` messages in `guild_service.py`, `tenant_service.py`, and `signup_service.py` migrated to `_t()` i18n keys (30+ strings, Phase 5).
 > - Seed file deduplication: `_BASE_CLASS_SPECS` and `_BASE_SPEC_ROLE_MAP` in `app/seeds/expansions.py` are shared across Classic/TBC/WotLK. Future expansions (Cata+) may have different specs — extend via the global admin UI, not hardcoded dicts.
 - [x] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
@@ -1283,26 +1283,42 @@ the admin panel — they are DB-driven and pluggable.
 > **⚡ Cross-Phase Dependencies & Interconnections:**
 > - **Phase 5 ← Phase 1:** Expansion packs become plugins that populate the expansion registry tables.
 > - **Phase 5 ← Phase 4:** Per-guild expansion settings and realm configuration are managed through plugin interfaces.
-> - **Phase 5 completes:** Warmane armory integration moves from inline service calls to a plugin. Guild member addition via armory is no longer the default — it's a Warmane-plugin-specific feature. The default flow is invitation-based (Phase 0/2).
+> - **Phase 5 completes:** Armory integration is wrapped in a generic, server-agnostic armory plugin. Realms are fully dynamic — no hardcoded lists anywhere. Guild member addition via armory is a plugin feature, not a default. The default flow is invitation-based (Phase 0/2).
 
 - [x] Create `app/plugins/` framework (BasePlugin, PluginRegistry)
-- [x] Refactor Warmane integration into a plugin (`app/plugins/warmane/`)
+- [x] Create generic **armory plugin** (`app/plugins/armory/`) — server-agnostic, not tied to any specific server
 - [x] Refactor Discord integration into a plugin (`app/plugins/discord/`)
-- [x] Create v2 plugin list API (`GET /api/v2/plugins/`, `GET /api/v2/plugins/<key>`, `GET /api/v2/plugins/<key>/config`)
-- [x] Build plugin management UI (PluginsTab in GlobalAdminView — lists all registered plugins with feature flags)
+- [x] Create v2 plugin API:
+  - [x] `GET /api/v2/plugins/` — list all plugins
+  - [x] `GET /api/v2/plugins/<key>` — get plugin metadata
+  - [x] `GET /api/v2/plugins/<key>/config` — get plugin config
+  - [x] `GET /api/v2/plugins/armory/providers` — list armory providers
+  - [x] `GET /api/v2/plugins/armory/providers/<name>/realms` — get provider realm suggestions (dynamic from API)
+- [x] Build plugin management UI (PluginsTab in GlobalAdminView)
 - [x] Frontend plugin store (`src/plugins/registry.js`) and API client (`src/api/plugins.js`)
-- [x] Move `WARMANE_REALMS` from `app/constants.py` → `app/plugins/warmane/plugin.py` (backwards-compat re-export kept)
+- [x] **Remove all hardcoded realm lists:**
+  - [x] Remove `WARMANE_REALMS` from `app/constants.py` entirely
+  - [x] Remove `WARMANE_REALMS` from `src/constants.js` entirely
+  - [x] Remove `warmaneRealms` from constants store → replaced with `providerRealms` + `allRealms`
+  - [x] Remove `warmane_realms` from meta API → replaced with `provider_realms` (dynamic from providers)
+  - [x] Remove `DEFAULT_REALMS` from `WarmaneProvider` — zero hardcoded realm data
+  - [x] Remove realm seeding on guild creation — guilds manage realms manually via GuildRealmsTab
+- [x] **Dynamic realm architecture:**
+  - [x] `ArmoryProvider.fetch_realms()` — providers can discover realms from their API
+  - [x] `ArmoryProvider.get_default_realms()` — returns `[]` by default
+  - [x] `ArmoryPlugin.get_provider_realms()` — tries `fetch_realms()` then `get_default_realms()`
+  - [x] Guilds manage their own realms via `GuildRealm` model + GuildRealmsTab UI
 - [x] Migrate all service-layer hardcoded English strings to `_t()` i18n (guild_service, tenant_service, signup_service — 30+ strings)
 - [x] Add 60+ i18n keys (plugin, guild.errors, tenant.errors, signup.errors) in en.json + pl.json
-- [x] 21 plugin tests (BasePlugin, PluginRegistry, v2 API, constants compat)
+- [x] 25 plugin tests (ArmoryPlugin, PluginRegistry, v2 API, provider tests)
 - [ ] Create plugin developer documentation
 - [ ] **New admin permissions:**
   - [ ] `manage_plugins` — global admin: enable/disable system plugins
 - [ ] **🧹 Phase 5 cleanup** (see [§13.3.6](#1336-phase-5-cleanup-checklist)):
-  - [x] Move hardcoded Warmane realm list into Warmane plugin config
+  - [x] Remove all hardcoded realm lists (WARMANE_REALMS → zero references in codebase)
   - [ ] Remove inline Warmane API calls from services — all go through plugin interface (deferred: existing armory provider system already provides abstraction)
   - [ ] Remove inline Discord integration from services — all go through plugin interface (deferred: Discord OAuth is auth-layer, not guild-level)
-  - [x] Run full lint + build + test suite on clean branch (818 tests pass, frontend builds)
+  - [x] Run full lint + build + test suite on clean branch (822 tests pass, frontend builds)
 
 ### Phase 6: SaaS Infrastructure
 **Goal:** Add billing, plan management, and tenant management from the global
@@ -4563,30 +4579,29 @@ grep -rn "WARMANE_REALMS\|Icecrown.*Lordaeron" src/ app/ --include="*.js" --incl
 
 #### 13.3.6 Phase 5 Cleanup Checklist
 
-Phase 5 extracts Warmane and Discord into plugins.
+Phase 5 creates a generic, server-agnostic armory plugin and wraps Discord as a plugin.
 
 **Code to remove/refactor:**
 
 | Location | What | Action | Status |
 |----------|------|--------|--------|
-| `app/services/warmane_service.py` | Direct Warmane API integration | Thin wrapper delegates to armory provider system. Plugin wraps metadata. | ✅ Plugin created (`app/plugins/warmane/`) |
+| `app/services/armory/warmane.py` | Warmane-specific API parser | Kept as provider implementation detail inside `app/services/armory/`. Not part of the plugin. | Provider pattern ✅ |
 | `app/services/discord_service.py` | Direct Discord integration | Auth-layer integration. Plugin wraps metadata. | ✅ Plugin created (`app/plugins/discord/`) |
 | `src/api/warmane.js` | Frontend Warmane API module | Kept — used by existing components for armory sync | Deferred |
 | `src/api/armory.js` | Frontend armory API module | Kept — used by armory config management | Deferred |
-| `app/api/v1/warmane.py` | Warmane blueprint | Kept in v1 registration — plugin does not re-register to avoid conflicts | Deferred |
-| `WARMANE_REALMS` in `app/constants.py` | Hardcoded Warmane realms | ✅ **Moved** to `app/plugins/warmane/plugin.py`, re-exported for compat | ✅ Done |
-| `WARMANE_REALMS` in `src/constants.js` | Same, frontend side | Static fallback until constants store loads — annotated | ✅ Done |
+| `app/api/v1/warmane.py` | Warmane blueprint | Kept in v1 registration — plugin does not re-register | Deferred |
+| `WARMANE_REALMS` everywhere | Hardcoded realm lists | ✅ **Removed entirely** — zero references in codebase. Realms are dynamic (from provider API or manual per-guild config) | ✅ Done |
 | `useWowheadTooltips.js` | Inline Wowhead script injection | **Consider** moving to plugin if Wowhead integration becomes optional | Deferred |
 
 **Verification:**
 ```bash
-# No direct Warmane/Discord imports outside plugins/
-grep -rn "warmane_service\|discord_service" app/ --include="*.py" | grep -v "plugins/"
-# Expected: empty
+# No hardcoded realm lists anywhere
+grep -rn "WARMANE_REALMS\|warmaneRealms\|warmane_realms" src/ app/ --include="*.js" --include="*.vue" --include="*.py"
+# Expected: empty ✅
 
-# No Warmane/armory API modules in frontend (if moved to plugins)
-ls src/api/warmane.js src/api/armory.js 2>/dev/null
-# Expected: files don't exist
+# Armory plugin has zero server-specific references
+grep -rn -i "warmane" app/plugins/ --include="*.py"
+# Expected: empty ✅
 ```
 
 #### 13.3.7 Phase 6 Cleanup Checklist
@@ -4758,7 +4773,7 @@ phase:
 | 4 | Static `WOW_CLASSES` in `src/constants.js` | Active — hardcoded 10 WotLK classes | **Phase 1** | Remove when DB-driven expansion data replaces it |
 | 5 | `WowClass` Python enum in `app/enums.py` | Active — hardcoded class enum | **Phase 1** | Remove when DB-driven `expansion_classes` table replaces it |
 | 6 | `CLASS_ROLES` / `CLASS_SPECS` in `app/constants.py` | Active — hardcoded WotLK mappings | **Phase 1** | Remove when DB-driven expansion registry replaces it |
-| 7 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | ✅ Moved to Warmane plugin (`app/plugins/warmane/plugin.py`) | **Phase 5** | `app/constants.py` re-exports for compat; `src/constants.js` static fallback annotated |
+| 7 | Static `WARMANE_REALMS` in `src/constants.js` + `app/constants.py` | ✅ **Removed entirely** — zero references in codebase | **Phase 5** | Realms are fully dynamic: fetched from provider API or managed manually per-guild via GuildRealmsTab |
 | 8 | `i18n-plan.md` | Planning doc — may become stale | **Phase 0** | Review; integrate remaining items into this plan or archive |
 | 9 | Hardcoded `max_guilds=3`, `max_members=unlimited` on Tenant model | Will be introduced in Phase 0 | **Phase 6** | Replace with billing-managed plan limits |
 | 10 | Database file `wotlk_calendar.db` | Active — WotLK-specific name | **Phase 0** | Rename to `raid_calendar.db` |

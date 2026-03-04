@@ -1015,7 +1015,7 @@
     "title": "Zapisz się",
     "updateSignup": "Aktualizuj zapis",
     "errors": {
-      "permanentlyKicked": "Ta postać została trwale wyrzucona z tego raidu. Skontaktuj się z oficerem raidu, aby odwołać się.",
+      "permanentlyKicked": "Ta postać została trwale wyrzucona z tego rajdu. Skontaktuj się z oficerem rajdu, aby odwołać się.",
       "notFound": "Zapis nie znaleziony",
       "replacementNotFound": "Prośba o zastępstwo nie znaleziona",
       "replacementNotPending": "Ta prośba o zastępstwo nie jest już oczekująca",
