@@ -297,9 +297,14 @@ def _register_socketio_handlers() -> None:
 
     @socketio.on("connect")
     def handle_connect():
-        """Auto-join the user's personal notification room on connect."""
+        """Auto-join the user's personal and tenant-scoped notification rooms on connect."""
         if current_user.is_authenticated:
             join_room(f"user_{current_user.id}")
+            # Also join tenant-scoped user room for tenant-isolated notifications
+            tenant_id = getattr(current_user, "active_tenant_id", None)
+            if tenant_id:
+                join_room(f"tenant_{tenant_id}_user_{current_user.id}")
+                join_room(f"tenant_{tenant_id}")
 
 
 def _seed_system_settings_if_missing() -> int:

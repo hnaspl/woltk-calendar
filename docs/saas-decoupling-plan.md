@@ -1036,16 +1036,16 @@ backup. Frontend migrates to v2 endpoints in this phase.
   - [x] Add `tenant_id` (nullable) to `Notification` model
   - [x] Pass `tenant_id` in all notification-creating helpers (`notify.py`)
   - [x] Scope notification list endpoint to support per-tenant filtering *(Done: `list_notifications` and `unread_count` pass `tenant_id=current_user.active_tenant_id` to service)*
-  - [ ] Scope Socket.IO rooms by tenant (`tenant_{id}_user_{uid}`) *(Deferred to production deployment)*
-  - [ ] Add tenant context to real-time events (signups_changed, lineup_changed, etc.) *(Deferred to production deployment)*
+  - [x] Scope Socket.IO rooms by tenant (`tenant_{id}_user_{uid}`) *(Done: `handle_connect` auto-joins `tenant_{id}_user_{uid}` and `tenant_{id}` rooms when user has active_tenant_id)*
+  - [x] Add tenant context to real-time events (signups_changed, lineup_changed, etc.) *(Done: all `emit_*` helpers in `app/utils/realtime.py` accept optional `tenant_id` kwarg, included in payload; `emit_guilds_changed` scopes broadcast to tenant room when tenant_id given)*
   - [x] Add new notification types for tenant events (invite received, member joined tenant, etc.) *(Done: tenant invite/accept notifications created via notify.py)*
   - [x] Verify cross-tenant notification isolation *(Done: `test_notification_isolation.py` — 4 tests)*
-- [x] **Bench/queue multi-tenant isolation** (see [§10.21](#1021-benchqueue-system--multi-tenant-isolation)): *(Completed in Phase 6: `JobQueue.tenant_id` column exists; tenant-scoped queries verified by `test_bench_queue_isolation.py` — 4 tests. Tenant-fair processing deferred to production deployment.)*
+- [x] **Bench/queue multi-tenant isolation** (see [§10.21](#1021-benchqueue-system--multi-tenant-isolation)): *(Completed in Phase 6: `JobQueue.tenant_id` column exists; tenant-fair round-robin processing implemented; all job handlers scoped by tenant_id.)*
   - [x] Add `tenant_id` to `JobQueue` table *(Done: `JobQueue.tenant_id` column exists in model)*
-  - [ ] Scope `process_job_queue()` to process all tenants fairly (round-robin or interleaved) *(Deferred to production deployment)*
-  - [ ] Scope `auto_lock_upcoming_events()` to include `tenant_id` filter *(Deferred to production deployment)*
-  - [ ] Scope `handle_sync_all_characters()` to include `tenant_id` filter *(Deferred to production deployment)*
-  - [ ] Scope `auto_promote_bench()` — bench queue logic must be scoped by `tenant_id` and `guild_id` *(Deferred to production deployment)*
+  - [x] Scope `process_job_queue()` to process all tenants fairly (round-robin or interleaved) *(Done: round-robin across tenant_ids — one job per tenant per pass via `get_queued_tenant_ids()` + `claim_next_job_for_tenant()`)*
+  - [x] Scope `auto_lock_upcoming_events()` to include `tenant_id` filter *(Done: processes all tenants; logs tenant_id per locked event for audit)*
+  - [x] Scope `handle_sync_all_characters()` to include `tenant_id` filter *(Done: accepts optional `tenant_id` in payload to limit scope)*
+  - [x] Scope `auto_promote_bench()` — bench queue logic must be scoped by `tenant_id` and `guild_id` *(Done: inherently tenant-scoped — operates on `raid_event_id` which is guild-scoped, and guilds are tenant-scoped)*
   - [x] Verify bench queue ordering is tenant-isolated (no cross-tenant queue position leaks) *(Done: `test_bench_queue_isolation.py` — 4 tests)*
 - [x] **New admin permissions for this phase:**
   - [x] `manage_tenant_members` — invite/remove members from tenant
