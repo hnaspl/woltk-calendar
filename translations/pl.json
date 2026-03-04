@@ -165,7 +165,7 @@
     "templates": "Szablony"
   },
   "auth": {
-    "appSubtitle": "WotLK Warmane – Zarządzanie gildią",
+    "appSubtitle": "WoW – Zarządzanie gildią",
     "appTitle": "Raid Calendar",
     "confirmNewPassword": "Potwierdź nowe hasło",
     "confirmPassword": "Potwierdź hasło",
@@ -354,9 +354,7 @@
     "fillManually": "lub uzupełnij ręcznie bez armory",
     "foundOnArmory": "Znaleziono — pola uzupełnione z armory",
     "imDone": "Gotowe",
-    "importFromWarmane": "Importuj z Warmane Armory",
-    "importHelp": "Wpisz nazwę postaci i realm, aby automatycznie uzupełnić dane z Warmane.",
-    "lookupOnWarmane": "Wyszukaj na Warmane",
+    "importHelp": "Wpisz nazwę postaci i realm, aby automatycznie uzupełnić dane z armory.",
     "main": "GŁÓWNA",
     "namePlaceholder": "Arthas",
     "nameRequired": "Nazwa postaci *",
@@ -374,15 +372,13 @@
     "setMain": "Ustaw jako główną",
     "spec": "Spec",
     "sync": "Synchronizuj",
-    "syncedFromWarmane": "Ta postać jest zsynchronizowana z Warmane. Pola są zablokowane. Użyj Synchronizuj, aby zaktualizować dane. Rolę nadal można zmienić.",
     "title": "Moje postacie",
     "toasts": {
       "characterUpdated": "Postać zaktualizowana",
       "characterAdded": "Postać dodana",
       "setAsMain": "{name} ustawiony jako główna",
       "failedToSetMain": "Nie udało się ustawić głównej postaci",
-      "syncedFromWarmane": "{name} zsynchronizowany z Warmane",
-      "syncFailed": "Synchronizacja nie powiodła się — postać może nie istnieć na Warmane",
+      "syncFailed": "Synchronizacja nie powiodła się — postać może nie istnieć w armory",
       "characterArchived": "Postać zarchiwizowana",
       "failedToArchive": "Nie udało się zarchiwizować postaci",
       "characterDeleted": "Postać trwale usunięta",
@@ -391,11 +387,15 @@
       "failedToRestore": "Nie udało się przywrócić postaci",
       "joinGuildFirst": "Musisz najpierw dołączyć do gildii, aby dodawać postacie",
       "nameClassRealmRequired": "Nazwa, klasa i realm są wymagane",
-      "joinGuildFirstManage": "Musisz najpierw dołączyć do gildii, aby zarządzać postaciami"
+      "joinGuildFirstManage": "Musisz najpierw dołączyć do gildii, aby zarządzać postaciami",
+      "syncedFromArmory": "{name} zsynchronizowano z armory"
     },
     "unarchive": "Przywróć",
-    "warmaneUrl": "URL Warmane Armory",
-    "whatToDo": "Co chcesz zrobić z"
+    "whatToDo": "Co chcesz zrobić z",
+    "importFromArmory": "Importuj z Armory",
+    "lookupOnArmory": "Szukaj w Armory",
+    "syncedFromArmory": "Zsynchronizowano z armory",
+    "armoryUrl": "URL Armory"
   },
   "attendance": {
     "absent": "Nieobecności",
@@ -589,7 +589,6 @@
     "expiresIn": "Wygasa",
     "expiresInDays": "Wygasa (dni)",
     "foundOnRealms": "Znaleziono na {count} realmach — wybierz jeden:",
-    "foundOnWarmane": "Znaleziono na Warmane",
     "generateLink": "Generuj link",
     "guildCreated": "Gildia utworzona!",
     "guildLimitReached": "Limit gildii osiągnięty — ulepsz",
@@ -608,7 +607,7 @@
     "join": "Dołącz",
     "linkGenerated": "Link zaproszeniowy utworzony!",
     "linkGeneratedHelp": "Udostępnij ten link członkom przestrzeni roboczej, których chcesz zaprosić do gildii.",
-    "manualEntry": "Tryb ręczny — gildia nie zweryfikowana na Warmane.",
+    "manualEntry": "Tryb ręczny — gildia nie zweryfikowana w armory.",
     "maxUses": "Maksymalna liczba użyć",
     "memberCount": "{count} członków",
     "membersOnRealm": "{count} członków na {realm}",
@@ -619,23 +618,21 @@
     "noGuildsFound": "Nie znaleziono otwartych gildii w tej przestrzeni roboczej.",
     "noInvites": "Brak zaproszeń.",
     "noInvitesHelp": "Utwórz swój pierwszy link zaproszeniowy powyżej.",
-    "notFound": "Gildii nie znaleziono na żadnym realmie Warmane. Chcesz wprowadzić dane ręcznie?",
+    "notFound": "Gildii nie znaleziono w armory. Chcesz wprowadzić dane ręcznie?",
     "pending": "Oczekujące",
     "revoke": "Wycofaj",
     "revoked": "Wycofane",
     "roleMember": "Członek",
     "roleOfficer": "Oficer",
-    "searchOnWarmane": "Szukaj na Warmane",
     "select": "Wybierz →",
     "selectFaction": "Wybierz frakcję…",
     "settings": {
       "title": "Ustawienia gildii",
       "information": "Informacje o gildii",
-      "nameLocked": "Nazwa jest zablokowana dla gildii z Warmane.",
-      "realmLocked": "Realm jest zablokowany dla gildii z Warmane.",
+      "nameLocked": "Nazwa jest zablokowana dla gildii z armory.",
+      "realmLocked": "Realm jest zablokowany dla gildii z armory.",
       "guildTimezone": "Strefa czasowa gildii",
       "timezoneHelp": "Wszystkie czasy rajdów będą domyślnie wyświetlane w tej strefie czasowej.",
-      "warmaneInfo": "Informacje z Warmane",
       "lastRefreshed": "Ostatnie odświeżenie:",
       "refresh": "Odśwież",
       "guildDetails": "Szczegóły gildii",
@@ -643,14 +640,14 @@
       "memberRoster": "Roster gildii ({count})",
       "race": "Rasa",
       "noRosterData": "Brak danych rostera.",
-      "guildName": "Nazwa Gildii"
+      "guildName": "Nazwa Gildii",
+      "armoryInfo": "Informacje o gildii z Armory"
     },
     "toasts": {
       "failedToJoin": "Nie udało się dołączyć do gildii",
       "joined": "Dołączono do {name}!",
-      "failedToSearchWarmane": "Nie udało się przeszukać API Warmane",
-      "failedToCreate": "Nie udało się utworzyć gildii",
-      "failedToSearchArmory": "Nie udało się wyszukać w API Armory"
+      "failedToSearchArmory": "Nie udało się wyszukać w API Armory",
+      "failedToCreate": "Nie udało się utworzyć gildii"
     },
     "unlimited": "∞",
     "used": "Użyte",
@@ -730,7 +727,7 @@
     "armoryProvider": "Dostawca Armory",
     "realmPlaceholder": "Wpisz nazwę realmu",
     "armoryUrl": "URL Armory serwera",
-    "armoryUrlHelp": "Podaj link do Armory swojego serwera (np. http://armory.warmane.com/api) lub pozostaw puste, aby wprowadzić dane ręcznie",
+    "armoryUrlHelp": "Podaj link do Armory swojego serwera (np. http://armory.example.com/api) lub pozostaw puste, aby wprowadzić dane ręcznie",
     "expansion": "Dodatek WoW",
     "expansionHelp": "Wybierz dodatek, w który gra Twoja gildia. Określa dostępne klasy, specjalizacje i rajdy.",
     "providerDetected": "Wykryto dostawcę: {provider}",
@@ -745,7 +742,7 @@
     "banConfirm": "Zbanować {name} z gildii? Zostanie usunięty i nie będzie mógł ponownie dołączyć, dopóki nie zostanie odbanowany.",
     "banMember": "Zbanuj członka",
     "failedToLoad": "Nie udało się załadować członków",
-    "fetchRoster": "Pobierz roster gildii z Warmane, aby znaleźć członków.",
+    "fetchRoster": "Pobierz roster gildii z armory, aby znaleźć członków.",
     "fetchRosterBtn": "Pobierz roster",
     "filterByName": "Filtruj po nazwie",
     "filterPlaceholder": "Wpisz, aby filtrować…",
@@ -785,7 +782,7 @@
     "toasts": {
       "ownershipTransferred": "Własność gildii przeniesiona pomyślnie",
       "failedToTransfer": "Nie udało się przenieść własności",
-      "failedToFetchRoster": "Nie udało się pobrać składu gildii z Warmane",
+      "failedToFetchRoster": "Nie udało się pobrać składu gildii z armory",
       "notificationSent": "Powiadomienie wysłane",
       "allNotified": "Wszyscy członkowie powiadomieni",
       "notificationFailed": "Nie udało się wysłać powiadomienia",
@@ -930,8 +927,6 @@
       "title": "Ustawienia systemowe",
       "wowheadTooltips": "Włącz podpowiedzi Wowhead",
       "wowheadHelp": "Gdy włączone, najechanie na przedmioty wyposażenia pokazuje szczegółowe podpowiedzi ze statystykami z Wowhead. Gdy wyłączone, podstawowe informacje są wyświetlane inline.",
-      "warmaneSync": "Auto-synchronizacja postaci z Warmane",
-      "warmaneSyncHelp": "Automatycznie synchronizuj wszystkie aktywne postacie z Warmane armory w zaplanowanych odstępach czasu.",
       "autoSyncEnabled": "Auto-synchronizacja włączona",
       "syncInterval": "Interwał synchronizacji",
       "every15min": "Co 15 minut",
@@ -972,7 +967,9 @@
         "callbackUrlLabel": "Redirect URL (dodaj to w Discord)",
         "callbackUrlHelp": "Skopiuj ten URL i wklej go w ustawieniach aplikacji Discord pod OAuth2 → Redirects.",
         "callbackUrlCopied": "URL przekierowania skopiowany do schowka"
-      }
+      },
+      "armorySync": "Synchronizacja Armory",
+      "armorySyncHelp": "Automatycznie synchronizuj dane postaci z dostawców armory"
     },
     "tabs": {
       "roles": "Role i uprawnienia",
@@ -1133,13 +1130,6 @@
     "noGuild": "Brak gildii",
     "toggleSidebar": "Przełącz pasek boczny"
   },
-  "warmane": {
-    "characterIdRequired": "character_id jest wymagane",
-    "characterNotFound": "Postaci nie znaleziono na Warmane armory",
-    "characterNotFoundGeneric": "Postaci nie znaleziono",
-    "fetchFailed": "Nie udało się pobrać danych z Warmane. Postać może nie istnieć lub API może być niedostępne.",
-    "guildNotFound": "Gildii nie znaleziono na Warmane armory"
-  },
   "api": {
     "admin": {
       "userNotFound": "Użytkownik nie znaleziony",
@@ -1187,13 +1177,13 @@
       "messageRequired": "Wiadomość jest wymagana.",
       "nameRequired": "Nazwa i realm są wymagane",
       "notFound": "Gildia nie znaleziona",
-      "notWarmane": "Gildia nie pochodzi z Warmane",
-      "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API",
+      "rosterFetchFailed": "Nie udało się pobrać rostera z armory",
       "selfJoinDisabled": "Ta gildia wymaga, aby członkowie byli dodawani ręcznie przez oficera",
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
       "tenantRequired": "Workspace jest wymagany do utworzenia gildii",
       "userIdRequired": "user_id jest wymagane",
-      "invalidVisibility": "Nieprawidłowe ustawienie widoczności"
+      "invalidVisibility": "Nieprawidłowe ustawienie widoczności",
+      "notArmorySource": "Ta gildia nie jest z armory"
     },
     "lineup": {
       "cannotModifyCompleted": "Nie można modyfikować składu ukończonego lub anulowanego wydarzenia",
@@ -1576,7 +1566,12 @@
     "labelRequired": "Etykieta konfiguracji armory jest wymagana",
     "providerRequired": "Dostawca armory jest wymagany",
     "unknownProvider": "Nieznany dostawca armory",
-    "urlRequired": "URL API armory jest wymagany"
+    "urlRequired": "URL API armory jest wymagany",
+    "characterIdRequired": "character_id jest wymagane",
+    "characterNotFound": "Postaci nie znaleziono na armory armory",
+    "characterNotFoundGeneric": "Postaci nie znaleziono",
+    "fetchFailed": "Nie udało się pobrać danych z armory. Postać może nie istnieć lub API może być niedostępne.",
+    "guildNotFound": "Gildii nie znaleziono na armory armory"
   },
   "tenant": {
     "acceptInvite": "Przyjmij zaproszenie",
@@ -1706,7 +1701,6 @@
     "noPlugins": "Brak zarejestrowanych wtyczek",
     "integration": "Integracja",
     "expansion": "Dodatek",
-    "warmane": "Integracja Warmane",
     "discord": "Integracja Discord",
     "dependencies": "Zależności",
     "noDependencies": "Brak",

@@ -15,7 +15,7 @@ from app.models.user import User
 from app.plugins.base import BasePlugin, PluginRegistry
 from app.plugins.armory.plugin import ArmoryPlugin
 from app.plugins.discord.plugin import DiscordPlugin
-from app.services.armory.warmane import WarmaneProvider
+from app.plugins.armory.provider import GenericArmoryProvider
 from app.seeds.expansions import seed_expansions
 
 
@@ -85,7 +85,7 @@ class TestBasePlugin:
         assert plugin.key == "armory"
         assert plugin.display_name == "Armory Integration"
         assert plugin.plugin_type == "integration"
-        assert plugin.version == "1.0.0"
+        assert plugin.version == "2.0.0"
 
     def test_armory_plugin_feature_flags(self):
         plugin = ArmoryPlugin()
@@ -98,19 +98,19 @@ class TestBasePlugin:
         plugin = ArmoryPlugin()
         config = plugin.get_default_config()
         assert "providers" in config
-        assert "warmane" in config["providers"]
-        assert "realms" in config["providers"]["warmane"]
+        assert "armory" in config["providers"]
+        assert "realms" in config["providers"]["armory"]
 
     def test_armory_plugin_provider_realms_empty_by_default(self, ctx):
         """Providers return no hardcoded realms — realms are managed per-guild."""
         plugin = ArmoryPlugin()
-        realms = plugin.get_provider_realms("warmane")
+        realms = plugin.get_provider_realms("armory")
         assert isinstance(realms, list)
 
     def test_armory_plugin_list_providers(self, ctx):
         plugin = ArmoryPlugin()
         providers = plugin.list_providers()
-        assert "warmane" in providers
+        assert "armory" in providers
 
     def test_armory_plugin_to_dict(self, ctx):
         plugin = ArmoryPlugin()
@@ -218,7 +218,7 @@ class TestPluginAPI:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "providers" in data
-        assert "warmane" in data["providers"]
+        assert "armory" in data["providers"]
 
     def test_get_plugin_config_not_found(self, app, db):
         client = app.test_client()
@@ -236,7 +236,7 @@ class TestPluginAPI:
         data = resp.get_json()
         assert isinstance(data, list)
         names = [p["name"] for p in data]
-        assert "warmane" in names
+        assert "armory" in names
 
     def test_get_plugin_config_requires_admin(self, app, db):
         """Non-admin user should get 403 on plugin config endpoint."""
@@ -251,29 +251,50 @@ class TestPluginAPI:
         client = app.test_client()
         user = _make_user(db)
         _login_as(client, user)
-        resp = client.get("/api/v2/plugins/armory/providers/warmane/realms")
+        resp = client.get("/api/v2/plugins/armory/providers/armory/realms")
         assert resp.status_code == 200
         data = resp.get_json()
         assert isinstance(data, list)
 
 
 # ---------------------------------------------------------------------------
-# WarmaneProvider tests (armory provider, not plugin)
+# GenericArmoryProvider tests
 # ---------------------------------------------------------------------------
 
-class TestWarmaneProvider:
+class TestGenericArmoryProvider:
     def test_provider_has_no_hardcoded_realms(self, ctx):
-        """WarmaneProvider should not have hardcoded realm defaults."""
-        provider = WarmaneProvider()
+        """GenericArmoryProvider should not have hardcoded realm defaults."""
+        provider = GenericArmoryProvider()
         realms = provider.get_default_realms()
         assert realms == []
 
     def test_provider_fetch_realms_returns_empty(self, ctx):
         """Base fetch_realms returns empty (no dynamic API)."""
-        provider = WarmaneProvider()
+        provider = GenericArmoryProvider()
         realms = provider.fetch_realms()
         assert realms == []
 
     def test_provider_name(self):
-        provider = WarmaneProvider()
-        assert provider.provider_name == "warmane"
+        provider = GenericArmoryProvider()
+        assert provider.provider_name == "armory"
+
+    def test_provider_no_default_url(self):
+        """Provider without URL configured returns None for api_base_url."""
+        provider = GenericArmoryProvider()
+        assert provider.api_base_url is None
+
+    def test_provider_custom_url(self):
+        """Provider with custom URL uses it."""
+        provider = GenericArmoryProvider(api_base_url="http://armory.example.com/api")
+        assert provider.api_base_url == "http://armory.example.com/api"
+
+    def test_provider_build_armory_url_no_base(self):
+        """build_armory_url returns empty string when no URL configured."""
+        provider = GenericArmoryProvider()
+        assert provider.build_armory_url("Realm", "Char") == ""
+
+    def test_provider_build_armory_url_custom(self):
+        """build_armory_url derives web URL from API base."""
+        provider = GenericArmoryProvider(api_base_url="http://armory.myserver.com/api")
+        url = provider.build_armory_url("Realm1", "TestChar")
+        assert url == "https://armory.myserver.com/character/TestChar/Realm1/summary"

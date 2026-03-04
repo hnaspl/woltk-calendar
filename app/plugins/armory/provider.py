@@ -1,7 +1,16 @@
-"""Warmane armory provider implementation.
+"""Generic WoW armory provider implementation.
 
-Wraps the existing Warmane API client logic in an :class:`ArmoryProvider`
-subclass so it can be used through the pluggable provider system.
+Works with ANY WoW private-server armory API regardless of expansion.
+All private servers use the same API format — the only difference is
+the base URL (e.g. ``http://armory.server1.com/api``,
+``http://armory.server2.com/api``, etc.).
+
+Guild admins configure their server's armory URL per-guild.  This
+provider uses that URL to communicate with the correct API.
+
+Class/spec validation is NOT done here — it comes from the guild's
+enabled expansions in the database.  The provider just fetches and
+normalizes the raw API data.
 """
 
 from __future__ import annotations
@@ -9,7 +18,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import requests
 
@@ -17,7 +26,8 @@ from app.services.armory.base import ArmoryProvider
 
 logger = logging.getLogger(__name__)
 
-WARMANE_API_BASE = "http://armory.warmane.com/api"
+# No default API base — each guild must configure its own armory URL.
+DEFAULT_API_BASE: str | None = None
 REQUEST_TIMEOUT = 15  # seconds
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -25,24 +35,20 @@ _HEADERS = {
 _MAX_RETRIES = 2
 _RETRY_DELAY = 2  # seconds
 
-_VALID_CLASSES = {
-    "Death Knight", "Druid", "Hunter", "Mage", "Paladin",
-    "Priest", "Rogue", "Shaman", "Warlock", "Warrior",
-}
 
+def normalize_class_name(raw_class: str) -> Optional[str]:
+    """Normalize a class name from the armory API.
 
-def normalize_class_name(warmane_class: str) -> Optional[str]:
-    """Validate and normalize a Warmane API class name."""
-    if warmane_class in _VALID_CLASSES:
-        return warmane_class
-    title = warmane_class.strip().title()
-    if title in _VALID_CLASSES:
-        return title
-    return None
+    Simply title-cases the input.  Actual class validation is done
+    elsewhere against the guild's enabled expansion data in the DB.
+    """
+    if not raw_class or not isinstance(raw_class, str):
+        return None
+    return raw_class.strip().title()
 
 
 def _parse_talents(talents: list) -> list[dict]:
-    """Parse talent specs from Warmane API response."""
+    """Parse talent specs from armory API response."""
     result = []
     for spec in (talents or []):
         result.append({
@@ -53,7 +59,7 @@ def _parse_talents(talents: list) -> list[dict]:
 
 
 def _parse_professions(professions) -> list[dict]:
-    """Parse professions from Warmane API response.
+    """Parse professions from armory API response.
 
     Character endpoint returns a list; guild roster wraps it in a dict.
     """
@@ -67,7 +73,7 @@ def _parse_professions(professions) -> list[dict]:
 
 
 def _parse_equipment(equipment: list) -> list[dict]:
-    """Parse equipment from Warmane API character response.
+    """Parse equipment from armory API character response.
 
     Preserves quality, gems, and enchant alongside name/item/transmog so the
     frontend can render richer item tooltips.
@@ -89,32 +95,53 @@ def _parse_equipment(equipment: list) -> list[dict]:
     return result
 
 
-class WarmaneProvider(ArmoryProvider):
-    """Armory provider backed by the Warmane public API."""
+def _derive_web_base(api_base_url: str) -> str:
+    """Derive the user-facing armory web URL from the API base URL.
+
+    ``http://armory.example.com/api`` → ``https://armory.example.com``
+    """
+    parsed = urlparse(api_base_url)
+    return f"https://{parsed.hostname}"
+
+
+class GenericArmoryProvider(ArmoryProvider):
+    """Generic WoW armory provider — works with any private server
+    and any expansion.
+
+    Accepts ``api_base_url`` so each guild can point at its own server.
+    Class/spec validation is NOT done here — it uses the guild's
+    expansion data from the database.
+    """
 
     def __init__(self, api_base_url: str | None = None) -> None:
-        self._api_base_url = api_base_url or WARMANE_API_BASE
+        if api_base_url:
+            self._api_base_url = api_base_url.rstrip("/")
+        else:
+            self._api_base_url = None
 
     @property
     def provider_name(self) -> str:
-        return "warmane"
+        return "armory"
 
     @property
     def api_base_url(self) -> str:
         return self._api_base_url
 
     def fetch_character(self, realm: str, name: str) -> Optional[dict]:
-        """Fetch character summary from the Warmane armory API.
+        """Fetch character summary from the armory API.
 
         Returns full character data or None if not found / API error.
         Retries up to _MAX_RETRIES times on transient failures.
         """
+        if not self._api_base_url:
+            logger.warning("No armory URL configured — cannot fetch character %s/%s", realm, name)
+            return None
         url = f"{self._api_base_url}/character/{quote(name, safe='')}/{quote(realm, safe='')}/summary"
         for attempt in range(_MAX_RETRIES):
             try:
                 resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
                 if resp.status_code != 200:
-                    logger.warning("Warmane API returned %s for %s/%s (attempt %d)", resp.status_code, realm, name, attempt + 1)
+                    logger.warning("Armory API returned %s for %s/%s (attempt %d)", resp.status_code, realm, name, attempt + 1)
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(_RETRY_DELAY)
                         continue
@@ -124,7 +151,7 @@ class WarmaneProvider(ArmoryProvider):
                     return None
                 return data
             except (requests.RequestException, ValueError) as exc:
-                logger.warning("Warmane API error for character %s/%s: %s (attempt %d)", realm, name, exc, attempt + 1)
+                logger.warning("Armory API error for character %s/%s: %s (attempt %d)", realm, name, exc, attempt + 1)
                 if attempt < _MAX_RETRIES - 1:
                     time.sleep(_RETRY_DELAY)
                     continue
@@ -132,17 +159,20 @@ class WarmaneProvider(ArmoryProvider):
         return None
 
     def fetch_guild(self, realm: str, guild_name: str) -> Optional[dict]:
-        """Fetch guild summary + roster from the Warmane armory API.
+        """Fetch guild summary + roster from the armory API.
 
         Returns a dict with guild data or None if not found / API error.
         Retries up to _MAX_RETRIES times on transient failures.
         """
+        if not self._api_base_url:
+            logger.warning("No armory URL configured — cannot fetch guild %s/%s", realm, guild_name)
+            return None
         url = f"{self._api_base_url}/guild/{quote(guild_name, safe='')}/{quote(realm, safe='')}/summary"
         for attempt in range(_MAX_RETRIES):
             try:
                 resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
                 if resp.status_code != 200:
-                    logger.warning("Warmane API returned %s for guild %s/%s (attempt %d)", resp.status_code, realm, guild_name, attempt + 1)
+                    logger.warning("Armory API returned %s for guild %s/%s (attempt %d)", resp.status_code, realm, guild_name, attempt + 1)
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(_RETRY_DELAY)
                         continue
@@ -152,7 +182,7 @@ class WarmaneProvider(ArmoryProvider):
                     return None
                 return data
             except (requests.RequestException, ValueError) as exc:
-                logger.warning("Warmane API error for guild %s/%s: %s (attempt %d)", realm, guild_name, exc, attempt + 1)
+                logger.warning("Armory API error for guild %s/%s: %s (attempt %d)", realm, guild_name, exc, attempt + 1)
                 if attempt < _MAX_RETRIES - 1:
                     time.sleep(_RETRY_DELAY)
                     continue
@@ -160,7 +190,7 @@ class WarmaneProvider(ArmoryProvider):
         return None
 
     def build_character_dict(self, data: dict, realm: str) -> dict:
-        """Transform a Warmane API character/roster response into our format."""
+        """Transform an armory API character/roster response into our format."""
         name = data.get("name", "")
         class_name = normalize_class_name(data.get("class", ""))
 
@@ -183,5 +213,12 @@ class WarmaneProvider(ArmoryProvider):
         }
 
     def build_armory_url(self, realm: str, name: str) -> str:
-        """Build the Warmane armory URL for a character."""
-        return f"https://armory.warmane.com/character/{name}/{realm}/summary"
+        """Build a user-facing armory URL for a character.
+
+        Derives the web URL from the configured API base, so it works
+        for ANY server.
+        """
+        if not self._api_base_url:
+            return ""
+        web_base = _derive_web_base(self._api_base_url)
+        return f"{web_base}/character/{name}/{realm}/summary"

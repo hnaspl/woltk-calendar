@@ -77,10 +77,10 @@ def get_slot_counts_from_rd(rd: object | None) -> dict[str, int]:
 def normalize_spec_name(
     tree_name: str | None, class_name: str | None
 ) -> str | None:
-    """Map a Warmane talent-tree name to the canonical spec name.
+    """Map an armory talent-tree name to the canonical spec name.
 
     Delegates to the DB-driven :func:`app.utils.class_roles.normalize_spec_name`.
-    Kept here for backward-compatible imports in warmane.py / handlers.py.
+    Kept here for backward-compatible imports in armory providers / handlers.py.
     """
     from app.utils.class_roles import normalize_spec_name as _normalize
     return _normalize(tree_name, class_name)

@@ -10,16 +10,16 @@
       <form v-else @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-          <input v-model="form.name" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
-          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.nameLocked') }}</p>
+          <input v-model="form.name" required :disabled="isArmorySource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
+          <p v-if="isArmorySource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.nameLocked') }}</p>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
-          <select v-model="form.realm" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+          <select v-model="form.realm" required :disabled="isArmorySource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
             <option value="">{{ t('common.fields.selectRealm') }}</option>
             <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
           </select>
-          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
+          <p v-if="isArmorySource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
@@ -37,12 +37,12 @@
       </form>
     </WowCard>
 
-    <!-- Warmane Guild Info (only for Warmane-sourced guilds) -->
-    <WowCard v-if="isWarmaneSource">
+    <!-- Armory Guild Info (only for armory-sourced guilds) -->
+    <WowCard v-if="isArmorySource">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div class="flex items-center gap-3">
           <img :src="getGuildIcon()" alt="Guild" class="w-8 h-8 rounded" />
-          <h2 class="wow-heading text-lg">{{ t('guild.settings.warmaneInfo') }}</h2>
+          <h2 class="wow-heading text-lg">{{ t('guild.settings.armoryInfo') }}</h2>
         </div>
         <div class="flex items-center gap-3 sm:gap-4">
           <span v-if="lastRefreshed" class="text-xs text-text-muted">
@@ -52,16 +52,16 @@
             v-if="canManualRefresh"
             variant="secondary"
             class="text-sm py-1.5 px-4 flex-shrink-0"
-            :loading="fetchingWarmane"
-            @click="fetchWarmaneRoster"
+            :loading="fetchingArmory"
+            @click="fetchArmoryRoster"
           >{{ t('guild.settings.refresh') }}</WowButton>
         </div>
       </div>
 
-      <div v-if="fetchingWarmane && !warmaneGuildData" class="h-56 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else-if="warmaneError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
+      <div v-if="fetchingArmory && !armoryGuildData" class="h-56 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+      <div v-else-if="armoryError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ armoryError }}</div>
 
-      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+      <div v-else-if="armoryGuildData" class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
         <!-- Left column: Guild Info -->
         <div class="space-y-6">
           <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">{{ t('guild.settings.guildDetails') }}</h3>
@@ -69,28 +69,28 @@
           <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-5 space-y-4">
             <div class="flex items-center gap-3 sm:gap-4">
               <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.guildName') }}</span>
-              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.name }}</span>
+              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ armoryGuildData.name }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
               <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.realmRequired').replace(' *', '') }}</span>
-              <span class="text-sm sm:text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
+              <span class="text-sm sm:text-base text-text-primary">{{ armoryGuildData.realm }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
               <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.faction') }}</span>
-              <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
-                :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+              <span v-if="armoryGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
+                :class="armoryGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >
-                <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-6 h-6 rounded" />
-                {{ warmaneGuildData.faction }}
+                <img :src="getFactionIcon(armoryGuildData.faction)" :alt="armoryGuildData.faction" class="w-6 h-6 rounded" />
+                {{ armoryGuildData.faction }}
               </span>
               <span v-else class="text-sm sm:text-base text-text-muted">{{ t('common.labels.unknown') }}</span>
             </div>
             <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
               <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.labels.members') }}</span>
-              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
+              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ armoryGuildData.member_count ?? armoryGuildData.roster?.length ?? 0 }}</span>
             </div>
           </div>
 
@@ -111,8 +111,8 @@
 
         <!-- Right column: Member Roster -->
         <div>
-          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">{{ t('guild.settings.memberRoster', { count: warmaneGuildData.roster?.length ?? 0 }) }}</h3>
-          <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-[32rem] overflow-y-auto rounded-lg border border-border-default">
+          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">{{ t('guild.settings.memberRoster', { count: armoryGuildData.roster?.length ?? 0 }) }}</h3>
+          <div v-if="armoryGuildData.roster?.length" class="overflow-x-auto max-h-[32rem] overflow-y-auto rounded-lg border border-border-default">
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10">
                 <tr class="bg-bg-tertiary border-b border-border-default">
@@ -122,7 +122,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-default/60">
-                <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50 transition-colors">
+                <tr v-for="ch in armoryGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50 transition-colors">
                   <td class="px-4 py-2.5">
                     <div class="flex items-center gap-3">
                       <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-7 h-7 rounded flex-shrink-0" />
@@ -171,7 +171,7 @@ const error = ref(null)
 const saveError = ref(null)
 const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
 const guildRealmNames = ref([])
-const isWarmaneSource = ref(false)
+const isArmorySource = ref(false)
 
 const timezoneOptions = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -210,7 +210,7 @@ async function loadGuildData() {
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
-      isWarmaneSource.value = !!g.warmane_source
+      isArmorySource.value = !!g.armory_source
       // Load guild-configured realms from API
       try {
         const data = await guildRealmsApi.getGuildRealms(g.id)
@@ -228,8 +228,8 @@ async function loadGuildData() {
 
 onMounted(async () => {
   await loadGuildData()
-  if (isWarmaneSource.value) {
-    await fetchWarmaneRoster()
+  if (isArmorySource.value) {
+    await fetchArmoryRoster()
     await loadAutoRefreshInterval()
   }
 })
@@ -240,10 +240,10 @@ watch(
     if (newId && newId !== oldId) {
       stopAutoRefresh()
       await loadGuildData()
-      warmaneGuildData.value = null
-      warmaneError.value = null
-      if (isWarmaneSource.value) {
-        await fetchWarmaneRoster()
+      armoryGuildData.value = null
+      armoryError.value = null
+      if (isArmorySource.value) {
+        await fetchArmoryRoster()
         await loadAutoRefreshInterval()
       }
     }
@@ -268,23 +268,23 @@ async function saveGuild() {
   }
 }
 
-// Warmane guild info
-const fetchingWarmane = ref(false)
-const warmaneError = ref(null)
-const warmaneGuildData = ref(null)
+// Armory guild info
+const fetchingArmory = ref(false)
+const armoryError = ref(null)
+const armoryGuildData = ref(null)
 const lastRefreshed = ref(null)
 let autoRefreshTimer = null
 
-async function fetchWarmaneRoster() {
+async function fetchArmoryRoster() {
   if (!guildStore.currentGuild?.id) return
-  warmaneError.value = null
-  fetchingWarmane.value = true
+  armoryError.value = null
+  fetchingArmory.value = true
   const maxAttempts = 2
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      warmaneGuildData.value = await guildsApi.getWarmaneRoster(guildStore.currentGuild.id)
+      armoryGuildData.value = await guildsApi.getArmoryRoster(guildStore.currentGuild.id)
       lastRefreshed.value = tzHelper.formatGuildTime(new Date().toISOString(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      warmaneError.value = null
+      armoryError.value = null
       break
     } catch (err) {
       if (attempt < maxAttempts) {
@@ -292,15 +292,15 @@ async function fetchWarmaneRoster() {
         await new Promise(resolve => setTimeout(resolve, 2000))
         continue
       }
-      warmaneError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from Warmane'
+      armoryError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from armory'
     }
   }
-  fetchingWarmane.value = false
+  fetchingArmory.value = false
 }
 
 // Class distribution computed from roster
 const classDistribution = computed(() => {
-  const roster = warmaneGuildData.value?.roster
+  const roster = armoryGuildData.value?.roster
   if (!roster?.length) return []
   const counts = {}
   for (const ch of roster) {
@@ -321,7 +321,7 @@ async function loadAutoRefreshInterval() {
     const intervalMin = parseInt(settings.autosync_interval_minutes) || 60
     if (enabled && intervalMin > 0) {
       autoRefreshTimer = setInterval(() => {
-        if (isWarmaneSource.value) fetchWarmaneRoster()
+        if (isArmorySource.value) fetchArmoryRoster()
       }, intervalMin * 60 * 1000)
     }
   } catch {

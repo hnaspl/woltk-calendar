@@ -39,7 +39,7 @@ def register_blueprints(app: Flask) -> None:
         lineup,
         attendance,
         notifications,
-        warmane,
+        armory_lookup,
         roles,
         meta,
         armory,
@@ -63,7 +63,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(lineup.bp, url_prefix=f"{guild_prefix}/events/<int:event_id>/lineup")
     app.register_blueprint(attendance.bp, url_prefix=f"{prefix}")
     app.register_blueprint(notifications.bp, url_prefix=f"{prefix}/notifications")
-    app.register_blueprint(warmane.bp, url_prefix=f"{prefix}/warmane")
+    app.register_blueprint(armory_lookup.bp, url_prefix=f"{prefix}/armory-lookup")
     app.register_blueprint(roles.bp, url_prefix=f"{prefix}/roles")
     app.register_blueprint(armory.bp, url_prefix=f"{prefix}/armory")
 

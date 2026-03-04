@@ -165,7 +165,7 @@
     "templates": "Templates"
   },
   "auth": {
-    "appSubtitle": "WotLK Warmane Guild Management",
+    "appSubtitle": "WoW Guild Management",
     "appTitle": "Raid Calendar",
     "confirmNewPassword": "Confirm New Password",
     "confirmPassword": "Confirm Password",
@@ -354,9 +354,7 @@
     "fillManually": "or fill in manually without armory",
     "foundOnArmory": "Found — fields populated from armory",
     "imDone": "I'm Done",
-    "importFromWarmane": "Import from Warmane Armory",
-    "importHelp": "Enter your character name and realm to auto-fill all details from the Warmane armory.",
-    "lookupOnWarmane": "Lookup on Warmane",
+    "importHelp": "Enter your character name and realm to auto-fill all details from the armory.",
     "main": "MAIN",
     "namePlaceholder": "Arthas",
     "nameRequired": "Character Name *",
@@ -374,15 +372,13 @@
     "setMain": "Set Main",
     "spec": "Spec",
     "sync": "Sync",
-    "syncedFromWarmane": "This character is synced from Warmane armory. Fields are locked. Use Sync to update from armory. Role can still be changed.",
     "title": "My Characters",
     "toasts": {
       "characterUpdated": "Character updated",
       "characterAdded": "Character added",
       "setAsMain": "{name} set as main",
       "failedToSetMain": "Failed to set main",
-      "syncedFromWarmane": "{name} synced from Warmane",
-      "syncFailed": "Sync failed — character may not exist on Warmane",
+      "syncFailed": "Sync failed — character may not exist on armory",
       "characterArchived": "Character archived",
       "failedToArchive": "Failed to archive character",
       "characterDeleted": "Character permanently deleted",
@@ -391,11 +387,15 @@
       "failedToRestore": "Failed to restore character",
       "joinGuildFirst": "You need to join a guild first before adding characters",
       "nameClassRealmRequired": "Name, class and realm are required",
-      "joinGuildFirstManage": "You need to join a guild first before managing characters"
+      "joinGuildFirstManage": "You need to join a guild first before managing characters",
+      "syncedFromArmory": "{name} synced from armory"
     },
     "unarchive": "Unarchive",
-    "warmaneUrl": "Warmane Armory URL",
-    "whatToDo": "What would you like to do with"
+    "whatToDo": "What would you like to do with",
+    "importFromArmory": "Import from Armory",
+    "lookupOnArmory": "Lookup on Armory",
+    "syncedFromArmory": "Synced from armory",
+    "armoryUrl": "Armory URL"
   },
   "attendance": {
     "absent": "Absent",
@@ -589,7 +589,6 @@
     "expiresIn": "Expires",
     "expiresInDays": "Expires (days)",
     "foundOnRealms": "Found on {count} realms — select one:",
-    "foundOnWarmane": "Found on Warmane",
     "generateLink": "Generate Link",
     "guildCreated": "Guild created!",
     "guildLimitReached": "Guild limit reached — upgrade",
@@ -608,7 +607,7 @@
     "join": "Join",
     "linkGenerated": "Invitation link created!",
     "linkGeneratedHelp": "Share this link with workspace members you want to invite to the guild.",
-    "manualEntry": "Manual entry mode — guild not verified on Warmane.",
+    "manualEntry": "Manual entry mode — guild not verified on armory.",
     "maxUses": "Max Uses",
     "memberCount": "{count} members",
     "membersOnRealm": "{count} members on {realm}",
@@ -619,23 +618,21 @@
     "noGuildsFound": "No open guilds found in this workspace.",
     "noInvites": "No invitations yet.",
     "noInvitesHelp": "Create your first guild invitation link above.",
-    "notFound": "Guild not found on any Warmane realm. Would you like to enter details manually?",
+    "notFound": "Guild not found on armory. Would you like to enter details manually?",
     "pending": "Pending",
     "revoke": "Revoke",
     "revoked": "Revoked",
     "roleMember": "Member",
     "roleOfficer": "Officer",
-    "searchOnWarmane": "Search on Warmane",
     "select": "Select →",
     "selectFaction": "Select faction…",
     "settings": {
       "title": "Guild Settings",
       "information": "Guild Information",
-      "nameLocked": "Name is locked for Warmane-sourced guilds.",
-      "realmLocked": "Realm is locked for Warmane-sourced guilds.",
+      "nameLocked": "Name is locked for armory-sourced guilds.",
+      "realmLocked": "Realm is locked for armory-sourced guilds.",
       "guildTimezone": "Guild Timezone",
       "timezoneHelp": "All raid times will be displayed in this timezone by default.",
-      "warmaneInfo": "Warmane Guild Info",
       "lastRefreshed": "Last refreshed:",
       "refresh": "Refresh",
       "guildDetails": "Guild Details",
@@ -643,14 +640,14 @@
       "memberRoster": "Member Roster ({count})",
       "race": "Race",
       "noRosterData": "No roster data available.",
-      "guildName": "Guild Name"
+      "guildName": "Guild Name",
+      "armoryInfo": "Armory Guild Info"
     },
     "toasts": {
       "failedToJoin": "Failed to join guild",
       "joined": "Joined {name}!",
-      "failedToSearchWarmane": "Failed to search Warmane API",
-      "failedToCreate": "Failed to create guild",
-      "failedToSearchArmory": "Failed to search armory API"
+      "failedToSearchArmory": "Failed to search armory API",
+      "failedToCreate": "Failed to create guild"
     },
     "unlimited": "∞",
     "used": "Used",
@@ -730,7 +727,7 @@
     "armoryProvider": "Armory Provider",
     "realmPlaceholder": "Enter realm name",
     "armoryUrl": "Server Armory URL",
-    "armoryUrlHelp": "Provide your server's armory link (e.g. http://armory.warmane.com/api) or leave empty for manual entry",
+    "armoryUrlHelp": "Provide your server's armory link (e.g. http://armory.example.com/api) or leave empty for manual entry",
     "expansion": "WoW Expansion",
     "expansionHelp": "Select the expansion your guild plays. This determines available classes, specs, and raids.",
     "providerDetected": "Provider detected: {provider}",
@@ -745,7 +742,7 @@
     "banConfirm": "Ban {name} from this guild? They will be removed and unable to rejoin until unbanned.",
     "banMember": "Ban Member",
     "failedToLoad": "Failed to load members",
-    "fetchRoster": "Fetch guild roster from Warmane to find members.",
+    "fetchRoster": "Fetch guild roster from armory to find members.",
     "fetchRosterBtn": "Fetch Roster",
     "filterByName": "Filter by name",
     "filterPlaceholder": "Type to filter…",
@@ -785,7 +782,7 @@
     "toasts": {
       "ownershipTransferred": "Guild ownership transferred successfully",
       "failedToTransfer": "Failed to transfer ownership",
-      "failedToFetchRoster": "Failed to fetch guild roster from Warmane",
+      "failedToFetchRoster": "Failed to fetch guild roster from armory",
       "notificationSent": "Notification sent",
       "allNotified": "All members notified",
       "notificationFailed": "Failed to send notification",
@@ -930,8 +927,6 @@
       "title": "System Settings",
       "wowheadTooltips": "Enable Wowhead Tooltips",
       "wowheadHelp": "When enabled, hovering equipment items shows rich tooltips with full item statistics from Wowhead. When disabled, basic item info is shown inline.",
-      "warmaneSync": "Warmane Character Auto-Sync",
-      "warmaneSyncHelp": "Automatically sync all active characters from the Warmane armory at a scheduled interval.",
       "autoSyncEnabled": "Auto-Sync Enabled",
       "syncInterval": "Sync Interval",
       "every15min": "Every 15 minutes",
@@ -972,7 +967,9 @@
         "callbackUrlLabel": "Redirect URL (add this to Discord)",
         "callbackUrlHelp": "Copy this URL and paste it into your Discord application settings under OAuth2 → Redirects.",
         "callbackUrlCopied": "Redirect URL copied to clipboard"
-      }
+      },
+      "armorySync": "Armory Sync",
+      "armorySyncHelp": "Auto-sync character data from armory providers periodically"
     },
     "tabs": {
       "roles": "Roles & Permissions",
@@ -1133,13 +1130,6 @@
     "noGuild": "No Guild",
     "toggleSidebar": "Toggle sidebar"
   },
-  "warmane": {
-    "characterIdRequired": "character_id is required",
-    "characterNotFound": "Character not found on Warmane armory",
-    "characterNotFoundGeneric": "Character not found",
-    "fetchFailed": "Could not fetch data from Warmane. The character may not exist or the API may be unavailable.",
-    "guildNotFound": "Guild not found on Warmane armory"
-  },
   "api": {
     "admin": {
       "userNotFound": "User not found",
@@ -1187,13 +1177,13 @@
       "messageRequired": "Message is required.",
       "nameRequired": "name and realm_name are required",
       "notFound": "Guild not found",
-      "notWarmane": "Guild is not sourced from Warmane",
-      "rosterFetchFailed": "Could not fetch roster from Warmane API",
+      "rosterFetchFailed": "Could not fetch roster from armory",
       "selfJoinDisabled": "This guild requires members to be added manually by an officer",
       "targetNotActive": "Target user is not an active member of this guild",
       "tenantRequired": "A workspace is required to create a guild",
       "userIdRequired": "user_id is required",
-      "invalidVisibility": "Invalid visibility setting"
+      "invalidVisibility": "Invalid visibility setting",
+      "notArmorySource": "This guild is not sourced from armory"
     },
     "lineup": {
       "cannotModifyCompleted": "Cannot modify lineup on a completed or cancelled event",
@@ -1576,7 +1566,12 @@
     "labelRequired": "Armory config label is required",
     "providerRequired": "Armory provider is required",
     "unknownProvider": "Unknown armory provider",
-    "urlRequired": "Armory API URL is required"
+    "urlRequired": "Armory API URL is required",
+    "characterIdRequired": "character_id is required",
+    "characterNotFound": "Character not found on armory armory",
+    "characterNotFoundGeneric": "Character not found",
+    "fetchFailed": "Could not fetch data from armory. The character may not exist or the API may be unavailable.",
+    "guildNotFound": "Guild not found on armory armory"
   },
   "tenant": {
     "acceptInvite": "Accept Invitation",
@@ -1706,7 +1701,6 @@
     "noPlugins": "No plugins registered",
     "integration": "Integration",
     "expansion": "Expansion",
-    "warmane": "Warmane Integration",
     "discord": "Discord Integration",
     "dependencies": "Dependencies",
     "noDependencies": "None",

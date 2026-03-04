@@ -30,8 +30,10 @@ export const removeMember = (guildId, userId) =>
 export const getMemberCharacters = (guildId, userId) =>
   api.get(`/guilds/${guildId}/members/${userId}/characters`)
 
-export const getWarmaneRoster = (guildId) =>
-  api.get(`/guilds/${guildId}/warmane-roster`)
+export const getArmoryRoster = (guildId) =>
+  api.get(`/guilds/${guildId}/armory-roster`)
+
+/** @deprecated Use getArmoryRoster instead */
 
 export const transferOwnership = (guildId, userId) =>
   api.post(`/guilds/${guildId}/transfer-ownership`, { user_id: userId })

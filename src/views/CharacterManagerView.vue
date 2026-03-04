@@ -95,7 +95,7 @@
               <WowButton
                 variant="secondary"
                 class="flex-1 text-xs py-1.5"
-                @click="syncFromWarmane(char)"
+                @click="syncFromArmory(char)"
                 :loading="syncing === char.id"
               >{{ t('characters.sync') }}</WowButton>
               <WowButton
@@ -172,13 +172,13 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
-          {{ t('characters.syncedFromWarmane') }}<template v-if="!isRoleLocked"> {{ t('characters.roleCanChange') }}</template>
+          {{ t('characters.syncedFromArmory') }}<template v-if="!isRoleLocked"> {{ t('characters.roleCanChange') }}</template>
         </div>
 
         <!-- STEP 1: Armory import (only when adding, not editing) -->
         <div v-if="!editingChar && !manualEntry" class="space-y-4">
           <div class="p-4 rounded bg-accent-gold/5 border border-accent-gold/30 space-y-3">
-            <div class="text-sm font-semibold text-accent-gold">{{ t('characters.importFromWarmane') }}</div>
+            <div class="text-sm font-semibold text-accent-gold">{{ t('characters.importFromArmory') }}</div>
             <p class="text-xs text-text-muted">{{ t('characters.importHelp') }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input v-model="form.name" :placeholder="t('characters.characterName')" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
@@ -192,8 +192,8 @@
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
-                {{ t('characters.lookupOnWarmane') }}
+              <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromArmory">
+                {{ t('characters.lookupOnArmory') }}
               </WowButton>
               <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ {{ t('characters.foundOnArmory') }}</span>
               <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">{{ t('characters.notFoundOnArmory') }}</span>
@@ -252,8 +252,8 @@
             <input v-else v-model="form.secondary_spec" :disabled="isArmoryLocked" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('characters.warmaneUrl') }}</label>
-            <input v-model="form.armory_url" :disabled="isArmoryLocked" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+            <label class="block text-xs text-text-muted mb-1">{{ t('characters.armoryUrl') }}</label>
+            <input v-model="form.armory_url" :disabled="isArmoryLocked" placeholder="https://armory.example.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
         </template>
 
@@ -329,7 +329,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { ROLE_OPTIONS, normalizeSpecName } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as charApi from '@/api/characters'
-import * as warmaneApi from '@/api/warmane'
+import * as armoryLookupApi from '@/api/armory_lookup'
 import * as guildRealmsApi from '@/api/guild_realms'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useTimezone } from '@/composables/useTimezone'
@@ -561,13 +561,13 @@ function confirmDelete(char) {
   showDeleteConfirm.value = true
 }
 
-async function lookupFromWarmane() {
+async function lookupFromArmory() {
   if (!form.name || !form.realm) return
   lookingUp.value = true
   lookupResult.value = null
   formError.value = null
   try {
-    const data = await warmaneApi.lookupCharacter(form.realm, form.name)
+    const data = await armoryLookupApi.lookupCharacter(form.realm, form.name)
     if (data?.class_name) {
       form.class = data.class_name
       // Auto-populate default role from classRoles
@@ -585,8 +585,8 @@ async function lookupFromWarmane() {
         form.secondary_spec = normalizeSpecName(data.talents[1]?.tree, form.class, classSpecs.value) || ''
       }
     }
-    // Store warmane data for metadata on save
-    warmaneData.value = data
+    // Store armory data for metadata on save
+    armoryData.value = data
     lookupResult.value = 'found'
   } catch {
     lookupResult.value = 'not_found'
@@ -595,7 +595,7 @@ async function lookupFromWarmane() {
   }
 }
 
-const warmaneData = ref(null)
+const armoryData = ref(null)
 
 async function saveChar() {
   formError.value = null
@@ -612,19 +612,19 @@ async function saveChar() {
       secondary_spec: form.secondary_spec || undefined,
       armory_url: form.armory_url || undefined,
     }
-    // Include warmane metadata when creating from lookup
-    if (!editingChar.value && warmaneData.value) {
+    // Include armory metadata when creating from lookup
+    if (!editingChar.value && armoryData.value) {
       payload.metadata = {
-        level: warmaneData.value.level,
-        race: warmaneData.value.race,
-        gender: warmaneData.value.gender,
-        faction: warmaneData.value.faction,
-        guild: warmaneData.value.guild,
-        achievement_points: warmaneData.value.achievement_points,
-        honorable_kills: warmaneData.value.honorable_kills,
-        professions: warmaneData.value.professions || [],
-        talents: warmaneData.value.talents || [],
-        equipment: warmaneData.value.equipment || [],
+        level: armoryData.value.level,
+        race: armoryData.value.race,
+        gender: armoryData.value.gender,
+        faction: armoryData.value.faction,
+        guild: armoryData.value.guild,
+        achievement_points: armoryData.value.achievement_points,
+        honorable_kills: armoryData.value.honorable_kills,
+        professions: armoryData.value.professions || [],
+        talents: armoryData.value.talents || [],
+        equipment: armoryData.value.equipment || [],
         last_synced: new Date().toISOString(),
       }
     }
@@ -640,7 +640,7 @@ async function saveChar() {
       uiStore.showToast(t('characters.toasts.characterAdded'), 'success')
     }
     const wasEditing = !!editingChar.value
-    warmaneData.value = null
+    armoryData.value = null
     showModal.value = false
     // Show "add another?" prompt only when creating new characters
     if (!wasEditing) {
@@ -663,13 +663,13 @@ async function setMain(char) {
   }
 }
 
-async function syncFromWarmane(char) {
+async function syncFromArmory(char) {
   syncing.value = char.id
   try {
-    const updated = await warmaneApi.syncCharacter(char.id)
+    const updated = await armoryLookupApi.syncCharacter(char.id)
     const idx = characters.value.findIndex(c => c.id === char.id)
     if (idx !== -1) characters.value[idx] = mapChar(updated)
-    uiStore.showToast(t('characters.toasts.syncedFromWarmane', { name: char.name }), 'success')
+    uiStore.showToast(t('characters.toasts.syncedFromArmory', { name: char.name }), 'success')
   } catch (err) {
     uiStore.showToast(err?.response?.data?.error ?? t('characters.toasts.syncFailed'), 'error')
   } finally {

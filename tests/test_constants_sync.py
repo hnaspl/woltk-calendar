@@ -80,7 +80,7 @@ class TestNormalizeSpecNameSync:
                 )
 
     def test_feral_quirk(self, app):
-        """Warmane sends 'Feral' for Druids; should normalize to 'Feral Combat'."""
+        """Armory API sends 'Feral' for Druids; should normalize to 'Feral Combat'."""
         result = normalize_spec_name("Feral", "Druid")
         assert result == "Feral Combat"
 
@@ -106,8 +106,8 @@ class TestApiVsDbSync:
         api = self._api_data(app)
         assert "provider_realms" in api
         assert isinstance(api["provider_realms"], dict)
-        # Warmane provider is registered (realms are dynamic, may be empty)
-        assert "warmane" in api["provider_realms"]
+        # Armory provider is registered (realms are dynamic, may be empty)
+        assert "armory" in api["provider_realms"]
 
     def test_api_returns_db_classes(self, app, db):
         """API wow_classes should match seeded expansion classes."""

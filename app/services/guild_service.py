@@ -21,9 +21,9 @@ def create_guild(
     faction: Optional[str] = None,
     region: Optional[str] = None,
     allow_self_join: bool = False,
-    warmane_source: bool = False,
+    armory_source: bool = False,
     timezone: str = "Europe/Warsaw",
-    armory_provider: str = "warmane",
+    armory_provider: str = "armory",
     armory_config_id: Optional[int] = None,
     armory_url: Optional[str] = None,
     expansion_id: Optional[int] = None,
@@ -61,7 +61,7 @@ def create_guild(
         faction=faction,
         region=region,
         allow_self_join=allow_self_join,
-        warmane_source=warmane_source,
+        armory_source=armory_source,
         timezone=timezone,
         armory_provider=armory_provider,
         armory_config_id=armory_config_id,
@@ -100,8 +100,8 @@ def update_guild(guild: Guild, data: dict) -> Guild:
     allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "visibility", "timezone", "armory_provider", "armory_config_id", "armory_url"}
     for key, value in data.items():
         if key in allowed:
-            # Prevent changing name or realm on Warmane-sourced guilds
-            if key in ("realm_name", "name") and guild.warmane_source:
+            # Prevent changing name or realm on armory-sourced guilds
+            if key in ("realm_name", "name") and guild.armory_source:
                 continue
             setattr(guild, key, value)
     db.session.commit()

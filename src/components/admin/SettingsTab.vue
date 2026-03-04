@@ -27,8 +27,8 @@
 
         <!-- Auto-Sync -->
         <div class="border-t border-border-default pt-4">
-          <h3 class="text-sm text-text-primary font-medium mb-3">{{ t('admin.system.warmaneSync') }}</h3>
-          <p class="text-text-muted text-xs mb-3">{{ t('admin.system.warmaneSyncHelp') }}</p>
+          <h3 class="text-sm text-text-primary font-medium mb-3">{{ t('admin.system.armorySync') }}</h3>
+          <p class="text-text-muted text-xs mb-3">{{ t('admin.system.armorySyncHelp') }}</p>
 
           <div class="space-y-3">
             <label class="flex items-center gap-3 cursor-pointer">
@@ -101,7 +101,7 @@
           <input
             v-model="settingsForm.armory_allowed_domains"
             type="text"
-            placeholder="armory.warmane.com, armory.example.com"
+            placeholder="armory.example.com, armory.server2.com"
             class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
           />
         </div>

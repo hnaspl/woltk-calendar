@@ -31,37 +31,37 @@
           </form>
         </WowCard>
 
-        <!-- Warmane Guild Lookup -->
+        <!-- Armory Guild Lookup -->
         <WowCard>
-          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.warmaneInfo') }}</h2>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.armoryInfo') }}</h2>
           <p class="text-text-muted text-sm mb-4">{{ t('members.fetchRoster') }}</p>
-          <form @submit.prevent="fetchWarmaneGuild" class="flex items-end gap-3 max-w-lg">
+          <form @submit.prevent="fetchArmoryGuild" class="flex items-end gap-3 max-w-lg">
             <div class="flex-1">
               <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildName') }}</label>
-              <input v-model="warmaneGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              <input v-model="armoryGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div class="w-40">
               <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
-              <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <select v-model="armoryGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                 <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
-            <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">{{ t('guildSettings.fetch') }}</WowButton>
+            <WowButton type="submit" :loading="fetchingArmory" variant="secondary">{{ t('guildSettings.fetch') }}</WowButton>
           </form>
 
-          <div v-if="warmaneError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
+          <div v-if="armoryError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ armoryError }}</div>
 
-          <div v-if="warmaneGuildData" class="mt-4 space-y-3">
+          <div v-if="armoryGuildData" class="mt-4 space-y-3">
             <div class="flex items-center gap-4 text-sm">
               <span class="text-text-muted">Guild:</span>
-              <span class="text-text-primary font-medium">{{ warmaneGuildData.name }}</span>
-              <span v-if="warmaneGuildData.faction" class="px-2 py-0.5 rounded text-xs font-medium"
-                :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
-              >{{ warmaneGuildData.faction }}</span>
-              <span class="text-text-muted">{{ warmaneGuildData.member_count }} members</span>
+              <span class="text-text-primary font-medium">{{ armoryGuildData.name }}</span>
+              <span v-if="armoryGuildData.faction" class="px-2 py-0.5 rounded text-xs font-medium"
+                :class="armoryGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+              >{{ armoryGuildData.faction }}</span>
+              <span class="text-text-muted">{{ armoryGuildData.member_count }} members</span>
             </div>
 
-            <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-64 overflow-y-auto">
+            <div v-if="armoryGuildData.roster?.length" class="overflow-x-auto max-h-64 overflow-y-auto">
               <table class="w-full text-xs">
                 <thead class="sticky top-0">
                   <tr class="bg-bg-tertiary border-b border-border-default">
@@ -72,7 +72,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-border-default">
-                  <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50">
+                  <tr v-for="ch in armoryGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50">
                     <td class="px-3 py-1.5 text-text-primary">{{ ch.name }}</td>
                     <td class="px-3 py-1.5 text-text-muted">{{ ch.class_name }}</td>
                     <td class="px-3 py-1.5 text-text-muted">{{ ch.level }}</td>
@@ -221,7 +221,7 @@ import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import * as guildsApi from '@/api/guilds'
-import * as warmaneApi from '@/api/warmane'
+import * as armoryLookupApi from '@/api/armory_lookup'
 import * as guildRealmsApi from '@/api/guild_realms'
 import api from '@/api'
 import { useI18n } from 'vue-i18n'
@@ -380,12 +380,12 @@ async function doKick() {
   }
 }
 
-// Warmane guild lookup
-const warmaneGuildName = ref('')
-const warmaneGuildRealm = ref('Icecrown')
-const fetchingWarmane = ref(false)
-const warmaneError = ref(null)
-const warmaneGuildData = ref(null)
+// Armory guild lookup
+const armoryGuildName = ref('')
+const armoryGuildRealm = ref('Icecrown')
+const fetchingArmory = ref(false)
+const armoryError = ref(null)
+const armoryGuildData = ref(null)
 
 // Member characters viewer
 const showMemberChars = ref(false)
@@ -451,22 +451,22 @@ async function doAddMember(user) {
   }
 }
 
-async function fetchWarmaneGuild() {
-  warmaneError.value = null
-  warmaneGuildData.value = null
-  const name = warmaneGuildName.value || form.name
-  const realm = warmaneGuildRealm.value || form.realm
+async function fetchArmoryGuild() {
+  armoryError.value = null
+  armoryGuildData.value = null
+  const name = armoryGuildName.value || form.name
+  const realm = armoryGuildRealm.value || form.realm
   if (!name || !realm) {
-    warmaneError.value = 'Guild name and realm are required'
+    armoryError.value = 'Guild name and realm are required'
     return
   }
-  fetchingWarmane.value = true
+  fetchingArmory.value = true
   try {
-    warmaneGuildData.value = await warmaneApi.lookupGuild(realm, name)
+    armoryGuildData.value = await armoryLookupApi.lookupGuild(realm, name)
   } catch (err) {
-    warmaneError.value = err?.response?.data?.message ?? 'Guild not found on Warmane'
+    armoryError.value = err?.response?.data?.message ?? 'Guild not found on armory'
   } finally {
-    fetchingWarmane.value = false
+    fetchingArmory.value = false
   }
 }
 </script>

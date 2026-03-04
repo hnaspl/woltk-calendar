@@ -31,9 +31,9 @@ class TestMetaConstants:
             data = client.get("/api/v1/meta/constants").get_json()
         assert "provider_realms" in data
         assert isinstance(data["provider_realms"], dict)
-        # Warmane provider exists but has no hardcoded realms
-        assert "warmane" in data["provider_realms"]
-        assert isinstance(data["provider_realms"]["warmane"], list)
+        # Armory provider exists but has no hardcoded realms
+        assert "armory" in data["provider_realms"]
+        assert isinstance(data["provider_realms"]["armory"], list)
 
     def test_wow_classes_from_db(self, app):
         """API wow_classes should match seeded expansion classes."""

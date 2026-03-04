@@ -1,12 +1,15 @@
 """Generic Armory integration plugin.
 
-Wraps the pluggable armory provider system (``app/services/armory``)
-as a first-class plugin.  Each provider registers itself in the armory
-provider registry.
+Provides a pluggable armory system where each guild can configure its
+own server's armory URL.  All WoTLK private servers use the same armory
+API format — the only difference is the base URL.
 
-Realms are **never hardcoded** — they are either fetched dynamically
-from the provider's API (if supported) or managed manually by the
-guild admin through the GuildRealmsTab UI.
+The plugin registers a single :class:`GenericArmoryProvider` that works
+with ANY server.  Guild admins set their ``armory_url`` per-guild, and
+the system uses that URL for lookups.
+
+Realms are **never hardcoded** — they are managed manually by the guild
+admin through the GuildRealmsTab UI.
 
 Usage::
 
@@ -14,7 +17,6 @@ Usage::
 
     armory = PluginRegistry.get("armory")
     providers = armory.list_providers()
-    realms = armory.get_provider_realms("some_provider")
 """
 
 from __future__ import annotations
@@ -34,18 +36,19 @@ if TYPE_CHECKING:
 class ArmoryPlugin(BasePlugin):
     """Generic armory integration plugin.
 
-    Manages all armory providers through the provider registry.
-    Individual providers live in ``app/services/armory/`` and register
-    themselves.  The plugin itself is server-agnostic.
+    Server-agnostic — works with any WoTLK private server that
+    exposes the standard armory API.  Each guild configures its own
+    ``armory_url``; the provider uses that to talk to the correct server.
     """
 
     key = "armory"
     display_name = "Armory Integration"
-    version = "1.0.0"
+    version = "2.0.0"
     description = (
-        "Pluggable armory integration — character lookup, guild sync, "
-        "and dynamic realm discovery.  Supports multiple armory "
-        "providers.  Realms are managed per-guild."
+        "Generic armory integration — character lookup, guild sync, "
+        "and roster import.  Works with any WoW private server and "
+        "any expansion.  Guild admins configure their server's armory "
+        "URL per-guild."
     )
     plugin_type = "integration"
     dependencies: list[str] = []
@@ -68,11 +71,9 @@ class ArmoryPlugin(BasePlugin):
             provider = get_provider(provider_name)
         except KeyError:
             return []
-        # Try dynamic fetch first
         realms = provider.fetch_realms()
         if realms:
             return realms
-        # Fall back to static defaults (may be empty)
         return provider.get_default_realms()
 
     # ── BasePlugin interface ─────────────────────────────────────────
@@ -96,7 +97,11 @@ class ArmoryPlugin(BasePlugin):
         }
 
     def register_blueprints(self, app: "Flask") -> None:
-        """Armory blueprints are already registered via v1 — no-op."""
+        """Register the generic armory provider."""
+        from app.plugins.armory.provider import GenericArmoryProvider
+        from app.services.armory.registry import register_provider
+
+        register_provider("armory", GenericArmoryProvider)
 
     def on_guild_enable(self, guild_id: int) -> None:
         """No-op — guilds manage their own realms via the GuildRealmsTab."""

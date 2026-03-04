@@ -96,10 +96,10 @@ class TestGuildCreationArmoryUrl:
             realm_name="Icecrown",
             created_by=user.id,
             tenant_id=tenant.id,
-            armory_url="https://armory.warmane.com/guild/TestGuild/Icecrown",
+            armory_url="https://armory.example.com/guild/TestGuild/Icecrown",
         )
         assert guild is not None
-        assert guild.armory_url == "https://armory.warmane.com/guild/TestGuild/Icecrown"
+        assert guild.armory_url == "https://armory.example.com/guild/TestGuild/Icecrown"
 
     def test_create_guild_with_manual_provider(self, ctx):
         """Guild creation with manual provider (no armory lookup)."""
@@ -167,7 +167,7 @@ class TestGuildCreationExpansion:
         assert guild.name == "Expansion Guild"
 
     def test_create_guild_sets_default_provider(self, ctx):
-        """Guild creation defaults to warmane provider."""
+        """Guild creation defaults to armory provider."""
         user = _make_user("guild-default", is_admin=True)
         tenant = tenant_service.create_tenant(owner=user, name="Default Tenant")
         guild = guild_service.create_guild(
@@ -176,4 +176,4 @@ class TestGuildCreationExpansion:
             created_by=user.id,
             tenant_id=tenant.id,
         )
-        assert guild.armory_provider == "warmane"
+        assert guild.armory_provider == "armory"

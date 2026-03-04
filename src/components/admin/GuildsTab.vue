@@ -50,7 +50,7 @@
                   <span class="text-accent-gold font-medium">{{ g.member_count }}</span>
                 </td>
                 <td class="hidden md:table-cell px-4 py-2.5 text-text-muted text-xs">
-                  <span class="capitalize">{{ g.armory_provider || 'warmane' }}</span>
+                  <span class="capitalize">{{ g.armory_provider || 'armory' }}</span>
                 </td>
                 <td class="px-4 py-2.5 text-text-muted text-xs">{{ g.creator_username || '—' }}</td>
                 <td class="hidden lg:table-cell px-4 py-2.5 text-text-muted text-xs">{{ formatDate(g.created_at) }}</td>

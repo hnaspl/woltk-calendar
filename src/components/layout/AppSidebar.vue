@@ -221,7 +221,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import * as guildsApi from '@/api/guilds'
-import * as warmaneApi from '@/api/warmane'
+import * as armoryLookupApi from '@/api/armory_lookup'
 import TenantSwitcher from '@/components/layout/TenantSwitcher.vue'
 
 const { t } = useI18n()
@@ -488,7 +488,7 @@ async function lookupGuild() {
   const realms = detectedProviderRealms.value
   for (const realm of realms) {
     try {
-      const data = await warmaneApi.lookupGuild(realm, name)
+      const data = await armoryLookupApi.lookupGuild(realm, name)
       if (data) {
         const alreadyAdded = guildStore.allGuilds.some(
           g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === realm.toLowerCase()
@@ -534,7 +534,7 @@ async function doCreateGuild() {
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
-      warmane_source: !!guildLookupMatch.value,
+      armory_source: !!guildLookupMatch.value,
       armory_provider: provider,
       armory_url: newGuild.armory_url.trim() || null,
       expansion_id: newGuild.expansion_id,

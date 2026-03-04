@@ -118,7 +118,7 @@ def validate_class_spec(class_name: str | None, chosen_spec: str) -> None:
 def normalize_spec_name(
     tree_name: str | None, class_name: str | None
 ) -> str | None:
-    """Map a Warmane talent-tree name to the canonical spec name.
+    """Map an armory talent-tree name to the canonical spec name.
 
     Queries the expansion_specs DB table for the given class, then applies
     exact → prefix → suffix → contains matching.

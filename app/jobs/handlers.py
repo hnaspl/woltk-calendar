@@ -82,12 +82,12 @@ def auto_lock_upcoming_events(app: Flask) -> None:
 
 @register_handler("sync_all_characters")
 def handle_sync_all_characters(payload: dict) -> None:
-    """Sync all active characters from the Warmane armory."""
+    """Sync all active characters from the armory."""
     from datetime import datetime, timezone as tz
 
     from app.extensions import db
     from app.constants import normalize_spec_name
-    from app.services import character_service, warmane_service
+    from app.services import character_service, armory_service
     from app.services.character_service import _default_role_for_class
 
     guild_id = payload.get("guild_id")
@@ -103,11 +103,11 @@ def handle_sync_all_characters(payload: dict) -> None:
     batch_size = 20
     for char in chars:
         try:
-            data = warmane_service.fetch_character(char.realm_name, char.name)
+            data = armory_service.fetch_character(char.realm_name, char.name)
             if data is None or (isinstance(data, dict) and "error" in data):
-                logger.warning("Skipping sync for %s/%s: no data from Warmane", char.realm_name, char.name)
+                logger.warning("Skipping sync for %s/%s: no data from armory", char.realm_name, char.name)
                 continue
-            char_data = warmane_service.build_character_dict(data, char.realm_name)
+            char_data = armory_service.build_character_dict(data, char.realm_name)
             if char_data.get("class_name"):
                 char.class_name = char_data["class_name"]
                 # Auto-populate default_role if not already set

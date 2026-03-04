@@ -13,7 +13,7 @@
  *
  * Components can use this store reactively:
  *   const cs = useConstantsStore()
- *   cs.providerRealms   // { warmane: ["Icecrown", ...] }
+ *   cs.providerRealms   // { armory: ["Realm1", ...] }
  *
  * Static imports from `@/constants` remain available for places that
  * need constants at import/module-evaluation time (e.g. route guards).
@@ -46,7 +46,7 @@ export const useConstantsStore = defineStore('constants', () => {
   const expansions = ref([])
 
   // Provider-based realm suggestions (dynamic, not hardcoded).
-  // Keyed by provider name, e.g. { warmane: ["Icecrown", ...] }
+  // Keyed by provider name, e.g. { armory: ["Realm1", ...] }
   const providerRealms = ref({})
 
   const loaded = ref(false)

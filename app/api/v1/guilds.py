@@ -289,7 +289,7 @@ def create_guild():
 
     # Resolve armory config if provided
     armory_config_id = data.get("armory_config_id")
-    armory_provider = data.get("armory_provider", "warmane")
+    armory_provider = data.get("armory_provider", "armory")
     armory_url = (data.get("armory_url") or "").strip() or None
     expansion_id = data.get("expansion_id")
 
@@ -323,7 +323,7 @@ def create_guild():
             faction=data.get("faction"),
             region=data.get("region"),
             allow_self_join=data.get("allow_self_join", False),
-            warmane_source=bool(data.get("warmane_source", False)),
+            armory_source=bool(data.get("armory_source", False)),
             timezone=data.get("timezone", "Europe/Warsaw"),
             armory_provider=armory_provider,
             armory_config_id=armory_config_id,
@@ -565,30 +565,36 @@ def list_member_characters(guild_id: int, user_id: int, membership):
 
 
 # ---------------------------------------------------------------------------
-# Warmane roster
+# Armory roster
 # ---------------------------------------------------------------------------
 
-@bp.get("/<int:guild_id>/warmane-roster")
+@bp.get("/<int:guild_id>/armory-roster")
 @login_required
-def get_warmane_roster(guild_id: int):
-    """Fetch the Warmane guild roster for a Warmane-sourced guild."""
+def get_armory_roster(guild_id: int):
+    """Fetch the guild roster from the armory for an armory-sourced guild."""
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
     membership = get_membership(guild_id, current_user.id)
     if not has_permission(membership, "add_members"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    if not guild.warmane_source:
-        return jsonify({"error": _t("api.guilds.notWarmane")}), 400
+    if not guild.armory_source:
+        return jsonify({"error": _t("api.guilds.notArmorySource")}), 400
 
-    from app.services import warmane_service
+    from app.services import armory_service
 
-    data = warmane_service.fetch_guild(guild.realm_name, guild.name)
+    data = armory_service.fetch_guild(
+        guild.realm_name, guild.name,
+        provider_name=guild.armory_provider,
+    )
     if data is None:
         return jsonify({"error": _t("api.guilds.rosterFetchFailed")}), 502
 
     roster = [
-        warmane_service.build_character_dict(m, guild.realm_name)
+        armory_service.build_character_dict(
+            m, guild.realm_name,
+            provider_name=guild.armory_provider,
+        )
         for m in data.get("roster", [])
     ]
 

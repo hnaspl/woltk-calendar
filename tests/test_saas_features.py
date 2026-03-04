@@ -90,10 +90,10 @@ class TestArmoryUrlValidation:
     # --- valid URLs ---
 
     @pytest.mark.parametrize("url", [
-        "http://armory.warmane.com/api",
-        "https://armory.warmane.com/api",
-        "http://armory.warmane.com",
         "http://armory.example.com/api",
+        "https://armory.example.com/api",
+        "http://armory.example.com",
+        "http://armory.myserver.org/api",
     ])
     def test_valid_urls(self, url):
         assert validate_armory_url(url) is None
@@ -107,7 +107,7 @@ class TestArmoryUrlValidation:
         assert validate_armory_url(None) is not None
 
     def test_ftp_scheme(self):
-        err = validate_armory_url("ftp://armory.warmane.com/api")
+        err = validate_armory_url("ftp://armory.example.com/api")
         assert err is not None
         assert "http" in err.lower()
 
@@ -132,26 +132,26 @@ class TestArmoryUrlValidation:
     # --- invalid: query params / fragments ---
 
     def test_query_params_rejected(self):
-        err = validate_armory_url("http://armory.warmane.com/api?key=secret")
+        err = validate_armory_url("http://armory.example.com/api?key=secret")
         assert err is not None
         assert "query" in err.lower()
 
     def test_fragment_rejected(self):
-        err = validate_armory_url("http://armory.warmane.com/api#section")
+        err = validate_armory_url("http://armory.example.com/api#section")
         assert err is not None
         assert "fragment" in err.lower()
 
     # --- invalid: credentials in URL ---
 
     def test_credentials_rejected(self):
-        err = validate_armory_url("http://user:pass@armory.warmane.com/api")
+        err = validate_armory_url("http://user:pass@armory.example.com/api")
         assert err is not None
         assert "credentials" in err.lower()
 
     # --- invalid: bad paths ---
 
     def test_bad_path_rejected(self):
-        err = validate_armory_url("http://armory.warmane.com/some/other/path")
+        err = validate_armory_url("http://armory.example.com/some/other/path")
         assert err is not None
         assert "path" in err.lower()
 
@@ -184,10 +184,10 @@ class TestArmoryUrlValidation:
         assert err is not None
         assert "allowed" in err.lower()
 
-    def test_whitelist_warmane_always_allowed(self):
+    def test_whitelist_with_allowed_domains(self):
         assert validate_armory_url(
-            "http://armory.warmane.com/api",
-            extra_allowed_domains=["custom.armory.org"],
+            "http://armory.example.com/api",
+            extra_allowed_domains=["armory.example.com"],
         ) is None
 
 
@@ -198,14 +198,14 @@ class TestArmoryUrlValidation:
 class TestArmoryProviderRegistry:
     """Tests for the armory provider registry."""
 
-    def test_list_providers_includes_warmane(self, ctx):
+    def test_list_providers_includes_armory(self, ctx):
         providers = list_providers()
-        assert "warmane" in providers
+        assert "armory" in providers
 
-    def test_get_provider_warmane(self, ctx):
-        from app.services.armory.warmane import WarmaneProvider
-        provider = get_provider("warmane")
-        assert isinstance(provider, WarmaneProvider)
+    def test_get_provider_armory(self, ctx):
+        from app.plugins.armory.provider import GenericArmoryProvider
+        provider = get_provider("armory")
+        assert isinstance(provider, GenericArmoryProvider)
 
     def test_get_provider_nonexistent_raises(self, ctx):
         with pytest.raises(KeyError, match="nonexistent"):
@@ -370,14 +370,14 @@ class TestArmoryConfigAPI:
         self._login_user(client)
 
         resp = client.post("/api/v1/armory/configs", json={
-            "provider_name": "warmane",
-            "api_base_url": "http://armory.warmane.com/api",
-            "label": "My Warmane",
+            "provider_name": "armory",
+            "api_base_url": "http://armory.example.com/api",
+            "label": "My Server",
         })
         assert resp.status_code == 201
         data = resp.get_json()
-        assert data["provider_name"] == "warmane"
-        assert data["api_base_url"] == "http://armory.warmane.com/api"
+        assert data["provider_name"] == "armory"
+        assert data["api_base_url"] == "http://armory.example.com/api"
 
     def test_post_config_malicious_url_returns_400(self, app, ctx):
         client = app.test_client()
@@ -385,7 +385,7 @@ class TestArmoryConfigAPI:
         self._login_user(client)
 
         resp = client.post("/api/v1/armory/configs", json={
-            "provider_name": "warmane",
+            "provider_name": "armory",
             "api_base_url": "http://localhost/api",
             "label": "Evil",
         })
@@ -398,12 +398,12 @@ class TestArmoryConfigAPI:
 
         resp = client.post("/api/v1/armory/configs", json={
             "provider_name": "fakeprovider",
-            "api_base_url": "http://armory.warmane.com/api",
+            "api_base_url": "http://armory.example.com/api",
             "label": "Bad Provider",
         })
         assert resp.status_code == 400
 
-    def test_get_providers_includes_warmane(self, app, ctx):
+    def test_get_providers_includes_armory(self, app, ctx):
         client = app.test_client()
         _seed_permissions()
         self._login_user(client)
@@ -412,4 +412,4 @@ class TestArmoryConfigAPI:
         assert resp.status_code == 200
         data = resp.get_json()
         assert isinstance(data, list)
-        assert "warmane" in data
+        assert "armory" in data

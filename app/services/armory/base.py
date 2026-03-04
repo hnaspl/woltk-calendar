@@ -7,12 +7,17 @@ from typing import Optional
 
 
 class ArmoryProvider(abc.ABC):
-    """Base class that every armory provider must implement."""
+    """Base class that every armory provider must implement.
+
+    Providers are expansion-agnostic and server-agnostic.  Class/spec
+    validation is done elsewhere against the guild's enabled expansion
+    data in the database.
+    """
 
     @property
     @abc.abstractmethod
     def provider_name(self) -> str:
-        """Short identifier for this provider (e.g. 'warmane')."""
+        """Short identifier for this provider."""
 
     @property
     @abc.abstractmethod

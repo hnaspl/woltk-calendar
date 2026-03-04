@@ -124,7 +124,7 @@ export const EVENT_STATUSES = ['draft', 'open', 'locked', 'completed', 'cancelle
 export const ATTENDANCE_OUTCOMES = ['attended', 'late', 'no_show', 'benched', 'backup']
 
 /**
- * Map a Warmane talent-tree name to the canonical spec name.
+ * Map an armory talent-tree name to the canonical spec name.
  * Handles quirks like "Feral" → "Feral Combat".
  *
  * Keep in sync with app/constants.py normalize_spec_name().

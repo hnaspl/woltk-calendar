@@ -1,4 +1,9 @@
-"""Warmane armory API proxy endpoints."""
+"""Armory lookup API proxy endpoints.
+
+Provides generic character/guild lookup and sync through the armory
+provider registry.  The guild's ``armory_provider`` field determines
+which backend is used.
+"""
 
 from __future__ import annotations
 
@@ -9,44 +14,44 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.constants import normalize_spec_name
-from app.services import character_service, warmane_service
+from app.services import character_service, armory_service
 from app.services.character_service import _default_role_for_class
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
 from app.i18n import _t
 
-bp = Blueprint("warmane", __name__, url_prefix="/warmane")
+bp = Blueprint("armory_lookup", __name__, url_prefix="/armory-lookup")
 
 
 @bp.get("/character/<realm>/<name>")
 @login_required
 def lookup_character(realm: str, name: str):
-    """Look up a character on the Warmane armory.
+    """Look up a character on the armory.
 
     Returns full character data: class, level, race, equipment, talents,
     professions, achievement points.
     """
-    data = warmane_service.fetch_character(realm, name)
+    data = armory_service.fetch_character(realm, name)
     if data is None:
-        return jsonify({"error": _t("warmane.characterNotFound")}), 404
+        return jsonify({"error": _t("armory.characterNotFound")}), 404
 
-    return jsonify(warmane_service.build_character_dict(data, realm)), 200
+    return jsonify(armory_service.build_character_dict(data, realm)), 200
 
 
 @bp.get("/guild/<realm>/<guild_name>")
 @login_required
 def lookup_guild(realm: str, guild_name: str):
-    """Look up a guild roster on the Warmane armory.
+    """Look up a guild roster on the armory.
 
     Returns guild info and roster with class, level, race, achievement
     points, and professions for each member.
     """
-    data = warmane_service.fetch_guild(realm, guild_name)
+    data = armory_service.fetch_guild(realm, guild_name)
     if data is None:
-        return jsonify({"error": _t("warmane.guildNotFound")}), 404
+        return jsonify({"error": _t("armory.guildNotFound")}), 404
 
     roster = [
-        warmane_service.build_character_dict(m, realm)
+        armory_service.build_character_dict(m, realm)
         for m in data.get("roster", [])
     ]
 
@@ -62,7 +67,7 @@ def lookup_guild(realm: str, guild_name: str):
 @bp.post("/sync-character")
 @login_required
 def sync_character():
-    """Sync an existing character's data from the Warmane armory.
+    """Sync an existing character's data from the armory.
 
     Requires: character_id.
     Updates the character's class, armory URL, specs, and stores level, race,
@@ -72,19 +77,19 @@ def sync_character():
     char_id = body.get("character_id")
 
     if not char_id:
-        return jsonify({"error": _t("warmane.characterIdRequired")}), 400
+        return jsonify({"error": _t("armory.characterIdRequired")}), 400
 
     char = character_service.get_character(char_id)
     if char is None:
-        return jsonify({"error": _t("warmane.characterNotFoundGeneric")}), 404
+        return jsonify({"error": _t("armory.characterNotFoundGeneric")}), 404
     if char.user_id != current_user.id:
         return jsonify({"error": _t("common.errors.forbidden")}), 403
 
-    data = warmane_service.fetch_character(char.realm_name, char.name)
+    data = armory_service.fetch_character(char.realm_name, char.name)
     if data is None or (isinstance(data, dict) and "error" in data):
-        return jsonify({"error": _t("warmane.fetchFailed")}), 404
+        return jsonify({"error": _t("armory.fetchFailed")}), 404
 
-    char_data = warmane_service.build_character_dict(data, char.realm_name)
+    char_data = armory_service.build_character_dict(data, char.realm_name)
 
     # Update core fields if valid
     updates = {"armory_url": char_data["armory_url"]}

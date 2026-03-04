@@ -2,6 +2,10 @@
 
 Providers are registered by name and can be looked up at runtime so that
 different guilds / configurations can use different armory APIs.
+
+The registry is **fully generic** — it has no knowledge of any specific
+server.  Providers register themselves via their plugins during
+application startup.
 """
 
 from __future__ import annotations
@@ -12,12 +16,10 @@ from urllib.parse import urlparse
 from app.services.armory.base import ArmoryProvider
 
 _registry: dict[str, Type[ArmoryProvider]] = {}
-_builtins_registered = False
 
-# Maps known armory domains to provider names for auto-detection
-_DOMAIN_TO_PROVIDER: dict[str, str] = {
-    "armory.warmane.com": "warmane",
-}
+# Maps known armory domains to provider names for auto-detection.
+# Populated dynamically by plugins via register_domain().
+_DOMAIN_TO_PROVIDER: dict[str, str] = {}
 
 
 def register_provider(name: str, cls: Type[ArmoryProvider]) -> None:
@@ -25,13 +27,9 @@ def register_provider(name: str, cls: Type[ArmoryProvider]) -> None:
     _registry[name.lower()] = cls
 
 
-def _ensure_builtins() -> None:
-    """Lazily register built-in providers on first access."""
-    global _builtins_registered
-    if not _builtins_registered:
-        from app.services.armory.warmane import WarmaneProvider
-        register_provider("warmane", WarmaneProvider)
-        _builtins_registered = True
+def register_domain(domain: str, provider_name: str) -> None:
+    """Map *domain* to *provider_name* for URL-based auto-detection."""
+    _DOMAIN_TO_PROVIDER[domain.lower()] = provider_name.lower()
 
 
 def get_provider(name: str, **kwargs) -> ArmoryProvider:
@@ -40,7 +38,6 @@ def get_provider(name: str, **kwargs) -> ArmoryProvider:
     Extra *kwargs* are forwarded to the provider constructor.
     Raises ``KeyError`` if the name is not registered.
     """
-    _ensure_builtins()
     cls = _registry.get(name.lower())
     if cls is None:
         raise KeyError(f"Unknown armory provider: {name!r}")
@@ -49,16 +46,15 @@ def get_provider(name: str, **kwargs) -> ArmoryProvider:
 
 def list_providers() -> list[str]:
     """Return sorted list of registered provider names."""
-    _ensure_builtins()
     return sorted(_registry)
 
 
 def detect_provider_from_url(url: str) -> Optional[str]:
     """Detect armory provider name from a URL.
 
-    Parses the hostname and checks it against known provider domains.
-    Returns the provider name (e.g. ``"warmane"``) or ``None`` if the
-    URL does not match any known provider.
+    Parses the hostname and checks it against domains registered by
+    plugins via :func:`register_domain`.
+    Returns the provider name or ``None`` if no match.
     """
     if not url or not isinstance(url, str):
         return None
@@ -68,3 +64,9 @@ def detect_provider_from_url(url: str) -> Optional[str]:
         return _DOMAIN_TO_PROVIDER.get(host)
     except (ValueError, AttributeError):
         return None
+
+
+def reset() -> None:
+    """Clear the registry — used in tests."""
+    _registry.clear()
+    _DOMAIN_TO_PROVIDER.clear()
