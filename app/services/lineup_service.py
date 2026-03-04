@@ -185,10 +185,13 @@ def upsert_slot(
 
 
 def _validate_class_role_lineup(signup: Signup, new_role: str) -> None:
-    """Validate class-role constraint for lineup changes."""
+    """Validate class-role constraint for lineup changes.
+
+    Uses the per-guild matrix resolver so guild-level overrides are respected.
+    """
     if signup.character is None:
         return
-    validate_class_role(signup.character.class_name, new_role)
+    validate_class_role(signup.character.class_name, new_role, guild_id=signup.character.guild_id)
 
 
 class LineupConflictError(Exception):

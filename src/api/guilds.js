@@ -115,3 +115,19 @@ export const updateGuildVisibility = (guildId, visibility) =>
 
 export const discoverGuilds = () =>
   api.get(`${v2}/discover-guilds/`)
+
+// ---------------------------------------------------------------------------
+// Class-role matrix (v2 API)
+// ---------------------------------------------------------------------------
+
+export const getClassRoleMatrix = (guildId) =>
+  api.get(`${v2}/guilds/${guildId}/class-role-matrix`)
+
+export const setClassRoleOverrides = (guildId, className, roles) =>
+  api.put(`${v2}/guilds/${guildId}/class-role-matrix/${className}`, { roles })
+
+export const resetClassRoleOverrides = (guildId, className) =>
+  api.delete(`${v2}/guilds/${guildId}/class-role-matrix/${className}`)
+
+export const resetClassRoleMatrix = (guildId) =>
+  api.delete(`${v2}/guilds/${guildId}/class-role-matrix`)

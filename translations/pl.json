@@ -657,7 +657,22 @@
     "visibility": "Widoczność",
     "visibilityHelp": "Ukryte gildie są widoczne tylko dla ich członków",
     "visibilityHidden": "Ukryta",
-    "visibilityOpen": "Otwarta"
+    "visibilityOpen": "Otwarta",
+    "matrixTitle": "Macierz Klas-Ról",
+    "matrixSubtitle": "Dostosuj, które role mogą pełnić poszczególne klasy",
+    "matrixDefaults": "Domyślne ustawienia dodatku",
+    "matrixOverrides": "Nadpisania gildii",
+    "matrixResetAll": "Resetuj wszystko do domyślnych",
+    "matrixResetAllConfirm": "Zresetować całą macierz do domyślnych ustawień?",
+    "matrixResetClass": "Resetuj do domyślnych",
+    "matrixSave": "Zapisz nadpisania",
+    "matrixSaved": "Nadpisania ról klasy zapisane",
+    "matrixReset": "Zresetowano do domyślnych",
+    "matrixAllReset": "Macierz zresetowana do domyślnych",
+    "matrixNoOverrides": "Brak nadpisań gildii — używane domyślne",
+    "matrixCustomized": "Zmienione",
+    "matrixDefault": "Domyślne",
+    "matrixSelectAtLeastOne": "Wybierz co najmniej jedną rolę"
   },
   "members": {
     "addMember": "+ Dodaj członka",
@@ -889,7 +904,8 @@
     "tabs": {
       "roles": "Role i uprawnienia",
       "guildSettings": "Ustawienia gildii",
-      "globalAdmin": "Admin globalny"
+      "globalAdmin": "Admin globalny",
+      "classRoleMatrix": "Macierz Klas-Ról"
     },
     "tenants": {
       "title": "Zarządzanie najemcami",
@@ -1067,7 +1083,8 @@
       "selfJoinDisabled": "Ta gildia wymaga, aby członkowie byli dodawani ręcznie przez oficera",
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
       "tenantRequired": "Workspace jest wymagany do utworzenia gildii",
-      "userIdRequired": "user_id jest wymagane"
+      "userIdRequired": "user_id jest wymagane",
+      "invalidVisibility": "Nieprawidłowe ustawienie widoczności"
     },
     "lineup": {
       "cannotModifyCompleted": "Nie można modyfikować składu ukończonego lub anulowanego wydarzenia",

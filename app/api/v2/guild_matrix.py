@@ -23,7 +23,8 @@ bp = Blueprint("guild_matrix", __name__)
 
 @bp.get("/<int:guild_id>/class-role-matrix")
 @login_required
-def get_matrix(guild_id: int):
+@require_guild_permission()
+def get_matrix(guild_id: int, membership):
     """Get the resolved class-role matrix for a guild."""
     matrix = matrix_service.resolve_matrix(guild_id)
     defaults = matrix_service.get_expansion_defaults()
@@ -41,7 +42,7 @@ def get_matrix(guild_id: int):
 @bp.put("/<int:guild_id>/class-role-matrix/<class_name>")
 @login_required
 @require_guild_permission("manage_class_role_matrix")
-def set_class_overrides(guild_id: int, class_name: str):
+def set_class_overrides(guild_id: int, class_name: str, membership):
     """Set allowed roles for a class in this guild."""
     data = get_json()
     err = validate_required(data, "roles")
@@ -73,7 +74,7 @@ def set_class_overrides(guild_id: int, class_name: str):
 @bp.delete("/<int:guild_id>/class-role-matrix/<class_name>")
 @login_required
 @require_guild_permission("manage_class_role_matrix")
-def reset_class(guild_id: int, class_name: str):
+def reset_class(guild_id: int, class_name: str, membership):
     """Reset a class to expansion defaults (remove guild overrides)."""
     try:
         matrix_service.reset_guild_class(guild_id, class_name)
@@ -90,7 +91,7 @@ def reset_class(guild_id: int, class_name: str):
 @bp.delete("/<int:guild_id>/class-role-matrix")
 @login_required
 @require_guild_permission("manage_class_role_matrix")
-def reset_matrix(guild_id: int):
+def reset_matrix(guild_id: int, membership):
     """Reset entire matrix to expansion defaults."""
     matrix_service.reset_guild_matrix(guild_id)
     db.session.commit()

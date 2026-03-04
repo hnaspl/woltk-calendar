@@ -11,14 +11,14 @@ from app.models.character import Character
 from app.utils.class_roles import allowed_roles_for_class, validate_class_spec
 
 
-def _default_role_for_class(class_name: str) -> str | None:
+def _default_role_for_class(class_name: str, *, guild_id: int | None = None) -> str | None:
     """Return the first allowed role for a character class.
 
     Uses the DB-driven expansion registry via shared ``allowed_roles_for_class``
-    helper. This ensures characters always have a valid default_role so there are
-    no unselected roles anywhere in the UI.
+    helper.  When *guild_id* is provided, the per-guild matrix resolver is used
+    so guild-level overrides are respected.
     """
-    roles = allowed_roles_for_class(class_name)
+    roles = allowed_roles_for_class(class_name, guild_id=guild_id)
     return roles[0] if roles else None
 
 
@@ -43,7 +43,7 @@ def create_character(user_id: int, guild_id: int, data: dict) -> Character:
     # Auto-populate default_role if not provided
     default_role = data.get("default_role")
     if not default_role and data.get("class_name"):
-        default_role = _default_role_for_class(data["class_name"])
+        default_role = _default_role_for_class(data["class_name"], guild_id=guild_id)
 
     char = Character(
         user_id=user_id,

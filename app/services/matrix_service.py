@@ -109,10 +109,16 @@ def resolve_matrix(guild_id: int | None = None) -> dict[str, list[str]]:
 
 
 def is_role_allowed(guild_id: int | None, class_name: str, role: str) -> bool:
-    """Check if a specific class→role assignment is allowed."""
+    """Check if a specific class→role assignment is allowed.
+
+    If the class is not present in the resolved matrix (expansion data
+    not seeded or class unknown), the check is permissive (returns True)
+    to avoid blocking operations when expansion data is unavailable.
+    """
     matrix = resolve_matrix(guild_id)
-    allowed = matrix.get(class_name, [])
-    return role in allowed
+    if class_name not in matrix:
+        return True  # class unknown to expansion registry — permissive
+    return role in matrix[class_name]
 
 
 def set_guild_overrides(guild_id: int, class_name: str, allowed_roles: list[str]) -> list:

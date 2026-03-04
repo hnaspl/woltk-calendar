@@ -159,7 +159,7 @@ def update_visibility(guild_id: int, membership):
         return err
     vis = data["visibility"]
     if vis not in [v.value for v in GuildVisibility]:
-        return jsonify({"error": f"Invalid visibility: {vis}"}), 400
+        return jsonify({"error": _t("api.guilds.invalidVisibility")}), 400
     guild = guild_service.get_guild(guild_id)
     if not guild:
         return jsonify({"error": _t("api.guilds.notFound")}), 404

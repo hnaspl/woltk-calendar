@@ -14,14 +14,16 @@ from app.utils.class_roles import validate_class_role
 def _validate_class_role(character_id: int, chosen_role: str) -> None:
     """Validate that the character's class is allowed to take the chosen role.
 
-    Raises ValueError if the role is not valid for the character's class.
+    Uses the per-guild matrix resolver (guild overrides + expansion defaults)
+    when the character has a guild_id.  Raises ValueError if the role is not
+    valid for the character's class.
     """
     from app.models.character import Character
 
     character = db.session.get(Character, character_id)
     if character is None or not character.class_name:
         return  # Let other validation handle missing character
-    validate_class_role(character.class_name, chosen_role)
+    validate_class_role(character.class_name, chosen_role, guild_id=character.guild_id)
 
 
 def _count_assigned_slots(raid_event_id: int) -> int:

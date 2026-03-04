@@ -657,7 +657,22 @@
     "visibility": "Visibility",
     "visibilityHelp": "Hidden guilds are only visible to their members",
     "visibilityHidden": "Hidden",
-    "visibilityOpen": "Open"
+    "visibilityOpen": "Open",
+    "matrixTitle": "Class-Role Matrix",
+    "matrixSubtitle": "Customize which roles each class can fill",
+    "matrixDefaults": "Expansion Defaults",
+    "matrixOverrides": "Guild Overrides",
+    "matrixResetAll": "Reset All to Defaults",
+    "matrixResetAllConfirm": "Reset entire matrix to expansion defaults?",
+    "matrixResetClass": "Reset to Default",
+    "matrixSave": "Save Overrides",
+    "matrixSaved": "Class-role overrides saved",
+    "matrixReset": "Reset to expansion defaults",
+    "matrixAllReset": "Matrix reset to expansion defaults",
+    "matrixNoOverrides": "No guild overrides — using expansion defaults",
+    "matrixCustomized": "Customized",
+    "matrixDefault": "Default",
+    "matrixSelectAtLeastOne": "Select at least one role"
   },
   "members": {
     "addMember": "+ Add Member",
@@ -889,7 +904,8 @@
     "tabs": {
       "roles": "Roles & Permissions",
       "guildSettings": "Guild Settings",
-      "globalAdmin": "Global Admin"
+      "globalAdmin": "Global Admin",
+      "classRoleMatrix": "Class-Role Matrix"
     },
     "tenants": {
       "title": "Tenant Management",
@@ -1067,7 +1083,8 @@
       "selfJoinDisabled": "This guild requires members to be added manually by an officer",
       "targetNotActive": "Target user is not an active member of this guild",
       "tenantRequired": "A workspace is required to create a guild",
-      "userIdRequired": "user_id is required"
+      "userIdRequired": "user_id is required",
+      "invalidVisibility": "Invalid visibility setting"
     },
     "lineup": {
       "cannotModifyCompleted": "Cannot modify lineup on a completed or cancelled event",

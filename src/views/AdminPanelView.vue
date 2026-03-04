@@ -52,6 +52,7 @@
         <KeepAlive>
           <MembersTab v-if="activeTab === 'members'" />
           <GuildInvitationsTab v-else-if="activeTab === 'invitations'" :permissions="permissions.permissions.value" />
+          <ClassRoleMatrixTab v-else-if="activeTab === 'matrix'" />
           <RolesTab v-else-if="activeTab === 'roles'" mode="guild" />
           <GuildSettingsTab v-else-if="activeTab === 'guild'" />
         </KeepAlive>
@@ -65,6 +66,7 @@ import { ref, computed, h, watch, onMounted } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import MembersTab from '@/components/admin/MembersTab.vue'
 import GuildInvitationsTab from '@/components/admin/GuildInvitationsTab.vue'
+import ClassRoleMatrixTab from '@/components/admin/ClassRoleMatrixTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildSettingsTab from '@/components/admin/GuildSettingsTab.vue'
 import { useGuildStore } from '@/stores/guild'
@@ -112,6 +114,9 @@ const icons = {
   ]),
   invitations: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' })
+  ]),
+  matrix: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 10h16M4 14h16M4 18h16' })
   ])
 }
 
@@ -119,6 +124,7 @@ const icons = {
 const allTabs = [
   { id: 'members', label: t('common.labels.members'), icon: icons.members, permission: 'update_member_roles' },
   { id: 'invitations', label: t('guild.invitationsTitle'), icon: icons.invitations, permission: 'invite_members' },
+  { id: 'matrix', label: t('admin.tabs.classRoleMatrix'), icon: icons.matrix, permission: 'manage_class_role_matrix' },
   { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles, permission: 'manage_guild_roles' },
   { id: 'guild', label: t('admin.tabs.guildSettings'), icon: icons.guild, permission: 'update_guild_settings' },
 ]

@@ -1170,24 +1170,24 @@ guild admins can customize.
 > - **Phase 3 ← Phase 4:** Full multi-expansion matrix merging requires Phase 4's per-guild expansion binding. Phase 3 can work with the system default expansion until Phase 4 is implemented.
 > - **Phase 3 → Phase 5:** Matrix configuration may become a plugin-provided UI component in Phase 5.
 
-- [ ] Create `GuildClassRoleOverride` model (references `expansion_classes`, `expansion_roles`)
-- [ ] Create v2 matrix API endpoints (GET/PUT/DELETE)
-- [ ] Add matrix resolution logic: expansion defaults → guild overrides → final matrix
-- [ ] Build matrix editor UI component
-- [ ] Integrate matrix checks into character creation (reads from DB matrix, not hardcoded)
-- [ ] Integrate matrix checks into signup validation (DB matrix resolver)
-- [ ] Integrate matrix checks into lineup assignment (DB matrix resolver)
-- [ ] **New admin permissions:**
-  - [ ] `manage_class_role_matrix` — edit class-role assignment matrix
-- [ ] **Frontend co-migration:**
-  - [ ] Matrix editor component
-  - [ ] Character creation uses dynamic matrix data
-  - [ ] Signup form respects matrix constraints
-- [ ] **🧹 Phase 3 cleanup** (see [§13.3.4](#1334-phase-3-cleanup-checklist)):
-  - [ ] Remove hardcoded class→role validation from signup/lineup services
-  - [ ] Remove static `CLASS_ROLES` usage in signup validation (all go through matrix resolver)
-  - [ ] Clean up any compatibility shims between old static mapping and new matrix system
-  - [ ] Run full lint + build + test suite on clean branch
+- [x] Create `GuildClassRoleOverride` model (references `expansion_classes`, `expansion_roles`)
+- [x] Create v2 matrix API endpoints (GET/PUT/DELETE)
+- [x] Add matrix resolution logic: expansion defaults → guild overrides → final matrix
+- [x] Build matrix editor UI component
+- [x] Integrate matrix checks into character creation (reads from DB matrix, not hardcoded)
+- [x] Integrate matrix checks into signup validation (DB matrix resolver)
+- [x] Integrate matrix checks into lineup assignment (DB matrix resolver)
+- [x] **New admin permissions:**
+  - [x] `manage_class_role_matrix` — edit class-role assignment matrix
+- [x] **Frontend co-migration:**
+  - [x] Matrix editor component
+  - [x] Character creation uses dynamic matrix data
+  - [x] Signup form respects matrix constraints
+- [x] **🧹 Phase 3 cleanup** (see [§13.3.4](#1334-phase-3-cleanup-checklist)):
+  - [x] Remove hardcoded class→role validation from signup/lineup services
+  - [x] Remove static `CLASS_ROLES` usage in signup validation (all go through matrix resolver)
+  - [x] Clean up any compatibility shims between old static mapping and new matrix system
+  - [x] Run full lint + build + test suite on clean branch
 
 ### Phase 4: Multi-Expansion Support
 **Goal:** Support guilds running different WoW expansions within the same tenant.
@@ -4455,20 +4455,39 @@ grep -rn "joinGuild" src/ --include="*.vue" --include="*.js"
 
 Phase 3 introduces the class-role matrix, replacing static mappings.
 
-**Code to remove/refactor:**
+**Status: ✅ COMPLETE**
 
-| Location | What | Action |
-|----------|------|--------|
-| `app/expansions/*.py` static `CLASS_ROLES` | Static class→role mappings | **Keep as defaults** but remove any code that reads them directly for validation (should go through matrix resolver) |
-| `signup_service.py` hardcoded validation | `if char.role not in CLASS_ROLES[char.wow_class]` | **Replace** with `matrix.is_valid_role(guild_id, char.wow_class, char.role)` |
-| `lineup_service.py` hardcoded validation | Similar static class→role check | **Replace** with matrix resolver |
-| `src/constants.js` `CLASS_ROLES` | Static frontend mapping | **Replace** with dynamic data from `GET /api/v2/guilds/{id}/class-role-matrix` (DB-driven) |
+**Code changes completed:**
+
+| Location | What | Action | Status |
+|----------|------|--------|--------|
+| `app/models/guild.py` | `GuildClassRoleOverride` model | **Added** — per-guild class→role override with FK to `expansion_classes` | ✅ Done |
+| `app/services/matrix_service.py` | Matrix resolver service | **Created** — `resolve_matrix()`, `is_role_allowed()`, `set_guild_overrides()`, `reset_guild_class()`, `reset_guild_matrix()` | ✅ Done |
+| `app/api/v2/guild_matrix.py` | v2 matrix API endpoints | **Created** — GET/PUT/DELETE with `@require_guild_permission`, `_t()`, `validate_required()` | ✅ Done |
+| `app/utils/class_roles.py` | Guild-scoped validation | **Updated** — `validate_class_role()` and `allowed_roles_for_class()` accept optional `guild_id` kwarg for matrix resolver | ✅ Done |
+| `app/services/signup_service.py` | `_validate_class_role()` | **Updated** — passes `guild_id=character.guild_id` to `validate_class_role()` | ✅ Done |
+| `app/services/lineup_service.py` | `_validate_class_role_lineup()` | **Updated** — passes `guild_id=character.guild_id` to `validate_class_role()` | ✅ Done |
+| `app/services/character_service.py` | `_default_role_for_class()` | **Updated** — accepts optional `guild_id` kwarg, passes to `allowed_roles_for_class()` | ✅ Done |
+| `app/seeds/permissions.py` | `manage_class_role_matrix` permission | **Added** to `guild_admin` and `global_admin` roles | ✅ Done |
+| `src/components/admin/ClassRoleMatrixTab.vue` | Matrix editor UI | **Created** — uses `WowCard`, `WowButton`, `useI18n`, `useUiStore`, `useGuildStore`, guilds API | ✅ Done |
+| `src/views/AdminPanelView.vue` | Matrix tab in admin panel | **Added** — registered as "matrix" tab with `manage_class_role_matrix` permission | ✅ Done |
+| `src/api/guilds.js` | Matrix API functions | **Added** — `getClassRoleMatrix()`, `setClassRoleOverrides()`, `resetClassRoleOverrides()`, `resetClassRoleMatrix()` | ✅ Done |
+| `translations/en.json` + `pl.json` | i18n keys | **Added** — `api.matrix.*` (backend) + `guild.matrix*` + `admin.tabs.classRoleMatrix` (frontend) | ✅ Done |
+| `tests/test_class_role_matrix.py` | 31 tests | **Created** — model, service, API, integration tests | ✅ Done |
 
 **Verification:**
 ```bash
 # No hardcoded CLASS_ROLES validation in services
 grep -rn "CLASS_ROLES\[" app/services/ --include="*.py"
-# Expected: empty (all go through matrix resolver)
+# Expected: empty (all go through matrix resolver) ✅
+
+# All 783 tests pass
+python -m pytest tests/ -q
+# 783 passed ✅
+
+# Frontend builds
+npx vite build
+# ✓ built in 3.5s ✅
 ```
 
 #### 13.3.5 Phase 4 Cleanup Checklist
