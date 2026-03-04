@@ -46,6 +46,7 @@ class Guild(db.Model):
     warmane_source: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False, server_default=sa.text("0"))
     armory_provider: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="warmane", server_default=sa.text("'warmane'"))
     armory_config_id: Mapped[int | None] = mapped_column(sa.Integer, sa.ForeignKey("armory_configs.id"), nullable=True)
+    armory_url: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
     timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="Europe/Warsaw", server_default=sa.text("'Europe/Warsaw'"))
     created_by: Mapped[int | None] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -96,6 +97,7 @@ class Guild(db.Model):
             "warmane_source": self.warmane_source,
             "armory_provider": self.armory_provider,
             "armory_config_id": self.armory_config_id,
+            "armory_url": self.armory_url,
             "timezone": self.timezone,
             "created_by": self.created_by,
             "created_at": utc_iso(self.created_at),

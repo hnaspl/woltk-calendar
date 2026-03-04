@@ -107,5 +107,13 @@ def get_constants():
             "role_slots": {
                 str(size): slots for size, slots in ROLE_SLOTS.items()
             },
+            "expansions": [
+                {"id": e.id, "name": e.name, "slug": e.slug, "sort_order": e.sort_order}
+                for e in db.session.execute(
+                    sa.select(Expansion)
+                    .where(Expansion.is_active == sa.true())
+                    .order_by(Expansion.sort_order)
+                ).scalars().all()
+            ],
         }
     )

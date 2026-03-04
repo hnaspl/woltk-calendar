@@ -25,6 +25,8 @@ def create_guild(
     timezone: str = "Europe/Warsaw",
     armory_provider: str = "warmane",
     armory_config_id: Optional[int] = None,
+    armory_url: Optional[str] = None,
+    expansion_id: Optional[int] = None,
 ) -> Guild:
     # Enforce guild limit if tenant is specified
     if tenant_id is not None:
@@ -34,6 +36,13 @@ def create_guild(
             guild_count = tenant_service.get_guild_count(tenant_id)
             if guild_count >= tenant.max_guilds:
                 raise ValueError(_t("guild.errors.tenantGuildLimitReached"))
+
+    # Auto-detect provider from armory_url if provided
+    if armory_url:
+        from app.services.armory.registry import detect_provider_from_url
+        detected = detect_provider_from_url(armory_url)
+        if detected:
+            armory_provider = detected
 
     # Check for duplicate guild (case-insensitive name + realm)
     existing = db.session.execute(
@@ -56,6 +65,7 @@ def create_guild(
         timezone=timezone,
         armory_provider=armory_provider,
         armory_config_id=armory_config_id,
+        armory_url=armory_url or None,
         created_by=created_by,
     )
     db.session.add(guild)
@@ -70,6 +80,14 @@ def create_guild(
         status=MemberStatus.ACTIVE.value,
     )
     db.session.add(membership)
+
+    # Enable selected expansion (cumulative auto-fill)
+    if expansion_id is not None:
+        from app.services import expansion_service
+        expansion_service.enable_expansion(
+            guild.id, expansion_id, created_by, tenant_id,
+        )
+
     db.session.commit()
     return guild
 
@@ -79,7 +97,7 @@ def get_guild(guild_id: int) -> Optional[Guild]:
 
 
 def update_guild(guild: Guild, data: dict) -> Guild:
-    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "visibility", "timezone", "armory_provider", "armory_config_id"}
+    allowed = {"name", "realm_name", "faction", "region", "settings_json", "allow_self_join", "visibility", "timezone", "armory_provider", "armory_config_id", "armory_url"}
     for key, value in data.items():
         if key in allowed:
             # Prevent changing name or realm on Warmane-sourced guilds

@@ -290,6 +290,23 @@ def create_guild():
     # Resolve armory config if provided
     armory_config_id = data.get("armory_config_id")
     armory_provider = data.get("armory_provider", "warmane")
+    armory_url = (data.get("armory_url") or "").strip() or None
+    expansion_id = data.get("expansion_id")
+
+    # Validate armory URL if provided
+    if armory_url:
+        from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+        allowed_domains = get_allowed_domains_from_settings()
+        url_error = validate_armory_url(armory_url, allowed_domains)
+        if url_error:
+            return jsonify({"error": url_error, "message": url_error}), 400
+
+        # Auto-detect provider from URL
+        from app.services.armory.registry import detect_provider_from_url
+        detected = detect_provider_from_url(armory_url)
+        if detected:
+            armory_provider = detected
+
     if armory_config_id is not None:
         from app.models.armory_config import ArmoryConfig
         ac = db.session.get(ArmoryConfig, armory_config_id)
@@ -310,6 +327,8 @@ def create_guild():
             timezone=data.get("timezone", "Europe/Warsaw"),
             armory_provider=armory_provider,
             armory_config_id=armory_config_id,
+            armory_url=armory_url,
+            expansion_id=expansion_id,
         )
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409

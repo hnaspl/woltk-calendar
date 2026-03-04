@@ -6,12 +6,18 @@ different guilds / configurations can use different armory APIs.
 
 from __future__ import annotations
 
-from typing import Type
+from typing import Optional, Type
+from urllib.parse import urlparse
 
 from app.services.armory.base import ArmoryProvider
 
 _registry: dict[str, Type[ArmoryProvider]] = {}
 _builtins_registered = False
+
+# Maps known armory domains to provider names for auto-detection
+_DOMAIN_TO_PROVIDER: dict[str, str] = {
+    "armory.warmane.com": "warmane",
+}
 
 
 def register_provider(name: str, cls: Type[ArmoryProvider]) -> None:
@@ -45,3 +51,20 @@ def list_providers() -> list[str]:
     """Return sorted list of registered provider names."""
     _ensure_builtins()
     return sorted(_registry)
+
+
+def detect_provider_from_url(url: str) -> Optional[str]:
+    """Detect armory provider name from a URL.
+
+    Parses the hostname and checks it against known provider domains.
+    Returns the provider name (e.g. ``"warmane"``) or ``None`` if the
+    URL does not match any known provider.
+    """
+    if not url or not isinstance(url, str):
+        return None
+    try:
+        parsed = urlparse(url.strip())
+        host = (parsed.hostname or "").lower()
+        return _DOMAIN_TO_PROVIDER.get(host)
+    except (ValueError, AttributeError):
+        return None
