@@ -16,6 +16,9 @@ import sqlalchemy as sa
 
 from app.extensions import db
 
+VALID_ROLES = frozenset(["main_tank", "off_tank", "healer", "melee_dps", "range_dps"])
+"""All valid role identifiers for the class-role matrix."""
+
 _ROLE_ORDER = ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]
 
 

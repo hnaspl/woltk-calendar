@@ -17,6 +17,7 @@ from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, validate_required
 from app.utils.decorators import require_guild_permission
 from app.services import matrix_service
+from app.services.matrix_service import VALID_ROLES
 
 bp = Blueprint("guild_matrix", __name__)
 
@@ -53,7 +54,7 @@ def set_class_overrides(guild_id: int, class_name: str, membership):
     if not isinstance(roles, list) or not roles:
         return jsonify({"error": _t("api.matrix.rolesRequired")}), 400
 
-    valid_roles = {"main_tank", "off_tank", "healer", "melee_dps", "range_dps"}
+    valid_roles = VALID_ROLES
     invalid = set(roles) - valid_roles
     if invalid:
         return jsonify({"error": _t("api.matrix.invalidRoles", roles=", ".join(invalid))}), 400

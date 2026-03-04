@@ -84,6 +84,8 @@ import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import * as guildsApi from '@/api/guilds'
 
+import { ROLE_OPTIONS, ROLE_LABEL_MAP } from '@/constants'
+
 const { t } = useI18n()
 const uiStore = useUiStore()
 const guildStore = useGuildStore()
@@ -97,14 +99,8 @@ const resettingAll = ref(false)
 const resettingClass = ref(null)
 const savingClass = ref(null)
 
-const allRoles = ['main_tank', 'off_tank', 'healer', 'melee_dps', 'range_dps']
-const roleLabels = {
-  main_tank: 'Main Tank',
-  off_tank: 'Off Tank',
-  healer: 'Healer',
-  melee_dps: 'Melee DPS',
-  range_dps: 'Range DPS',
-}
+const allRoles = ROLE_OPTIONS.map(r => r.value)
+const roleLabels = ROLE_LABEL_MAP
 
 // Local edits per class — tracks uncommitted checkbox changes
 const localEdits = reactive({})
