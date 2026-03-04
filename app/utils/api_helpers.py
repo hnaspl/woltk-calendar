@@ -3,6 +3,7 @@
 Provides common patterns used across API endpoint handlers:
 - JSON body extraction
 - Required-field validation
+- System-level permission checks
 - Guild-scoped event lookup
 - Guild role map construction
 """
@@ -28,6 +29,28 @@ def validate_required(data: dict, *fields: str):
     missing = set(fields) - set(data.keys())
     if missing:
         return jsonify({"error": _t("api.common.missingFields", fields=", ".join(missing))}), 400
+    return None
+
+
+def require_system_permission(perm_code: str):
+    """Check system-level (non-guild) permission for the current user.
+
+    Returns an error response tuple ``(jsonify(...), 403)`` when the
+    user lacks the permission, or ``None`` on success.
+
+    Usage::
+
+        @bp.post("/admin/action")
+        @login_required
+        def admin_action():
+            err = require_system_permission("manage_expansions")
+            if err:
+                return err
+            ...
+    """
+    from app.utils.permissions import has_permission
+    if not has_permission(None, perm_code):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     return None
 
 

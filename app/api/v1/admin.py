@@ -8,24 +8,16 @@ from flask_login import current_user
 from app.services import auth_service
 from app.extensions import db
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json
-from app.utils.permissions import has_permission
+from app.utils.api_helpers import get_json, require_system_permission
 from app.i18n import _t
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
-def _require_permission(perm_code: str):
-    """Return an error tuple if the current user lacks the permission, else None."""
-    if not has_permission(None, perm_code):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    return None
-
-
 @bp.get("/users")
 @login_required
 def list_users():
-    err = _require_permission("list_system_users")
+    err = require_system_permission("list_system_users")
     if err:
         return err
     users = auth_service.list_all_users()
@@ -35,7 +27,7 @@ def list_users():
 @bp.get("/dashboard")
 @login_required
 def dashboard_stats():
-    err = _require_permission("list_system_users")
+    err = require_system_permission("list_system_users")
     if err:
         return err
 
@@ -124,7 +116,7 @@ def dashboard_stats():
 @bp.put("/users/<int:user_id>")
 @login_required
 def update_user(user_id: int):
-    err = _require_permission("manage_system_users")
+    err = require_system_permission("manage_system_users")
     if err:
         return err
     user = auth_service.get_user_by_id(user_id)
@@ -151,7 +143,7 @@ def update_user(user_id: int):
 @bp.delete("/users/<int:user_id>")
 @login_required
 def delete_user(user_id: int):
-    err = _require_permission("manage_system_users")
+    err = require_system_permission("manage_system_users")
     if err:
         return err
     user = auth_service.get_user_by_id(user_id)
@@ -172,7 +164,7 @@ def delete_user(user_id: int):
 @login_required
 def trigger_sync():
     """Manually trigger a sync of all characters."""
-    err = _require_permission("trigger_sync")
+    err = require_system_permission("trigger_sync")
     if err:
         return err
     from app.jobs.handlers import handle_sync_all_characters
@@ -203,7 +195,7 @@ def _system_settings_response():
 @login_required
 def update_system_settings():
     """Update global system settings. Requires manage_system_settings permission."""
-    err = _require_permission("manage_system_settings")
+    err = require_system_permission("manage_system_settings")
     if err:
         return err
     from app.models.system_setting import SystemSetting
@@ -330,7 +322,7 @@ def update_discord_settings():
 @login_required
 def set_user_guild_limit(user_id: int):
     """Set max_guilds_override on a user. Requires manage_system_users permission."""
-    err = _require_permission("manage_system_users")
+    err = require_system_permission("manage_system_users")
     if err:
         return err
     from app.models.user import User
@@ -357,7 +349,7 @@ def set_user_guild_limit(user_id: int):
 @login_required
 def get_guild_features(guild_id: int):
     """Get feature flags for a guild. Requires manage_system_settings permission."""
-    err = _require_permission("manage_system_settings")
+    err = require_system_permission("manage_system_settings")
     if err:
         return err
     from app.services.feature_service import get_guild_features as _get_features
@@ -368,7 +360,7 @@ def get_guild_features(guild_id: int):
 @login_required
 def update_guild_features(guild_id: int):
     """Update feature flags for a guild. Requires manage_system_settings permission."""
-    err = _require_permission("manage_system_settings")
+    err = require_system_permission("manage_system_settings")
     if err:
         return err
     from app.services.feature_service import set_feature

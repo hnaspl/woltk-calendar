@@ -9,17 +9,9 @@ from app.extensions import db
 from app.i18n import _t
 from app.services import tenant_service
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json
-from app.utils.permissions import has_permission
+from app.utils.api_helpers import get_json, require_system_permission
 
 bp = Blueprint("admin_tenants_v2", __name__)
-
-
-def _require_admin():
-    """Return error response if current user lacks manage_tenants permission."""
-    if not has_permission(None, "manage_tenants"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    return None
 
 
 def _get_tenant_or_404(tenant_id: int):
@@ -34,7 +26,7 @@ def _get_tenant_or_404(tenant_id: int):
 @login_required
 def list_tenants():
     """List all tenants (global admin only)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenants = tenant_service.list_all_tenants()
@@ -51,7 +43,7 @@ def list_tenants():
 @login_required
 def get_tenant(tenant_id: int):
     """Get tenant details (global admin only)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenant, t_err = _get_tenant_or_404(tenant_id)
@@ -67,7 +59,7 @@ def get_tenant(tenant_id: int):
 @login_required
 def update_tenant(tenant_id: int):
     """Update tenant as global admin (plan, limits, etc.)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenant, t_err = _get_tenant_or_404(tenant_id)
@@ -82,7 +74,7 @@ def update_tenant(tenant_id: int):
 @login_required
 def suspend_tenant(tenant_id: int):
     """Suspend a tenant (global admin only)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenant, t_err = _get_tenant_or_404(tenant_id)
@@ -96,7 +88,7 @@ def suspend_tenant(tenant_id: int):
 @login_required
 def activate_tenant(tenant_id: int):
     """Reactivate a suspended tenant (global admin only)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenant, t_err = _get_tenant_or_404(tenant_id)
@@ -110,7 +102,7 @@ def activate_tenant(tenant_id: int):
 @login_required
 def delete_tenant(tenant_id: int):
     """Delete a tenant and all its data (global admin only)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenant, t_err = _get_tenant_or_404(tenant_id)
@@ -124,7 +116,7 @@ def delete_tenant(tenant_id: int):
 @login_required
 def update_limits(tenant_id: int):
     """Override guild/member limits for a tenant (global admin only)."""
-    err = _require_admin()
+    err = require_system_permission("manage_tenants")
     if err:
         return err
     tenant, t_err = _get_tenant_or_404(tenant_id)

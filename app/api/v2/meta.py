@@ -14,21 +14,13 @@ from app.models.expansion import (
     ExpansionSpec,
 )
 from app.models.system_setting import SystemSetting
-from app.utils.api_helpers import get_json, validate_required
+from app.utils.api_helpers import get_json, validate_required, require_system_permission
 from app.utils.auth import login_required
-from app.utils.permissions import has_permission
 
 bp = Blueprint("meta_v2", __name__)
 
 
 # --------------------------------------------------------------------------- helpers
-
-def _require_permission(perm_code: str):
-    """Return an error tuple if the current user lacks the permission, else None."""
-    if not has_permission(None, perm_code):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    return None
-
 
 def _get_expansion_or_404(slug: str):
     expansion = db.session.query(Expansion).filter_by(slug=slug, is_active=True).first()
@@ -121,7 +113,7 @@ def get_default_expansion():
 @bp.put("/default-expansion")
 @login_required
 def set_default_expansion():
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     data = get_json()
@@ -146,7 +138,7 @@ def set_default_expansion():
 @bp.post("/")
 @login_required
 def create_expansion():
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     data = get_json()
@@ -168,7 +160,7 @@ def create_expansion():
 @bp.put("/<int:expansion_id>")
 @login_required
 def update_expansion(expansion_id: int):
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     expansion = db.session.get(Expansion, expansion_id)
@@ -185,7 +177,7 @@ def update_expansion(expansion_id: int):
 @bp.delete("/<int:expansion_id>")
 @login_required
 def delete_expansion(expansion_id: int):
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     expansion = db.session.get(Expansion, expansion_id)
@@ -199,7 +191,7 @@ def delete_expansion(expansion_id: int):
 @bp.post("/<int:expansion_id>/raids")
 @login_required
 def add_raid(expansion_id: int):
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     expansion = db.session.get(Expansion, expansion_id)
@@ -230,7 +222,7 @@ def add_raid(expansion_id: int):
 @bp.put("/raids/<int:raid_id>")
 @login_required
 def update_raid(raid_id: int):
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     raid = db.session.get(ExpansionRaid, raid_id)
@@ -251,7 +243,7 @@ def update_raid(raid_id: int):
 @bp.delete("/raids/<int:raid_id>")
 @login_required
 def delete_raid(raid_id: int):
-    err = _require_permission("manage_expansions")
+    err = require_system_permission("manage_expansions")
     if err:
         return err
     raid = db.session.get(ExpansionRaid, raid_id)
