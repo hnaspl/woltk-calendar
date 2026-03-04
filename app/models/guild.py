@@ -14,9 +14,10 @@ from app.utils.dt import utc_iso
 
 from app.enums import GuildVisibility, MemberStatus
 from app.extensions import db
+from app.models.mixins import TenantMixin
 
 if TYPE_CHECKING:
-    from app.models.expansion import ExpansionClass
+    from app.models.expansion import Expansion, ExpansionClass
     from app.models.user import User
 
 
@@ -68,6 +69,8 @@ class Guild(db.Model):
         "GuildInvitation", back_populates="guild", lazy="select"
     )
     creator: Mapped[User | None] = relationship("User", foreign_keys=[created_by], lazy="select")
+    guild_expansions = relationship("GuildExpansion", back_populates="guild", lazy="dynamic")
+    guild_realms = relationship("GuildRealm", back_populates="guild", lazy="dynamic")
 
     @property
     def settings(self) -> dict:
@@ -302,3 +305,89 @@ class GuildClassRoleOverride(db.Model):
 
     def __repr__(self) -> str:
         return f"<GuildClassRoleOverride guild_id={self.guild_id} class_id={self.expansion_class_id} role={self.role!r}>"
+
+
+class GuildExpansion(TenantMixin, db.Model):
+    """Binds a guild to an expansion (cumulative)."""
+
+    __tablename__ = "guild_expansions"
+    __table_args__ = (
+        sa.UniqueConstraint("guild_id", "expansion_id", name="uq_guild_expansion"),
+        sa.Index("ix_guild_expansions_guild", "guild_id"),
+    )
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    guild_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=False
+    )
+    expansion_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("expansions.id"), nullable=False
+    )
+    enabled_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    enabled_by: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("users.id"), nullable=True
+    )
+
+    # Relationships
+    guild: Mapped[Guild] = relationship("Guild", back_populates="guild_expansions")
+    expansion: Mapped[Expansion] = relationship("Expansion", lazy="select")
+    enabler: Mapped[User | None] = relationship("User", foreign_keys=[enabled_by], lazy="select")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "guild_id": self.guild_id,
+            "expansion_id": self.expansion_id,
+            "expansion_slug": self.expansion.slug if self.expansion else None,
+            "expansion_name": self.expansion.name if self.expansion else None,
+            "enabled_at": utc_iso(self.enabled_at),
+            "enabled_by": self.enabled_by,
+        }
+
+    def __repr__(self) -> str:
+        return f"<GuildExpansion guild_id={self.guild_id} expansion_id={self.expansion_id}>"
+
+
+class GuildRealm(TenantMixin, db.Model):
+    """Per-guild realm configuration."""
+
+    __tablename__ = "guild_realms"
+    __table_args__ = (
+        sa.UniqueConstraint("guild_id", "name", name="uq_guild_realm"),
+        sa.Index("ix_guild_realms_guild", "guild_id"),
+    )
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    guild_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    is_default: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, default=False
+    )
+    sort_order: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    guild: Mapped[Guild] = relationship("Guild", back_populates="guild_realms")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "guild_id": self.guild_id,
+            "name": self.name,
+            "is_default": self.is_default,
+            "sort_order": self.sort_order,
+            "created_at": utc_iso(self.created_at),
+        }
+
+    def __repr__(self) -> str:
+        return f"<GuildRealm guild_id={self.guild_id} name={self.name!r}>"

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
-from sqlalchemy import relationship
-from sqlalchemy.orm import declared_attr, mapped_column
+from sqlalchemy.orm import declared_attr, mapped_column, relationship
 
 
 class TenantMixin:
