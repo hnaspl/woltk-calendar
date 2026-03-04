@@ -172,7 +172,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
-import { RAID_TYPES } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import { useI18n } from 'vue-i18n'
@@ -186,7 +186,7 @@ const { joinGuild, leaveGuild, on, off } = useSocket()
 const tzHelper = useTimezone()
 const { t } = useI18n()
 
-const raidTypes = RAID_TYPES
+const { raidTypes } = useExpansionData()
 
 const showCreateModal = ref(false)
 const creating = ref(false)

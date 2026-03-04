@@ -326,7 +326,7 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, ROLE_OPTIONS, CLASS_ROLES, normalizeSpecName } from '@/constants'
+import { WARMANE_REALMS, ROLE_OPTIONS, normalizeSpecName } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
@@ -374,7 +374,7 @@ const manualEntry = ref(false)
 const showAddAnother = ref(false)
 const lastAddedName = ref('')
 
-const { wowClasses, classSpecs } = useExpansionData()
+const { wowClasses, classSpecs, classRoles } = useExpansionData()
 const warmaneRealms = WARMANE_REALMS
 
 /** Lock all fields when editing a character imported from armory */
@@ -397,7 +397,7 @@ const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', seco
 /** Roles filtered by the selected class */
 const filteredRoles = computed(() => {
   if (!form.class) return ROLE_OPTIONS
-  const allowed = CLASS_ROLES[form.class] ?? []
+  const allowed = classRoles.value[form.class] ?? []
   if (allowed.length === 0) return ROLE_OPTIONS
   return ROLE_OPTIONS.filter(r => allowed.includes(r.value))
 })
@@ -495,7 +495,7 @@ function addAnotherCharacter() {
 
 /** Reset role and specs when class changes so invalid values don't persist */
 function onClassChange() {
-  const allowed = CLASS_ROLES[form.class] ?? []
+  const allowed = classRoles.value[form.class] ?? []
   if (form.role && !allowed.includes(form.role)) form.role = ''
   const specs = classSpecs.value[form.class] ?? []
   if (form.spec && specs.length > 0 && !specs.includes(form.spec)) form.spec = ''
@@ -528,8 +528,8 @@ async function lookupFromWarmane() {
     const data = await warmaneApi.lookupCharacter(form.realm, form.name)
     if (data?.class_name) {
       form.class = data.class_name
-      // Auto-populate default role from CLASS_ROLES
-      const allowed = CLASS_ROLES[data.class_name] ?? []
+      // Auto-populate default role from classRoles
+      const allowed = classRoles.value[data.class_name] ?? []
       if (allowed.length > 0 && !form.role) {
         form.role = allowed[0]
       }
@@ -538,9 +538,9 @@ async function lookupFromWarmane() {
     if (data?.name) form.name = data.name
     // Auto-fill spec from talents
     if (data?.talents?.length) {
-      form.spec = normalizeSpecName(data.talents[0]?.tree, form.class) || ''
+      form.spec = normalizeSpecName(data.talents[0]?.tree, form.class, classSpecs.value) || ''
       if (data.talents.length > 1) {
-        form.secondary_spec = normalizeSpecName(data.talents[1]?.tree, form.class) || ''
+        form.secondary_spec = normalizeSpecName(data.talents[1]?.tree, form.class, classSpecs.value) || ''
       }
     }
     // Store warmane data for metadata on save

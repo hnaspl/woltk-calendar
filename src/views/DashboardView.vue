@@ -175,7 +175,7 @@
                     <span v-if="ev.duration_minutes" class="text-text-muted">· ⏱️ ~{{ formatDuration(ev.duration_minutes) }}</span>
                   </div>
                   <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span v-if="raidTypeLabel(ev.raid_type)" class="text-[10px] text-amber-300">⚔️ {{ raidTypeLabel(ev.raid_type) }}</span>
+                    <span v-if="raidTypeLabel(ev.raid_type, raidTypes)" class="text-[10px] text-amber-300">⚔️ {{ raidTypeLabel(ev.raid_type, raidTypes) }}</span>
                     <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" />
                     <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 {{ t('dashboard.signupsClose', { time: formatDateTime(ev.close_signups_at) }) }}</span>
                   </div>
@@ -209,7 +209,7 @@
                 <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
                 <div class="flex-1 min-w-0">
                   <span class="text-sm text-text-primary truncate block">{{ su.event_title ?? 'Raid' }}</span>
-                  <span v-if="raidTypeLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidTypeLabel(su.raid_type) }}</span>
+                  <span v-if="raidTypeLabel(su.raid_type, raidTypes)" class="text-[10px] text-amber-300 truncate block">{{ raidTypeLabel(su.raid_type, raidTypes) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">
                     {{ su.character.name }}
                   </span>
@@ -251,7 +251,8 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
 import { useSocket } from '@/composables/useSocket'
-import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import { useI18n } from 'vue-i18n'
@@ -266,6 +267,7 @@ const tzHelper = useTimezone()
 const { formatDateTime, formatTimeOnly } = useFormatting()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const { t } = useI18n()
+const { raidTypes } = useExpansionData()
 
 let isActive = true
 const loading = ref(true)

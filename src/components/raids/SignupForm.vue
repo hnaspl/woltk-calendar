@@ -149,9 +149,11 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, CLASS_ROLES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
+const { classRoles } = useExpansionData()
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -197,7 +199,7 @@ const classAllowedRoles = computed(() => {
   if (!form.characterId) return null
   const selected = characters.value.find(c => String(c.id) === String(form.characterId))
   if (!selected || !selected.class_name) return null
-  return CLASS_ROLES[selected.class_name] ?? null
+  return classRoles.value[selected.class_name] ?? null
 })
 
 const roles = computed(() =>
@@ -286,7 +288,7 @@ function onCharacterChange() {
   const selected = characters.value.find(c => String(c.id) === String(charId))
   if (selected && !props.existingSignup) {
     // Only auto-fill role if it's valid for the character's class
-    const allowed = CLASS_ROLES[selected.class_name] ?? []
+    const allowed = classRoles.value[selected.class_name] ?? []
     const defaultRole = selected.default_role || ''
     form.chosenRole = allowed.includes(defaultRole) ? defaultRole : ''
     form.chosenSpec = selected.primary_spec || ''

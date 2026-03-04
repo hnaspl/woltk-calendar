@@ -172,9 +172,11 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
-import { CLASS_ROLES, ROLE_LABEL_MAP } from '@/constants'
+import { ROLE_LABEL_MAP } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
+const { classRoles } = useExpansionData()
 
 const props = defineProps({
   signups:        { type: Array,          default: () => [] },
@@ -254,7 +256,7 @@ function findSignupById(id) {
 function isClassAllowedForRole(signup, role) {
   const className = signup?.character?.class_name
   if (!className) return true // allow if class unknown
-  const allowed = CLASS_ROLES[className]
+  const allowed = classRoles.value[className]
   if (!allowed) return true // allow if class not in map
   return allowed.includes(role)
 }

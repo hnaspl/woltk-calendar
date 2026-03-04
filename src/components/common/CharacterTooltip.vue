@@ -172,9 +172,11 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName, getItemQualityText } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import { useFormatting } from '@/composables/useFormatting'
 
 const { t } = useI18n()
+const { classSpecs } = useExpansionData()
 
 const props = defineProps({
   character: { type: Object, default: null },
@@ -222,7 +224,7 @@ const talents = computed(() => {
   const cls = props.character?.class_name ?? ''
   return raw.map(t => ({
     ...t,
-    tree: normalizeSpecName(t.tree, cls) ?? t.tree,
+    tree: normalizeSpecName(t.tree, cls, classSpecs.value) ?? t.tree,
   }))
 })
 const glyphs = computed(() => meta.value.glyphs ?? [])

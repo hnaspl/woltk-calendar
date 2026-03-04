@@ -49,7 +49,7 @@
                 </div>
                 <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">⚔️</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidTypeLabel(event.raid_type) }}</span>
+                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted">
                   <span class="text-accent-gold">📝</span>
@@ -419,7 +419,8 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
@@ -437,6 +438,7 @@ const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
 const { formatDateTime } = useFormatting()
 const { t } = useI18n()
+const { raidTypes } = useExpansionData()
 
 const event = ref(null)
 const signups = ref([])
@@ -452,7 +454,6 @@ const hasAttendance = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
-const raidTypes = RAID_TYPES
 
 function mySignupProfessions(s) {
   return (s.character?.metadata?.professions ?? []).slice(0, 2)

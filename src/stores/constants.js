@@ -22,13 +22,9 @@ import * as metaApi from '@/api/meta'
 // These are used until the API fetch resolves.
 import {
   WARMANE_REALMS as _REALMS,
-  WOW_CLASSES as _CLASSES,
-  RAID_TYPES as _RAID_TYPES,
   ROLE_OPTIONS as _ROLES,
   EVENT_STATUSES as _STATUSES,
   ATTENDANCE_OUTCOMES as _OUTCOMES,
-  CLASS_SPECS as _SPECS,
-  CLASS_ROLES as _CLASS_ROLES,
 } from '@/constants'
 
 export const useConstantsStore = defineStore('constants', () => {
@@ -36,13 +32,13 @@ export const useConstantsStore = defineStore('constants', () => {
   // State – initialised with static defaults
   // ---------------------------------------------------------------------------
   const warmaneRealms = ref([..._REALMS])
-  const wowClasses = ref([..._CLASSES])
-  const raidTypes = ref([..._RAID_TYPES])
+  const wowClasses = ref([])
+  const raidTypes = ref([])
   const roles = ref([..._ROLES])
   const eventStatuses = ref([..._STATUSES])
   const attendanceOutcomes = ref([..._OUTCOMES])
-  const classSpecs = ref({ ..._SPECS })
-  const classRoles = ref({ ..._CLASS_ROLES })
+  const classSpecs = ref({})
+  const classRoles = ref({})
   const roleSlots = ref({})
 
   const loaded = ref(false)

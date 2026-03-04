@@ -284,9 +284,11 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useGuildStore } from '@/stores/guild'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, CLASS_ROLES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
+const { classRoles } = useExpansionData()
 
 const guildStore = useGuildStore()
 const systemSettings = useSystemSettings()
@@ -335,8 +337,8 @@ const editForm = reactive({ chosen_role: '', chosen_spec: '' })
 function editRolesForClass(signup) {
   const className = signup.character?.class_name
   if (!className) return []
-  const classRoles = CLASS_ROLES[className] ?? []
-  return ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value) && classRoles.includes(r.value))
+  const classRolesForClass = classRoles.value[className] ?? []
+  return ROLE_OPTIONS.filter(r => props.availableRoles.includes(r.value) && classRolesForClass.includes(r.value))
 }
 
 /** Get spec options for a signup's character */
