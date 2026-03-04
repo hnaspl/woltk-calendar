@@ -36,7 +36,7 @@
         v-if="canCreateGuild && hasTenant && !guildLimitReached"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
-        @click="showCreateGuild = true; _setDefaultProvider()"
+        @click="showCreateGuild = true; _initCreateGuild()"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -94,19 +94,28 @@
       <div class="relative bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md mx-4 p-6 z-10">
         <h3 class="wow-heading text-lg mb-4">{{ t('guild.createGuild') }}</h3>
 
-        <!-- Step 1: Select provider & lookup guild on armory -->
+        <!-- Step 1: Guild details & armory lookup -->
         <div v-if="!guildLookupDone" class="space-y-4">
           <p class="text-sm text-text-muted">{{ t('guild.createHelp') }}</p>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.armoryProvider') }}</label>
-            <select v-model="newGuild.armory_provider" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option v-for="p in availableProviders" :key="p" :value="p">{{ p.charAt(0).toUpperCase() + p.slice(1) }}</option>
-              <option value="manual">{{ t('guild.manualNoArmory') }}</option>
-            </select>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="detectedProvider ? lookupGuild() : enterManually()" />
           </div>
           <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="newGuild.armory_provider !== 'manual' ? lookupGuild() : enterManually()" />
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.armoryUrl') }}</label>
+            <input v-model="newGuild.armory_url" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.armoryUrlPlaceholder')" />
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.armoryUrlHelp') }}</p>
+          </div>
+          <div v-if="newGuild.armory_url.trim()">
+            <p v-if="detectedProvider" class="text-xs text-green-400">{{ t('guild.providerDetected', { provider: detectedProvider.charAt(0).toUpperCase() + detectedProvider.slice(1) }) }}</p>
+            <p v-else class="text-xs text-yellow-400">{{ t('guild.noProviderDetected') }}</p>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
+            <select v-model="newGuild.expansion_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
+            </select>
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
           </div>
           <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
           <div v-if="guildLookupNotFound" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
@@ -133,7 +142,7 @@
           <div class="flex justify-end gap-3">
             <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">{{ t('common.buttons.cancel') }}</button>
             <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">{{ t('guild.enterManually') }}</button>
-            <button v-if="newGuild.armory_provider !== 'manual'" type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
+            <button v-if="detectedProvider" type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
               {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnArmory') }}
             </button>
             <button v-else type="button" :disabled="!newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="enterManually">
@@ -385,7 +394,7 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
-const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw', armory_provider: '' })
+const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw', armory_url: '', expansion_id: null })
 
 const GUILD_TIMEZONES = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -403,22 +412,34 @@ const GUILD_TIMEZONES = [
   'UTC',
 ]
 
-// Available armory providers from constants store
-const availableProviders = computed(() => Object.keys(constantsStore.providerRealms))
-
-// Realms for the selected provider (empty for manual mode to show free-text input)
-const selectedProviderRealms = computed(() => {
-  const provider = newGuild.armory_provider
-  if (!provider || provider === 'manual') return []
-  return constantsStore.providerRealms[provider] || []
+// Auto-detect armory provider from the URL
+const detectedProvider = computed(() => {
+  const url = newGuild.armory_url.trim().toLowerCase()
+  if (!url) return null
+  for (const provider of Object.keys(constantsStore.providerRealms)) {
+    if (url.includes(provider)) return provider
+  }
+  return null
 })
 
-// Set default provider when providers load
-const _setDefaultProvider = () => {
-  if (!newGuild.armory_provider && availableProviders.value.length > 0) {
-    newGuild.armory_provider = availableProviders.value[0]
-  } else if (!newGuild.armory_provider) {
-    newGuild.armory_provider = 'manual'
+// Realms for the detected provider
+const detectedProviderRealms = computed(() => {
+  if (!detectedProvider.value) return []
+  return constantsStore.providerRealms[detectedProvider.value] || []
+})
+
+// Realms for step 2 (uses detected provider or empty for manual)
+const selectedProviderRealms = computed(() => detectedProviderRealms.value)
+
+// Expansions sorted by sort_order descending (highest first)
+const sortedExpansions = computed(() => {
+  return [...constantsStore.expansions].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
+})
+
+// Set default expansion to highest sort_order
+const _initCreateGuild = () => {
+  if (sortedExpansions.value.length > 0 && !newGuild.expansion_id) {
+    newGuild.expansion_id = sortedExpansions.value[0].id
   }
 }
 
@@ -463,20 +484,18 @@ async function lookupGuild() {
 
   const matches = []
 
-  // Search realms for the selected armory provider
-  const realms = selectedProviderRealms.value
+  // Search realms for the detected armory provider
+  const realms = detectedProviderRealms.value
   for (const realm of realms) {
     try {
       const data = await warmaneApi.lookupGuild(realm, name)
       if (data) {
-        // Check if this guild is already added
         const alreadyAdded = guildStore.allGuilds.some(
           g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === realm.toLowerCase()
         )
         matches.push({ ...data, realm, alreadyAdded })
       }
     } catch (err) {
-      // 404 = not found on this realm, try next; other errors are real failures
       if (err?.response?.status && err.response.status !== 404) {
         lookingUpGuild.value = false
         guildLookupError.value = err?.response?.data?.message ?? t('guild.toasts.failedToSearchArmory')
@@ -495,10 +514,8 @@ async function lookupGuild() {
   guildLookupMatches.value = matches
 
   if (matches.length === 1) {
-    // Single match — auto-select
     selectGuildMatch(matches[0])
   }
-  // Multiple matches: show selection UI (handled in template)
 }
 
 function selectGuildMatch(match) {
@@ -512,13 +529,15 @@ async function doCreateGuild() {
   createGuildError.value = null
   creatingGuild.value = true
   try {
-    const provider = newGuild.armory_provider === 'manual' ? '' : newGuild.armory_provider
+    const provider = detectedProvider.value || ''
     const guild = await guildsApi.createGuild({
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
       warmane_source: !!guildLookupMatch.value,
       armory_provider: provider,
+      armory_url: newGuild.armory_url.trim() || null,
+      expansion_id: newGuild.expansion_id,
       timezone: newGuild.timezone,
     })
     await guildStore.fetchGuilds()
@@ -528,7 +547,8 @@ async function doCreateGuild() {
     newGuild.realm_name = ''
     newGuild.faction = ''
     newGuild.timezone = 'Europe/Warsaw'
-    newGuild.armory_provider = availableProviders.value[0] || 'manual'
+    newGuild.armory_url = ''
+    newGuild.expansion_id = sortedExpansions.value[0]?.id ?? null
     guildLookupDone.value = false
     guildLookupMatch.value = null
     guildLookupMatches.value = []

@@ -43,6 +43,7 @@ export const useConstantsStore = defineStore('constants', () => {
   const classSpecs = ref({})
   const classRoles = ref({})
   const roleSlots = ref({})
+  const expansions = ref([])
 
   // Provider-based realm suggestions (dynamic, not hardcoded).
   // Keyed by provider name, e.g. { warmane: ["Icecrown", ...] }
@@ -90,6 +91,9 @@ export const useConstantsStore = defineStore('constants', () => {
       if (data.provider_realms) {
         providerRealms.value = data.provider_realms
       }
+      if (data.expansions) {
+        expansions.value = data.expansions
+      }
       loaded.value = true
     } catch (err) {
       error.value = err?.response?.data?.message || 'Failed to load constants'
@@ -109,6 +113,7 @@ export const useConstantsStore = defineStore('constants', () => {
     classRoles,
     roleSlots,
     providerRealms,
+    expansions,
     loaded,
     loading,
     error,

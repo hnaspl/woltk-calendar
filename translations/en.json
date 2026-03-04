@@ -728,7 +728,14 @@
     "manualEntryInfo": "Manual entry mode — guild not linked to an armory provider. You can configure armory settings later in guild settings.",
     "manualNoArmory": "Manual (no armory)",
     "armoryProvider": "Armory Provider",
-    "realmPlaceholder": "Enter realm name"
+    "realmPlaceholder": "Enter realm name",
+    "armoryUrl": "Server Armory URL",
+    "armoryUrlHelp": "Provide your server's armory link (e.g. http://armory.warmane.com/api) or leave empty for manual entry",
+    "expansion": "WoW Expansion",
+    "expansionHelp": "Select the expansion your guild plays. This determines available classes, specs, and raids.",
+    "providerDetected": "Provider detected: {provider}",
+    "noProviderDetected": "No known provider detected. Guild will be created in manual mode.",
+    "armoryUrlPlaceholder": "http://armory.example.com/api"
   },
   "members": {
     "addMember": "+ Add Member",

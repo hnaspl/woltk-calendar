@@ -728,7 +728,14 @@
     "manualEntryInfo": "Tryb ręczny — gildia nie jest połączona z dostawcą Armory. Możesz skonfigurować ustawienia Armory później w ustawieniach gildii.",
     "manualNoArmory": "Ręcznie (bez Armory)",
     "armoryProvider": "Dostawca Armory",
-    "realmPlaceholder": "Wpisz nazwę realmu"
+    "realmPlaceholder": "Wpisz nazwę realmu",
+    "armoryUrl": "URL Armory serwera",
+    "armoryUrlHelp": "Podaj link do Armory swojego serwera (np. http://armory.warmane.com/api) lub pozostaw puste, aby wprowadzić dane ręcznie",
+    "expansion": "Dodatek WoW",
+    "expansionHelp": "Wybierz dodatek, w który gra Twoja gildia. Określa dostępne klasy, specjalizacje i rajdy.",
+    "providerDetected": "Wykryto dostawcę: {provider}",
+    "noProviderDetected": "Nie wykryto znanego dostawcy. Gildia zostanie utworzona w trybie ręcznym.",
+    "armoryUrlPlaceholder": "http://armory.example.com/api"
   },
   "members": {
     "addMember": "+ Dodaj członka",
