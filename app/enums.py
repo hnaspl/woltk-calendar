@@ -47,6 +47,13 @@ class MemberStatus(str, Enum):
     ACTIVE = "active"
     INVITED = "invited"
     BANNED = "banned"
+    APPLIED = "applied"
+    DECLINED = "declined"
+
+
+class GuildVisibility(str, Enum):
+    OPEN = "open"
+    HIDDEN = "hidden"
 
 
 class JobStatus(str, Enum):
