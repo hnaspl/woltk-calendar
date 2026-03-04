@@ -68,7 +68,7 @@ async function doAccept() {
   const token = route.params.token
   if (!token) {
     status.value = 'error'
-    errorMsg.value = 'No token provided'
+    errorMsg.value = t('guild.inviteError')
     return
   }
   accepting.value = true

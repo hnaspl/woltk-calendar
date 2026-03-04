@@ -212,10 +212,9 @@ const canManageGuild = computed(() => permissions.can('create_events'))
 const canCreateGuild = computed(() => permissions.can('create_guild'))
 const hasTenant = computed(() => !!tenantStore.activeTenantId)
 
-// Filter hidden guilds from sidebar — only show guilds where the user is a member
-// Hidden guilds are visible to their members but hidden from discovery
+// Show all guilds where user is a member; filter out hidden guilds from non-members
 const visibleGuilds = computed(() => {
-  return guildStore.guilds.filter(g => g.visibility !== 'hidden' || guildStore.currentGuild?.id === g.id)
+  return guildStore.guilds.filter(g => g.visibility !== 'hidden')
 })
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
