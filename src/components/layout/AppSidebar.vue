@@ -158,7 +158,7 @@
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">{{ t('common.fields.selectRealm') }}</option>
-              <option v-for="r in WARMANE_REALMS" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in constantsStore.warmaneRealms" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
           <div>
@@ -196,10 +196,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useTenantStore } from '@/stores/tenant'
 import { useUiStore } from '@/stores/ui'
+import { useConstantsStore } from '@/stores/constants'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
-import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
 import TenantSwitcher from '@/components/layout/TenantSwitcher.vue'
@@ -214,6 +214,7 @@ const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const tenantStore = useTenantStore()
 const uiStore = useUiStore()
+const constantsStore = useConstantsStore()
 const router = useRouter()
 const route = useRoute()
 const permissions = usePermissions()
@@ -432,8 +433,8 @@ async function lookupGuild() {
 
   const matches = []
 
-  // Search ALL Warmane realms
-  for (const realm of WARMANE_REALMS) {
+  // Search all realms from constants store (API-driven)
+  for (const realm of constantsStore.warmaneRealms) {
     try {
       const data = await warmaneApi.lookupGuild(realm, name)
       if (data) {

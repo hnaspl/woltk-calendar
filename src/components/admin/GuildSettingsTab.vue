@@ -17,7 +17,7 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
           <select v-model="form.realm" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
             <option value="">{{ t('common.fields.selectRealm') }}</option>
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+            <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
           </select>
           <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
         </div>
@@ -152,9 +152,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { usePermissions } from '@/composables/usePermissions'
-import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
+import * as guildRealmsApi from '@/api/guild_realms'
 import { useTimezone } from '@/composables/useTimezone'
 
 const { t } = useI18n()
@@ -170,7 +170,7 @@ const saving = ref(false)
 const error = ref(null)
 const saveError = ref(null)
 const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
-const warmaneRealms = WARMANE_REALMS
+const guildRealmNames = ref([])
 const isWarmaneSource = ref(false)
 
 const timezoneOptions = [
@@ -211,6 +211,13 @@ async function loadGuildData() {
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
       isWarmaneSource.value = !!g.warmane_source
+      // Load guild-configured realms from API
+      try {
+        const data = await guildRealmsApi.getGuildRealms(g.id)
+        guildRealmNames.value = (data.realms || []).map(r => r.name)
+      } catch {
+        guildRealmNames.value = []
+      }
     }
   } catch {
     error.value = t('guildSettings.failedToLoad')

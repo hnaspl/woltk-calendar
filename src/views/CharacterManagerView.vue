@@ -186,7 +186,7 @@
                 <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
                 <select v-else v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                   <option value="">{{ t('common.fields.selectRealm') }}</option>
-                  <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+                  <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
                 </select>
                 <span v-if="guildStore.currentGuild?.realm_name" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
               </div>
@@ -223,7 +223,7 @@
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="form.realm" required :disabled="isArmoryLocked || isRealmLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">{{ t('common.fields.selectRealm') }}</option>
-              <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
             </select>
             <span v-if="isRealmLocked" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
             <span v-else-if="guildRealms.length" class="text-[10px] text-text-muted">{{ t('characters.onlyGuildRealms') }}</span>
@@ -326,10 +326,11 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, ROLE_OPTIONS, normalizeSpecName } from '@/constants'
+import { ROLE_OPTIONS, normalizeSpecName } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
+import * as guildRealmsApi from '@/api/guild_realms'
 import { useTimezone } from '@/composables/useTimezone'
 import { useI18n } from 'vue-i18n'
 
@@ -375,7 +376,19 @@ const showAddAnother = ref(false)
 const lastAddedName = ref('')
 
 const { wowClasses, classSpecs, classRoles } = useExpansionData()
-const warmaneRealms = WARMANE_REALMS
+const configuredRealms = ref([])
+
+/** Load guild-configured realms from API, fallback to empty array */
+async function loadGuildRealms() {
+  const guildId = guildStore.currentGuildId
+  if (!guildId) return
+  try {
+    const data = await guildRealmsApi.getGuildRealms(guildId)
+    configuredRealms.value = (data.realms || []).map(r => r.name)
+  } catch {
+    configuredRealms.value = []
+  }
+}
 
 /** Lock all fields when editing a character imported from armory */
 const isArmoryLocked = computed(() => !!editingChar.value && !!editingChar.value.armory_url)
@@ -388,6 +401,8 @@ const isRealmLocked = computed(() => !editingChar.value && !!guildStore.currentG
 
 /** Realms from guilds the user belongs to (for character realm selector) */
 const guildRealms = computed(() => {
+  // Prefer guild-configured realms from API; fallback to guild membership realms
+  if (configuredRealms.value.length) return configuredRealms.value
   const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
   return [...realms].sort()
 })
@@ -430,6 +445,7 @@ onMounted(async () => {
     loading.value = false
     return
   }
+  await loadGuildRealms()
   try {
     const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
     characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)

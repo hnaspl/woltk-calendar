@@ -19,7 +19,7 @@
               <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
               <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                 <option value="">{{ t('common.fields.selectRealm') }}</option>
-                <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+                <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
             <div>
@@ -43,7 +43,7 @@
             <div class="w-40">
               <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
               <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+                <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
             <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">{{ t('guildSettings.fetch') }}</WowButton>
@@ -220,9 +220,9 @@ import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
-import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
 import * as warmaneApi from '@/api/warmane'
+import * as guildRealmsApi from '@/api/guild_realms'
 import api from '@/api'
 import { useI18n } from 'vue-i18n'
 
@@ -242,7 +242,7 @@ const kickTarget = ref(null)
 const allRoles = ref([])
 
 const form = reactive({ name: '', realm: '', description: '' })
-const warmaneRealms = WARMANE_REALMS
+const guildRealmNames = ref([])
 
 async function fetchRoles() {
   try {
@@ -284,7 +284,8 @@ async function loadGuildData() {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
       await Promise.all([
         guildStore.fetchMembers(g.id),
-        fetchRoles()
+        fetchRoles(),
+        loadGuildRealmNames(g.id),
       ])
       members.value = guildStore.members
     }
@@ -292,6 +293,15 @@ async function loadGuildData() {
     error.value = t('guildSettings.failedToLoad')
   } finally {
     loading.value = false
+  }
+}
+
+async function loadGuildRealmNames(guildId) {
+  try {
+    const data = await guildRealmsApi.getGuildRealms(guildId)
+    guildRealmNames.value = (data.realms || []).map(r => r.name)
+  } catch {
+    guildRealmNames.value = []
   }
 }
 

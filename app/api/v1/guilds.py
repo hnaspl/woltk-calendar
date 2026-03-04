@@ -35,8 +35,9 @@ def list_guilds():
 @bp.get("/all")
 @login_required
 def list_all_guilds():
-    """List all guilds (for browsing / joining)."""
-    guilds = guild_service.list_all_guilds()
+    """List all guilds scoped to user's active tenant (for browsing)."""
+    tenant_id = getattr(current_user, "active_tenant_id", None)
+    guilds = guild_service.list_all_guilds(tenant_id=tenant_id)
     user_guild_ids = set(guild_service.get_user_guild_ids(current_user.id))
     result = []
     for g in guilds:
