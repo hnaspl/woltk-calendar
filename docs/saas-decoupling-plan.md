@@ -1244,8 +1244,8 @@ the admin panel — they are DB-driven and pluggable.
   - [x] Guild owner can specify custom realm names for their guild (not hardcoded to Warmane realms)
   - [x] Create `GuildRealm` model — guild owner defines which realm(s) their guild plays on
   - [x] Different private servers have different realms — realm list is guild-configurable via `GuildRealm` model
-  - [ ] Character creation realm dropdown reads from guild's configured realms
-  - [ ] Remove hardcoded `WARMANE_REALMS` dependency from guild/character creation
+  - [x] Character creation realm dropdown reads from guild's configured realms
+  - [x] Remove hardcoded `WARMANE_REALMS` dependency from guild/character creation
   - [ ] Warmane-specific realm list moves into Warmane plugin (Phase 5) as default/suggestion
 - [ ] Create expansion selection flow in guild creation (guild admin picks highest expansion; cumulative auto-fill)
 - [ ] Update character creation to filter classes by guild's enabled expansions (from DB)
@@ -1264,8 +1264,8 @@ the admin panel — they are DB-driven and pluggable.
   - [ ] Global admin expansion management UI
 
 > **⚡ Phase 4 → Phase 5 Interconnection (carried forward):**
-> - `WARMANE_REALMS` still exists in `app/constants.py` and `src/constants.js` as a default suggestion list for `realm_service.seed_default_realms()`. Phase 5 should move this into the Warmane plugin config.
-> - `CharacterManagerView.vue` and `GuildSettingsTab.vue` still import `WARMANE_REALMS` from `@/constants` for realm dropdowns. Phase 5 should replace these with guild-scoped realm data from `GET /api/v2/guilds/<id>/constants`.
+> - `WARMANE_REALMS` still exists in `app/constants.py` and `src/constants.js` only as static fallback for the constants store and `realm_service.seed_default_realms()`. **No frontend component imports `WARMANE_REALMS` directly** — they use guild-scoped realm API or `constantsStore.warmaneRealms`. Phase 5 should move the static list into the Warmane plugin config.
+> - `CharacterManagerView.vue`, `GuildSettingsTab.vue`, `GuildSettingsView.vue`, and `AppSidebar.vue` now use guild-scoped realm API (`getGuildRealms()`) or `constantsStore.warmaneRealms` instead of importing `WARMANE_REALMS` directly.
 > - Service-layer `ValueError` messages in `app/services/guild_service.py` use hardcoded English strings. Phase 5 or later should migrate these to `_t()` i18n keys.
 > - Seed file deduplication: `_BASE_CLASS_SPECS` and `_BASE_SPEC_ROLE_MAP` in `app/seeds/expansions.py` are shared across Classic/TBC/WotLK. Future expansions (Cata+) may have different specs — extend via the global admin UI, not hardcoded dicts.
 - [ ] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
@@ -4367,10 +4367,10 @@ Phase 0 introduces tenancy. It also obsoletes several pre-tenancy patterns.
 
 | Location | What | Action | Status |
 |----------|------|--------|--------|
-| `AppSidebar.vue` lines 33-50 | "Available guilds to join" section | **Remove** — guild discovery is now within tenant context; users join tenants first, then guilds within | ⏳ Pending |
-| `AppSidebar.vue` `availableGuilds` computed | Computed property filtering `allGuilds` by `allow_self_join` | **Remove** — replaced by tenant invitation system | ⏳ Pending |
-| `guild_service.py` `list_all_guilds()` | Lists ALL guilds in the system (no tenant filter) | **Refactor** — must filter by `tenant_id`; old global listing is a security risk | ⏳ Pending |
-| `guilds.py` API `GET /guilds/all` | Returns all guilds without tenant scoping | **Refactor** — scope to active tenant; global admin has separate endpoint | ⏳ Pending |
+| `AppSidebar.vue` lines 33-50 | "Available guilds to join" section | **Remove** — guild discovery is now within tenant context; users join tenants first, then guilds within | ✅ Done |
+| `AppSidebar.vue` `availableGuilds` computed | Computed property filtering `allGuilds` by `allow_self_join` | **Remove** — replaced by tenant invitation system | ✅ Done |
+| `guild_service.py` `list_all_guilds()` | Lists ALL guilds in the system (no tenant filter) | **Refactor** — must filter by `tenant_id`; old global listing is a security risk | ✅ Done |
+| `guilds.py` API `GET /guilds/all` | Returns all guilds without tenant scoping | **Refactor** — scope to active tenant; global admin has separate endpoint | ✅ Done |
 | Any `console.log` / `print()` debug statements | Left from development | **Remove** — use proper logging (Python `logging` module, no `print()`) | ✅ Done |
 
 **Test fixtures to update:**
