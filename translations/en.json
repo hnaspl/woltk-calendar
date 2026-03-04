@@ -1661,6 +1661,7 @@
     "configuration": "Configuration"
   },
   "plan": {
+    "deleted": "Plan deleted",
     "errors": {
       "not_found": "Plan not found",
       "duplicate_slug": "A plan with this slug already exists",

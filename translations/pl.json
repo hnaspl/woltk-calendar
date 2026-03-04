@@ -1661,6 +1661,7 @@
     "configuration": "Konfiguracja"
   },
   "plan": {
+    "deleted": "Plan usunięty",
     "errors": {
       "not_found": "Nie znaleziono planu",
       "duplicate_slug": "Plan z tym identyfikatorem już istnieje",
