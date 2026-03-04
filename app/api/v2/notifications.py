@@ -21,7 +21,8 @@ def list_notifications():
     except (ValueError, TypeError):
         return jsonify({"error": _t("common.errors.badRequest")}), 400
     notifications = notification_service.list_notifications(
-        current_user.id, limit=limit, offset=offset
+        current_user.id, tenant_id=getattr(current_user, "active_tenant_id", None),
+        limit=limit, offset=offset
     )
     return jsonify([n.to_dict() for n in notifications]), 200
 
@@ -46,7 +47,9 @@ def mark_all_read():
 @bp.get("/unread-count")
 @login_required
 def unread_count():
-    count = notification_service.unread_count(current_user.id)
+    count = notification_service.unread_count(
+        current_user.id, tenant_id=getattr(current_user, "active_tenant_id", None)
+    )
     return jsonify({"count": count}), 200
 
 

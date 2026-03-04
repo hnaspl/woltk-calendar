@@ -23,8 +23,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
-SIGNUPS_PY = ROOT / "app" / "api" / "v1" / "signups.py"
-LINEUP_PY = ROOT / "app" / "api" / "v1" / "lineup.py"
+SIGNUPS_PY = ROOT / "app" / "api" / "v2" / "signups.py"
+LINEUP_PY = ROOT / "app" / "api" / "v2" / "lineup.py"
 LINEUP_BOARD_VUE = ROOT / "src" / "components" / "raids" / "LineupBoard.vue"
 SIGNUP_FORM_VUE = ROOT / "src" / "components" / "raids" / "SignupForm.vue"
 

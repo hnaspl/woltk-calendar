@@ -30,6 +30,33 @@
       </div>
 
       <template v-else-if="tenant">
+        <!-- Plan & Usage dashboard -->
+        <WowCard>
+          <div class="flex items-center gap-2 mb-4">
+            <svg class="w-5 h-5 text-accent-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <h2 class="text-sm font-semibold text-text-primary">{{ t('tenant.plan') }} &amp; {{ t('admin.tenants.usage') }}</h2>
+          </div>
+          <div v-if="usageLoading" class="py-4 text-center">
+            <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin mx-auto" />
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="res in ['guilds', 'members', 'events']" :key="res"
+              class="flex items-center justify-between p-3 rounded-lg bg-bg-tertiary border border-border-default"
+            >
+              <span class="text-sm text-text-muted capitalize">{{ t(`admin.tenants.${res}`) }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-text-primary font-medium">{{ usageInfo(res) }}</span>
+                <span v-if="shouldShowUpgrade(res)"
+                  class="px-1.5 py-0.5 rounded text-xs bg-red-900/30 text-red-400">{{ t('admin.plans.limitReached') }}</span>
+              </div>
+            </div>
+            <p v-if="shouldShowUpgrade('guilds') || shouldShowUpgrade('members') || shouldShowUpgrade('events')"
+              class="text-xs text-yellow-500/80 mt-2">{{ t('admin.plans.upgradePrompt') }}</p>
+          </div>
+        </WowCard>
+
         <!-- Settings form -->
         <WowCard>
           <div class="flex items-center gap-2 mb-4">
@@ -115,10 +142,12 @@ import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useTenantStore } from '@/stores/tenant'
+import { usePlanLimits } from '@/composables/usePlanLimits'
 import * as tenantsApi from '@/api/tenants'
 
 const { t } = useI18n()
 const tenantStore = useTenantStore()
+const { fetchUsage, usageInfo, shouldShowUpgrade, loadingUsage: usageLoading } = usePlanLimits()
 
 const tenant = ref(null)
 const loading = ref(false)
@@ -187,5 +216,8 @@ async function doRemoveMember(m) {
 onMounted(() => {
   fetchTenant()
   fetchMembers()
+  if (tenantStore.activeTenantId) {
+    fetchUsage(tenantStore.activeTenantId)
+  }
 })
 </script>
