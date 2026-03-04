@@ -10,6 +10,7 @@ import sqlalchemy as sa
 
 from app.extensions import bcrypt, db
 from app.models.user import User
+from app.services import tenant_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,4 +61,6 @@ def seed_admin_user(
     )
     db.session.add(user)
     db.session.commit()
+    tenant_service.create_tenant(owner=user)
+    logger.info("Created default tenant for admin user '%s'.", username)
     return True

@@ -81,6 +81,7 @@ ALL_PERMISSIONS = [
     ("manage_tenants", "Manage Tenants", "Global admin: view/suspend/delete any tenant", "tenant"),
 
     # Admin
+    ("manage_expansions", "Manage Expansions", "Global admin: add/edit/disable expansion packs", "admin"),
     ("list_system_users", "List System Users", "View all system users", "admin"),
     ("manage_system_users", "Manage System Users", "Activate/deactivate/delete users", "admin"),
     ("trigger_sync", "Trigger Sync", "Trigger character synchronization", "admin"),
@@ -168,6 +169,7 @@ ROLE_PERMISSIONS = {
         "manage_system_settings",
         # Tenant management (global admin can manage all tenants)
         "manage_tenant_members", "manage_tenant_settings", "manage_tenants",
+        "manage_expansions",
     ],
 }
 
