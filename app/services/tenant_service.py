@@ -14,6 +14,8 @@ from app.enums import MemberStatus
 from app.models.tenant import Tenant, TenantMembership, TenantInvitation
 from app.models.user import User
 
+MAX_INVITATION_EXPIRY_DAYS = 30
+
 
 # ---------------------------------------------------------------------------
 # Slug generation
