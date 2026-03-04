@@ -1226,7 +1226,10 @@
       "invalidToken": "Invalid invitation token",
       "tenantIdRequired": "tenant_id is required",
       "userIdRequired": "user_id is required",
-      "roleRequired": "role is required"
+      "roleRequired": "role is required",
+      "exportSuccess": "Tenant data exported successfully",
+      "importSuccess": "Tenant data imported successfully",
+      "importFailed": "Failed to import tenant data"
     },
     "matrix": {
       "rolesRequired": "At least one role must be specified",
@@ -1636,8 +1639,11 @@
   "expansion": {
     "errors": {
       "not_found": "Expansion not found",
-      "cannot_remove_last": "Cannot remove the last enabled expansion"
-    }
+      "cannot_remove_last": "Cannot remove the last enabled expansion",
+      "import_failed": "Failed to import expansion data",
+      "invalid_format": "Invalid expansion data format"
+    },
+    "import_success": "Expansion imported successfully"
   },
   "realm": {
     "errors": {

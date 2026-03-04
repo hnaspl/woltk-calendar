@@ -14,6 +14,13 @@ from app.enums import MemberStatus
 from app.i18n import _t
 from app.models.tenant import Tenant, TenantMembership, TenantInvitation
 from app.models.user import User
+from app.models.guild import Guild, GuildMembership, GuildInvitation, GuildExpansion, GuildRealm, GuildClassRoleOverride
+from app.models.character import Character
+from app.models.raid import RaidDefinition, RaidTemplate, EventSeries, RaidEvent
+from app.models.signup import Signup, LineupSlot, RaidBan, CharacterReplacement
+from app.models.attendance import AttendanceRecord
+from app.models.notification import Notification, JobQueue
+from app.models.guild_feature import GuildFeature
 
 MAX_INVITATION_EXPIRY_DAYS = 30
 
@@ -57,6 +64,7 @@ def create_tenant(
     """Create a tenant for the given owner.
 
     Called automatically on user registration.
+    Uses the default billing plan limits when available.
     """
     # Check owner doesn't already have a tenant
     existing = db.session.execute(
@@ -68,13 +76,30 @@ def create_tenant(
     tenant_name = name or f"{owner.username}'s Workspace"
     tenant_slug = _ensure_unique_slug(slug or _slugify(tenant_name))
 
+    # Look up default free plan for limits
+    from app.services import billing_service
+    default_plan = billing_service.get_default_plan()
+
+    if default_plan:
+        effective_max_guilds = default_plan.max_guilds
+        effective_max_members = default_plan.max_members
+        effective_plan_name = default_plan.slug
+        effective_plan_id = default_plan.id
+    else:
+        effective_max_guilds = max_guilds
+        effective_max_members = None
+        effective_plan_name = plan
+        effective_plan_id = None
+
     tenant = Tenant(
         name=tenant_name,
         description=description,
         slug=tenant_slug,
         owner_id=owner.id,
-        plan=plan,
-        max_guilds=max_guilds,
+        plan=effective_plan_name,
+        plan_id=effective_plan_id,
+        max_guilds=effective_max_guilds,
+        max_members=effective_max_members,
     )
     db.session.add(tenant)
     db.session.flush()
@@ -124,7 +149,141 @@ def update_tenant(tenant: Tenant, data: dict) -> Tenant:
 
 
 def delete_tenant(tenant: Tenant) -> None:
-    """Delete tenant and cascade all related data."""
+    """Delete tenant and cascade all related data.
+
+    Performs explicit bulk cleanup of guild-child data before deleting
+    the tenant itself (which cascades guilds, tenant memberships, and
+    tenant invitations via ORM cascade).
+    """
+    tenant_id = tenant.id
+
+    # Clear active_tenant_id for users referencing this tenant
+    db.session.execute(
+        sa.update(User).where(User.active_tenant_id == tenant_id)
+        .values(active_tenant_id=None)
+    )
+
+    # Collect guild IDs for this tenant
+    guild_ids = list(db.session.execute(
+        sa.select(Guild.id).where(Guild.tenant_id == tenant_id)
+    ).scalars().all())
+
+    if guild_ids:
+        # Collect event IDs for the tenant's guilds
+        event_ids = list(db.session.execute(
+            sa.select(RaidEvent.id).where(RaidEvent.guild_id.in_(guild_ids))
+        ).scalars().all())
+
+        if event_ids:
+            # Delete signups (and their child lineup_slots/character_replacements)
+            signup_ids = list(db.session.execute(
+                sa.select(Signup.id).where(Signup.raid_event_id.in_(event_ids))
+            ).scalars().all())
+
+            if signup_ids:
+                db.session.execute(
+                    sa.delete(CharacterReplacement).where(
+                        CharacterReplacement.signup_id.in_(signup_ids)
+                    )
+                )
+                db.session.execute(
+                    sa.delete(LineupSlot).where(
+                        LineupSlot.signup_id.in_(signup_ids)
+                    )
+                )
+
+            # Delete remaining lineup_slots not tied to a signup
+            db.session.execute(
+                sa.delete(LineupSlot).where(
+                    LineupSlot.raid_event_id.in_(event_ids)
+                )
+            )
+
+            # Delete raid bans
+            db.session.execute(
+                sa.delete(RaidBan).where(
+                    RaidBan.raid_event_id.in_(event_ids)
+                )
+            )
+
+            # Delete signups and attendances
+            db.session.execute(
+                sa.delete(Signup).where(Signup.raid_event_id.in_(event_ids))
+            )
+            db.session.execute(
+                sa.delete(AttendanceRecord).where(
+                    AttendanceRecord.raid_event_id.in_(event_ids)
+                )
+            )
+
+        # Delete raid events
+        db.session.execute(
+            sa.delete(RaidEvent).where(RaidEvent.guild_id.in_(guild_ids))
+        )
+
+        # Delete event series
+        db.session.execute(
+            sa.delete(EventSeries).where(EventSeries.guild_id.in_(guild_ids))
+        )
+
+        # Delete raid templates
+        db.session.execute(
+            sa.delete(RaidTemplate).where(RaidTemplate.guild_id.in_(guild_ids))
+        )
+
+        # Delete raid definitions
+        db.session.execute(
+            sa.delete(RaidDefinition).where(RaidDefinition.guild_id.in_(guild_ids))
+        )
+
+        # Delete characters
+        db.session.execute(
+            sa.delete(Character).where(Character.guild_id.in_(guild_ids))
+        )
+
+        # Delete guild memberships
+        db.session.execute(
+            sa.delete(GuildMembership).where(GuildMembership.guild_id.in_(guild_ids))
+        )
+
+        # Delete guild invitations
+        db.session.execute(
+            sa.delete(GuildInvitation).where(GuildInvitation.guild_id.in_(guild_ids))
+        )
+
+        # Delete guild expansions
+        db.session.execute(
+            sa.delete(GuildExpansion).where(GuildExpansion.guild_id.in_(guild_ids))
+        )
+
+        # Delete guild realms
+        db.session.execute(
+            sa.delete(GuildRealm).where(GuildRealm.guild_id.in_(guild_ids))
+        )
+
+        # Delete guild features
+        db.session.execute(
+            sa.delete(GuildFeature).where(GuildFeature.guild_id.in_(guild_ids))
+        )
+
+        # Delete guild class role overrides
+        db.session.execute(
+            sa.delete(GuildClassRoleOverride).where(
+                GuildClassRoleOverride.guild_id.in_(guild_ids)
+            )
+        )
+
+    # Delete notifications for the tenant
+    db.session.execute(
+        sa.delete(Notification).where(Notification.tenant_id == tenant_id)
+    )
+
+    # Delete job queue entries for the tenant
+    db.session.execute(
+        sa.delete(JobQueue).where(JobQueue.tenant_id == tenant_id)
+    )
+
+    # Delete the tenant (cascades guilds, tenant memberships, tenant invitations)
     db.session.delete(tenant)
     db.session.commit()
 
@@ -372,7 +531,6 @@ def is_tenant_member(tenant_id: int, user_id: int) -> bool:
 
 def get_guild_count(tenant_id: int) -> int:
     """Return the number of guilds in a tenant."""
-    from app.models.guild import Guild
     return db.session.execute(
         sa.select(sa.func.count()).select_from(Guild).where(Guild.tenant_id == tenant_id)
     ).scalar() or 0

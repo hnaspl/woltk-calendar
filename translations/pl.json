@@ -1226,7 +1226,10 @@
       "invalidToken": "Nieprawidłowy token zaproszenia",
       "tenantIdRequired": "tenant_id jest wymagane",
       "userIdRequired": "user_id jest wymagane",
-      "roleRequired": "role jest wymagane"
+      "roleRequired": "role jest wymagane",
+      "exportSuccess": "Dane workspace'u wyeksportowane pomyślnie",
+      "importSuccess": "Dane workspace'u zaimportowane pomyślnie",
+      "importFailed": "Nie udało się zaimportować danych workspace'u"
     },
     "matrix": {
       "rolesRequired": "Wymagana jest co najmniej jedna rola",
@@ -1636,8 +1639,11 @@
   "expansion": {
     "errors": {
       "not_found": "Nie znaleziono rozszerzenia",
-      "cannot_remove_last": "Nie można usunąć ostatniego włączonego rozszerzenia"
-    }
+      "cannot_remove_last": "Nie można usunąć ostatniego włączonego rozszerzenia",
+      "import_failed": "Nie udało się zaimportować danych rozszerzenia",
+      "invalid_format": "Nieprawidłowy format danych rozszerzenia"
+    },
+    "import_success": "Rozszerzenie zaimportowane pomyślnie"
   },
   "realm": {
     "errors": {

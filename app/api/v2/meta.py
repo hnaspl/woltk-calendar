@@ -268,3 +268,22 @@ def delete_raid(raid_id: int):
     db.session.delete(raid)
     db.session.commit()
     return jsonify({"ok": True}), 200
+
+
+@bp.post("/import")
+@login_required
+def import_expansion():
+    """Import a full expansion with classes/specs/roles/raids from JSON."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    data = get_json()
+    if not data or not isinstance(data.get("name"), str) or not isinstance(data.get("slug"), str):
+        return jsonify({"error": _t("expansion.errors.invalid_format")}), 400
+    try:
+        from app.services.expansion_import_service import import_expansion_from_dict
+        expansion = import_expansion_from_dict(data)
+    except (ValueError, Exception) as exc:
+        db.session.rollback()
+        return jsonify({"error": _t("expansion.errors.import_failed")}), 400
+    return jsonify({"message": _t("expansion.import_success"), "expansion": expansion.to_dict(include_nested=True)}), 201

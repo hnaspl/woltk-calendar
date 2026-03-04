@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.i18n import _t
-from app.services import tenant_service, billing_service
+from app.services import tenant_service, billing_service, export_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, require_system_permission
 
@@ -147,3 +147,40 @@ def get_tenant_usage(tenant_id: int):
         return t_err
     usage = billing_service.get_tenant_usage(tenant_id)
     return jsonify(usage), 200
+
+
+# ---------------------------------------------------------------------------
+# Export / import
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:tenant_id>/export")
+@login_required
+def export_tenant(tenant_id: int):
+    """Export all tenant data as JSON (global admin only)."""
+    err = require_system_permission("manage_tenants")
+    if err:
+        return err
+    tenant, t_err = _get_tenant_or_404(tenant_id)
+    if t_err:
+        return t_err
+    data = export_service.export_tenant_data(tenant_id)
+    return jsonify({"message": _t("api.tenants.exportSuccess"), "data": data}), 200
+
+
+@bp.post("/import")
+@login_required
+def import_tenant():
+    """Import tenant data from JSON (global admin only)."""
+    err = require_system_permission("manage_tenants")
+    if err:
+        return err
+    body = get_json()
+    data = body.get("data")
+    if not data or not isinstance(data, dict):
+        return jsonify({"error": _t("api.tenants.importFailed")}), 400
+    owner_id = body.get("owner_id", current_user.id)
+    try:
+        tenant = export_service.import_tenant_data(data, owner_id)
+    except (ValueError, Exception) as exc:
+        return jsonify({"error": _t("api.tenants.importFailed")}), 400
+    return jsonify({"message": _t("api.tenants.importSuccess"), "tenant": tenant.to_dict()}), 201
