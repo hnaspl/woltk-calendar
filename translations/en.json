@@ -592,6 +592,7 @@
     "foundOnWarmane": "Found on Warmane",
     "generateLink": "Generate Link",
     "guildCreated": "Guild created!",
+    "guildLimitReached": "Guild limit reached — upgrade",
     "guildNamePlaceholder": "My Guild",
     "horde": "Horde",
     "invitationsSubtitle": "Manage invitation links for this guild",

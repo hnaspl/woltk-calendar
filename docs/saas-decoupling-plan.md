@@ -1155,6 +1155,7 @@ catalog lives in the `expansion_raids` table, not in `WOTLK_RAIDS` or
   - [x] Remove `joinGuild` API function from frontend `src/api/guilds.js`
   - [x] Verify no frontend code references removed join flows (confirmed: only socket room joins remain, which are unrelated)
   - [x] Run full lint + build + test suite on clean branch (752 tests pass, frontend builds)
+- [x] **Guild limit enforcement UI:** When tenant guild limit is reached, hide "Create Guild" button and show "Limit reached — upgrade" link to tenant settings (sidebar). Actual upgrade/plan system is in Phase 6.
 
 ### Phase 3: Class-Role Matrix
 **Goal:** Give guild admins a visual matrix to control class-role assignments.
