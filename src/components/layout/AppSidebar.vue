@@ -115,15 +115,12 @@
             <div v-else-if="discoveredRealms.length > 0" class="text-xs text-green-400">
               ✓ {{ t('guild.realmsDiscovered', { count: discoveredRealms.length }) }}
             </div>
-            <div v-else class="text-xs text-yellow-400">
-              {{ t('guild.noRealmsDiscovered') }}
-            </div>
           </div>
-          <!-- Manual realm input (fallback when no realms auto-discovered) -->
+          <!-- Realm hint input (optional - shown when no realms auto-discovered, helps narrow search) -->
           <div v-if="newGuild.armory_url.trim() && !discoveringRealms && discoveredRealms.length === 0">
-            <label class="block text-xs text-text-muted mb-1">{{ t('guild.realmForSearch') }}</label>
-            <input v-model="lookupRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmSearchPlaceholder')" @keydown.enter.prevent="lookupGuild()" />
-            <p class="text-xs text-text-muted mt-1">{{ t('guild.realmSearchHelp') }}</p>
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.realmHint') }}</label>
+            <input v-model="lookupRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmHintPlaceholder')" @keydown.enter.prevent="lookupGuild()" />
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.realmHintHelp') }}</p>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
@@ -481,7 +478,9 @@ async function onArmoryUrlChange() {
 const canDoLookup = computed(() => {
   const url = newGuild.armory_url.trim()
   if (!url) return false
-  return discoveredRealms.value.length > 0 || detectedProviderRealms.value.length > 0 || lookupRealm.value.trim().length > 0
+  // Always allow lookup when armory URL is present — the backend will
+  // discover realms automatically or use realm hints
+  return true
 })
 
 // Expansions sorted by sort_order descending (highest first)
@@ -548,56 +547,53 @@ async function lookupGuild() {
   guildLookupMatch.value = null
   guildLookupMatches.value = []
 
-  const matches = []
-
-  // Build list of realms to search: discovered realms (priority), then provider realms, then manual input
-  const realms = []
-  if (discoveredRealms.value.length > 0) {
-    realms.push(...discoveredRealms.value)
-  } else if (detectedProviderRealms.value.length > 0) {
-    realms.push(...detectedProviderRealms.value)
-  }
-  const manualRealm = lookupRealm.value.trim()
-  if (manualRealm && !realms.map(r => r.toLowerCase()).includes(manualRealm.toLowerCase())) {
-    realms.push(manualRealm)
-  }
-
-  // If no realms at all, show error
-  if (realms.length === 0) {
+  const armoryUrl = newGuild.armory_url.trim()
+  if (!armoryUrl) {
     lookingUpGuild.value = false
-    guildLookupError.value = t('guild.noRealmsToSearch')
+    guildLookupError.value = t('guild.armoryUrlRequired')
     return
   }
 
-  for (const realm of realms) {
-    try {
-      const data = await armoryLookupApi.lookupGuild(realm, name)
-      if (data) {
-        const alreadyAdded = guildStore.allGuilds.some(
-          g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === realm.toLowerCase()
-        )
-        matches.push({ ...data, realm, alreadyAdded })
+  // Collect realm hints from manual input and detected provider realms
+  const realmHints = []
+  const manualRealm = lookupRealm.value.trim()
+  if (manualRealm) realmHints.push(manualRealm)
+  if (detectedProviderRealms.value.length > 0) {
+    realmHints.push(...detectedProviderRealms.value)
+  }
+
+  try {
+    // Use the unified search-guild endpoint which discovers realms + searches
+    const result = await armoryLookupApi.searchGuild(armoryUrl, name, realmHints)
+    const serverMatches = result.matches || []
+
+    // Mark already-added guilds
+    const matches = serverMatches.map(m => ({
+      ...m,
+      alreadyAdded: guildStore.allGuilds.some(
+        g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === m.realm.toLowerCase()
+      )
+    }))
+
+    lookingUpGuild.value = false
+
+    if (matches.length === 0) {
+      guildLookupNotFound.value = true
+      // If no realms were available and no manual hint given, prompt for realm
+      if (!result.realms_available && !manualRealm) {
+        guildLookupError.value = t('guild.noRealmsToSearch')
       }
-    } catch (err) {
-      if (err?.response?.status && err.response.status !== 404) {
-        lookingUpGuild.value = false
-        guildLookupError.value = err?.response?.data?.message ?? t('guild.toasts.failedToSearchArmory')
-        return
-      }
+      return
     }
-  }
 
-  lookingUpGuild.value = false
+    guildLookupMatches.value = matches
 
-  if (matches.length === 0) {
-    guildLookupNotFound.value = true
-    return
-  }
-
-  guildLookupMatches.value = matches
-
-  if (matches.length === 1) {
-    selectGuildMatch(matches[0])
+    if (matches.length === 1) {
+      selectGuildMatch(matches[0])
+    }
+  } catch (err) {
+    lookingUpGuild.value = false
+    guildLookupError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('guild.toasts.failedToSearchArmory')
   }
 }
 

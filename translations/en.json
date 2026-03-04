@@ -741,7 +741,11 @@
     "realmForSearch": "Realm Name",
     "realmSearchPlaceholder": "e.g. Lordaeron, Icecrown",
     "realmSearchHelp": "Enter the realm name to search for your guild on the armory.",
-    "noRealmsToSearch": "No realms available. Enter a realm name or provide a valid armory URL."
+    "realmHint": "Realm Name (optional)",
+    "realmHintPlaceholder": "e.g. Lordaeron, Icecrown",
+    "realmHintHelp": "If the armory does not list realms automatically, enter the realm name to help find your guild.",
+    "armoryUrlRequired": "Please enter the armory URL to search for your guild.",
+    "noRealmsToSearch": "No realms available. Enter a realm name to help find your guild."
   },
   "members": {
     "addMember": "+ Add Member",
@@ -1579,6 +1583,7 @@
     "providerRequired": "Armory provider is required",
     "unknownProvider": "Unknown armory provider",
     "urlRequired": "Armory API URL is required",
+    "guildNameRequired": "Guild name is required",
     "characterIdRequired": "character_id is required",
     "characterNotFound": "Character not found on armory armory",
     "characterNotFoundGeneric": "Character not found",

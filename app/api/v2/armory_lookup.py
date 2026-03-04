@@ -92,6 +92,98 @@ def discover_realms():
     return jsonify({"realms": realms}), 200
 
 
+@bp.post("/search-guild")
+@login_required
+def search_guild():
+    """Search for a guild by name on an armory server.
+
+    Primary lookup flow:
+    1. Discover realms from the armory URL (``/realms``, ``/realm/list``)
+    2. If realms found, search guild on each realm
+    3. If no realms endpoint, try the guild with user-supplied realm hint(s)
+    4. Return all matches with realm info
+
+    This is the primary guild lookup method — it does NOT require the user
+    to know which realm the guild is on (if the armory supports realm listing).
+
+    Accepts::
+
+        {
+            "armory_url": "http://armory.example.com/api",
+            "guild_name": "MyGuild",
+            "realm_hints": ["Icecrown", "Lordaeron"]  // optional fallback realms
+        }
+
+    Returns::
+
+        {
+            "matches": [{"realm": "...", "name": "...", ...}],
+            "realms_searched": N,
+            "realms_available": true/false
+        }
+    """
+    import logging
+    from app.plugins.armory.provider import GenericArmoryProvider
+    from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+
+    logger = logging.getLogger(__name__)
+
+    body = get_json()
+    armory_url = (body.get("armory_url") or "").strip()
+    guild_name = (body.get("guild_name") or "").strip()
+    realm_hints = body.get("realm_hints") or []
+
+    if not armory_url:
+        return jsonify({"error": _t("armory.urlRequired"), "matches": []}), 400
+    if not guild_name:
+        return jsonify({"error": _t("armory.guildNameRequired"), "matches": []}), 400
+
+    # Validate URL security
+    allowed_domains = get_allowed_domains_from_settings()
+    url_error = validate_armory_url(armory_url, allowed_domains)
+    if url_error:
+        return jsonify({"error": url_error, "matches": []}), 400
+
+    provider = GenericArmoryProvider(api_base_url=armory_url)
+
+    # Step 1: Discover realms from the armory API
+    realms = provider.fetch_realms()
+    realms_available = len(realms) > 0
+
+    # Step 2: If no realms discovered, use realm hints from user
+    if not realms and realm_hints:
+        if isinstance(realm_hints, str):
+            realm_hints = [r.strip() for r in realm_hints.split(",") if r.strip()]
+        realms = realm_hints
+
+    # Step 3: Search guild on each realm
+    matches = []
+    for realm in realms:
+        try:
+            data = provider.fetch_guild(realm, guild_name)
+            if data and "error" not in data:
+                roster = [
+                    provider.build_character_dict(m, realm)
+                    for m in data.get("roster", [])[:5]  # Limit roster preview
+                ]
+                matches.append({
+                    "name": data.get("name", guild_name),
+                    "realm": realm,
+                    "faction": data.get("faction"),
+                    "member_count": data.get("membercount"),
+                    "roster_preview": roster,
+                })
+        except Exception as exc:
+            logger.debug("Guild search failed on realm %s: %s", realm, exc)
+            continue
+
+    return jsonify({
+        "matches": matches,
+        "realms_searched": len(realms),
+        "realms_available": realms_available,
+    }), 200
+
+
 @bp.post("/sync-character")
 @login_required
 def sync_character():

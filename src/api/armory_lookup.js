@@ -15,3 +15,6 @@ export const syncCharacter = (characterId) =>
 
 export const discoverRealms = (armoryUrl) =>
   api.post('/armory-lookup/discover-realms', { armory_url: armoryUrl })
+
+export const searchGuild = (armoryUrl, guildName, realmHints = []) =>
+  api.post('/armory-lookup/search-guild', { armory_url: armoryUrl, guild_name: guildName, realm_hints: realmHints })

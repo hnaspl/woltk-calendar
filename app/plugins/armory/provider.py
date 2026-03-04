@@ -130,51 +130,88 @@ class GenericArmoryProvider(ArmoryProvider):
     def fetch_realms(self) -> list[str]:
         """Attempt to discover realms from the armory API.
 
-        Tries common WoW private-server armory realm endpoints:
-        - ``/realms`` (most common)
-        - ``/realm/list``
+        Tries common WoW private-server armory realm endpoints used by
+        various emulator projects (AzerothCore, TrinityCore, CMaNGOS,
+        AscEmu, etc.) and armory frontends:
+
+        - ``/realms`` — most common (Warmane-style, AzerothCore armory)
+        - ``/realm/list`` — some CMaNGOS/MaNGOS armories
+        - ``/server/status`` — TrinityCore web panels
+        - ``/api/realms`` — nested API pattern
+        - ``/api/server/status`` — nested server status
+        - ``/status`` — simple status endpoints
+
         Returns realm names or an empty list if discovery fails.
         """
         if not self._api_base_url:
             return []
 
-        endpoints = ["/realms", "/realm/list"]
-        for endpoint in endpoints:
-            url = f"{self._api_base_url}{endpoint}"
+        base = self._api_base_url.rstrip("/")
+        endpoints = [
+            f"{base}/realms",
+            f"{base}/realm/list",
+            f"{base}/server/status",
+            f"{base}/api/realms",
+            f"{base}/api/server/status",
+            f"{base}/status",
+        ]
+        for url in endpoints:
             try:
                 resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
                 if resp.status_code != 200:
                     continue
+                # Guard against non-JSON responses (Cloudflare challenge pages etc.)
+                content_type = resp.headers.get("content-type", "")
+                if "json" not in content_type and "javascript" not in content_type:
+                    continue
                 data = resp.json()
-                # Handle various response formats
-                if isinstance(data, list):
-                    realms = []
-                    for item in data:
-                        if isinstance(item, str):
-                            realms.append(item)
-                        elif isinstance(item, dict):
-                            name = item.get("name") or item.get("realm") or item.get("realmName")
-                            if name:
-                                realms.append(name)
-                    if realms:
-                        return sorted(realms)
-                elif isinstance(data, dict):
-                    # Some APIs wrap in {"realms": [...]}
-                    realm_list = data.get("realms") or data.get("data") or []
-                    realms = []
-                    for item in realm_list:
-                        if isinstance(item, str):
-                            realms.append(item)
-                        elif isinstance(item, dict):
-                            name = item.get("name") or item.get("realm") or item.get("realmName")
-                            if name:
-                                realms.append(name)
-                    if realms:
-                        return sorted(realms)
+                realms = self._extract_realms(data)
+                if realms:
+                    return sorted(realms)
             except (requests.RequestException, ValueError) as exc:
                 logger.debug("Realm discovery failed for %s: %s", url, exc)
                 continue
         return []
+
+    @staticmethod
+    def _extract_realms(data) -> list[str]:
+        """Extract realm names from various API response formats."""
+        realms: list[str] = []
+
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, str):
+                    realms.append(item)
+                elif isinstance(item, dict):
+                    name = (
+                        item.get("name")
+                        or item.get("realm")
+                        or item.get("realmName")
+                        or item.get("realm_name")
+                    )
+                    if name:
+                        realms.append(name)
+        elif isinstance(data, dict):
+            # Try common wrapper keys
+            for key in ("realms", "data", "servers", "realmlist", "results"):
+                realm_list = data.get(key)
+                if realm_list and isinstance(realm_list, list):
+                    for item in realm_list:
+                        if isinstance(item, str):
+                            realms.append(item)
+                        elif isinstance(item, dict):
+                            name = (
+                                item.get("name")
+                                or item.get("realm")
+                                or item.get("realmName")
+                                or item.get("realm_name")
+                            )
+                            if name:
+                                realms.append(name)
+                    if realms:
+                        break
+
+        return realms
 
     def fetch_character(self, realm: str, name: str) -> Optional[dict]:
         """Fetch character summary from the armory API.
@@ -210,32 +247,57 @@ class GenericArmoryProvider(ArmoryProvider):
     def fetch_guild(self, realm: str, guild_name: str) -> Optional[dict]:
         """Fetch guild summary + roster from the armory API.
 
+        Tries multiple URL patterns used by common private-server armories:
+        - ``/guild/{name}/{realm}/summary`` — Warmane-style
+        - ``/guild/{name}/{realm}`` — simplified variant
+        - ``/api/guild/{name}/{realm}`` — nested API variant
+        - ``/guild/{realm}/{name}`` — reversed order (some emulators)
+
         Returns a dict with guild data or None if not found / API error.
-        Retries up to _MAX_RETRIES times on transient failures.
         """
         if not self._api_base_url:
             logger.warning("No armory URL configured — cannot fetch guild %s/%s", realm, guild_name)
             return None
-        url = f"{self._api_base_url}/guild/{quote(guild_name, safe='')}/{quote(realm, safe='')}/summary"
-        for attempt in range(_MAX_RETRIES):
-            try:
-                resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
-                if resp.status_code != 200:
-                    logger.warning("Armory API returned %s for guild %s/%s (attempt %d)", resp.status_code, realm, guild_name, attempt + 1)
+
+        base = self._api_base_url.rstrip("/")
+        enc_name = quote(guild_name, safe="")
+        enc_realm = quote(realm, safe="")
+
+        url_patterns = [
+            f"{base}/guild/{enc_name}/{enc_realm}/summary",
+            f"{base}/guild/{enc_name}/{enc_realm}",
+            f"{base}/api/guild/{enc_name}/{enc_realm}",
+            f"{base}/guild/{enc_realm}/{enc_name}",
+        ]
+
+        for url in url_patterns:
+            for attempt in range(_MAX_RETRIES):
+                try:
+                    resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
+                    if resp.status_code == 404:
+                        break  # Not found on this pattern, try next
+                    if resp.status_code != 200:
+                        if attempt < _MAX_RETRIES - 1:
+                            time.sleep(_RETRY_DELAY)
+                            continue
+                        break
+                    content_type = resp.headers.get("content-type", "")
+                    if "json" not in content_type and "javascript" not in content_type:
+                        break  # HTML response (Cloudflare etc.), skip
+                    data = resp.json()
+                    if "error" in data:
+                        break
+                    # Valid guild data — must have at least a name or roster
+                    if data.get("name") or data.get("roster") or data.get("members"):
+                        return data
+                    break
+                except (requests.RequestException, ValueError) as exc:
+                    logger.debug("Armory fetch guild %s/%s from %s: %s (attempt %d)",
+                                 realm, guild_name, url, exc, attempt + 1)
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(_RETRY_DELAY)
                         continue
-                    return None
-                data = resp.json()
-                if "error" in data:
-                    return None
-                return data
-            except (requests.RequestException, ValueError) as exc:
-                logger.warning("Armory API error for guild %s/%s: %s (attempt %d)", realm, guild_name, exc, attempt + 1)
-                if attempt < _MAX_RETRIES - 1:
-                    time.sleep(_RETRY_DELAY)
-                    continue
-                return None
+                    break
         return None
 
     def build_character_dict(self, data: dict, realm: str) -> dict:
