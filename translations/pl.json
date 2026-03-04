@@ -811,6 +811,19 @@
       "updated": "Definicja rajdu zaktualizowana.",
       "deleted": "Definicja rajdu usunięta."
     },
+    "expansions": {
+      "title": "Rozszerzenia",
+      "noExpansions": "Nie znaleziono rozszerzeń",
+      "raids": "Raidy",
+      "classes": "Klasy",
+      "addRaid": "Dodaj Raid",
+      "editRaid": "Edytuj Raid",
+      "raidName": "Nazwa Raidu",
+      "raidCode": "Kod",
+      "raidSize": "Rozmiar Raidu",
+      "duration": "Czas trwania (min)",
+      "heroic": "Heroiczny"
+    },
     "dashboard": {
       "title": "Przegląd systemu",
       "totalUsers": "Użytkownicy",

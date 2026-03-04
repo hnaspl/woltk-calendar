@@ -811,6 +811,19 @@
       "updated": "Raid definition updated.",
       "deleted": "Raid definition deleted."
     },
+    "expansions": {
+      "title": "Expansions",
+      "noExpansions": "No expansions found",
+      "raids": "Raids",
+      "classes": "Classes",
+      "addRaid": "Add Raid",
+      "editRaid": "Edit Raid",
+      "raidName": "Raid Name",
+      "raidCode": "Code",
+      "raidSize": "Raid Size",
+      "duration": "Duration (min)",
+      "heroic": "Heroic"
+    },
     "dashboard": {
       "title": "System Overview",
       "totalUsers": "Total Users",

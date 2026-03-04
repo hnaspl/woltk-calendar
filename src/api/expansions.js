@@ -1,0 +1,20 @@
+/**
+ * Expansions API module — communicates with /v2/meta/expansions endpoints.
+ */
+import api from '@/api'
+
+// Public endpoints
+export const listExpansions = () => api.get('/v2/meta/expansions')
+export const getClasses = (slug) => api.get(`/v2/meta/expansions/${slug}/classes`)
+export const getSpecs = (slug) => api.get(`/v2/meta/expansions/${slug}/specs`)
+export const getRaids = (slug) => api.get(`/v2/meta/expansions/${slug}/raids`)
+export const getRoles = (slug) => api.get(`/v2/meta/expansions/${slug}/roles`)
+export const getDefaultExpansion = () => api.get('/v2/meta/expansions/default-expansion')
+
+// Admin endpoints
+export const createExpansion = (data) => api.post('/v2/meta/expansions', data)
+export const updateExpansion = (id, data) => api.put(`/v2/meta/expansions/${id}`, data)
+export const deleteExpansion = (id) => api.delete(`/v2/meta/expansions/${id}`)
+export const addRaid = (expansionId, data) => api.post(`/v2/meta/expansions/${expansionId}/raids`, data)
+export const updateRaid = (raidId, data) => api.put(`/v2/meta/expansions/raids/${raidId}`, data)
+export const deleteRaid = (raidId) => api.delete(`/v2/meta/expansions/raids/${raidId}`)
