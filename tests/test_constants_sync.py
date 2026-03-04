@@ -100,7 +100,7 @@ class TestApiVsDbSync:
 
     def _api_data(self, app):
         with app.test_client() as client:
-            return client.get("/api/v1/meta/constants").get_json()
+            return client.get("/api/v2/meta/constants").get_json()
 
     def test_api_returns_provider_realms(self, app):
         api = self._api_data(app)

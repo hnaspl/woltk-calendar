@@ -3,7 +3,7 @@
  *
  * Acts as the frontend's single source of truth for data that lives
  * in the backend (`app/constants.py`, `app/enums.py`).  On app init
- * the store fetches from `GET /api/v1/meta/constants` and replaces
+ * the store fetches from `GET /api/v2/meta/constants` and replaces
  * the static defaults with the authoritative backend values.
  *
  * Realm data is dynamic — provided by armory providers via the plugin

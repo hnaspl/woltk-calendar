@@ -268,7 +268,7 @@ class TestBuiltinPermissions:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
                 json={"name": "Admin Edited"},
             )
             assert resp.status_code == 200
@@ -317,7 +317,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
                 json={"name": "Updated Name"},
             )
             assert resp.status_code == 200
@@ -333,7 +333,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
                 json={"name": "Hacked Name"},
             )
             assert resp.status_code == 403
@@ -348,7 +348,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.delete(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
             )
             assert resp.status_code == 403
 
@@ -363,7 +363,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{rd.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{rd.id}",
                 json={"name": "Updated Custom ICC"},
             )
             assert resp.status_code == 200
@@ -379,7 +379,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}/copy",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}/copy",
             )
             assert resp.status_code == 201
             data = resp.get_json()
@@ -392,7 +392,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["member_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions",
                 json={"name": "Hacked Def", "code": "hack", "size": 25},
             )
             assert resp.status_code == 403
@@ -569,7 +569,7 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Admin Guild", "realm_name": "Icecrown"
             })
             assert resp.status_code == 201
@@ -579,7 +579,7 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["gadmin_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "GA New Guild", "realm_name": "Lordaeron"
             })
             assert resp.status_code == 201
@@ -589,7 +589,7 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Officer Guild", "realm_name": "Icecrown"
             })
             assert resp.status_code == 403
@@ -599,7 +599,7 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["member_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Member Guild", "realm_name": "Icecrown"
             })
             assert resp.status_code == 403
@@ -609,7 +609,7 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
-            resp = client.delete(f"/api/v1/guilds/{seeded['guild_a'].id}")
+            resp = client.delete(f"/api/v2/guilds/{seeded['guild_a'].id}")
             assert resp.status_code == 403
 
     def test_api_delete_guild_as_guild_admin(self, seeded, app):
@@ -620,7 +620,7 @@ class TestCreateGuildAPI:
             # Create a temp guild as global admin
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Temp Delete Guild", "realm_name": "Frostmourne"
             })
             assert resp.status_code == 201
@@ -637,7 +637,7 @@ class TestCreateGuildAPI:
             # Delete as gadmin_user (guild_admin role) — should succeed
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["gadmin_user"].id)
-            resp = client.delete(f"/api/v1/guilds/{temp_guild_id}")
+            resp = client.delete(f"/api/v2/guilds/{temp_guild_id}")
             # Permission check should pass (guild_admin has delete_guild)
             # Note: the actual delete may fail due to cascading constraints
             # but we verify the permission check passes (not 403)
@@ -706,7 +706,7 @@ class TestCopyTemplateToGuild:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_b'].id}/templates/{tmpl.id}/copy",
+                f"/api/v2/guilds/{seeded['guild_b'].id}/templates/{tmpl.id}/copy",
             )
             assert resp.status_code == 201
             data = resp.get_json()
@@ -764,7 +764,7 @@ class TestCopySeriesToGuild:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_b'].id}/series/{series.id}/copy",
+                f"/api/v2/guilds/{seeded['guild_b'].id}/series/{series.id}/copy",
             )
             assert resp.status_code == 201
             data = resp.get_json()

@@ -106,7 +106,7 @@ class TestSystemSettingsAPI:
         from app import _seed_system_settings_if_missing
         _seed_system_settings_if_missing()
 
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "admin@test.com",
             "password": "pass",
         })
@@ -116,7 +116,7 @@ class TestSystemSettingsAPI:
         client = app.test_client()
         self._login_admin(client, db)
 
-        resp = client.get("/api/v1/admin/settings/system")
+        resp = client.get("/api/v2/admin/settings/system")
         assert resp.status_code == 200
         data = resp.get_json()
         assert "wowhead_tooltips" in data
@@ -128,7 +128,7 @@ class TestSystemSettingsAPI:
         self._login_admin(client, db)
 
         # Update all settings at once
-        resp = client.put("/api/v1/admin/settings/system", json={
+        resp = client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": False,
             "autosync_enabled": True,
             "autosync_interval_minutes": 30,
@@ -152,14 +152,14 @@ class TestSystemSettingsAPI:
         self._login_admin(client, db)
 
         # Set all settings
-        client.put("/api/v1/admin/settings/system", json={
+        client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": False,
             "autosync_enabled": True,
             "autosync_interval_minutes": 15,
         })
 
         # Update only wowhead
-        resp = client.put("/api/v1/admin/settings/system", json={
+        resp = client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": True,
         })
         assert resp.status_code == 200
@@ -176,7 +176,7 @@ class TestSystemSettingsAPI:
         self._login_admin(client, db)
 
         # Save custom values
-        client.put("/api/v1/admin/settings/system", json={
+        client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": False,
             "autosync_enabled": True,
             "autosync_interval_minutes": 120,
@@ -188,7 +188,7 @@ class TestSystemSettingsAPI:
         assert seeded == 0
 
         # Read back
-        resp = client.get("/api/v1/admin/settings/system")
+        resp = client.get("/api/v2/admin/settings/system")
         data = resp.get_json()
         assert data["wowhead_tooltips"] == "false"
         assert data["autosync_enabled"] == "true"

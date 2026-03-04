@@ -107,7 +107,7 @@ wotlk-calendar/
 │   ├── constants.py        # WoW constants
 │   ├── models/             # SQLAlchemy 2.x models
 │   ├── services/           # Business logic
-│   ├── api/v1/             # Blueprint-per-module REST API
+│   ├── api/v2/             # Blueprint-per-module REST API
 │   ├── jobs/               # DB-backed scheduler + worker
 │   ├── seeds/              # Seed data for WotLK raids
 │   └── utils/              # Auth helpers, permissions, pagination
@@ -179,7 +179,7 @@ When a player signs up for a raid event:
 
 ##### 3. Admin Moves Player from Lineup to Bench (via Lineup Board)
 
-The lineup board sends a `PUT /api/v1/guilds/{gid}/events/{eid}/lineup` with a grouped payload:
+The lineup board sends a `PUT /api/v2/guilds/{gid}/events/{eid}/lineup` with a grouped payload:
 
 ```json
 {
@@ -231,7 +231,7 @@ Identical to deletion auto-promote. When a `going` player's signup is declined:
 
 ##### 7. Bench Queue Reorder
 
-Officers can reorder the bench queue via `PUT /api/v1/guilds/{gid}/events/{eid}/lineup/bench-reorder`:
+Officers can reorder the bench queue via `PUT /api/v2/guilds/{gid}/events/{eid}/lineup/bench-reorder`:
 
 ```json
 {"ordered_signup_ids": [5, 4, 7]}
@@ -246,7 +246,7 @@ Backend processing:
 
 ##### 8. Lineup Confirm
 
-`POST /api/v1/guilds/{gid}/events/{eid}/lineup/confirm` marks all current lineup slots as confirmed. Each player in the lineup receives a confirmation notification.
+`POST /api/v2/guilds/{gid}/events/{eid}/lineup/confirm` marks all current lineup slots as confirmed. Each player in the lineup receives a confirmation notification.
 
 ##### 9. Multi-Role Isolation
 
@@ -297,7 +297,7 @@ WoW-inspired dark theme with official class colors, local SVG icons, gold accent
 
 ## API Reference
 
-All endpoints are under `/api/v1/`. Authentication uses session cookies (Flask-Login).
+All endpoints are under `/api/v2/`. Authentication uses session cookies (Flask-Login).
 
 | Resource | Endpoints |
 |---|---|
@@ -336,7 +336,7 @@ This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It
 | **Realms** | All 7 Warmane WotLK realms (Icecrown, Lordaeron, Onyxia, Blackrock, Frostwolf, Frostmourne, Neltharion) are available as dropdown selectors throughout the app |
 | **Character lookup** | When adding a character, click "Lookup on Warmane" to auto-fill class, armory URL, and more from the Warmane armory API. Falls back to manual entry if the API is unavailable. |
 | **Live character sync** | Click "Sync" on any character card to pull fresh data from Warmane: class, level, race, talent specs, professions, equipment, and achievement points. |
-| **Guild roster lookup** | `GET /api/v1/warmane/guild/{realm}/{name}` returns the full guild roster from Warmane |
+| **Guild roster lookup** | `GET /api/v2/warmane/guild/{realm}/{name}` returns the full guild roster from Warmane |
 | **Equipment data** | Full gear list (17 slots with item names + item IDs) is stored on sync |
 | **Talent specs** | Dual spec talent trees are fetched and auto-fill primary/secondary spec fields |
 | **Armory URLs** | Characters store a Warmane armory link — auto-generated on import or manually entered |
@@ -352,9 +352,9 @@ This app is a **calendar-first raid planner** built for Warmane WotLK guilds. It
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/v1/warmane/character/{realm}/{name}` | Look up a character (returns class, level, race, equipment, talents, professions, achievement points) |
-| `GET /api/v1/warmane/guild/{realm}/{guild_name}` | Look up a guild roster (returns member list with class, level, race, professions) |
-| `POST /api/v1/warmane/sync-character` | Sync an existing character from Warmane (body: `{"character_id": 123}`) |
+| `GET /api/v2/warmane/character/{realm}/{name}` | Look up a character (returns class, level, race, equipment, talents, professions, achievement points) |
+| `GET /api/v2/warmane/guild/{realm}/{guild_name}` | Look up a guild roster (returns member list with class, level, race, professions) |
+| `POST /api/v2/warmane/sync-character` | Sync an existing character from Warmane (body: `{"character_id": 123}`) |
 
 > **Note:** The Warmane API (`armory.warmane.com/api`) is a public endpoint. If it's unreachable, all features fall back to manual entry gracefully.
 

@@ -150,6 +150,6 @@ async function handleLogin() {
 
 async function handleDiscordLogin() {
   // Direct navigation to backend endpoint which returns HTTP 302 to Discord
-  window.location.href = '/api/v1/auth/discord/login'
+  window.location.href = '/api/v2/auth/discord/login'
 }
 </script>

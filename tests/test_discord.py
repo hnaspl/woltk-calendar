@@ -95,7 +95,7 @@ def discord_user(db):
 
 
 def _login(client, email, password):
-    return client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    return client.post("/api/v2/auth/login", json={"email": email, "password": password})
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +195,7 @@ class TestDiscordLoginBlocking:
         # Log in as the Discord user via session manipulation
         with client.session_transaction() as sess:
             sess["_user_id"] = str(user.id)
-        resp = client.post("/api/v1/auth/change-password", json={
+        resp = client.post("/api/v2/auth/change-password", json={
             "current_password": "anything",
             "new_password": "newpass123",
         })
@@ -208,7 +208,7 @@ class TestDiscordLoginBlocking:
 
 class TestDiscordEnabled:
     def test_discord_not_enabled_by_default(self, client):
-        resp = client.get("/api/v1/auth/discord/enabled")
+        resp = client.get("/api/v2/auth/discord/enabled")
         assert resp.status_code == 200
         assert resp.get_json()["enabled"] is False
 
@@ -220,7 +220,7 @@ class TestDiscordEnabled:
                                          value=encrypt_value("test-secret")))
             db.session.commit()
 
-        resp = client.get("/api/v1/auth/discord/enabled")
+        resp = client.get("/api/v2/auth/discord/enabled")
         assert resp.status_code == 200
         assert resp.get_json()["enabled"] is True
 
@@ -231,7 +231,7 @@ class TestDiscordEnabled:
 
 class TestDiscordLoginUrl:
     def test_redirects_to_login_when_not_configured(self, client):
-        resp = client.get("/api/v1/auth/discord/login")
+        resp = client.get("/api/v2/auth/discord/login")
         assert resp.status_code == 302
         assert "/login?error=discord_not_configured" in resp.headers["Location"]
 
@@ -243,7 +243,7 @@ class TestDiscordLoginUrl:
                                          value=encrypt_value("my-secret")))
             db.session.commit()
 
-        resp = client.get("/api/v1/auth/discord/login")
+        resp = client.get("/api/v2/auth/discord/login")
         assert resp.status_code == 302
         location = resp.headers["Location"]
         assert "discord.com" in location
@@ -258,7 +258,7 @@ class TestDiscordLoginUrl:
                                          value=encrypt_value("sec")))
             db.session.commit()
 
-        resp = client.get("/api/v1/auth/discord/login")
+        resp = client.get("/api/v2/auth/discord/login")
         location = resp.headers["Location"]
         assert "scope=identify%20email" in location
         assert "identify+email" not in location
@@ -272,7 +272,7 @@ class TestDiscordLoginUrl:
                                          value=encrypt_value("sec")))
             db.session.commit()
 
-        resp = client.get("/api/v1/auth/discord/login")
+        resp = client.get("/api/v2/auth/discord/login")
         location = resp.headers["Location"]
         assert "prompt=none" in location
         assert "prompt=consent" not in location
@@ -286,15 +286,15 @@ class TestDiscordLoginUrl:
                                          value=encrypt_value("auto-sec")))
             db.session.commit()
 
-        resp = client.get("/api/v1/auth/discord/login")
+        resp = client.get("/api/v2/auth/discord/login")
         assert resp.status_code == 302
         location = resp.headers["Location"]
         assert "discord.com" in location
         # The auto-generated URI should contain the correct callback path
-        assert "%2Fapi%2Fv1%2Fauth%2Fdiscord%2Fcallback" in location
+        assert "%2Fapi%2Fv2%2Fauth%2Fdiscord%2Fcallback" in location
 
     def test_auto_generated_uri_uses_correct_path(self, app, client, db):
-        """Auto-generated redirect_uri must use /api/v1/auth/discord/callback path."""
+        """Auto-generated redirect_uri must use /api/v2/auth/discord/callback path."""
         with app.app_context():
             from app.utils.encryption import encrypt_value
             db.session.add(SystemSetting(key="discord_client_id", value="pid"))
@@ -305,7 +305,7 @@ class TestDiscordLoginUrl:
             from app.services.discord_service import get_redirect_uri
             with app.test_request_context("/", base_url="http://mysite.com:5000"):
                 uri = get_redirect_uri()
-                assert uri == "http://mysite.com:5000/api/v1/auth/discord/callback"
+                assert uri == "http://mysite.com:5000/api/v2/auth/discord/callback"
 
 
 # ---------------------------------------------------------------------------
@@ -315,24 +315,24 @@ class TestDiscordLoginUrl:
 class TestAdminDiscordSettings:
     def test_get_requires_admin(self, client, regular_user):
         _login(client, "user@test.com", "user1234pass")
-        resp = client.get("/api/v1/admin/settings/discord")
+        resp = client.get("/api/v2/admin/settings/discord")
         assert resp.status_code == 403
 
     def test_put_requires_admin(self, client, regular_user):
         _login(client, "user@test.com", "user1234pass")
-        resp = client.put("/api/v1/admin/settings/discord", json={
+        resp = client.put("/api/v2/admin/settings/discord", json={
             "discord_client_id": "test"
         })
         assert resp.status_code == 403
 
     def test_admin_can_get_discord_settings(self, client, admin_user):
         _login(client, "admin@test.com", "admin123pass")
-        resp = client.get("/api/v1/admin/settings/discord")
+        resp = client.get("/api/v2/admin/settings/discord")
         assert resp.status_code == 200
 
     def test_admin_can_save_discord_settings(self, client, admin_user):
         _login(client, "admin@test.com", "admin123pass")
-        resp = client.put("/api/v1/admin/settings/discord", json={
+        resp = client.put("/api/v2/admin/settings/discord", json={
             "discord_client_id": "my-app-id",
             "discord_client_secret": "super-secret",
         })
@@ -340,7 +340,7 @@ class TestAdminDiscordSettings:
 
     def test_client_secret_is_encrypted_in_db(self, app, client, admin_user, db):
         _login(client, "admin@test.com", "admin123pass")
-        client.put("/api/v1/admin/settings/discord", json={
+        client.put("/api/v2/admin/settings/discord", json={
             "discord_client_id": "id123",
             "discord_client_secret": "raw-secret-value",
         })
@@ -362,7 +362,7 @@ class TestAdminDiscordSettings:
             db.session.commit()
 
         _login(client, "admin@test.com", "admin123pass")
-        resp = client.get("/api/v1/admin/settings/discord")
+        resp = client.get("/api/v2/admin/settings/discord")
         data = resp.get_json()
         assert data["discord_client_secret"] == "••••••••"
         assert data["discord_client_id"] == "id123"
@@ -378,7 +378,7 @@ class TestAdminDiscordSettings:
 
         _login(client, "admin@test.com", "admin123pass")
         # Send the mask placeholder back
-        client.put("/api/v1/admin/settings/discord", json={
+        client.put("/api/v2/admin/settings/discord", json={
             "discord_client_secret": "••••••••",
         })
 
@@ -390,11 +390,11 @@ class TestAdminDiscordSettings:
     def test_get_returns_callback_url(self, client, admin_user):
         """GET discord settings includes auto-generated callback_url."""
         _login(client, "admin@test.com", "admin123pass")
-        resp = client.get("/api/v1/admin/settings/discord")
+        resp = client.get("/api/v2/admin/settings/discord")
         assert resp.status_code == 200
         data = resp.get_json()
         assert "callback_url" in data
-        assert data["callback_url"].endswith("/api/v1/auth/discord/callback")
+        assert data["callback_url"].endswith("/api/v2/auth/discord/callback")
 
 
 # ---------------------------------------------------------------------------
@@ -621,7 +621,7 @@ class TestDiscordService:
             db.session.commit()
             with app.test_request_context("/", base_url="http://example.com:8080"):
                 uri = get_redirect_uri()
-                assert uri == "http://example.com:8080/api/v1/auth/discord/callback"
+                assert uri == "http://example.com:8080/api/v2/auth/discord/callback"
 
 
 # ---------------------------------------------------------------------------
@@ -630,19 +630,19 @@ class TestDiscordService:
 
 class TestDiscordCallback:
     def test_callback_missing_code_redirects(self, client):
-        resp = client.get("/api/v1/auth/discord/callback?state=abc")
+        resp = client.get("/api/v2/auth/discord/callback?state=abc")
         assert resp.status_code == 302
         assert "/login?error=discord_failed" in resp.headers["Location"]
 
     def test_callback_missing_state_redirects(self, client):
-        resp = client.get("/api/v1/auth/discord/callback?code=abc")
+        resp = client.get("/api/v2/auth/discord/callback?code=abc")
         assert resp.status_code == 302
         assert "/login?error=discord_failed" in resp.headers["Location"]
 
     def test_callback_state_mismatch_redirects(self, client):
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "correct-state"
-        resp = client.get("/api/v1/auth/discord/callback?code=abc&state=wrong-state")
+        resp = client.get("/api/v2/auth/discord/callback?code=abc&state=wrong-state")
         assert resp.status_code == 302
         assert "/login?error=discord_failed" in resp.headers["Location"]
 
@@ -651,7 +651,7 @@ class TestDiscordCallback:
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "test-state"
         with patch("app.services.discord_service.exchange_code", return_value=None):
-            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=test-state")
+            resp = client.get("/api/v2/auth/discord/callback?code=abc&state=test-state")
         assert resp.status_code == 302
         assert "/login?error=discord_failed" in resp.headers["Location"]
 
@@ -662,7 +662,7 @@ class TestDiscordCallback:
             sess["discord_oauth_state"] = "test-state"
         with patch("app.services.discord_service.exchange_code",
                    side_effect=Exception("unexpected")):
-            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=test-state")
+            resp = client.get("/api/v2/auth/discord/callback?code=abc&state=test-state")
         assert resp.status_code == 302
         assert "/login?error=discord_failed" in resp.headers["Location"]
 
@@ -678,7 +678,7 @@ class TestDiscordCallback:
             sess["discord_oauth_state"] = "valid-state"
         with patch("app.services.discord_service.exchange_code",
                    return_value=discord_info):
-            resp = client.get("/api/v1/auth/discord/callback?code=real&state=valid-state")
+            resp = client.get("/api/v2/auth/discord/callback?code=real&state=valid-state")
         assert resp.status_code == 302
         assert "/dashboard" in resp.headers["Location"]
 
@@ -698,7 +698,7 @@ class TestDiscordCallback:
             sess["discord_oauth_state"] = "valid-state"
         with patch("app.services.discord_service.exchange_code",
                    return_value=discord_info):
-            resp = client.get("/api/v1/auth/discord/callback?code=real&state=valid-state")
+            resp = client.get("/api/v2/auth/discord/callback?code=real&state=valid-state")
         assert resp.status_code == 302
         assert "/login?error=account_disabled" in resp.headers["Location"]
 
@@ -712,13 +712,13 @@ class TestDiscordCallback:
                                           value=encrypt_value("sess-sec")))
             db.session.commit()
 
-        resp = client.get("/api/v1/auth/discord/login")
+        resp = client.get("/api/v2/auth/discord/login")
         assert resp.status_code == 302
 
         with client.session_transaction() as sess:
             assert "discord_redirect_uri" in sess
             assert sess["discord_redirect_uri"].endswith(
-                "/api/v1/auth/discord/callback")
+                "/api/v2/auth/discord/callback")
 
     def test_callback_passes_stored_redirect_uri_to_exchange(self, app, client, db):
         """The callback must pass the stored redirect_uri to exchange_code."""
@@ -728,13 +728,13 @@ class TestDiscordCallback:
             "username": "uriuser",
             "email": "uri@discord.com",
         }
-        stored_uri = "http://myhost:5000/api/v1/auth/discord/callback"
+        stored_uri = "http://myhost:5000/api/v2/auth/discord/callback"
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "uri-state"
             sess["discord_redirect_uri"] = stored_uri
         with patch("app.services.discord_service.exchange_code",
                    return_value=discord_info) as mock_exchange:
-            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=uri-state")
+            resp = client.get("/api/v2/auth/discord/callback?code=abc&state=uri-state")
         assert resp.status_code == 302
         assert "/dashboard" in resp.headers["Location"]
         mock_exchange.assert_called_once_with("abc", redirect_uri=stored_uri)
@@ -749,7 +749,7 @@ class TestDiscordCallback:
             # No discord_redirect_uri in session
         with patch("app.services.discord_service.exchange_code",
                    return_value=discord_info) as mock_exchange:
-            resp = client.get("/api/v1/auth/discord/callback?code=abc&state=fb-state")
+            resp = client.get("/api/v2/auth/discord/callback?code=abc&state=fb-state")
         assert resp.status_code == 302
         assert "/dashboard" in resp.headers["Location"]
         mock_exchange.assert_called_once_with("abc", redirect_uri=None)
@@ -766,10 +766,10 @@ class TestDiscordCallback:
 
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "denied-state"
-            sess["discord_redirect_uri"] = "http://localhost/api/v1/auth/discord/callback"
+            sess["discord_redirect_uri"] = "http://localhost/api/v2/auth/discord/callback"
 
         resp = client.get(
-            "/api/v1/auth/discord/callback?error=access_denied&state=denied-state")
+            "/api/v2/auth/discord/callback?error=access_denied&state=denied-state")
         assert resp.status_code == 302
         location = resp.headers["Location"]
         assert location.startswith("https://discord.com/oauth2/authorize")
@@ -782,7 +782,7 @@ class TestDiscordCallback:
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "correct-state"
         resp = client.get(
-            "/api/v1/auth/discord/callback?error=access_denied&state=wrong-state")
+            "/api/v2/auth/discord/callback?error=access_denied&state=wrong-state")
         assert resp.status_code == 302
         assert "/login?error=discord_failed" in resp.headers["Location"]
 
@@ -795,13 +795,13 @@ class TestDiscordCallback:
                                           value=encrypt_value("pres-sec")))
             db.session.commit()
 
-        stored_uri = "http://myhost:5000/api/v1/auth/discord/callback"
+        stored_uri = "http://myhost:5000/api/v2/auth/discord/callback"
         with client.session_transaction() as sess:
             sess["discord_oauth_state"] = "pres-state"
             sess["discord_redirect_uri"] = stored_uri
 
         resp = client.get(
-            "/api/v1/auth/discord/callback?error=access_denied&state=pres-state")
+            "/api/v2/auth/discord/callback?error=access_denied&state=pres-state")
         assert resp.status_code == 302
         location = resp.headers["Location"]
         # The stored redirect_uri should appear (url-encoded) in the new authorize URL
@@ -822,7 +822,7 @@ class TestDiscordEnabledRobust:
         from unittest.mock import patch
         with patch("app.services.discord_service.is_discord_enabled",
                    side_effect=Exception("DB gone")):
-            resp = client.get("/api/v1/auth/discord/enabled")
+            resp = client.get("/api/v2/auth/discord/enabled")
         assert resp.status_code == 200
         assert resp.get_json()["enabled"] is False
 
@@ -851,7 +851,7 @@ class TestDiscordEnabledRobust:
                  patch("app.services.discord_service.requests.get",
                        return_value=mock_user_resp):
                 result = exchange_code("test-code",
-                                       redirect_uri="http://custom:5000/api/v1/auth/discord/callback")
+                                       redirect_uri="http://custom:5000/api/v2/auth/discord/callback")
                 assert result is not None
                 call_data = mock_post.call_args.kwargs.get("data", {})
-                assert call_data["redirect_uri"] == "http://custom:5000/api/v1/auth/discord/callback"
+                assert call_data["redirect_uri"] == "http://custom:5000/api/v2/auth/discord/callback"

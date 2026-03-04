@@ -137,7 +137,7 @@ class TestSecurityHeaders:
     """Verify that security headers are present on API responses."""
 
     def test_health_returns_security_headers(self, client):
-        resp = client.get("/api/v1/health")
+        resp = client.get("/api/v2/health")
         assert resp.status_code == 200
         assert resp.headers.get("X-Content-Type-Options") == "nosniff"
         assert resp.headers.get("X-Frame-Options") == "SAMEORIGIN"
@@ -145,14 +145,14 @@ class TestSecurityHeaders:
         assert "geolocation=()" in resp.headers.get("Permissions-Policy", "")
 
     def test_404_returns_security_headers(self, client):
-        resp = client.get("/api/v1/nonexistent")
+        resp = client.get("/api/v2/nonexistent")
         assert resp.status_code == 404
         assert resp.headers.get("X-Content-Type-Options") == "nosniff"
         assert resp.headers.get("X-Frame-Options") == "SAMEORIGIN"
 
     def test_hsts_not_set_without_secure_cookies(self, client):
         """HSTS should only be set when SESSION_COOKIE_SECURE is True."""
-        resp = client.get("/api/v1/health")
+        resp = client.get("/api/v2/health")
         assert "Strict-Transport-Security" not in resp.headers
 
 
@@ -164,7 +164,7 @@ class TestPasswordPolicy:
     """Verify that password length requirements are enforced."""
 
     def test_register_rejects_short_password(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "short@test.com",
             "username": "shortpw",
             "password": "abc",
@@ -172,7 +172,7 @@ class TestPasswordPolicy:
         assert resp.status_code == 400
 
     def test_register_rejects_7_char_password(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "seven@test.com",
             "username": "sevenpw",
             "password": "1234567",
@@ -180,7 +180,7 @@ class TestPasswordPolicy:
         assert resp.status_code == 400
 
     def test_register_accepts_8_char_password(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "eight@test.com",
             "username": "eightpw",
             "password": "12345678",
@@ -188,22 +188,22 @@ class TestPasswordPolicy:
         assert resp.status_code == 201
 
     def test_change_password_rejects_short(self, client, user):
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
-        resp = client.post("/api/v1/auth/change-password", json={
+        resp = client.post("/api/v2/auth/change-password", json={
             "current_password": "testpass123",
             "new_password": "abc",
         })
         assert resp.status_code == 400
 
     def test_change_password_accepts_valid(self, client, user):
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
-        resp = client.post("/api/v1/auth/change-password", json={
+        resp = client.post("/api/v2/auth/change-password", json={
             "current_password": "testpass123",
             "new_password": "newsecurepass123",
         })
@@ -260,13 +260,13 @@ class TestRateLimiting:
     def test_register_rate_limited(self, client):
         """Register endpoint should return 429 after exceeding limit."""
         for i in range(5):
-            client.post("/api/v1/auth/register", json={
+            client.post("/api/v2/auth/register", json={
                 "email": f"rl{i}@test.com",
                 "username": f"ratelimit{i}",
                 "password": "securepass123",
             })
         # 6th request should be rate-limited
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "rl5@test.com",
             "username": "ratelimit5",
             "password": "securepass123",
@@ -276,12 +276,12 @@ class TestRateLimiting:
     def test_login_rate_limited(self, client, user):
         """Login endpoint should return 429 after exceeding limit."""
         for _ in range(10):
-            client.post("/api/v1/auth/login", json={
+            client.post("/api/v2/auth/login", json={
                 "email": "test@example.com",
                 "password": "wrongpassword",
             })
         # 11th request should be rate-limited
-        resp = client.post("/api/v1/auth/login", json={
+        resp = client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "wrongpassword",
         })
@@ -303,27 +303,27 @@ class TestNotificationInputValidation:
     """Verify notification pagination handles invalid input."""
 
     def test_notification_invalid_limit(self, client, user):
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
-        resp = client.get("/api/v1/notifications?limit=abc")
+        resp = client.get("/api/v2/notifications?limit=abc")
         assert resp.status_code == 400
 
     def test_notification_invalid_offset(self, client, user):
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
-        resp = client.get("/api/v1/notifications?offset=xyz")
+        resp = client.get("/api/v2/notifications?offset=xyz")
         assert resp.status_code == 400
 
     def test_notification_valid_params(self, client, user):
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
-        resp = client.get("/api/v1/notifications?limit=10&offset=0")
+        resp = client.get("/api/v2/notifications?limit=10&offset=0")
         assert resp.status_code == 200
 
 
@@ -335,7 +335,7 @@ class TestInputLengthValidation:
     """Verify input length limits on registration."""
 
     def test_register_rejects_long_email(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "a" * 256 + "@test.com",
             "username": "longmail",
             "password": "securepass123",
@@ -343,7 +343,7 @@ class TestInputLengthValidation:
         assert resp.status_code == 400
 
     def test_register_rejects_short_username(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "x@test.com",
             "username": "a",
             "password": "securepass123",
@@ -351,7 +351,7 @@ class TestInputLengthValidation:
         assert resp.status_code == 400
 
     def test_register_rejects_long_username(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "y@test.com",
             "username": "u" * 81,
             "password": "securepass123",
@@ -359,7 +359,7 @@ class TestInputLengthValidation:
         assert resp.status_code == 400
 
     def test_register_rejects_long_display_name(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "z@test.com",
             "username": "longdisp",
             "password": "securepass123",
@@ -476,14 +476,14 @@ class TestSessionProtection:
         """Strong session protection works when proxy sets X-Forwarded-For."""
         proxy_headers = {"X-Forwarded-For": "203.0.113.50"}
         resp = client.post(
-            "/api/v1/auth/login",
+            "/api/v2/auth/login",
             json={"email": "test@example.com", "password": "testpass123"},
             headers=proxy_headers,
         )
         assert resp.status_code == 200
 
         # Subsequent request with same forwarded IP keeps the session alive
-        resp = client.get("/api/v1/auth/me", headers=proxy_headers)
+        resp = client.get("/api/v2/auth/me", headers=proxy_headers)
         assert resp.status_code == 200
 
     def test_session_not_fresh_on_ip_change(self, client, user):
@@ -494,7 +494,7 @@ class TestSessionProtection:
         future @fresh_login_required endpoints.
         """
         resp = client.post(
-            "/api/v1/auth/login",
+            "/api/v2/auth/login",
             json={"email": "test@example.com", "password": "testpass123"},
             headers={"X-Forwarded-For": "203.0.113.50"},
         )
@@ -502,7 +502,7 @@ class TestSessionProtection:
 
         # Different IP → session is kept (permanent) but marked non-fresh
         resp = client.get(
-            "/api/v1/auth/me",
+            "/api/v2/auth/me",
             headers={"X-Forwarded-For": "198.51.100.99"},
         )
         # Session survives (permanent), user stays authenticated
@@ -619,29 +619,29 @@ class TestAuthEdgeCases:
     """Verify auth endpoints handle missing/invalid data gracefully."""
 
     def test_login_missing_fields(self, client):
-        resp = client.post("/api/v1/auth/login", json={})
+        resp = client.post("/api/v2/auth/login", json={})
         assert resp.status_code == 400
 
     def test_login_invalid_credentials(self, client, user):
-        resp = client.post("/api/v1/auth/login", json={
+        resp = client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "wrongpass",
         })
         assert resp.status_code == 401
 
     def test_register_missing_fields(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "a@b.com",
         })
         assert resp.status_code == 400
 
     def test_unauthenticated_access(self, client):
         """Endpoints requiring auth should return 401 when not logged in."""
-        resp = client.get("/api/v1/guilds")
+        resp = client.get("/api/v2/guilds")
         assert resp.status_code == 401
-        resp = client.get("/api/v1/notifications")
+        resp = client.get("/api/v2/notifications")
         assert resp.status_code == 401
-        resp = client.get("/api/v1/characters")
+        resp = client.get("/api/v2/characters")
         assert resp.status_code == 401
 
 
@@ -654,7 +654,7 @@ class TestLikeWildcardEscaping:
 
     def test_available_users_search_escapes_percent(self, client, user, guild_and_event):
         """The % character should not act as a wildcard in search."""
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
@@ -664,7 +664,7 @@ class TestLikeWildcardEscaping:
         _db.session.commit()
 
         guild_id = guild_and_event["guild"].id
-        resp = client.get(f"/api/v1/guilds/{guild_id}/available-users?q=%25")
+        resp = client.get(f"/api/v2/guilds/{guild_id}/available-users?q=%25")
         assert resp.status_code == 200
         data = resp.get_json()
         # A literal '%' search should match nobody (no usernames contain '%')
@@ -672,7 +672,7 @@ class TestLikeWildcardEscaping:
 
     def test_available_users_search_escapes_underscore(self, client, user, guild_and_event):
         """The _ character should not act as a single-char wildcard."""
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "test@example.com",
             "password": "testpass123",
         })
@@ -683,7 +683,7 @@ class TestLikeWildcardEscaping:
 
         guild_id = guild_and_event["guild"].id
         # '_' is a LIKE wildcard matching any single char; it should be escaped
-        resp = client.get(f"/api/v1/guilds/{guild_id}/available-users?q=_")
+        resp = client.get(f"/api/v2/guilds/{guild_id}/available-users?q=_")
         assert resp.status_code == 200
         data = resp.get_json()
         # A literal '_' search should not match usernames like 'testuser'
@@ -792,7 +792,7 @@ class TestEmailValidation:
     # --- API integration ---
 
     def test_register_rejects_disposable_email(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "user@mailinator.com",
             "username": "dispuser",
             "password": "securepass123",
@@ -802,7 +802,7 @@ class TestEmailValidation:
         assert "disposable" in data["error"].lower() or "temporary" in data["error"].lower()
 
     def test_register_rejects_invalid_format(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "not-an-email",
             "username": "badformat",
             "password": "securepass123",
@@ -810,7 +810,7 @@ class TestEmailValidation:
         assert resp.status_code == 400
 
     def test_register_accepts_valid_email(self, client):
-        resp = client.post("/api/v1/auth/register", json={
+        resp = client.post("/api/v2/auth/register", json={
             "email": "valid@example.com",
             "username": "validuser",
             "password": "securepass123",

@@ -1,0 +1,104 @@
+"""Characters API."""
+
+from __future__ import annotations
+
+from flask import Blueprint, jsonify, request
+from flask_login import current_user
+
+from app.services import character_service
+from app.utils.auth import login_required
+from app.utils.api_helpers import get_json, validate_required
+from app.i18n import _t
+
+bp = Blueprint("characters", __name__, url_prefix="/characters")
+
+
+@bp.get("")
+@login_required
+def list_characters():
+    guild_id = request.args.get("guild_id", type=int)
+    include_archived = request.args.get("include_archived", "false").lower() == "true"
+    chars = character_service.list_characters(
+        current_user.id, guild_id, include_archived=include_archived
+    )
+    return jsonify([c.to_dict() for c in chars]), 200
+
+
+@bp.post("")
+@login_required
+def create_character():
+    data = get_json()
+    err = validate_required(data, "guild_id", "realm_name", "name", "class_name")
+    if err:
+        return err
+
+    try:
+        char = character_service.create_character(
+            user_id=current_user.id,
+            guild_id=data["guild_id"],
+            data=data,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 409
+
+    return jsonify(char.to_dict()), 201
+
+
+@bp.get("/<int:char_id>")
+@login_required
+def get_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": _t("api.characters.notFound")}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
+    return jsonify(char.to_dict()), 200
+
+
+@bp.put("/<int:char_id>")
+@login_required
+def update_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": _t("api.characters.notFound")}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
+    data = get_json()
+    char = character_service.update_character(char, data)
+    return jsonify(char.to_dict()), 200
+
+
+@bp.delete("/<int:char_id>")
+@login_required
+def delete_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": _t("api.characters.notFound")}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
+    character_service.delete_character(char)
+    return jsonify({"message": _t("api.characters.deleted")}), 200
+
+
+@bp.post("/<int:char_id>/archive")
+@login_required
+def archive_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": _t("api.characters.notFound")}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
+    char = character_service.archive_character(char)
+    return jsonify(char.to_dict()), 200
+
+
+@bp.post("/<int:char_id>/unarchive")
+@login_required
+def unarchive_character(char_id: int):
+    char = character_service.get_character(char_id)
+    if char is None:
+        return jsonify({"error": _t("api.characters.notFound")}), 404
+    if char.user_id != current_user.id:
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
+    char = character_service.unarchive_character(char)
+    return jsonify(char.to_dict()), 200

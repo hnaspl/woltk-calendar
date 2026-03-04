@@ -41,7 +41,7 @@ DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize"
 DISCORD_TOKEN_URL = f"{DISCORD_API_BASE}/oauth2/token"
 
 # The fixed path of the Discord OAuth2 callback endpoint.
-DISCORD_CALLBACK_PATH = "/api/v1/auth/discord/callback"
+DISCORD_CALLBACK_PATH = "/api/v2/auth/discord/callback"
 
 
 def _get_discord_settings() -> dict:

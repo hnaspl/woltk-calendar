@@ -53,7 +53,7 @@ def _make_user(
 
 
 def _login(client, email="test@example.com", password="testpass123"):
-    return client.post("/api/v1/auth/login", json={
+    return client.post("/api/v2/auth/login", json={
         "email": email,
         "password": password,
     })
@@ -220,7 +220,7 @@ class TestGuildCreationLimits:
     """Tests for guild creation limit enforcement via the API."""
 
     def _create_guild(self, client, name, realm="Icecrown"):
-        return client.post("/api/v1/guilds", json={
+        return client.post("/api/v2/guilds", json={
             "name": name,
             "realm_name": realm,
         })
@@ -357,7 +357,7 @@ class TestFeatureFlags:
 # ===================================================================
 
 class TestArmoryConfigAPI:
-    """Tests for the /api/v1/armory endpoints."""
+    """Tests for the /api/v2/armory endpoints."""
 
     def _login_user(self, client):
         user = _make_user(username="armuser", email="armuser@test.com")
@@ -369,7 +369,7 @@ class TestArmoryConfigAPI:
         _seed_permissions()
         self._login_user(client)
 
-        resp = client.post("/api/v1/armory/configs", json={
+        resp = client.post("/api/v2/armory/configs", json={
             "provider_name": "armory",
             "api_base_url": "http://armory.example.com/api",
             "label": "My Server",
@@ -384,7 +384,7 @@ class TestArmoryConfigAPI:
         _seed_permissions()
         self._login_user(client)
 
-        resp = client.post("/api/v1/armory/configs", json={
+        resp = client.post("/api/v2/armory/configs", json={
             "provider_name": "armory",
             "api_base_url": "http://localhost/api",
             "label": "Evil",
@@ -396,7 +396,7 @@ class TestArmoryConfigAPI:
         _seed_permissions()
         self._login_user(client)
 
-        resp = client.post("/api/v1/armory/configs", json={
+        resp = client.post("/api/v2/armory/configs", json={
             "provider_name": "fakeprovider",
             "api_base_url": "http://armory.example.com/api",
             "label": "Bad Provider",
@@ -408,7 +408,7 @@ class TestArmoryConfigAPI:
         _seed_permissions()
         self._login_user(client)
 
-        resp = client.get("/api/v1/armory/providers")
+        resp = client.get("/api/v2/armory/providers")
         assert resp.status_code == 200
         data = resp.get_json()
         assert isinstance(data, list)

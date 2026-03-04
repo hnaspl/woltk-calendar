@@ -157,7 +157,7 @@ def create_app(config_override: dict | None = None) -> Flask:
         return jsonify({"error": _t("common.errors.internalError")}), 500
 
     # ---------------------------------------- API health endpoint
-    @app.route("/api/v1/health")
+    @app.route("/api/v2/health")
     def health():
         return jsonify({"status": "ok"})
 

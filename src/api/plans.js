@@ -1,29 +1,7 @@
 /**
- * Plans API module — communicates with /api/v2/admin/plans endpoints.
+ * Plans API module — communicates with /admin/plans endpoints.
  */
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: '/api/v2',
-  withCredentials: true,
-  headers: { 'Content-Type': 'application/json' }
-})
-
-api.interceptors.response.use(
-  res => res.data,
-  err => {
-    if (err.response) {
-      if (typeof err.response.data !== 'object' || err.response.data === null) {
-        err.response.data = { error: `Server error (${err.response.status})`, message: `Server error (${err.response.status})` }
-      } else {
-        if (err.response.data.error && !err.response.data.message) {
-          err.response.data.message = err.response.data.error
-        }
-      }
-    }
-    return Promise.reject(err)
-  }
-)
+import api from './index'
 
 // --- Admin Plan CRUD ---
 export const listPlans = () => api.get('/admin/plans/')

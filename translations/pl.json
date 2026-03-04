@@ -962,7 +962,7 @@
         "redirectUri": "Redirect URI",
         "clientIdPlaceholder": "Client ID aplikacji Discord",
         "clientSecretPlaceholder": "Client Secret aplikacji Discord",
-        "redirectUriPlaceholder": "https://twoja-domena.com/api/v1/auth/discord/callback",
+        "redirectUriPlaceholder": "https://twoja-domena.com/api/v2/auth/discord/callback",
         "saveSettings": "Zapisz ustawienia Discord",
         "callbackUrlLabel": "Redirect URL (dodaj to w Discord)",
         "callbackUrlHelp": "Skopiuj ten URL i wklej go w ustawieniach aplikacji Discord pod OAuth2 → Redirects.",

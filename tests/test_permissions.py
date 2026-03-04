@@ -643,7 +643,7 @@ class TestRoleHierarchy:
 # ===========================================================================
 
 class TestRolesAPI:
-    """Test the /api/v1/roles API endpoints."""
+    """Test the /api/v2/roles API endpoints."""
 
     @staticmethod
     def _login(app, client, user):
@@ -658,7 +658,7 @@ class TestRolesAPI:
     def test_list_roles(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/roles")
+            resp = client.get("/api/v2/roles")
             assert resp.status_code == 200
             data = resp.get_json()
             assert len(data) == len(DEFAULT_ROLES)
@@ -669,7 +669,7 @@ class TestRolesAPI:
     def test_list_permissions(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/roles/permissions")
+            resp = client.get("/api/v2/roles/permissions")
             assert resp.status_code == 200
             data = resp.get_json()
             assert len(data) == len(ALL_PERMISSIONS)
@@ -677,7 +677,7 @@ class TestRolesAPI:
     def test_list_grant_rules(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/roles/grant-rules")
+            resp = client.get("/api/v2/roles/grant-rules")
             assert resp.status_code == 200
             data = resp.get_json()
             assert len(data) > 0
@@ -685,7 +685,7 @@ class TestRolesAPI:
     def test_my_permissions_guild(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["officer_user"])
-            resp = client.get(f"/api/v1/roles/my-permissions/{seeded['guild'].id}")
+            resp = client.get(f"/api/v2/roles/my-permissions/{seeded['guild'].id}")
             assert resp.status_code == 200
             data = resp.get_json()
             assert data["role"] == "officer"
@@ -695,7 +695,7 @@ class TestRolesAPI:
     def test_create_custom_role_api(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "trial",
                 "display_name": "Trial Member",
                 "description": "Probationary access",
@@ -713,14 +713,14 @@ class TestRolesAPI:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             # Create a role first
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "temp", "display_name": "Temp", "level": 5,
                 "permissions": ["view_events"],
             })
             role_id = resp.get_json()["id"]
 
             # Update it
-            resp = client.put(f"/api/v1/roles/{role_id}", json={
+            resp = client.put(f"/api/v2/roles/{role_id}", json={
                 "display_name": "Updated Temp",
                 "permissions": ["view_events", "sign_up", "view_attendance"],
             })
@@ -732,12 +732,12 @@ class TestRolesAPI:
     def test_delete_custom_role_api(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "disposable", "display_name": "Disposable", "level": 1,
             })
             role_id = resp.get_json()["id"]
 
-            resp = client.delete(f"/api/v1/roles/{role_id}")
+            resp = client.delete(f"/api/v2/roles/{role_id}")
             assert resp.status_code == 200
 
     def test_cannot_delete_system_role_api(self, seeded, app):
@@ -746,14 +746,14 @@ class TestRolesAPI:
             officer = _db.session.execute(
                 _db.select(SystemRole).where(SystemRole.name == "officer")
             ).scalar_one()
-            resp = client.delete(f"/api/v1/roles/{officer.id}")
+            resp = client.delete(f"/api/v2/roles/{officer.id}")
             assert resp.status_code == 403
 
     def test_create_grant_rule_api(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             # Create a custom role
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "assistant", "display_name": "Assistant", "level": 25,
             })
             custom_id = resp.get_json()["id"]
@@ -762,7 +762,7 @@ class TestRolesAPI:
                 _db.select(SystemRole).where(SystemRole.name == "officer")
             ).scalar_one()
 
-            resp = client.post("/api/v1/roles/grant-rules", json={
+            resp = client.post("/api/v2/roles/grant-rules", json={
                 "granter_role_id": officer.id,
                 "grantee_role_id": custom_id,
             })
@@ -772,17 +772,17 @@ class TestRolesAPI:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             # Get an existing rule
-            resp = client.get("/api/v1/roles/grant-rules")
+            resp = client.get("/api/v2/roles/grant-rules")
             rules = resp.get_json()
             assert len(rules) > 0
 
-            resp = client.delete(f"/api/v1/roles/grant-rules/{rules[0]['id']}")
+            resp = client.delete(f"/api/v2/roles/grant-rules/{rules[0]['id']}")
             assert resp.status_code == 200
 
     def test_non_admin_cannot_create_role(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "hacker_role", "display_name": "Hacker",
             })
             assert resp.status_code == 403
@@ -790,7 +790,7 @@ class TestRolesAPI:
     def test_duplicate_role_name_rejected(self, seeded, app):
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "officer", "display_name": "Another Officer",
             })
             assert resp.status_code == 409
@@ -820,7 +820,7 @@ class TestRolePermissionFiltering:
         """Site admin sees every role including global_admin."""
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/roles")
+            resp = client.get("/api/v2/roles")
             assert resp.status_code == 200
             data = resp.get_json()
             names = {r["name"] for r in data}
@@ -832,7 +832,7 @@ class TestRolePermissionFiltering:
         """Guild admin (level 80) should NOT see global_admin (level 100)."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.get("/api/v1/roles")
+            resp = client.get("/api/v2/roles")
             assert resp.status_code == 200
             data = resp.get_json()
             names = {r["name"] for r in data}
@@ -845,7 +845,7 @@ class TestRolePermissionFiltering:
         """Officer (level 60) should NOT see guild_admin or global_admin."""
         with app.test_client() as client:
             self._login(app, client, seeded["officer_user"])
-            resp = client.get("/api/v1/roles")
+            resp = client.get("/api/v2/roles")
             assert resp.status_code == 200
             data = resp.get_json()
             names = {r["name"] for r in data}
@@ -859,7 +859,7 @@ class TestRolePermissionFiltering:
         """Member (level 20) should only see member role."""
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
-            resp = client.get("/api/v1/roles")
+            resp = client.get("/api/v2/roles")
             assert resp.status_code == 200
             data = resp.get_json()
             names = {r["name"] for r in data}
@@ -871,7 +871,7 @@ class TestRolePermissionFiltering:
         """Site admin sees all permissions including admin category."""
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/roles/permissions")
+            resp = client.get("/api/v2/roles/permissions")
             assert resp.status_code == 200
             data = resp.get_json()
             categories = {p["category"] for p in data}
@@ -882,7 +882,7 @@ class TestRolePermissionFiltering:
         """Guild admin should not see admin-category permissions."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.get("/api/v1/roles/permissions")
+            resp = client.get("/api/v2/roles/permissions")
             assert resp.status_code == 200
             data = resp.get_json()
             categories = {p["category"] for p in data}
@@ -897,7 +897,7 @@ class TestRolePermissionFiltering:
         """Guild admin (level 80) cannot create a role with level > 80."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "super_role",
                 "display_name": "Super Role",
                 "level": 90,
@@ -908,7 +908,7 @@ class TestRolePermissionFiltering:
         """Guild admin can create roles at or below their level (80)."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "custom_ga_role",
                 "display_name": "Custom GA Role",
                 "level": 80,
@@ -921,7 +921,7 @@ class TestRolePermissionFiltering:
         # Create a custom role as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
-            resp = admin_client.post("/api/v1/roles", json={
+            resp = admin_client.post("/api/v2/roles", json={
                 "name": "editable_role",
                 "display_name": "Editable",
                 "level": 50,
@@ -931,7 +931,7 @@ class TestRolePermissionFiltering:
         # Update as guild admin
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.put(f"/api/v1/roles/{role_id}", json={
+            resp = client.put(f"/api/v2/roles/{role_id}", json={
                 "display_name": "Updated Name",
             })
             assert resp.status_code == 200
@@ -941,7 +941,7 @@ class TestRolePermissionFiltering:
         # Create a role at level 90 as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
-            resp = admin_client.post("/api/v1/roles", json={
+            resp = admin_client.post("/api/v2/roles", json={
                 "name": "high_level_role",
                 "display_name": "High Level",
                 "level": 90,
@@ -951,7 +951,7 @@ class TestRolePermissionFiltering:
         # Try to update as guild admin
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.put(f"/api/v1/roles/{role_id}", json={
+            resp = client.put(f"/api/v2/roles/{role_id}", json={
                 "display_name": "Hacked Name",
             })
             assert resp.status_code == 403
@@ -961,7 +961,7 @@ class TestRolePermissionFiltering:
         # Create a custom role as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
-            resp = admin_client.post("/api/v1/roles", json={
+            resp = admin_client.post("/api/v2/roles", json={
                 "name": "to_delete_ga",
                 "display_name": "To Delete",
                 "level": 10,
@@ -971,14 +971,14 @@ class TestRolePermissionFiltering:
         # Delete as guild admin
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.delete(f"/api/v1/roles/{role_id}")
+            resp = client.delete(f"/api/v2/roles/{role_id}")
             assert resp.status_code == 200
 
     def test_guild_admin_cannot_assign_admin_perms(self, seeded, app):
         """Guild admin creating a role cannot include admin-category permissions."""
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "sneaky_role",
                 "display_name": "Sneaky",
                 "level": 30,
@@ -995,7 +995,7 @@ class TestRolePermissionFiltering:
         """Officer (without manage_guild_roles) cannot create roles."""
         with app.test_client() as client:
             self._login(app, client, seeded["officer_user"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "officer_role",
                 "display_name": "Officer Role",
                 "level": 10,
@@ -1007,7 +1007,7 @@ class TestRolePermissionFiltering:
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             # Get role IDs — guild admin sees roles at/below level 80
-            resp = client.get("/api/v1/roles")
+            resp = client.get("/api/v2/roles")
             roles = resp.get_json()
             # Find two distinct roles at/below guild admin level
             assert len(roles) >= 2
@@ -1015,7 +1015,7 @@ class TestRolePermissionFiltering:
             granter = next(r for r in roles if r["name"] == "officer")
             grantee = next(r for r in roles if r["name"] == "member")
             # First ensure rule does not exist
-            resp = client.get("/api/v1/roles/grant-rules")
+            resp = client.get("/api/v2/roles/grant-rules")
             existing_rules = resp.get_json()
             existing_pair = {
                 (r["granter_role_name"], r["grantee_role_name"]) for r in existing_rules
@@ -1027,8 +1027,8 @@ class TestRolePermissionFiltering:
                     if r["granter_role_name"] == granter["name"]
                     and r["grantee_role_name"] == grantee["name"]
                 )
-                client.delete(f"/api/v1/roles/grant-rules/{rule_id}")
-            resp = client.post("/api/v1/roles/grant-rules", json={
+                client.delete(f"/api/v2/roles/grant-rules/{rule_id}")
+            resp = client.post("/api/v2/roles/grant-rules", json={
                 "granter_role_id": granter["id"],
                 "grantee_role_id": grantee["id"],
             })
@@ -1040,7 +1040,7 @@ class TestRolePermissionFiltering:
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
             # Create a custom role at low level
-            resp = admin_client.post("/api/v1/roles", json={
+            resp = admin_client.post("/api/v2/roles", json={
                 "name": "deletable_rule_role",
                 "display_name": "Deletable Rule Role",
                 "level": 10,
@@ -1049,7 +1049,7 @@ class TestRolePermissionFiltering:
             member = _db.session.execute(
                 _db.select(SystemRole).where(SystemRole.name == "member")
             ).scalar_one()
-            resp = admin_client.post("/api/v1/roles/grant-rules", json={
+            resp = admin_client.post("/api/v2/roles/grant-rules", json={
                 "granter_role_id": custom_id,
                 "grantee_role_id": member.id,
             })
@@ -1059,7 +1059,7 @@ class TestRolePermissionFiltering:
         # Delete as guild admin
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
-            resp = client.delete(f"/api/v1/roles/grant-rules/{rule_id}")
+            resp = client.delete(f"/api/v2/roles/grant-rules/{rule_id}")
             assert resp.status_code == 200
 
     def test_guild_admin_cannot_create_grant_rules_above_level(self, seeded, app):
@@ -1075,7 +1075,7 @@ class TestRolePermissionFiltering:
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             # Try to create a rule with global_admin as granter (level 100 > 80)
-            resp = client.post("/api/v1/roles/grant-rules", json={
+            resp = client.post("/api/v2/roles/grant-rules", json={
                 "granter_role_id": global_admin.id,
                 "grantee_role_id": member.id,
             })
@@ -1086,7 +1086,7 @@ class TestRolePermissionFiltering:
         # Get global_admin grant rules as site admin
         with app.test_client() as admin_client:
             self._login(app, admin_client, seeded["site_admin"])
-            resp = admin_client.get("/api/v1/roles/grant-rules")
+            resp = admin_client.get("/api/v2/roles/grant-rules")
             rules = resp.get_json()
             # Find a rule involving global_admin
             ga_rule = next(
@@ -1096,14 +1096,14 @@ class TestRolePermissionFiltering:
         if ga_rule:
             with app.test_client() as client:
                 self._login(app, client, seeded["guild_admin_user"])
-                resp = client.delete(f"/api/v1/roles/grant-rules/{ga_rule['id']}")
+                resp = client.delete(f"/api/v2/roles/grant-rules/{ga_rule['id']}")
                 assert resp.status_code == 403
 
     def test_global_admin_can_create_roles(self, seeded, app):
         """Global admin CAN create roles."""
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "admin_created_role",
                 "display_name": "Admin Created",
                 "level": 50,
@@ -1120,7 +1120,7 @@ class TestRolePermissionFiltering:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             # Create a custom role
-            resp = client.post("/api/v1/roles", json={
+            resp = client.post("/api/v2/roles", json={
                 "name": "cascade_test",
                 "display_name": "Cascade Test",
                 "level": 15,
@@ -1131,7 +1131,7 @@ class TestRolePermissionFiltering:
             member = _db.session.execute(
                 _db.select(SystemRole).where(SystemRole.name == "member")
             ).scalar_one()
-            resp = client.post("/api/v1/roles/grant-rules", json={
+            resp = client.post("/api/v2/roles/grant-rules", json={
                 "granter_role_id": role_id,
                 "grantee_role_id": member.id,
             })
@@ -1139,7 +1139,7 @@ class TestRolePermissionFiltering:
             rule_id = resp.get_json()["id"]
 
             # Delete the role
-            resp = client.delete(f"/api/v1/roles/{role_id}")
+            resp = client.delete(f"/api/v2/roles/{role_id}")
             assert resp.status_code == 200
 
             # Grant rule should be gone
@@ -1157,7 +1157,7 @@ class TestRolePermissionFiltering:
 
         with app.test_client() as client:
             self._login(app, client, seeded["officer_user"])
-            resp = client.post("/api/v1/roles/grant-rules", json={
+            resp = client.post("/api/v2/roles/grant-rules", json={
                 "granter_role_id": raid_leader.id,
                 "grantee_role_id": member.id,
             })
@@ -1185,7 +1185,7 @@ class TestAdminGuildManagement:
         """Global admin can list all guilds with member counts."""
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/guilds/admin/all")
+            resp = client.get("/api/v2/guilds/admin/all")
             assert resp.status_code == 200
             data = resp.get_json()
             assert len(data) >= 1
@@ -1197,14 +1197,14 @@ class TestAdminGuildManagement:
         """Non-admin users cannot access admin guild listing."""
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
-            resp = client.get("/api/v1/guilds/admin/all")
+            resp = client.get("/api/v2/guilds/admin/all")
             assert resp.status_code == 403
 
     def test_admin_can_view_guild_members(self, seeded, app):
         """Global admin can view members of any guild."""
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get(f"/api/v1/guilds/admin/{seeded['guild'].id}/members")
+            resp = client.get(f"/api/v2/guilds/admin/{seeded['guild'].id}/members")
             assert resp.status_code == 200
             data = resp.get_json()
             assert len(data) >= 1
@@ -1213,7 +1213,7 @@ class TestAdminGuildManagement:
         """Non-admin users cannot access admin guild members endpoint."""
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
-            resp = client.get(f"/api/v1/guilds/admin/{seeded['guild'].id}/members")
+            resp = client.get(f"/api/v2/guilds/admin/{seeded['guild'].id}/members")
             assert resp.status_code == 403
 
     def test_admin_can_view_any_guild(self, seeded, app):
@@ -1227,7 +1227,7 @@ class TestAdminGuildManagement:
 
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get(f"/api/v1/guilds/{g2.id}")
+            resp = client.get(f"/api/v2/guilds/{g2.id}")
             assert resp.status_code == 200
             assert resp.get_json()["name"] == "Private Guild"
 
@@ -1236,7 +1236,7 @@ class TestAdminGuildManagement:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.put(
-                f"/api/v1/guilds/admin/{seeded['guild'].id}/members/{seeded['member_user'].id}",
+                f"/api/v2/guilds/admin/{seeded['guild'].id}/members/{seeded['member_user'].id}",
                 json={"role": "officer"},
             )
             assert resp.status_code == 200
@@ -1247,7 +1247,7 @@ class TestAdminGuildManagement:
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
             resp = client.put(
-                f"/api/v1/guilds/admin/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                f"/api/v2/guilds/admin/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
                 json={"role": "member"},
             )
             assert resp.status_code == 403
@@ -1266,7 +1266,7 @@ class TestAdminGuildManagement:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.delete(
-                f"/api/v1/guilds/admin/{seeded['guild'].id}/members/{extra.id}",
+                f"/api/v2/guilds/admin/{seeded['guild'].id}/members/{extra.id}",
             )
             assert resp.status_code == 200
 
@@ -1275,7 +1275,7 @@ class TestAdminGuildManagement:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.post(
-                f"/api/v1/guilds/admin/{seeded['guild'].id}/transfer-ownership",
+                f"/api/v2/guilds/admin/{seeded['guild'].id}/transfer-ownership",
                 json={"user_id": seeded["officer_user"].id},
             )
             assert resp.status_code == 200
@@ -1291,14 +1291,14 @@ class TestAdminGuildManagement:
 
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.delete(f"/api/v1/guilds/admin/{g2.id}")
+            resp = client.delete(f"/api/v2/guilds/admin/{g2.id}")
             assert resp.status_code == 200
 
     def test_non_admin_cannot_delete_guild_via_admin(self, seeded, app):
         """Non-admin cannot use admin guild delete endpoint."""
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
-            resp = client.delete(f"/api/v1/guilds/admin/{seeded['guild'].id}")
+            resp = client.delete(f"/api/v2/guilds/admin/{seeded['guild'].id}")
             assert resp.status_code == 403
 
     def test_admin_can_send_notification(self, seeded, app):
@@ -1306,7 +1306,7 @@ class TestAdminGuildManagement:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.post(
-                f"/api/v1/guilds/admin/{seeded['guild'].id}/notify/{seeded['member_user'].id}",
+                f"/api/v2/guilds/admin/{seeded['guild'].id}/notify/{seeded['member_user'].id}",
                 json={"message": "Please update your character info."},
             )
             assert resp.status_code == 200
@@ -1316,7 +1316,7 @@ class TestAdminGuildManagement:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.post(
-                f"/api/v1/guilds/admin/{seeded['guild'].id}/notify/{seeded['member_user'].id}",
+                f"/api/v2/guilds/admin/{seeded['guild'].id}/notify/{seeded['member_user'].id}",
                 json={"message": ""},
             )
             assert resp.status_code == 400
@@ -1345,7 +1345,7 @@ class TestAdminDefaultRaidDefinitions:
         seed_raid_definitions()
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.get("/api/v1/admin/raid-definitions")
+            resp = client.get("/api/v2/admin/raid-definitions")
             assert resp.status_code == 200
             data = resp.get_json()
             assert len(data) >= 1
@@ -1355,14 +1355,14 @@ class TestAdminDefaultRaidDefinitions:
         """Non-admin cannot access admin raid definitions endpoint."""
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
-            resp = client.get("/api/v1/admin/raid-definitions")
+            resp = client.get("/api/v2/admin/raid-definitions")
             assert resp.status_code == 403
 
     def test_admin_can_create_default_definition(self, seeded, app):
         """Global admin can create a new default raid definition."""
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.post("/api/v1/admin/raid-definitions", json={
+            resp = client.post("/api/v2/admin/raid-definitions", json={
                 "name": "Custom Default Raid",
                 "code": "custom_default",
                 "default_raid_size": 25,
@@ -1385,7 +1385,7 @@ class TestAdminDefaultRaidDefinitions:
 
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.put(f"/api/v1/admin/raid-definitions/{rd.id}", json={
+            resp = client.put(f"/api/v2/admin/raid-definitions/{rd.id}", json={
                 "name": "Updated Name",
             })
             assert resp.status_code == 200
@@ -1403,7 +1403,7 @@ class TestAdminDefaultRaidDefinitions:
 
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.delete(f"/api/v1/admin/raid-definitions/{rd.id}")
+            resp = client.delete(f"/api/v2/admin/raid-definitions/{rd.id}")
             assert resp.status_code == 200
 
     def test_admin_cannot_update_guild_scoped_definition(self, seeded, app):
@@ -1418,7 +1418,7 @@ class TestAdminDefaultRaidDefinitions:
 
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
-            resp = client.put(f"/api/v1/admin/raid-definitions/{rd.id}", json={
+            resp = client.put(f"/api/v2/admin/raid-definitions/{rd.id}", json={
                 "name": "Should Fail",
             })
             assert resp.status_code == 404
@@ -1446,14 +1446,14 @@ class TestGuildAdminPromotion:
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                f"/api/v2/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
                 json={"role": "guild_admin"},
             )
             assert resp.status_code == 200
             assert resp.get_json()["role"] == "guild_admin"
             # Restore original role
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                f"/api/v2/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
                 json={"role": "officer"},
             )
             assert resp.status_code == 200
@@ -1463,14 +1463,14 @@ class TestGuildAdminPromotion:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                f"/api/v2/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
                 json={"role": "guild_admin"},
             )
             assert resp.status_code == 200
             assert resp.get_json()["role"] == "guild_admin"
             # Restore original role
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
+                f"/api/v2/guilds/{seeded['guild'].id}/members/{seeded['officer_user'].id}",
                 json={"role": "officer"},
             )
             assert resp.status_code == 200
@@ -1495,7 +1495,7 @@ class TestGuildAdminPromotion:
 
                 self._login(app, client, extra_ga)
                 resp = client.put(
-                    f"/api/v1/guilds/{seeded['guild'].id}/members/{seeded['raid_leader_user'].id}",
+                    f"/api/v2/guilds/{seeded['guild'].id}/members/{seeded['raid_leader_user'].id}",
                     json={"role": "guild_admin"},
                 )
                 assert resp.status_code == 403
@@ -1525,7 +1525,7 @@ class TestOwnershipTransfer:
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                f"/api/v2/guilds/{seeded['guild'].id}/transfer-ownership",
                 json={"user_id": seeded["officer_user"].id},
             )
             assert resp.status_code == 200
@@ -1556,7 +1556,7 @@ class TestOwnershipTransfer:
         with app.test_client() as client:
             self._login(app, client, seeded["site_admin"])
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                f"/api/v2/guilds/{seeded['guild'].id}/transfer-ownership",
                 json={"user_id": seeded["officer_user"].id},
             )
             assert resp.status_code == 200
@@ -1599,7 +1599,7 @@ class TestOwnershipTransfer:
 
                 self._login(app, client, extra_ga)
                 resp = client.post(
-                    f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                    f"/api/v2/guilds/{seeded['guild'].id}/transfer-ownership",
                     json={"user_id": seeded["officer_user"].id},
                 )
                 assert resp.status_code == 403
@@ -1613,7 +1613,7 @@ class TestOwnershipTransfer:
         with app.test_client() as client:
             self._login(app, client, seeded["member_user"])
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                f"/api/v2/guilds/{seeded['guild'].id}/transfer-ownership",
                 json={"user_id": seeded["officer_user"].id},
             )
             assert resp.status_code == 403
@@ -1623,7 +1623,7 @@ class TestOwnershipTransfer:
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                f"/api/v2/guilds/{seeded['guild'].id}/transfer-ownership",
                 json={"user_id": seeded["guild_admin_user"].id},
             )
             assert resp.status_code == 400
@@ -1633,7 +1633,7 @@ class TestOwnershipTransfer:
         with app.test_client() as client:
             self._login(app, client, seeded["guild_admin_user"])
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild'].id}/transfer-ownership",
+                f"/api/v2/guilds/{seeded['guild'].id}/transfer-ownership",
                 json={"user_id": seeded["outsider"].id},
             )
             assert resp.status_code == 404
