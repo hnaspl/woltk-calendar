@@ -160,7 +160,8 @@ class GenericArmoryProvider(ArmoryProvider):
                 resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
                 if resp.status_code != 200:
                     continue
-                # Guard against non-JSON responses (Cloudflare challenge pages etc.)
+                # Guard against non-JSON responses (Cloudflare challenge pages,
+                # JSONP callbacks that use application/javascript, etc.)
                 content_type = resp.headers.get("content-type", "")
                 if "json" not in content_type and "javascript" not in content_type:
                     continue

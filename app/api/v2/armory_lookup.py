@@ -22,6 +22,9 @@ from app.i18n import _t
 
 bp = Blueprint("armory_lookup", __name__, url_prefix="/armory-lookup")
 
+# Maximum number of roster members to include in guild search preview
+ROSTER_PREVIEW_LIMIT = 5
+
 
 @bp.get("/character/<realm>/<name>")
 @login_required
@@ -164,7 +167,7 @@ def search_guild():
             if data and "error" not in data:
                 roster = [
                     provider.build_character_dict(m, realm)
-                    for m in data.get("roster", [])[:5]  # Limit roster preview
+                    for m in data.get("roster", [])[:ROSTER_PREVIEW_LIMIT]
                 ]
                 matches.append({
                     "name": data.get("name", guild_name),

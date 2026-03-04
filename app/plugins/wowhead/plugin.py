@@ -111,7 +111,7 @@ RAID_ZONE_IDS: dict[str, dict[str, int]] = {
     # BfA
     "bfa": {
         "uldir": 9389,
-        "bod": 9389,
+        "bod": 9354,
         "cos": 10057,
         "ep": 10425,
         "nya": 10522,
