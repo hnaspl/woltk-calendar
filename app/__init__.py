@@ -129,6 +129,10 @@ def create_app(config_override: dict | None = None) -> Flask:
     from app.api.v2 import register_blueprints as register_v2_blueprints
     register_v2_blueprints(app)
 
+    # -------------------------------------------------- Plugin system
+    from app.plugins import init_plugins
+    init_plugins(app)
+
     # ------------------------------------------------- Error handlers
     @app.errorhandler(400)
     def bad_request(e):

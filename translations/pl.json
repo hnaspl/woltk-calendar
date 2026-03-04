@@ -1597,5 +1597,26 @@
       "duplicate_name": "Serwer o tej nazwie już istnieje",
       "cannot_remove_last": "Nie można usunąć ostatniego serwera"
     }
+  },
+  "plugin": {
+    "notFound": "Wtyczka nie znaleziona",
+    "title": "Wtyczki",
+    "description": "Zarządzaj zarejestrowanymi wtyczkami",
+    "name": "Nazwa",
+    "version": "Wersja",
+    "type": "Typ",
+    "status": "Status",
+    "enabled": "Włączona",
+    "disabled": "Wyłączona",
+    "features": "Funkcje",
+    "noPlugins": "Brak zarejestrowanych wtyczek",
+    "integration": "Integracja",
+    "expansion": "Dodatek",
+    "warmane": "Integracja Warmane",
+    "discord": "Integracja Discord",
+    "dependencies": "Zależności",
+    "noDependencies": "Brak",
+    "featureFlags": "Flagi funkcji",
+    "configuration": "Konfiguracja"
   }
 }

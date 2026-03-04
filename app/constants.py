@@ -87,17 +87,10 @@ def normalize_spec_name(
 
 
 # ---------------------------------------------------------------------------
-# Warmane realm names
+# Warmane realm names — now owned by the Warmane plugin.
+# Re-exported here for backwards compatibility with realm_service / meta API.
 # ---------------------------------------------------------------------------
-WARMANE_REALMS: list[str] = [
-    "Icecrown",
-    "Lordaeron",
-    "Onyxia",
-    "Blackrock",
-    "Frostwolf",
-    "Frostmourne",
-    "Neltharion",
-]
+from app.plugins.warmane.plugin import WARMANE_DEFAULT_REALMS as WARMANE_REALMS  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Standard role slot distribution for raid sizes

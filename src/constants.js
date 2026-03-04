@@ -7,6 +7,10 @@
  * Keep in sync with app/constants.py (backend Python equivalent).
  */
 
+// Warmane realm list — static fallback until the constants store loads
+// from the backend API.  The authoritative source is the Warmane plugin
+// (app/plugins/warmane/plugin.py WARMANE_DEFAULT_REALMS).
+// NOTE: This will be removed once all consumers use the constants store.
 export const WARMANE_REALMS = [
   'Icecrown',
   'Lordaeron',

@@ -1597,5 +1597,26 @@
       "duplicate_name": "A realm with this name already exists",
       "cannot_remove_last": "Cannot remove the last realm"
     }
+  },
+  "plugin": {
+    "notFound": "Plugin not found",
+    "title": "Plugins",
+    "description": "Manage registered plugins",
+    "name": "Name",
+    "version": "Version",
+    "type": "Type",
+    "status": "Status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "features": "Features",
+    "noPlugins": "No plugins registered",
+    "integration": "Integration",
+    "expansion": "Expansion",
+    "warmane": "Warmane Integration",
+    "discord": "Discord Integration",
+    "dependencies": "Dependencies",
+    "noDependencies": "None",
+    "featureFlags": "Feature Flags",
+    "configuration": "Configuration"
   }
 }
