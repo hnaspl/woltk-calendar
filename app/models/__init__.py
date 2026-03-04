@@ -12,6 +12,9 @@ from app.models.permission import SystemRole, Permission, RolePermission, RoleGr
 from app.models.system_setting import SystemSetting
 from app.models.armory_config import ArmoryConfig
 from app.models.guild_feature import GuildFeature
+from app.models.expansion import (
+    Expansion, ExpansionClass, ExpansionSpec, ExpansionRole, ExpansionRaid,
+)
 
 __all__ = [
     "Tenant",
@@ -39,4 +42,9 @@ __all__ = [
     "SystemSetting",
     "ArmoryConfig",
     "GuildFeature",
+    "Expansion",
+    "ExpansionClass",
+    "ExpansionSpec",
+    "ExpansionRole",
+    "ExpansionRaid",
 ]
