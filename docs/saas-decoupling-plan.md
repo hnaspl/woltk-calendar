@@ -1360,6 +1360,9 @@ admin panel.
 
 > **⚡ Cross-Phase Dependencies & Interconnections:**
 > - **Phase 6 ← Phase 0:** Tenant model is the billing unit. `max_guilds`/`max_members` fields on Tenant (Phase 0) become plan-driven.
+> - **Phase 6 ← Phase 0 (deferred items):** Notification multi-tenant isolation, bench/queue multi-tenant isolation, data migration backfill, composite indexes, DB rename, v1→v2 API migration — all deferred from Phase 0 to Phase 6.
+> - **Phase 6 ← Phase 4 (deferred items):** Expansion selection in guild creation wizard, JSON/CSV expansion import, admin class/spec CRUD UI — deferred from Phase 4 as UX enhancements.
+> - **Phase 6 ← Phase 5 (deferred items):** Plugin developer documentation, inline Warmane/Discord service refactoring — deferred from Phase 5.
 > - **Phase 6 ← Phase 5:** Plugin system provides the feature toggle mechanism for plan-based feature gating.
 > - **Phase 6 completes:** v1 API deprecation review — assess if v1 endpoints can be fully removed.
 
@@ -1393,6 +1396,21 @@ admin panel.
   - [ ] Final full-codebase dead-code audit (see §13.4)
   - [ ] **v1 API deprecation review:** Assess if v1 endpoints can now be fully removed or if they need to remain for any legacy integrations
   - [ ] Run full lint + build + test suite on clean branch
+- [ ] **Deferred items from previous phases (UX & infrastructure enhancements):**
+  - [ ] *Phase 0 → Phase 6:* Notification system multi-tenant isolation (Socket.IO rooms by tenant, tenant notification types, cross-tenant isolation verification)
+  - [ ] *Phase 0 → Phase 6:* Bench/queue multi-tenant isolation (`tenant_id` on `JobQueue`, tenant-fair processing, bench queue tenant isolation)
+  - [ ] *Phase 0 → Phase 6:* Data migration — backfill `tenant_id` from owner relationships
+  - [ ] *Phase 0 → Phase 6:* Add composite indexes on `(tenant_id, ...)` for all tenant-scoped tables
+  - [ ] *Phase 0 → Phase 6:* Rename database file from `wotlk_calendar.db` to `raid_calendar.db`
+  - [ ] *Phase 0 → Phase 6:* Migrate all frontend API calls from v1 to v2 (tied to v1 API deprecation review)
+  - [ ] *Phase 0 → Phase 6:* Add tests verifying bench/queue isolation across tenants
+  - [ ] *Phase 0 → Phase 6:* Add tests verifying notification isolation
+  - [ ] *Phase 4 → Phase 6:* Expansion selection flow in guild creation wizard (guild admin picks highest expansion; cumulative auto-fill)
+  - [ ] *Phase 4 → Phase 6:* Import expansion data from JSON/CSV (optional convenience feature)
+  - [ ] *Phase 4 → Phase 6:* Global admin UI for expansion class/spec CRUD (currently managed via DB seeds)
+  - [ ] *Phase 5 → Phase 6:* Create plugin developer documentation
+  - [ ] *Phase 5 → Phase 6:* Remove inline Warmane API calls from services — route through plugin interface
+  - [ ] *Phase 5 → Phase 6:* Remove inline Discord integration from services — route through plugin interface
 
 ---
 
