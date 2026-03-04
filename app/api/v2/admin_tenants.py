@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.i18n import _t
-from app.services import tenant_service
+from app.services import tenant_service, billing_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, require_system_permission
 
@@ -129,3 +129,21 @@ def update_limits(tenant_id: int):
             setattr(tenant, key, data[key])
     db.session.commit()
     return jsonify(tenant.to_dict()), 200
+
+
+# ---------------------------------------------------------------------------
+# Billing / usage
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:tenant_id>/usage")
+@login_required
+def get_tenant_usage(tenant_id: int):
+    """Get resource usage stats for a tenant (global admin only)."""
+    err = require_system_permission("manage_billing")
+    if err:
+        return err
+    tenant, t_err = _get_tenant_or_404(tenant_id)
+    if t_err:
+        return t_err
+    usage = billing_service.get_tenant_usage(tenant_id)
+    return jsonify(usage), 200

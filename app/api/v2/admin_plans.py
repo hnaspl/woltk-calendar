@@ -1,4 +1,9 @@
-"""Admin plan management and billing operations API."""
+"""Admin plan management API and public plans listing.
+
+Tenant billing operations (usage, suspend, reactivate) are handled in
+``admin_tenants.py`` to avoid duplicate URL rules — both modules share
+the ``/api/v2/admin/tenants`` prefix.
+"""
 
 from __future__ import annotations
 
@@ -132,8 +137,6 @@ def assign_plan():
     return jsonify(tenant.to_dict()), 200
 
 
-# --------------------------------------------------------------------------- tenant billing
-
 # --------------------------------------------------------------------------- public plans
 
 public_plans_bp = Blueprint("public_plans_v2", __name__)
@@ -144,50 +147,3 @@ def list_active_plans():
     """List active plans (public, no auth required)."""
     plans = billing_service.list_plans(active_only=True)
     return jsonify([p.to_dict() for p in plans]), 200
-
-
-# --------------------------------------------------------------------------- tenant billing
-
-tenant_billing_bp = Blueprint("admin_tenant_billing_v2", __name__)
-
-
-@tenant_billing_bp.get("/<int:tenant_id>/usage")
-@login_required
-def get_tenant_usage(tenant_id: int):
-    """Get resource usage stats for a tenant."""
-    err = require_system_permission("manage_billing")
-    if err:
-        return err
-    try:
-        usage = billing_service.get_tenant_usage(tenant_id)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 404
-    return jsonify(usage), 200
-
-
-@tenant_billing_bp.post("/<int:tenant_id>/suspend")
-@login_required
-def suspend_tenant(tenant_id: int):
-    """Suspend a tenant."""
-    err = require_system_permission("manage_billing")
-    if err:
-        return err
-    try:
-        tenant = billing_service.suspend_tenant(tenant_id)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 404
-    return jsonify(tenant.to_dict()), 200
-
-
-@tenant_billing_bp.post("/<int:tenant_id>/reactivate")
-@login_required
-def reactivate_tenant(tenant_id: int):
-    """Reactivate a suspended tenant."""
-    err = require_system_permission("manage_billing")
-    if err:
-        return err
-    try:
-        tenant = billing_service.reactivate_tenant(tenant_id)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 404
-    return jsonify(tenant.to_dict()), 200
