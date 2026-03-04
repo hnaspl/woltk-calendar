@@ -331,6 +331,7 @@ import { useExpansionData } from '@/composables/useExpansionData'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
 import * as guildRealmsApi from '@/api/guild_realms'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useTimezone } from '@/composables/useTimezone'
 import { useI18n } from 'vue-i18n'
 
@@ -375,8 +376,32 @@ const manualEntry = ref(false)
 const showAddAnother = ref(false)
 const lastAddedName = ref('')
 
-const { wowClasses, classSpecs, classRoles } = useExpansionData()
+const { wowClasses: systemClasses, classSpecs: systemSpecs, classRoles: systemRoles } = useExpansionData()
+
+// Guild-scoped expansion data (overrides system-wide when available)
+const guildClasses = ref(null)
+const guildSpecsMap = ref(null)
+const guildRolesMap = ref(null)
+
+const wowClasses = computed(() => guildClasses.value ?? systemClasses.value)
+const classSpecs = computed(() => guildSpecsMap.value ?? systemSpecs.value)
+const classRoles = computed(() => guildRolesMap.value ?? systemRoles.value)
+
 const configuredRealms = ref([])
+
+/** Load guild-scoped expansion constants (classes/specs/roles filtered by enabled expansions). */
+async function loadGuildConstants() {
+  const guildId = guildStore.currentGuildId
+  if (!guildId) return
+  try {
+    const data = await guildExpansionsApi.getGuildConstants(guildId)
+    if (data.wow_classes) guildClasses.value = data.wow_classes
+    if (data.class_specs) guildSpecsMap.value = data.class_specs
+    if (data.class_roles) guildRolesMap.value = data.class_roles
+  } catch {
+    // Fall back to system-wide expansion data
+  }
+}
 
 /** Load guild-configured realms from API, fallback to empty array */
 async function loadGuildRealms() {
@@ -446,6 +471,7 @@ onMounted(async () => {
     return
   }
   await loadGuildRealms()
+  await loadGuildConstants()
   try {
     const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
     characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)

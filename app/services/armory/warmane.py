@@ -32,7 +32,7 @@ _VALID_CLASSES = {
 
 
 def normalize_class_name(warmane_class: str) -> Optional[str]:
-    """Validate and normalize a Warmane API class name to our WowClass enum value."""
+    """Validate and normalize a Warmane API class name."""
     if warmane_class in _VALID_CLASSES:
         return warmane_class
     title = warmane_class.strip().title()

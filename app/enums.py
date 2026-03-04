@@ -5,19 +5,6 @@ from __future__ import annotations
 from enum import Enum
 
 
-class WowClass(str, Enum):
-    DEATH_KNIGHT = "Death Knight"
-    DRUID = "Druid"
-    HUNTER = "Hunter"
-    MAGE = "Mage"
-    PALADIN = "Paladin"
-    PRIEST = "Priest"
-    ROGUE = "Rogue"
-    SHAMAN = "Shaman"
-    WARLOCK = "Warlock"
-    WARRIOR = "Warrior"
-
-
 class Role(str, Enum):
     MELEE_DPS = "melee_dps"
     MAIN_TANK = "main_tank"
