@@ -15,6 +15,7 @@ from app.enums import MemberStatus
 from app.utils.dt import utc_iso
 
 if TYPE_CHECKING:
+    from app.models.plan import Plan
     from app.models.user import User
     from app.models.guild import Guild
 
@@ -35,6 +36,9 @@ class Tenant(db.Model):
         sa.Integer, sa.ForeignKey("users.id"), nullable=False, unique=True
     )
     plan: Mapped[str] = mapped_column(sa.String(30), nullable=False, default="free")
+    plan_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("plans.id"), nullable=True
+    )
     max_guilds: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=3)
     max_members: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
@@ -53,6 +57,7 @@ class Tenant(db.Model):
 
     # Relationships
     owner: Mapped[User] = relationship("User", foreign_keys=[owner_id], lazy="select")
+    plan_ref: Mapped[Plan | None] = relationship("Plan", lazy="select")
     memberships: Mapped[list[TenantMembership]] = relationship(
         "TenantMembership", back_populates="tenant", lazy="select",
         cascade="all, delete-orphan",
@@ -84,6 +89,7 @@ class Tenant(db.Model):
             "slug": self.slug,
             "owner_id": self.owner_id,
             "plan": self.plan,
+            "plan_id": self.plan_id,
             "max_guilds": self.max_guilds,
             "max_members": self.max_members,
             "is_active": self.is_active,

@@ -2,6 +2,7 @@
 
 from app.models.tenant import Tenant, TenantMembership, TenantInvitation
 from app.models.user import User
+from app.models.plan import Plan
 from app.models.guild import Guild, GuildMembership, GuildExpansion, GuildRealm
 from app.models.character import Character
 from app.models.raid import RaidDefinition, RaidTemplate, EventSeries, RaidEvent
@@ -21,6 +22,7 @@ __all__ = [
     "TenantMembership",
     "TenantInvitation",
     "User",
+    "Plan",
     "Guild",
     "GuildMembership",
     "GuildExpansion",

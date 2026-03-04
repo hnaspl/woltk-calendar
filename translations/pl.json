@@ -1659,5 +1659,21 @@
     "noDependencies": "Brak",
     "featureFlags": "Flagi funkcji",
     "configuration": "Konfiguracja"
+  },
+  "plan": {
+    "errors": {
+      "not_found": "Nie znaleziono planu",
+      "duplicate_slug": "Plan z tym identyfikatorem już istnieje",
+      "cannot_delete_assigned": "Nie można usunąć planu przypisanego do organizacji",
+      "slug_required": "Identyfikator planu jest wymagany",
+      "name_required": "Nazwa planu jest wymagana"
+    }
+  },
+  "billing": {
+    "errors": {
+      "tenant_suspended": "Organizacja jest zawieszona",
+      "limit_reached": "Osiągnięto limit planu dla zasobu: {resource}",
+      "tenant_not_found": "Nie znaleziono organizacji"
+    }
   }
 }

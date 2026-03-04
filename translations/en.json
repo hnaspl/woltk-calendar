@@ -1659,5 +1659,21 @@
     "noDependencies": "None",
     "featureFlags": "Feature Flags",
     "configuration": "Configuration"
+  },
+  "plan": {
+    "errors": {
+      "not_found": "Plan not found",
+      "duplicate_slug": "A plan with this slug already exists",
+      "cannot_delete_assigned": "Cannot delete plan assigned to tenants",
+      "slug_required": "Plan slug is required",
+      "name_required": "Plan name is required"
+    }
+  },
+  "billing": {
+    "errors": {
+      "tenant_suspended": "Tenant is suspended",
+      "limit_reached": "Plan limit reached for {resource}",
+      "tenant_not_found": "Tenant not found"
+    }
   }
 }

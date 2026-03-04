@@ -95,6 +95,10 @@ ALL_PERMISSIONS = [
     ("manage_autosync", "Manage Auto-Sync", "Configure auto-sync settings", "admin"),
     ("manage_roles", "Manage Roles", "Create/edit/delete roles and permissions", "admin"),
     ("manage_system_settings", "Manage System Settings", "Configure global system settings", "admin"),
+
+    # Billing & plans
+    ("manage_plans", "Manage Plans", "Create, edit, and delete subscription plans", "billing"),
+    ("manage_billing", "Manage Billing", "View and manage tenant billing", "billing"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -182,6 +186,8 @@ ROLE_PERMISSIONS = {
         "manage_tenant_members", "manage_tenant_settings", "manage_tenants",
         "manage_expansions",
         "manage_plugins",
+        "manage_plans",
+        "manage_billing",
     ],
 }
 
