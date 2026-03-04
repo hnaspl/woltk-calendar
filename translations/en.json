@@ -707,6 +707,19 @@
       "failedToUpdate": "Failed to update realm",
       "failedToRemove": "Failed to remove realm",
       "failedToSetDefault": "Failed to set default"
+    },
+    "errors": {
+      "tenantGuildLimitReached": "Tenant guild limit reached",
+      "duplicateGuild": "A guild with this name on this realm already exists",
+      "alreadyMember": "User is already a member of this guild",
+      "notFound": "Guild not found",
+      "invalidExpiry": "Invitation expiry must be between 1 and 30 days",
+      "invitationExpired": "Invitation is no longer valid",
+      "mustBeTenantMember": "You must be a member of the workspace to join this guild",
+      "cannotApplyHidden": "Cannot apply to a hidden guild",
+      "alreadyMemberOrPending": "Already a member or application pending",
+      "onlyPendingApprove": "Only pending applications can be approved",
+      "onlyPendingDecline": "Only pending applications can be declined"
     }
   },
   "members": {
@@ -1000,7 +1013,15 @@
     "spec": "Spec (select one or more)",
     "specPlaceholder": "e.g. Holy, Frost, Balance…",
     "title": "Sign Up",
-    "updateSignup": "Update Signup"
+    "updateSignup": "Update Signup",
+    "errors": {
+      "permanentlyKicked": "This character has been permanently kicked from this raid. Contact a raid officer to appeal.",
+      "notFound": "Signup not found",
+      "replacementNotFound": "Replacement request not found",
+      "replacementNotPending": "This replacement request is no longer pending",
+      "signupGone": "Signup no longer exists",
+      "invalidAction": "Invalid action"
+    }
   },
   "signupList": {
     "achievementPoints": "Achievement Points",
@@ -1569,7 +1590,19 @@
     "unlimited": "Unlimited",
     "uses": "Uses",
     "workspace": "Workspace",
-    "workspaceInfo": "Workspace Information"
+    "workspaceInfo": "Workspace Information",
+    "errors": {
+      "alreadyOwns": "User already owns a tenant",
+      "slugTaken": "This slug is already taken",
+      "alreadyMember": "User is already a member of this tenant",
+      "memberLimitReached": "Tenant has reached its member limit",
+      "invalidRole": "Invalid role",
+      "notMember": "User is not a member of this tenant",
+      "cannotRemoveOwner": "Cannot remove the tenant owner",
+      "notActiveMember": "You are not an active member of this tenant",
+      "tenantNotActive": "Tenant is not active",
+      "invitationExpired": "This invitation is no longer valid"
+    }
   },
   "invite": {
     "accept": "Accept Invitation",

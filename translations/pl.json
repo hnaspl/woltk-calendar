@@ -707,6 +707,19 @@
       "failedToUpdate": "Nie udało się zaktualizować serwera",
       "failedToRemove": "Nie udało się usunąć serwera",
       "failedToSetDefault": "Nie udało się ustawić domyślnego"
+    },
+    "errors": {
+      "tenantGuildLimitReached": "Osiągnięto limit gildii w przestrzeni roboczej",
+      "duplicateGuild": "Gildia o tej nazwie na tym realmie już istnieje",
+      "alreadyMember": "Użytkownik jest już członkiem tej gildii",
+      "notFound": "Gildia nie znaleziona",
+      "invalidExpiry": "Ważność zaproszenia musi wynosić od 1 do 30 dni",
+      "invitationExpired": "Zaproszenie nie jest już ważne",
+      "mustBeTenantMember": "Musisz być członkiem przestrzeni roboczej, aby dołączyć do tej gildii",
+      "cannotApplyHidden": "Nie można aplikować do ukrytej gildii",
+      "alreadyMemberOrPending": "Już jest członkiem lub aplikacja jest w toku",
+      "onlyPendingApprove": "Tylko oczekujące aplikacje mogą być zatwierdzone",
+      "onlyPendingDecline": "Tylko oczekujące aplikacje mogą być odrzucone"
     }
   },
   "members": {
@@ -1000,7 +1013,15 @@
     "spec": "Spec (wybierz jeden lub więcej)",
     "specPlaceholder": "np. Holy, Frost, Balance…",
     "title": "Zapisz się",
-    "updateSignup": "Aktualizuj zapis"
+    "updateSignup": "Aktualizuj zapis",
+    "errors": {
+      "permanentlyKicked": "Ta postać została trwale wyrzucona z tego raidu. Skontaktuj się z oficerem raidu, aby odwołać się.",
+      "notFound": "Zapis nie znaleziony",
+      "replacementNotFound": "Prośba o zastępstwo nie znaleziona",
+      "replacementNotPending": "Ta prośba o zastępstwo nie jest już oczekująca",
+      "signupGone": "Zapis już nie istnieje",
+      "invalidAction": "Nieprawidłowa akcja"
+    }
   },
   "signupList": {
     "achievementPoints": "Punkty osiągnięć",
@@ -1569,7 +1590,19 @@
     "unlimited": "Bez limitu",
     "uses": "Użycia",
     "workspace": "Przestrzeń robocza",
-    "workspaceInfo": "Informacje o przestrzeni roboczej"
+    "workspaceInfo": "Informacje o przestrzeni roboczej",
+    "errors": {
+      "alreadyOwns": "Użytkownik jest już właścicielem przestrzeni roboczej",
+      "slugTaken": "Ten slug jest już zajęty",
+      "alreadyMember": "Użytkownik jest już członkiem tej przestrzeni roboczej",
+      "memberLimitReached": "Przestrzeń robocza osiągnęła limit członków",
+      "invalidRole": "Nieprawidłowa rola",
+      "notMember": "Użytkownik nie jest członkiem tej przestrzeni roboczej",
+      "cannotRemoveOwner": "Nie można usunąć właściciela przestrzeni roboczej",
+      "notActiveMember": "Nie jesteś aktywnym członkiem tej przestrzeni roboczej",
+      "tenantNotActive": "Przestrzeń robocza nie jest aktywna",
+      "invitationExpired": "To zaproszenie nie jest już ważne"
+    }
   },
   "invite": {
     "accept": "Akceptuj zaproszenie",

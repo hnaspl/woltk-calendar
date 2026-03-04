@@ -213,7 +213,7 @@ class TestGuildInvitationService:
         assert inv.status == "pending"
 
     def test_create_invitation_invalid_expiry(self, db, guild, owner):
-        with pytest.raises(ValueError, match="1-30 days"):
+        with pytest.raises(ValueError, match="1.*30"):
             guild_service.create_guild_invitation(
                 guild_id=guild.id, inviter_id=owner.id,
                 expires_in_days=31,

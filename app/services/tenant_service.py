@@ -11,6 +11,7 @@ import sqlalchemy as sa
 
 from app.extensions import db
 from app.enums import MemberStatus
+from app.i18n import _t
 from app.models.tenant import Tenant, TenantMembership, TenantInvitation
 from app.models.user import User
 
@@ -62,7 +63,7 @@ def create_tenant(
         sa.select(Tenant).where(Tenant.owner_id == owner.id)
     ).scalar_one_or_none()
     if existing:
-        raise ValueError("User already owns a tenant")
+        raise ValueError(_t("tenant.errors.alreadyOwns"))
 
     tenant_name = name or f"{owner.username}'s Workspace"
     tenant_slug = _ensure_unique_slug(slug or _slugify(tenant_name))
@@ -116,7 +117,7 @@ def update_tenant(tenant: Tenant, data: dict) -> Tenant:
             sa.select(Tenant).where(Tenant.slug == new_slug, Tenant.id != tenant.id)
         ).scalar_one_or_none()
         if existing:
-            raise ValueError(f"Slug '{new_slug}' is already taken")
+            raise ValueError(_t("tenant.errors.slugTaken"))
         tenant.slug = new_slug
     db.session.commit()
     return tenant
@@ -203,7 +204,7 @@ def add_member(
     """Add a user as a member of a tenant."""
     existing = get_membership(tenant_id, user_id)
     if existing:
-        raise ValueError("User is already a member of this tenant")
+        raise ValueError(_t("tenant.errors.alreadyMember"))
 
     # Check max_members limit
     tenant = db.session.get(Tenant, tenant_id)
@@ -215,7 +216,7 @@ def add_member(
             )
         ).scalar()
         if count >= tenant.max_members:
-            raise ValueError("Tenant has reached its member limit")
+            raise ValueError(_t("tenant.errors.memberLimitReached"))
 
     membership = TenantMembership(
         tenant_id=tenant_id,
@@ -230,7 +231,7 @@ def add_member(
 
 def update_member_role(membership: TenantMembership, new_role: str) -> TenantMembership:
     if new_role not in ("owner", "admin", "member"):
-        raise ValueError(f"Invalid role: {new_role}")
+        raise ValueError(_t("tenant.errors.invalidRole"))
     membership.role = new_role
     db.session.commit()
     return membership
@@ -240,9 +241,9 @@ def remove_member(tenant_id: int, user_id: int) -> None:
     """Remove a member from a tenant."""
     membership = get_membership(tenant_id, user_id)
     if not membership:
-        raise ValueError("User is not a member of this tenant")
+        raise ValueError(_t("tenant.errors.notMember"))
     if membership.role == "owner":
-        raise ValueError("Cannot remove the tenant owner")
+        raise ValueError(_t("tenant.errors.cannotRemoveOwner"))
     db.session.delete(membership)
     db.session.commit()
 
@@ -255,10 +256,10 @@ def switch_active_tenant(user: User, tenant_id: int) -> User:
     """Set the user's active tenant. Verifies membership."""
     membership = get_membership(tenant_id, user.id)
     if not membership or membership.status != MemberStatus.ACTIVE.value:
-        raise ValueError("You are not an active member of this tenant")
+        raise ValueError(_t("tenant.errors.notActiveMember"))
     tenant = db.session.get(Tenant, tenant_id)
     if not tenant or not tenant.is_active:
-        raise ValueError("Tenant is not active")
+        raise ValueError(_t("tenant.errors.tenantNotActive"))
     user.active_tenant_id = tenant_id
     db.session.commit()
     return user
@@ -313,12 +314,12 @@ def list_invitations(tenant_id: int) -> list[TenantInvitation]:
 def accept_invitation(invitation: TenantInvitation, user: User) -> TenantMembership:
     """Accept a tenant invitation."""
     if not invitation.is_usable:
-        raise ValueError("This invitation is no longer valid")
+        raise ValueError(_t("tenant.errors.invitationExpired"))
 
     # Check if user is already a member
     existing = get_membership(invitation.tenant_id, user.id)
     if existing:
-        raise ValueError("You are already a member of this tenant")
+        raise ValueError(_t("tenant.errors.alreadyMember"))
 
     # Add member
     membership = add_member(

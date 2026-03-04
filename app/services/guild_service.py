@@ -9,6 +9,7 @@ import sqlalchemy as sa
 
 from app.enums import GuildVisibility, MemberStatus
 from app.extensions import db
+from app.i18n import _t
 from app.models.guild import Guild, GuildInvitation, GuildMembership
 
 
@@ -32,7 +33,7 @@ def create_guild(
         if tenant:
             guild_count = tenant_service.get_guild_count(tenant_id)
             if guild_count >= tenant.max_guilds:
-                raise ValueError(f"Tenant guild limit ({tenant.max_guilds}) reached")
+                raise ValueError(_t("guild.errors.tenantGuildLimitReached"))
 
     # Check for duplicate guild (case-insensitive name + realm)
     existing = db.session.execute(
@@ -42,7 +43,7 @@ def create_guild(
         )
     ).scalar_one_or_none()
     if existing:
-        raise ValueError(f"Guild '{name}' on {realm_name} already exists")
+        raise ValueError(_t("guild.errors.duplicateGuild"))
 
     guild = Guild(
         name=name,
@@ -148,7 +149,7 @@ def add_member(
         )
     ).scalar_one_or_none()
     if existing:
-        raise ValueError("User is already a member of this guild")
+        raise ValueError(_t("guild.errors.alreadyMember"))
     membership = GuildMembership(guild_id=guild_id, user_id=user_id, role=role, status=status)
     db.session.add(membership)
     db.session.commit()
@@ -200,9 +201,9 @@ def create_guild_invitation(
     """Create a guild invitation link."""
     guild = get_guild(guild_id)
     if guild is None:
-        raise ValueError("Guild not found")
+        raise ValueError(_t("guild.errors.notFound"))
     if expires_in_days < 1 or expires_in_days > _MAX_INVITE_DAYS:
-        raise ValueError(f"Expiry must be 1-{_MAX_INVITE_DAYS} days")
+        raise ValueError(_t("guild.errors.invalidExpiry"))
     expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
     invitation = GuildInvitation(
         guild_id=guild_id,
@@ -244,12 +245,12 @@ def get_guild_invitation_by_token(token: str) -> Optional[GuildInvitation]:
 def accept_guild_invitation(invitation: GuildInvitation, user) -> GuildMembership:
     """Accept a guild invitation and add user as member."""
     if not invitation.is_usable:
-        raise ValueError("Invitation is no longer valid")
+        raise ValueError(_t("guild.errors.invitationExpired"))
     # Ensure user is in the same tenant
     if invitation.tenant_id is not None:
         from app.services import tenant_service
         if not tenant_service.is_tenant_member(invitation.tenant_id, user.id):
-            raise ValueError("You must be a member of the workspace to join this guild")
+            raise ValueError(_t("guild.errors.mustBeTenantMember"))
     # Check if already a member
     existing = db.session.execute(
         sa.select(GuildMembership).where(
@@ -258,7 +259,7 @@ def accept_guild_invitation(invitation: GuildInvitation, user) -> GuildMembershi
         )
     ).scalar_one_or_none()
     if existing:
-        raise ValueError("You are already a member of this guild")
+        raise ValueError(_t("guild.errors.alreadyMember"))
     membership = GuildMembership(
         guild_id=invitation.guild_id,
         user_id=user.id,
@@ -289,9 +290,9 @@ def apply_to_guild(guild_id: int, user_id: int) -> GuildMembership:
     """Create a pending application to join a guild."""
     guild = get_guild(guild_id)
     if guild is None:
-        raise ValueError("Guild not found")
+        raise ValueError(_t("guild.errors.notFound"))
     if guild.visibility != GuildVisibility.OPEN.value:
-        raise ValueError("Cannot apply to a hidden guild")
+        raise ValueError(_t("guild.errors.cannotApplyHidden"))
     existing = db.session.execute(
         sa.select(GuildMembership).where(
             GuildMembership.guild_id == guild_id,
@@ -299,7 +300,7 @@ def apply_to_guild(guild_id: int, user_id: int) -> GuildMembership:
         )
     ).scalar_one_or_none()
     if existing:
-        raise ValueError("Already a member or application pending")
+        raise ValueError(_t("guild.errors.alreadyMemberOrPending"))
     membership = GuildMembership(
         guild_id=guild_id,
         user_id=user_id,
@@ -315,7 +316,7 @@ def apply_to_guild(guild_id: int, user_id: int) -> GuildMembership:
 def approve_application(membership: GuildMembership) -> GuildMembership:
     """Approve a guild membership application."""
     if membership.status != MemberStatus.APPLIED.value:
-        raise ValueError("Only pending applications can be approved")
+        raise ValueError(_t("guild.errors.onlyPendingApprove"))
     membership.status = MemberStatus.ACTIVE.value
     db.session.commit()
     return membership
@@ -324,7 +325,7 @@ def approve_application(membership: GuildMembership) -> GuildMembership:
 def decline_application(membership: GuildMembership) -> GuildMembership:
     """Decline a guild membership application."""
     if membership.status != MemberStatus.APPLIED.value:
-        raise ValueError("Only pending applications can be declined")
+        raise ValueError(_t("guild.errors.onlyPendingDecline"))
     membership.status = MemberStatus.DECLINED.value
     db.session.commit()
     return membership

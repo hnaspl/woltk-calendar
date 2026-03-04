@@ -48,6 +48,7 @@
           <TenantsTab v-else-if="activeTab === 'tenants'" />
           <DefaultRaidDefinitionsTab v-else-if="activeTab === 'raid-definitions'" />
           <ExpansionsTab v-else-if="activeTab === 'expansions'" />
+          <PluginsTab v-else-if="activeTab === 'plugins'" />
           <SettingsTab v-else-if="activeTab === 'settings'" />
         </KeepAlive>
       </template>
@@ -66,6 +67,7 @@ import TenantsTab from '@/components/admin/TenantsTab.vue'
 import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitionsTab.vue'
 import ExpansionsTab from '@/components/admin/ExpansionsTab.vue'
 import SettingsTab from '@/components/admin/SettingsTab.vue'
+import PluginsTab from '@/components/admin/PluginsTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 
@@ -97,6 +99,9 @@ const icons = {
   settings: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }),
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' })
+  ]),
+  plugins: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
   ])
 }
 
@@ -108,6 +113,7 @@ const tabs = [
   { id: 'tenants', label: t('admin.tenants.tabTitle'), icon: icons.tenants },
   { id: 'raid-definitions', label: t('admin.raidDefinitions.tabTitle'), icon: icons.raidDefs },
   { id: 'expansions', label: t('admin.expansions.title'), icon: icons.expansions },
+  { id: 'plugins', label: t('plugin.title'), icon: icons.plugins },
   { id: 'settings', label: t('admin.system.title'), icon: icons.settings },
 ]
 

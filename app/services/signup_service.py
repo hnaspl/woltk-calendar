@@ -7,6 +7,7 @@ from typing import Optional
 import sqlalchemy as sa
 
 from app.extensions import db
+from app.i18n import _t
 from app.models.signup import Signup, RaidBan, CharacterReplacement
 from app.utils.class_roles import validate_class_role
 
@@ -215,7 +216,7 @@ def create_signup(
     # Check if character is permanently banned from this event
     ban = get_ban(raid_event_id, character_id)
     if ban is not None:
-        raise ValueError("This character has been permanently kicked from this raid. Contact a raid officer to appeal.")
+        raise ValueError(_t("signup.errors.permanentlyKicked"))
 
     # Validate class-role constraint
     _validate_class_role(character_id, chosen_role)
@@ -425,7 +426,7 @@ def create_replacement_request(
 
     signup = get_signup(signup_id)
     if signup is None:
-        raise ValueError("Signup not found")
+        raise ValueError(_t("signup.errors.notFound"))
 
     # Cancel any existing pending requests for this signup
     existing = db.session.execute(
@@ -503,14 +504,14 @@ def resolve_replacement(
 
     req = db.session.get(CharacterReplacement, replacement_id)
     if req is None:
-        raise ValueError("Replacement request not found")
+        raise ValueError(_t("signup.errors.replacementNotFound"))
     if req.status != "pending":
-        raise ValueError("This replacement request is no longer pending")
+        raise ValueError(_t("signup.errors.replacementNotPending"))
 
     if action == "confirm":
         signup = get_signup(req.signup_id)
         if signup is None:
-            raise ValueError("Signup no longer exists")
+            raise ValueError(_t("signup.errors.signupGone"))
         # Check if the new character already has a signup for this event
         from app.models.signup import LineupSlot
         from app.services import lineup_service
@@ -559,7 +560,7 @@ def resolve_replacement(
             delete_signup(signup)
             return req
     else:
-        raise ValueError(f"Invalid action: {action}")
+        raise ValueError(_t("signup.errors.invalidAction"))
 
     req.resolved_at = datetime.now(timezone.utc)
     db.session.commit()
