@@ -82,6 +82,14 @@ def normalize_spec_name(
     for (c, s), canon in _SPEC_LOOKUP.items():
         if c == cls and canon.lower().startswith(tree.lower()):
             return canon
+    # Suffix match (e.g. "Combat" matches "Feral Combat")
+    for (c, s), canon in _SPEC_LOOKUP.items():
+        if c == cls and canon.lower().endswith(tree.lower()):
+            return canon
+    # Contains match (e.g. "Beast" matches "Beast Mastery")
+    for (c, s), canon in _SPEC_LOOKUP.items():
+        if c == cls and tree.lower() in canon.lower():
+            return canon
     return tree
 
 # ---------------------------------------------------------------------------

@@ -46,10 +46,18 @@ export function normalizeSpecName(treeName, className, classSpecs = {}) {
   if (!treeName) return treeName
   const tree = treeName.trim()
   const specs = classSpecs[className] || []
+  // Exact match
   const exact = specs.find(s => s.toLowerCase() === tree.toLowerCase())
   if (exact) return exact
+  // Prefix match (e.g. "Feral" matches "Feral Combat")
   const prefix = specs.find(s => s.toLowerCase().startsWith(tree.toLowerCase()))
   if (prefix) return prefix
+  // Suffix match (e.g. "Combat" matches "Feral Combat")
+  const suffix = specs.find(s => s.toLowerCase().endsWith(tree.toLowerCase()))
+  if (suffix) return suffix
+  // Contains match (e.g. "Beast" matches "Beast Mastery")
+  const contains = specs.find(s => s.toLowerCase().includes(tree.toLowerCase()))
+  if (contains) return contains
   return tree
 }
 

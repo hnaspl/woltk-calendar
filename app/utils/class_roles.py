@@ -62,3 +62,42 @@ def validate_class_role(class_name: str | None, chosen_role: str) -> None:
     allowed = allowed_roles_for_class(name)
     if allowed is not None and chosen_role not in allowed:
         raise ValueError(f"{name} cannot take the {chosen_role} role")
+
+
+def allowed_specs_for_class(class_name: str) -> list[str] | None:
+    """Return the list of allowed spec names for a WoW class name.
+
+    Reads from the ``expansion_specs`` table.
+    Returns ``None`` if the class is not found in the DB.
+    """
+    name = class_name.value if hasattr(class_name, "value") else class_name
+
+    try:
+        from app.models.expansion import ExpansionClass, ExpansionSpec
+        cls = db.session.execute(
+            sa.select(ExpansionClass).where(ExpansionClass.name == name)
+        ).scalars().first()
+        if cls is not None:
+            specs = db.session.execute(
+                sa.select(ExpansionSpec.name).where(ExpansionSpec.class_id == cls.id)
+            ).scalars().all()
+            return list(specs) if specs else None
+    except Exception:
+        pass
+
+    # Fallback to hardcoded constants (pre-seed / migration scenarios)
+    from app.constants import CLASS_SPECS
+    for wow_class, spec_names in CLASS_SPECS.items():
+        if wow_class.value == name:
+            return list(spec_names)
+    return None
+
+
+def validate_class_spec(class_name: str | None, chosen_spec: str) -> None:
+    """Raise ValueError if *chosen_spec* is not valid for *class_name*."""
+    if not class_name or not chosen_spec:
+        return
+    name = class_name.value if hasattr(class_name, "value") else class_name
+    allowed = allowed_specs_for_class(name)
+    if allowed is not None and chosen_spec not in allowed:
+        raise ValueError(f"{name} cannot use the {chosen_spec} specialization")

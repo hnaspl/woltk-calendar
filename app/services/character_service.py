@@ -8,7 +8,7 @@ import sqlalchemy as sa
 
 from app.extensions import db
 from app.models.character import Character
-from app.utils.class_roles import allowed_roles_for_class
+from app.utils.class_roles import allowed_roles_for_class, validate_class_spec
 
 
 def _default_role_for_class(class_name: str) -> str | None:
@@ -22,12 +22,25 @@ def _default_role_for_class(class_name: str) -> str | None:
     return roles[0] if roles else None
 
 
+def _validate_specs(class_name: str | None, data: dict) -> None:
+    """Validate primary_spec and secondary_spec against expansion DB."""
+    if not class_name:
+        return
+    for field in ("primary_spec", "secondary_spec"):
+        spec = data.get(field)
+        if spec:
+            validate_class_spec(class_name, spec)
+
+
 def create_character(user_id: int, guild_id: int, data: dict) -> Character:
     existing = find_existing(guild_id, data["realm_name"], data["name"])
     if existing is not None:
         raise ValueError(f"Character '{data['name']}' on {data['realm_name']} already exists in this guild")
 
-    # Auto-populate default_role from CLASS_ROLES if not provided
+    # Validate specs against expansion registry
+    _validate_specs(data.get("class_name"), data)
+
+    # Auto-populate default_role if not provided
     default_role = data.get("default_role")
     if not default_role and data.get("class_name"):
         default_role = _default_role_for_class(data["class_name"])
@@ -62,6 +75,9 @@ def update_character(character: Character, data: dict) -> Character:
         "realm_name", "name", "class_name", "primary_spec", "secondary_spec",
         "default_role", "off_role", "is_main", "is_active", "armory_url",
     }
+    # Validate specs against expansion registry
+    class_name = data.get("class_name", character.class_name)
+    _validate_specs(class_name, data)
     for key, value in data.items():
         if key in allowed:
             setattr(character, key, value)
