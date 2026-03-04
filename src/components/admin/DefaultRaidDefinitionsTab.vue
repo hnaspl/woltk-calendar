@@ -149,13 +149,13 @@ import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { RAID_TYPES } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as rdApi from '@/api/raidDefinitions'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
 const { getRaidIcon } = useWowIcons()
-const raidTypes = RAID_TYPES
+const { raidTypes } = useExpansionData()
 
 const definitions = ref([])
 const loading = ref(true)

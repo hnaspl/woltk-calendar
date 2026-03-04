@@ -326,7 +326,8 @@ import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS, normalizeSpecName } from '@/constants'
+import { WARMANE_REALMS, ROLE_OPTIONS, CLASS_ROLES, normalizeSpecName } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as charApi from '@/api/characters'
 import * as warmaneApi from '@/api/warmane'
 import { useTimezone } from '@/composables/useTimezone'
@@ -373,7 +374,7 @@ const manualEntry = ref(false)
 const showAddAnother = ref(false)
 const lastAddedName = ref('')
 
-const wowClasses = WOW_CLASSES
+const { wowClasses, classSpecs } = useExpansionData()
 const warmaneRealms = WARMANE_REALMS
 
 /** Lock all fields when editing a character imported from armory */
@@ -404,7 +405,7 @@ const filteredRoles = computed(() => {
 /** Specs filtered by the selected class */
 const filteredSpecs = computed(() => {
   if (!form.class) return []
-  return CLASS_SPECS[form.class] ?? []
+  return classSpecs.value[form.class] ?? []
 })
 
 // Map backend response fields to display-friendly names
@@ -496,7 +497,7 @@ function addAnotherCharacter() {
 function onClassChange() {
   const allowed = CLASS_ROLES[form.class] ?? []
   if (form.role && !allowed.includes(form.role)) form.role = ''
-  const specs = CLASS_SPECS[form.class] ?? []
+  const specs = classSpecs.value[form.class] ?? []
   if (form.spec && specs.length > 0 && !specs.includes(form.spec)) form.spec = ''
   if (form.secondary_spec && specs.length > 0 && !specs.includes(form.secondary_spec)) form.secondary_spec = ''
 }

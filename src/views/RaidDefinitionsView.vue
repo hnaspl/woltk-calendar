@@ -226,7 +226,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { RAID_TYPES } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import { useI18n } from 'vue-i18n'
 
@@ -255,7 +255,7 @@ const editing = ref(null)
 const deleteTarget = ref(null)
 const copySource = ref(null)
 
-const raidTypes = RAID_TYPES
+const { raidTypes } = useExpansionData()
 
 const form = reactive({ name: '', raid_type: '', size: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
 const selectedGuildId = ref(null)
