@@ -1310,6 +1310,21 @@ Current API is `/api/v1/`. Strategy:
 - Components should use optional chaining for new fields
 - New UI features should be behind feature flag checks
 
+### 8.4 CodeQL Policy
+
+- CodeQL scans must ONLY be run at the **end of all changes** for a phase, never during intermediate agent work
+- After the final scan, fix all findings before marking the phase complete
+- This avoids wasting CI/agent resources on scans during active development
+
+### 8.5 Shared Utilities & Code Reuse Policy
+
+- **Always** use existing helpers, decorators, and shared utilities:
+  - Backend: `_t()` (i18n), `validate_required()`, `get_json()`, `get_event_or_404()`, `has_permission()`, `@login_required`, `@require_guild_permission()`, `_require_permission()` pattern
+  - Frontend: composables (`usePermissions`, `useSocket`, `useWowIcons`), store patterns, API helpers
+- **Never** duplicate code — if new shared logic is needed, create a helper, decorator, utility, or composable
+- New API endpoints must follow established patterns (error responses via `_t()`, validation via `validate_required()`, permission checks via `has_permission()` or `_require_permission()`)
+- `jsonify` must not be used with hardcoded English strings — always use `_t()` translation keys
+
 ---
 
 ## 9. Open Questions & Decisions

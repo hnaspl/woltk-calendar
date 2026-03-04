@@ -981,7 +981,8 @@
       "notWarmane": "Gildia nie pochodzi z Warmane",
       "rosterFetchFailed": "Nie udało się pobrać rostera z Warmane API",
       "messageRequired": "Wiadomość jest wymagana.",
-      "guildLimitReached": "Osiągnięto maksymalną liczbę gildii ({limit})"
+      "guildLimitReached": "Osiągnięto maksymalną liczbę gildii ({limit})",
+      "tenantRequired": "Workspace jest wymagany do utworzenia gildii"
     },
     "characters": {
       "notFound": "Postać nie znaleziona",

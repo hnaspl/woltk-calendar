@@ -288,6 +288,10 @@ def create_guild():
     if not has_any_guild_permission(current_user.id, "create_guild"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
+    # Require an active tenant
+    if not current_user.active_tenant_id:
+        return jsonify({"error": _t("api.guilds.tenantRequired")}), 400
+
     # --- Guild creation limit enforcement ---
     if not getattr(current_user, "is_admin", False):
         from app.models.system_setting import SystemSetting
@@ -320,6 +324,7 @@ def create_guild():
             name=data["name"],
             realm_name=data["realm_name"],
             created_by=current_user.id,
+            tenant_id=current_user.active_tenant_id,
             faction=data.get("faction"),
             region=data.get("region"),
             allow_self_join=data.get("allow_self_join", True),

@@ -981,7 +981,8 @@
       "notWarmane": "Guild is not sourced from Warmane",
       "rosterFetchFailed": "Could not fetch roster from Warmane API",
       "messageRequired": "Message is required.",
-      "guildLimitReached": "You have reached the maximum number of guilds you can create ({limit})"
+      "guildLimitReached": "You have reached the maximum number of guilds you can create ({limit})",
+      "tenantRequired": "A workspace is required to create a guild"
     },
     "characters": {
       "notFound": "Character not found",

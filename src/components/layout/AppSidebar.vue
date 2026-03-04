@@ -16,8 +16,8 @@
     <!-- Tenant Switcher -->
     <TenantSwitcher />
 
-    <!-- Guild Switcher -->
-    <div class="px-4 py-3 border-b border-[#2a3450]">
+    <!-- Guild Switcher (only visible when tenant is active) -->
+    <div v-if="hasTenant" class="px-4 py-3 border-b border-[#2a3450]">
       <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('common.labels.guild') }}</label>
       <select
         :value="guildStore.currentGuild?.id ?? ''"
@@ -33,7 +33,7 @@
       </select>
 
       <button
-        v-if="canCreateGuild"
+        v-if="canCreateGuild && hasTenant"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
         @click="showCreateGuild = true"
@@ -188,6 +188,7 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+import { useTenantStore } from '@/stores/tenant'
 import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -205,6 +206,7 @@ const { on, off } = useSocket()
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
+const tenantStore = useTenantStore()
 const uiStore = useUiStore()
 const router = useRouter()
 const route = useRoute()
@@ -212,6 +214,7 @@ const permissions = usePermissions()
 
 const canManageGuild = computed(() => permissions.can('create_events'))
 const canCreateGuild = computed(() => permissions.can('create_guild'))
+const hasTenant = computed(() => !!tenantStore.activeTenantId)
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
