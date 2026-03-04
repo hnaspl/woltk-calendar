@@ -101,25 +101,29 @@ class TestSeedExpansions:
         assert exp is not None
         assert exp.name == "Wrath of the Lich King"
 
-    def test_seed_creates_10_classes(self, db, ctx):
+    def test_seed_creates_28_classes(self, db, ctx):
         seed_expansions()
         classes = db.session.execute(sa.select(ExpansionClass)).scalars().all()
-        assert len(classes) == 10
+        # Classic 9 + TBC 9 + WotLK 10 = 28
+        assert len(classes) == 28
 
-    def test_seed_creates_30_specs(self, db, ctx):
+    def test_seed_creates_84_specs(self, db, ctx):
         seed_expansions()
         specs = db.session.execute(sa.select(ExpansionSpec)).scalars().all()
-        assert len(specs) == 30
+        # Classic 27 + TBC 27 + WotLK 30 = 84
+        assert len(specs) == 84
 
-    def test_seed_creates_5_roles(self, db, ctx):
+    def test_seed_creates_15_roles(self, db, ctx):
         seed_expansions()
         roles = db.session.execute(sa.select(ExpansionRole)).scalars().all()
-        assert len(roles) == 5
+        # 5 roles × 3 expansions = 15
+        assert len(roles) == 15
 
-    def test_seed_creates_8_raids(self, db, ctx):
+    def test_seed_creates_22_raids(self, db, ctx):
         seed_expansions()
         raids = db.session.execute(sa.select(ExpansionRaid)).scalars().all()
-        assert len(raids) == 8
+        # Classic 6 + TBC 8 + WotLK 8 = 22
+        assert len(raids) == 22
 
     def test_seed_is_idempotent(self, db, ctx):
         created_first = seed_expansions()
@@ -127,7 +131,7 @@ class TestSeedExpansions:
         assert created_first > 0
         assert created_second == 0
         classes = db.session.execute(sa.select(ExpansionClass)).scalars().all()
-        assert len(classes) == 10
+        assert len(classes) == 28
 
 
 # ---------------------------------------------------------------------------
@@ -230,12 +234,12 @@ class TestExpansionAdminAPI:
         _login_as(client, admin)
         resp = client.post(
             "/api/v2/meta/expansions/",
-            json={"name": "The Burning Crusade", "slug": "tbc", "sort_order": 2},
+            json={"name": "Cataclysm", "slug": "cata", "sort_order": 4},
         )
         assert resp.status_code == 201
         data = resp.get_json()
-        assert data["name"] == "The Burning Crusade"
-        assert data["slug"] == "tbc"
+        assert data["name"] == "Cataclysm"
+        assert data["slug"] == "cata"
 
     def test_update_expansion_as_admin(self, app, db, ctx):
         _seed_all(db)
@@ -260,7 +264,7 @@ class TestExpansionAdminAPI:
         _login_as(client, admin)
         resp = client.post(
             "/api/v2/meta/expansions/",
-            json={"name": "Classic", "slug": "classic"},
+            json={"name": "Mists of Pandaria", "slug": "mop"},
         )
         exp_id = resp.get_json()["id"]
         resp = client.delete(f"/api/v2/meta/expansions/{exp_id}")

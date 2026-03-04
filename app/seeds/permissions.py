@@ -75,6 +75,8 @@ ALL_PERMISSIONS = [
     ("approve_applications", "Approve Applications", "Approve/decline membership applications", "guild"),
     ("manage_guild_visibility", "Manage Guild Visibility", "Change guild visibility within tenant", "guild"),
     ("manage_class_role_matrix", "Manage Class-Role Matrix", "Edit class-role assignment matrix for guild", "guild"),
+    ("manage_guild_expansions", "Manage Guild Expansions", "Enable/disable expansion packs for guild", "guild"),
+    ("manage_guild_realms", "Manage Guild Realms", "Configure guild's realm list", "guild"),
 
     # Notifications
     ("view_notifications", "View Notifications", "View own notifications", "notifications"),
@@ -149,6 +151,7 @@ ROLE_PERMISSIONS = {
         "manage_class_role_matrix", "update_guild_settings",
         # Guild admin specifics
         "create_guild", "delete_guild", "manage_guild_roles",
+        "manage_guild_expansions", "manage_guild_realms",
         # Tenant management (guild admin = tenant admin for their workspace)
         "manage_tenant_members", "manage_tenant_settings",
     ],
@@ -170,6 +173,7 @@ ROLE_PERMISSIONS = {
         "invite_members", "approve_applications", "manage_guild_visibility",
         "manage_class_role_matrix", "update_guild_settings",
         "create_guild", "delete_guild", "manage_roles", "manage_guild_roles",
+        "manage_guild_expansions", "manage_guild_realms",
         "list_system_users", "manage_system_users",
         "trigger_sync", "manage_autosync",
         "manage_system_settings",
