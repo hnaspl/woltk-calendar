@@ -15,6 +15,7 @@ export const getDefaultExpansion = () => api.get('/v2/meta/expansions/default-ex
 export const createExpansion = (data) => api.post('/v2/meta/expansions', data)
 export const updateExpansion = (id, data) => api.put(`/v2/meta/expansions/${id}`, data)
 export const deleteExpansion = (id) => api.delete(`/v2/meta/expansions/${id}`)
+export const setDefaultExpansion = (slug) => api.put('/v2/meta/expansions/default-expansion', { slug })
 export const addRaid = (expansionId, data) => api.post(`/v2/meta/expansions/${expansionId}/raids`, data)
 export const updateRaid = (raidId, data) => api.put(`/v2/meta/expansions/raids/${raidId}`, data)
 export const deleteRaid = (raidId) => api.delete(`/v2/meta/expansions/raids/${raidId}`)

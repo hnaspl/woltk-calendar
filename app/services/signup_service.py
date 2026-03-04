@@ -6,7 +6,6 @@ from typing import Optional
 
 import sqlalchemy as sa
 
-from app.constants import CLASS_ROLES
 from app.extensions import db
 from app.models.signup import Signup, RaidBan, CharacterReplacement
 from app.utils.class_roles import validate_class_role

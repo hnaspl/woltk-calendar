@@ -47,6 +47,9 @@ class RaidDefinition(db.Model):
     healer_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     range_dps_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    expansion_raid_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("expansion_raids.id"), nullable=True
+    )
     created_by: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("users.id"), nullable=True
     )
@@ -59,6 +62,7 @@ class RaidDefinition(db.Model):
     # Relationships
     guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
     creator = relationship("User", foreign_keys=[created_by], lazy="select")
+    expansion_raid = relationship("ExpansionRaid", foreign_keys=[expansion_raid_id], lazy="select")
 
     def to_dict(self) -> dict:
         return {
@@ -84,6 +88,7 @@ class RaidDefinition(db.Model):
             "healer_slots": self.healer_slots,
             "range_dps_slots": self.range_dps_slots,
             "notes": self.notes,
+            "expansion_raid_id": self.expansion_raid_id,
             "created_by": self.created_by,
             "created_at": utc_iso(self.created_at),
         }

@@ -118,6 +118,29 @@ def get_default_expansion():
     return jsonify({"slug": slug}), 200
 
 
+@bp.put("/default-expansion")
+@login_required
+def set_default_expansion():
+    err = _require_permission("manage_expansions")
+    if err:
+        return err
+    data = get_json()
+    missing = validate_required(data, "slug")
+    if missing:
+        return missing
+    # Verify expansion exists
+    expansion = db.session.query(Expansion).filter_by(slug=data["slug"]).first()
+    if not expansion:
+        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    setting = db.session.get(SystemSetting, "default_expansion")
+    if setting:
+        setting.value = data["slug"]
+    else:
+        db.session.add(SystemSetting(key="default_expansion", value=data["slug"]))
+    db.session.commit()
+    return jsonify({"slug": data["slug"]}), 200
+
+
 # --------------------------------------------------------------------------- admin
 
 @bp.post("/")

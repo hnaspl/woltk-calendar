@@ -6,22 +6,20 @@ from typing import Optional
 
 import sqlalchemy as sa
 
-from app.constants import CLASS_ROLES
-from app.enums import WowClass
 from app.extensions import db
 from app.models.character import Character
+from app.utils.class_roles import allowed_roles_for_class
 
 
 def _default_role_for_class(class_name: str) -> str | None:
     """Return the first allowed role for a character class.
 
-    This ensures characters always have a valid default_role so there are
+    Uses the DB-driven expansion registry via shared ``allowed_roles_for_class``
+    helper. This ensures characters always have a valid default_role so there are
     no unselected roles anywhere in the UI.
     """
-    for wow_class, roles in CLASS_ROLES.items():
-        if wow_class.value == class_name and roles:
-            return roles[0].value
-    return None
+    roles = allowed_roles_for_class(class_name)
+    return roles[0] if roles else None
 
 
 def create_character(user_id: int, guild_id: int, data: dict) -> Character:

@@ -1,20 +1,55 @@
-"""Shared class-role validation helpers."""
+"""Shared class-role validation helpers.
+
+Reads from the DB-driven expansion registry (expansion_classes / expansion_specs).
+Falls back to the hardcoded CLASS_ROLES constant if no expansion data is loaded
+(e.g. during migrations or before seeding).
+"""
 
 from __future__ import annotations
 
-from app.constants import CLASS_ROLES
+import sqlalchemy as sa
+
+from app.extensions import db
 
 
 def allowed_roles_for_class(class_name: str) -> list[str] | None:
     """Return the list of allowed role values for a WoW class name.
 
-    Returns None if the class is not found in the mapping.
+    Reads from the ``expansion_specs`` table, deriving roles from spec→role
+    mappings.  The spec role ``"tank"`` expands to ``["main_tank", "off_tank"]``
+    to match the legacy CLASS_ROLES contract.
+
+    Returns ``None`` if the class is not found.
     """
     # Handle both enum values and plain strings
     name = class_name.value if hasattr(class_name, "value") else class_name
-    for wow_class, roles in CLASS_ROLES.items():
+
+    # Try DB-driven lookup first
+    try:
+        from app.models.expansion import ExpansionClass, ExpansionSpec
+        cls = db.session.execute(
+            sa.select(ExpansionClass).where(ExpansionClass.name == name)
+        ).scalars().first()
+        if cls is not None:
+            specs = db.session.execute(
+                sa.select(ExpansionSpec.role).where(ExpansionSpec.class_id == cls.id)
+            ).scalars().all()
+            roles: set[str] = set()
+            for spec_role in specs:
+                if spec_role == "tank":
+                    roles.add("main_tank")
+                    roles.add("off_tank")
+                else:
+                    roles.add(spec_role)
+            return list(roles) if roles else None
+    except Exception:
+        pass
+
+    # Fallback to hardcoded constants (pre-seed / migration scenarios)
+    from app.constants import CLASS_ROLES
+    for wow_class, roles_list in CLASS_ROLES.items():
         if wow_class.value == name:
-            return [r.value for r in roles]
+            return [r.value for r in roles_list]
     return None
 
 
