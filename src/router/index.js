@@ -88,6 +88,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/guild-invite/:token',
+    name: 'guild-invite-accept',
+    component: () => import('@/views/GuildInviteAcceptView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/guilds/discover',
+    name: 'guild-discovery',
+    component: () => import('@/views/GuildDiscoveryView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/guild/settings',
     redirect: '/admin'
   },

@@ -235,29 +235,6 @@ def admin_send_notification(guild_id: int, user_id: int):
     return jsonify({"message": "ok"}), 200
 
 
-@bp.post("/<int:guild_id>/join")
-@login_required
-def join_guild(guild_id: int):
-    """Allow any authenticated user to join a guild as a member."""
-    guild = guild_service.get_guild(guild_id)
-    if guild is None:
-        return jsonify({"error": _t("api.guilds.notFound")}), 404
-    if not guild.allow_self_join:
-        return jsonify({"error": _t("api.guilds.selfJoinDisabled")}), 403
-    try:
-        membership = guild_service.add_member(
-            guild_id=guild_id,
-            user_id=current_user.id,
-            role="member",
-            status="active",
-        )
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-    emit_guild_changed(guild_id)
-    notify.notify_member_joined_guild(current_user.id, guild)
-    return jsonify(membership.to_dict()), 201
-
-
 @bp.get("/<int:guild_id>/available-users")
 @login_required
 @require_guild_permission("add_members")

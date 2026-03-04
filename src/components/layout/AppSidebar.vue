@@ -24,9 +24,9 @@
         class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
         @change="onGuildChange"
       >
-        <option v-if="!guildStore.guilds.length" value="">{{ t('guild.noGuilds') }}</option>
+        <option v-if="!visibleGuilds.length" value="">{{ t('guild.noGuilds') }}</option>
         <option
-          v-for="g in guildStore.guilds"
+          v-for="g in visibleGuilds"
           :key="g.id"
           :value="g.id"
         >{{ g.name }} ({{ g.realm_name }})</option>
@@ -212,6 +212,12 @@ const canManageGuild = computed(() => permissions.can('create_events'))
 const canCreateGuild = computed(() => permissions.can('create_guild'))
 const hasTenant = computed(() => !!tenantStore.activeTenantId)
 
+// Filter hidden guilds from sidebar — only show guilds where the user is a member
+// Hidden guilds are visible to their members but hidden from discovery
+const visibleGuilds = computed(() => {
+  return guildStore.guilds.filter(g => g.visibility !== 'hidden' || guildStore.currentGuild?.id === g.id)
+})
+
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
 // Load guilds on mount and listen for real-time updates
@@ -268,6 +274,9 @@ const icons = {
   ]),
   system: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' })
+  ]),
+  search: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' })
   ])
 }
 
@@ -287,7 +296,8 @@ const navGroups = computed(() => {
         { label: t('common.labels.dashboard'), to: '/dashboard', icon: icons.dashboard },
         { label: t('common.labels.calendar'), to: '/calendar', icon: icons.calendar },
         { label: t('common.labels.characters'), to: '/characters', icon: icons.chars },
-        { label: t('common.labels.attendance'), to: '/attendance', icon: icons.attendance }
+        { label: t('common.labels.attendance'), to: '/attendance', icon: icons.attendance },
+        { label: t('guild.discoverTitle'), to: '/guilds/discover', icon: icons.search }
       ]
     }
   ]

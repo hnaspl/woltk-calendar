@@ -1,5 +1,8 @@
 import api from './index'
 
+// v2 API base
+const v2 = '/v2'
+
 export const getGuilds = () => api.get('/guilds')
 
 export const getAllGuilds = () => api.get('/guilds/all')
@@ -9,8 +12,6 @@ export const getGuild = (id) => api.get(`/guilds/${id}`)
 export const createGuild = (payload) => api.post('/guilds', payload)
 
 export const updateGuild = (id, payload) => api.put(`/guilds/${id}`, payload)
-
-export const joinGuild = (guildId) => api.post(`/guilds/${guildId}/join`)
 
 export const getGuildMembers = (guildId) => api.get(`/guilds/${guildId}/members`)
 
@@ -68,3 +69,49 @@ export const banGuildMember = (guildId, userId) =>
 
 export const unbanGuildMember = (guildId, userId) =>
   api.post(`/guilds/${guildId}/unban/${userId}`)
+
+// ---------------------------------------------------------------------------
+// Guild invitations (v2 API)
+// ---------------------------------------------------------------------------
+
+export const getGuildInvitations = (guildId) =>
+  api.get(`${v2}/guilds/${guildId}/invitations`)
+
+export const createGuildInvitation = (guildId, payload) =>
+  api.post(`${v2}/guilds/${guildId}/invitations`, payload)
+
+export const revokeGuildInvitation = (guildId, invitationId) =>
+  api.delete(`${v2}/guilds/${guildId}/invitations/${invitationId}`)
+
+export const acceptGuildInvite = (token) =>
+  api.post(`${v2}/guild-invite/${token}`)
+
+// ---------------------------------------------------------------------------
+// Guild applications (v2 API)
+// ---------------------------------------------------------------------------
+
+export const applyToGuild = (guildId) =>
+  api.post(`${v2}/guilds/${guildId}/apply`)
+
+export const getGuildApplications = (guildId) =>
+  api.get(`${v2}/guilds/${guildId}/applications`)
+
+export const approveApplication = (guildId, userId) =>
+  api.post(`${v2}/guilds/${guildId}/applications/${userId}/approve`)
+
+export const declineApplication = (guildId, userId) =>
+  api.post(`${v2}/guilds/${guildId}/applications/${userId}/decline`)
+
+// ---------------------------------------------------------------------------
+// Guild visibility (v2 API)
+// ---------------------------------------------------------------------------
+
+export const updateGuildVisibility = (guildId, visibility) =>
+  api.put(`${v2}/guilds/${guildId}/visibility`, { visibility })
+
+// ---------------------------------------------------------------------------
+// Guild discovery (v2 API)
+// ---------------------------------------------------------------------------
+
+export const discoverGuilds = () =>
+  api.get(`${v2}/discover-guilds/`)

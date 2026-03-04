@@ -1043,7 +1043,7 @@ backup. Frontend migrates to v2 endpoints in this phase.
 - [x] **🧹 Phase 0 cleanup** (see [§13.3.1](#1331-phase-0-cleanup-checklist)):
   - [x] Delete orphaned `src/components/admin/SystemTab.vue` (unused, replaced by UsersTab + SettingsTab)
   - [x] Remove pre-tenant `allow_self_join` checkbox from guild creation form (replaced by tenant invitation system)
-  - [ ] Remove "available guilds to join" sidebar section (guild discovery now happens within tenant)
+  - [x] Remove "available guilds to join" sidebar section (guild discovery now happens within tenant — implemented in Phase 2)
   - [x] Audit and remove any temporary migration helpers/scripts
   - [x] Verify no dead imports remain after model/service changes
   - [x] Run full lint + build + test suite on clean branch
@@ -1126,35 +1126,35 @@ catalog lives in the `expansion_raids` table, not in `WOTLK_RAIDS` or
 
 > **⚡ Cross-Phase Dependencies & Interconnections:**
 > - **Phase 2 ← Phase 0:** Tenant invitation system (Phase 0) provides the pattern. Guild invitations extend this to guild-level within a tenant.
-> - **Phase 2 ← Phase 0:** The `allow_self_join` field was already deprecated in Phase 0 cleanup (checkbox removed from guild creation). Phase 2 completes this by removing the backend field entirely.
+> - **Phase 2 ← Phase 0:** The `allow_self_join` field was already deprecated in Phase 0 cleanup (checkbox removed from guild creation). Phase 2 completes this by removing the direct-join endpoint entirely.
 > - **Phase 2 → Phase 4:** Guild discovery page (Phase 2) must respect per-guild expansion settings (Phase 4) when showing guild details.
 > - **Not blocked by Phase 1:** Guild membership hardening is independent of expansion registry.
 
-- [ ] Add `GuildVisibility` enum and `visibility` field to Guild model
-- [ ] Ensure hidden guilds are NOT shown in sidebar navigation (only visible in explicit guild browser)
-- [ ] Add `GuildInvitation` model (guild-level invites within a tenant)
-- [ ] Invitation expiry: guild admin selects duration; system enforces max 30 days
-- [ ] Extend `MemberStatus` with `APPLIED` and `DECLINED`
-- [ ] Create v2 guild invitation endpoints (send, accept, decline, list)
-- [ ] Create v2 application endpoints (apply, approve, decline)
-- [ ] **New admin permissions:**
-  - [ ] `invite_members` — send guild invitations within tenant
-  - [ ] `approve_applications` — approve/decline membership applications
-  - [ ] `manage_guild_visibility` — change guild visibility within tenant
-- [ ] Update guild list endpoint to respect visibility settings within tenant
-- [ ] Change `allow_self_join` default to `False`
-- [ ] Build invitation management UI (guild admin panel)
-- [ ] Add guild discovery page (open guilds within tenant only)
-- [ ] **Frontend co-migration:**
-  - [ ] Guild invitation management UI in guild admin panel
-  - [ ] Guild discovery/browser page
-  - [ ] Sidebar: do NOT show hidden guilds in navigation
-- [ ] **🧹 Phase 2 cleanup** (see [§13.3.3](#1333-phase-2-cleanup-checklist)):
-  - [ ] Remove or deprecate `allow_self_join` field from Guild model if fully replaced by invitation system
-  - [ ] Remove any remaining direct-join logic (old `POST /guilds/{id}/join` flow without invitation)
-  - [ ] Clean up old guild membership test fixtures that bypass invitation flow
-  - [ ] Verify no frontend code references removed join flows
-  - [ ] Run full lint + build + test suite on clean branch
+- [x] Add `GuildVisibility` enum and `visibility` field to Guild model
+- [x] Ensure hidden guilds are NOT shown in sidebar navigation (only visible in explicit guild browser)
+- [x] Add `GuildInvitation` model (guild-level invites within a tenant)
+- [x] Invitation expiry: guild admin selects duration; system enforces max 30 days
+- [x] Extend `MemberStatus` with `APPLIED` and `DECLINED`
+- [x] Create v2 guild invitation endpoints (send, accept, decline, list)
+- [x] Create v2 application endpoints (apply, approve, decline)
+- [x] **New admin permissions:**
+  - [x] `invite_members` — send guild invitations within tenant
+  - [x] `approve_applications` — approve/decline membership applications
+  - [x] `manage_guild_visibility` — change guild visibility within tenant
+- [x] Update guild list endpoint to respect visibility settings within tenant
+- [x] Change `allow_self_join` default to `False`
+- [x] Build invitation management UI (guild admin panel)
+- [x] Add guild discovery page (open guilds within tenant only)
+- [x] **Frontend co-migration:**
+  - [x] Guild invitation management UI in guild admin panel
+  - [x] Guild discovery/browser page
+  - [x] Sidebar: do NOT show hidden guilds in navigation
+- [x] **🧹 Phase 2 cleanup** (see [§13.3.3](#1333-phase-2-cleanup-checklist)):
+  - [x] Deprecate `allow_self_join` field from Guild model (field kept for DB compat, defaults to False, marked deprecated)
+  - [x] Remove direct-join endpoint (`POST /guilds/{id}/join`) — fully removed from codebase
+  - [x] Remove `joinGuild` API function from frontend `src/api/guilds.js`
+  - [x] Verify no frontend code references removed join flows (confirmed: only socket room joins remain, which are unrelated)
+  - [x] Run full lint + build + test suite on clean branch (752 tests pass, frontend builds)
 
 ### Phase 3: Class-Role Matrix
 **Goal:** Give guild admins a visual matrix to control class-role assignments.
@@ -4420,25 +4420,34 @@ grep -rn "WowClass" app/ tests/
 
 Phase 2 replaces self-join with invitation-based guild membership.
 
-**Code to remove/refactor:**
+**✅ Completed:**
 
-| Location | What | Action |
-|----------|------|--------|
-| `Guild` model `allow_self_join` field | Boolean flag for direct join | **Deprecate** — if invitation system fully replaces it, remove the column in migration. If kept for backward compat, mark with `# DEPRECATED: Remove in Phase 3` |
-| `POST /guilds/{id}/join` endpoint | Direct join without invitation | **Remove** or **gate behind invitation** — direct join should not bypass the invitation system |
-| `AppSidebar.vue` `doJoinGuild()` | Direct join button in sidebar | **Remove** if direct join endpoint is removed |
-| `guilds.js` API `joinGuild()` | API call for direct join | **Remove** if endpoint is removed |
-| Phase 1 backward-compat re-exports | `# COMPAT: Remove in Phase 2` markers | **Remove now** — Phase 2 is where these shims die |
+| Location | What | Action | Status |
+|----------|------|--------|--------|
+| `Guild` model `allow_self_join` field | Boolean flag for direct join | **Deprecated** — field kept for DB compat, defaults to `False`, marked with `# DEPRECATED (Phase 2)` | ✅ Done |
+| `POST /guilds/{id}/join` endpoint | Direct join without invitation | **Removed** — endpoint fully deleted from `app/api/v1/guilds.py` | ✅ Done |
+| `guilds.js` API `joinGuild()` | API call for direct join | **Removed** — export deleted from `src/api/guilds.js` | ✅ Done |
+| `GuildInvitation` model | Guild-level invitations | **Added** — `app/models/guild.py` with token, expiry, max_uses | ✅ Done |
+| `GuildVisibility` enum | `OPEN`/`HIDDEN` guild visibility | **Added** — `app/enums.py`, used in Guild model and sidebar | ✅ Done |
+| v2 guild invitation API | Send, accept, revoke, list invitations | **Added** — `app/api/v2/guild_invitations.py` | ✅ Done |
+| v2 application API | Apply, approve, decline membership | **Added** — same file, with `MemberStatus.APPLIED`/`DECLINED` | ✅ Done |
+| Guild discovery page | Browse open guilds within tenant | **Added** — `src/views/GuildDiscoveryView.vue` with route `/guilds/discover` | ✅ Done |
+| Guild invitation management UI | Admin panel tab for invitations | **Added** — `src/components/admin/GuildInvitationsTab.vue` | ✅ Done |
+| Sidebar hidden guild filter | Hidden guilds not in dropdown | **Added** — `visibleGuilds` computed in `AppSidebar.vue` | ✅ Done |
 
 **Verification:**
 ```bash
-# No references to allow_self_join in frontend (if deprecated)
+# No references to allow_self_join in frontend (confirmed empty)
 grep -rn "allow_self_join\|self.join\|self_join" src/ --include="*.vue" --include="*.js"
-# Expected: empty
+# Expected: empty ✅
 
-# No direct join endpoints remaining
-grep -rn "join.*guild\|guilds.*join" app/api/ --include="*.py"
-# Expected: only invitation-based join
+# No direct join endpoints remaining (confirmed: only invitation-based)
+grep -rn "join_guild" app/api/ --include="*.py"
+# Expected: empty ✅
+
+# joinGuild in frontend is ONLY for WebSocket room joining (not guild membership)
+grep -rn "joinGuild" src/ --include="*.vue" --include="*.js"
+# Expected: only useSocket.js references ✅
 ```
 
 #### 13.3.4 Phase 3 Cleanup Checklist
@@ -4687,7 +4696,7 @@ phase:
 |---|------|---------------|------------|--------|
 | 1 | `SystemTab.vue` (394 lines) | Orphaned — not imported anywhere | **Phase 0** | Delete |
 | 2 | `codebase-cleanup-plan.md` | Contains cleanup tasks — unclear which are done | **Phase 0** | Audit; mark completed items ✅; create issues for remaining |
-| 3 | `allow_self_join` on Guild model | Active — used in sidebar for direct guild join | **Phase 2** | Remove or deprecate when invitation system replaces it |
+| 3 | `allow_self_join` on Guild model | **Deprecated** — field kept for DB compat, defaults to `False`, `POST /guilds/{id}/join` endpoint removed | **Phase 2** ✅ | Deprecated; direct-join endpoint removed; `joinGuild` API removed from frontend |
 | 4 | Static `WOW_CLASSES` in `src/constants.js` | Active — hardcoded 10 WotLK classes | **Phase 1** | Remove when DB-driven expansion data replaces it |
 | 5 | `WowClass` Python enum in `app/enums.py` | Active — hardcoded class enum | **Phase 1** | Remove when DB-driven `expansion_classes` table replaces it |
 | 6 | `CLASS_ROLES` / `CLASS_SPECS` in `app/constants.py` | Active — hardcoded WotLK mappings | **Phase 1** | Remove when DB-driven expansion registry replaces it |

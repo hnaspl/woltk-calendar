@@ -35,6 +35,7 @@ class Guild(db.Model):
     faction: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
     region: Mapped[str | None] = mapped_column(sa.String(20), nullable=True)
     settings_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    # DEPRECATED (Phase 2): Replaced by invitation system. Defaults to False.
     allow_self_join: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False, server_default=sa.text("0"))
     visibility: Mapped[str] = mapped_column(
         sa.String(20), nullable=False, default=GuildVisibility.OPEN.value,
