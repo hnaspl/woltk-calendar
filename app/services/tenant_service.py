@@ -59,7 +59,7 @@ def create_tenant(
     description: Optional[str] = None,
     slug: Optional[str] = None,
     plan: str = "free",
-    max_guilds: int = 3,
+    max_guilds: int = 5,
 ) -> Tenant:
     """Create a tenant for the given owner.
 

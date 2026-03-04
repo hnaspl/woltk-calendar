@@ -101,29 +101,36 @@ class TestSeedExpansions:
         assert exp is not None
         assert exp.name == "Wrath of the Lich King"
 
-    def test_seed_creates_28_classes(self, db, ctx):
+    def test_seed_creates_all_expansions(self, db, ctx):
+        seed_expansions()
+        expansions = db.session.execute(sa.select(Expansion)).scalars().all()
+        assert len(expansions) == 11
+        slugs = {e.slug for e in expansions}
+        assert slugs == {"classic", "tbc", "wotlk", "cata", "mop", "wod", "legion", "bfa", "sl", "df", "tww"}
+
+    def test_seed_creates_classes(self, db, ctx):
         seed_expansions()
         classes = db.session.execute(sa.select(ExpansionClass)).scalars().all()
-        # Classic 9 + TBC 9 + WotLK 10 = 28
-        assert len(classes) == 28
+        # 9+9+10+10+11+11+12+12+12+13+13 = 122
+        assert len(classes) == 122
 
-    def test_seed_creates_84_specs(self, db, ctx):
+    def test_seed_creates_specs(self, db, ctx):
         seed_expansions()
         specs = db.session.execute(sa.select(ExpansionSpec)).scalars().all()
-        # Classic 27 + TBC 27 + WotLK 30 = 84
-        assert len(specs) == 84
+        # 27+27+30+31+34+34+36+36+36+39+39 = 369
+        assert len(specs) == 369
 
-    def test_seed_creates_15_roles(self, db, ctx):
+    def test_seed_creates_roles(self, db, ctx):
         seed_expansions()
         roles = db.session.execute(sa.select(ExpansionRole)).scalars().all()
-        # 5 roles × 3 expansions = 15
-        assert len(roles) == 15
+        # 5 roles × 11 expansions = 55
+        assert len(roles) == 55
 
-    def test_seed_creates_22_raids(self, db, ctx):
+    def test_seed_creates_raids(self, db, ctx):
         seed_expansions()
         raids = db.session.execute(sa.select(ExpansionRaid)).scalars().all()
-        # Classic 6 + TBC 8 + WotLK 8 = 22
-        assert len(raids) == 22
+        # 7+9+9+6+5+3+5+5+3+3+2 = 57
+        assert len(raids) == 57
 
     def test_seed_is_idempotent(self, db, ctx):
         created_first = seed_expansions()
@@ -131,7 +138,7 @@ class TestSeedExpansions:
         assert created_first > 0
         assert created_second == 0
         classes = db.session.execute(sa.select(ExpansionClass)).scalars().all()
-        assert len(classes) == 28
+        assert len(classes) == 122
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +196,7 @@ class TestExpansionPublicAPI:
         resp = client.get("/api/v2/meta/expansions/wotlk/raids")
         assert resp.status_code == 200
         data = resp.get_json()
-        assert len(data) == 8
+        assert len(data) == 9
 
     def test_get_roles(self, app, db, ctx):
         _seed_all(db)
@@ -234,12 +241,12 @@ class TestExpansionAdminAPI:
         _login_as(client, admin)
         resp = client.post(
             "/api/v2/meta/expansions/",
-            json={"name": "Cataclysm", "slug": "cata", "sort_order": 4},
+            json={"name": "Test Expansion", "slug": "test-exp", "sort_order": 99},
         )
         assert resp.status_code == 201
         data = resp.get_json()
-        assert data["name"] == "Cataclysm"
-        assert data["slug"] == "cata"
+        assert data["name"] == "Test Expansion"
+        assert data["slug"] == "test-exp"
 
     def test_update_expansion_as_admin(self, app, db, ctx):
         _seed_all(db)
@@ -264,7 +271,7 @@ class TestExpansionAdminAPI:
         _login_as(client, admin)
         resp = client.post(
             "/api/v2/meta/expansions/",
-            json={"name": "Mists of Pandaria", "slug": "mop"},
+            json={"name": "Throwaway Expansion", "slug": "throwaway-exp"},
         )
         exp_id = resp.get_json()["id"]
         resp = client.delete(f"/api/v2/meta/expansions/{exp_id}")

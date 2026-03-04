@@ -1,9 +1,14 @@
-"""Seed expansion data (Classic, TBC, WotLK) with classes, specs, roles, raids.
+"""Seed expansion data for ALL WoW expansions with classes, specs, roles, raids.
 
 All shared class/spec/role data is defined ONCE in the ``_BASE_*`` dicts and
 reused across expansions.  Only expansion-specific additions (e.g. Death Knight
-in WotLK) are appended on top.  Role names and labels are sourced from the
-canonical ``Role`` enum and ``ROLE_LABELS`` in ``app/constants``.
+in WotLK, Monk in MoP, Demon Hunter in Legion, Evoker in DF) are appended.
+Role names and labels are sourced from the canonical ``Role`` enum and
+``ROLE_LABELS`` in ``app/constants``.
+
+Raid data is sourced from Wowhead (wowhead.com/zones/instances/raids).
+Selecting a later expansion automatically includes all earlier ones via
+cumulative ``sort_order``.
 """
 
 from __future__ import annotations
@@ -79,38 +84,246 @@ WOTLK_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Per-expansion raid data (these are genuinely different per expansion)
+# Cataclysm updated spec names (Feral → Feral Combat dropped) but same classes.
+# Same 10 classes as WotLK.
+# ---------------------------------------------------------------------------
+
+_CATA_CLASS_SPECS: dict[str, list[str]] = {
+    "Death Knight": ["Blood", "Frost", "Unholy"],
+    "Warrior":  ["Arms", "Fury", "Protection"],
+    "Paladin":  ["Holy", "Protection", "Retribution"],
+    "Hunter":   ["Beast Mastery", "Marksmanship", "Survival"],
+    "Rogue":    ["Assassination", "Combat", "Subtlety"],
+    "Priest":   ["Discipline", "Holy", "Shadow"],
+    "Shaman":   ["Elemental", "Enhancement", "Restoration"],
+    "Mage":     ["Arcane", "Fire", "Frost"],
+    "Warlock":  ["Affliction", "Demonology", "Destruction"],
+    "Druid":    ["Balance", "Feral", "Guardian", "Restoration"],
+}
+
+_CATA_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
+    "Death Knight": {"Blood": "tank", "Frost": "melee_dps", "Unholy": "melee_dps"},
+    "Warrior":  {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
+    "Paladin":  {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
+    "Hunter":   {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "range_dps"},
+    "Rogue":    {"Assassination": "melee_dps", "Combat": "melee_dps", "Subtlety": "melee_dps"},
+    "Priest":   {"Discipline": "healer", "Holy": "healer", "Shadow": "range_dps"},
+    "Shaman":   {"Elemental": "range_dps", "Enhancement": "melee_dps", "Restoration": "healer"},
+    "Mage":     {"Arcane": "range_dps", "Fire": "range_dps", "Frost": "range_dps"},
+    "Warlock":  {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
+    "Druid":    {"Balance": "range_dps", "Feral": "melee_dps", "Guardian": "tank", "Restoration": "healer"},
+}
+
+# ---------------------------------------------------------------------------
+# Mists of Pandaria adds Monk
+# ---------------------------------------------------------------------------
+
+MOP_CLASS_SPECS: dict[str, list[str]] = {
+    "Monk": ["Brewmaster", "Mistweaver", "Windwalker"],
+    **_CATA_CLASS_SPECS,
+}
+
+MOP_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
+    "Monk": {"Brewmaster": "tank", "Mistweaver": "healer", "Windwalker": "melee_dps"},
+    **_CATA_SPEC_ROLE_MAP,
+}
+
+# ---------------------------------------------------------------------------
+# Warlords of Draenor — same classes as MoP (Rogue Combat → Outlaw in Legion)
+# ---------------------------------------------------------------------------
+
+WOD_CLASS_SPECS = MOP_CLASS_SPECS
+WOD_SPEC_ROLE_MAP = MOP_SPEC_ROLE_MAP
+
+# ---------------------------------------------------------------------------
+# Legion adds Demon Hunter; Rogue Combat → Outlaw, Survival Hunter → melee
+# ---------------------------------------------------------------------------
+
+LEGION_CLASS_SPECS: dict[str, list[str]] = {
+    "Demon Hunter": ["Havoc", "Vengeance"],
+    "Monk": ["Brewmaster", "Mistweaver", "Windwalker"],
+    "Death Knight": ["Blood", "Frost", "Unholy"],
+    "Warrior":  ["Arms", "Fury", "Protection"],
+    "Paladin":  ["Holy", "Protection", "Retribution"],
+    "Hunter":   ["Beast Mastery", "Marksmanship", "Survival"],
+    "Rogue":    ["Assassination", "Outlaw", "Subtlety"],
+    "Priest":   ["Discipline", "Holy", "Shadow"],
+    "Shaman":   ["Elemental", "Enhancement", "Restoration"],
+    "Mage":     ["Arcane", "Fire", "Frost"],
+    "Warlock":  ["Affliction", "Demonology", "Destruction"],
+    "Druid":    ["Balance", "Feral", "Guardian", "Restoration"],
+}
+
+LEGION_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
+    "Demon Hunter": {"Havoc": "melee_dps", "Vengeance": "tank"},
+    "Monk": {"Brewmaster": "tank", "Mistweaver": "healer", "Windwalker": "melee_dps"},
+    "Death Knight": {"Blood": "tank", "Frost": "melee_dps", "Unholy": "melee_dps"},
+    "Warrior":  {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
+    "Paladin":  {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
+    "Hunter":   {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "melee_dps"},
+    "Rogue":    {"Assassination": "melee_dps", "Outlaw": "melee_dps", "Subtlety": "melee_dps"},
+    "Priest":   {"Discipline": "healer", "Holy": "healer", "Shadow": "range_dps"},
+    "Shaman":   {"Elemental": "range_dps", "Enhancement": "melee_dps", "Restoration": "healer"},
+    "Mage":     {"Arcane": "range_dps", "Fire": "range_dps", "Frost": "range_dps"},
+    "Warlock":  {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
+    "Druid":    {"Balance": "range_dps", "Feral": "melee_dps", "Guardian": "tank", "Restoration": "healer"},
+}
+
+# ---------------------------------------------------------------------------
+# BfA / Shadowlands — same classes as Legion
+# ---------------------------------------------------------------------------
+
+BFA_CLASS_SPECS = LEGION_CLASS_SPECS
+BFA_SPEC_ROLE_MAP = LEGION_SPEC_ROLE_MAP
+SL_CLASS_SPECS = LEGION_CLASS_SPECS
+SL_SPEC_ROLE_MAP = LEGION_SPEC_ROLE_MAP
+
+# ---------------------------------------------------------------------------
+# Dragonflight adds Evoker
+# ---------------------------------------------------------------------------
+
+DF_CLASS_SPECS: dict[str, list[str]] = {
+    "Evoker": ["Devastation", "Preservation", "Augmentation"],
+    **LEGION_CLASS_SPECS,
+}
+
+DF_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
+    "Evoker": {"Devastation": "range_dps", "Preservation": "healer", "Augmentation": "range_dps"},
+    **LEGION_SPEC_ROLE_MAP,
+}
+
+# ---------------------------------------------------------------------------
+# The War Within — same classes as Dragonflight
+# ---------------------------------------------------------------------------
+
+TWW_CLASS_SPECS = DF_CLASS_SPECS
+TWW_SPEC_ROLE_MAP = DF_SPEC_ROLE_MAP
+
+# ---------------------------------------------------------------------------
+# Per-expansion raid data — sourced from Wowhead (wowhead.com/zones/instances/raids)
+# Each raid is tagged with its addon of origin for filtering.
 # ---------------------------------------------------------------------------
 
 CLASSIC_RAIDS: list[dict] = [
-    {"code": "mc",     "name": "Molten Core",             "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "notes": "40-man raid beneath Blackrock Mountain."},
+    {"code": "mc",     "name": "Molten Core",             "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "notes": "40-man raid beneath Blackrock Mountain. First tier raid."},
+    {"code": "ony",    "name": "Onyxia's Lair",           "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Single-boss 40-man raid in Dustwallow Marsh."},
     {"code": "bwl",    "name": "Blackwing Lair",          "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Nefarian's 40-man stronghold atop Blackrock Mountain."},
-    {"code": "ony",    "name": "Onyxia",                  "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Onyxia's Lair single-boss 40-man raid."},
-    {"code": "aq40",   "name": "Temple of Ahn'Qiraj",     "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 240, "notes": "40-man raid in Silithus."},
-    {"code": "naxx40", "name": "Naxxramas",               "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 300, "notes": "Original 40-man Naxxramas floating above Eastern Plaguelands."},
     {"code": "zg",     "name": "Zul'Gurub",               "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "notes": "20-man troll raid in Stranglethorn Vale."},
+    {"code": "aq20",   "name": "Ruins of Ahn'Qiraj",     "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "notes": "20-man raid in Silithus."},
+    {"code": "aq40",   "name": "Temple of Ahn'Qiraj",    "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 240, "notes": "40-man raid in Silithus. C'Thun encounter."},
+    {"code": "naxx40", "name": "Naxxramas",               "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 300, "notes": "Original 40-man Naxxramas floating above Eastern Plaguelands."},
 ]
 
 TBC_RAIDS: list[dict] = [
-    {"code": "kara",  "name": "Karazhan",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 180, "notes": "10-man raid in Deadwind Pass."},
+    {"code": "kara",  "name": "Karazhan",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 180, "notes": "10-man raid in Deadwind Pass. First TBC tier."},
     {"code": "gruul", "name": "Gruul's Lair",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "25-man raid in Blade's Edge Mountains."},
     {"code": "mag",   "name": "Magtheridon's Lair",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "25-man raid beneath Hellfire Citadel."},
-    {"code": "ssc",   "name": "Serpentshrine Cavern",  "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid in Coilfang Reservoir."},
-    {"code": "tk",    "name": "Tempest Keep",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "25-man raid in Netherstorm."},
-    {"code": "hyjal", "name": "Mount Hyjal",           "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "25-man Caverns of Time raid."},
-    {"code": "bt",    "name": "Black Temple",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 300, "notes": "25-man raid in Shadowmoon Valley."},
-    {"code": "swp",   "name": "Sunwell Plateau",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid on the Isle of Quel'Danas."},
+    {"code": "ssc",   "name": "Serpentshrine Cavern",  "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid in Coilfang Reservoir. Lady Vashj encounter."},
+    {"code": "tk",    "name": "Tempest Keep",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "25-man raid in Netherstorm. Kael'thas encounter."},
+    {"code": "hyjal", "name": "Hyjal Summit",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "25-man Caverns of Time raid. Archimonde encounter."},
+    {"code": "bt",    "name": "Black Temple",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 300, "notes": "25-man raid in Shadowmoon Valley. Illidan encounter."},
+    {"code": "za",    "name": "Zul'Aman",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 120, "notes": "10-man timed troll raid in Ghostlands."},
+    {"code": "swp",   "name": "Sunwell Plateau",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid on the Isle of Quel'Danas. Kil'jaeden encounter."},
 ]
 
 WOTLK_RAIDS: list[dict] = [
-    {"code": "naxx",   "name": "Naxxramas",              "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Original Lich King tier 7 raid in Dragonblight."},
-    {"code": "os",     "name": "The Obsidian Sanctum",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Sartharion encounter with optional Drake tiers (3D)."},
-    {"code": "eoe",    "name": "The Eye of Eternity",     "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Malygos encounter above the Nexus."},
-    {"code": "voa",    "name": "Vault of Archavon",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "PvP-gated raid in Wintergrasp; up to 4 bosses."},
-    {"code": "ulduar", "name": "Ulduar",                  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Titan facility raid with hard-mode encounters."},
-    {"code": "toc",    "name": "Trial of the Crusader",   "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Argent Tournament arena raid — normal & heroic."},
-    {"code": "icc",    "name": "Icecrown Citadel",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "notes": "12-boss raid culminating in the Lich King encounter."},
-    {"code": "rs",     "name": "The Ruby Sanctum",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 60,  "notes": "Halion encounter; bridge between WotLK and Cataclysm."},
+    {"code": "naxx",   "name": "Naxxramas",              "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Tier 7 raid in Dragonblight. Supports 10 and 25-man."},
+    {"code": "os",     "name": "The Obsidian Sanctum",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Sartharion encounter with optional drakes (0-3D). 10/25-man."},
+    {"code": "eoe",    "name": "The Eye of Eternity",     "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Malygos encounter above the Nexus. 10/25-man."},
+    {"code": "voa",    "name": "Vault of Archavon",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "PvP-gated raid in Wintergrasp; up to 4 bosses. 10/25-man."},
+    {"code": "ulduar", "name": "Ulduar",                  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Titan facility raid with hard-mode encounters. 10/25-man."},
+    {"code": "toc",    "name": "Trial of the Crusader",   "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Argent Tournament arena raid. Normal & heroic. 10/25-man."},
+    {"code": "ony25",  "name": "Onyxia's Lair",           "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "Retuned for level 80. Supports 10 and 25-man."},
+    {"code": "icc",    "name": "Icecrown Citadel",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "notes": "12-boss raid. The Lich King encounter. Normal & heroic. 10/25-man."},
+    {"code": "rs",     "name": "The Ruby Sanctum",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 60,  "notes": "Halion encounter; bridge between WotLK and Cataclysm. 10/25-man."},
+]
+
+# ---------------------------------------------------------------------------
+# Cataclysm raids (expansion 3 on Wowhead)
+# ---------------------------------------------------------------------------
+
+CATA_RAIDS: list[dict] = [
+    {"code": "bwd",    "name": "Blackwing Descent",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Nefarian's lair reborn. 10/25-man normal & heroic."},
+    {"code": "bot",    "name": "The Bastion of Twilight",  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Cho'gall's fortress. 10/25-man normal & heroic."},
+    {"code": "totfw",  "name": "Throne of the Four Winds", "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Al'Akir encounter. 10/25-man normal & heroic."},
+    {"code": "bh",     "name": "Baradin Hold",             "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "PvP-gated raid in Tol Barad. 10/25-man."},
+    {"code": "fl",     "name": "Firelands",                "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Ragnaros returns. 10/25-man normal & heroic."},
+    {"code": "ds",     "name": "Dragon Soul",              "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Deathwing encounter. 10/25-man normal & heroic. LFR introduced."},
+]
+
+# ---------------------------------------------------------------------------
+# Mists of Pandaria raids (expansion 4 on Wowhead)
+# ---------------------------------------------------------------------------
+
+MOP_RAIDS: list[dict] = [
+    {"code": "msv",    "name": "Mogu'shan Vaults",         "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "First MoP tier. 10/25-man normal, heroic, LFR."},
+    {"code": "hof",    "name": "Heart of Fear",            "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Mantid raid. 10/25-man normal, heroic, LFR."},
+    {"code": "toes",   "name": "Terrace of Endless Spring","default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 120, "notes": "Sha of Fear. 10/25-man normal, heroic, LFR."},
+    {"code": "tot",    "name": "Throne of Thunder",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Lei Shen encounter. 10/25-man normal, heroic, LFR."},
+    {"code": "soo",    "name": "Siege of Orgrimmar",       "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "notes": "Garrosh encounter. 10/25-man. First flex mode. LFR/normal/heroic/mythic."},
+]
+
+# ---------------------------------------------------------------------------
+# Warlords of Draenor raids (expansion 5 on Wowhead)
+# ---------------------------------------------------------------------------
+
+WOD_RAIDS: list[dict] = [
+    {"code": "hm",     "name": "Highmaul",                 "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Imperator Mar'gok. Flex normal/heroic, 20-man mythic."},
+    {"code": "brf",    "name": "Blackrock Foundry",        "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Blackhand encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "hfc",    "name": "Hellfire Citadel",         "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Archimonde encounter. Flex normal/heroic, 20-man mythic."},
+]
+
+# ---------------------------------------------------------------------------
+# Legion raids (expansion 6 on Wowhead)
+# ---------------------------------------------------------------------------
+
+LEGION_RAIDS: list[dict] = [
+    {"code": "en",     "name": "The Emerald Nightmare",    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Xavius encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "tov",    "name": "Trial of Valor",           "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Helya encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "nh",     "name": "The Nighthold",            "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Gul'dan encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "tos",    "name": "Tomb of Sargeras",         "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Kil'jaeden encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "abt",    "name": "Antorus, the Burning Throne","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 300, "notes": "Argus encounter. Flex normal/heroic, 20-man mythic."},
+]
+
+# ---------------------------------------------------------------------------
+# Battle for Azeroth raids (expansion 7 on Wowhead)
+# ---------------------------------------------------------------------------
+
+BFA_RAIDS: list[dict] = [
+    {"code": "uldir",  "name": "Uldir",                    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "G'huun encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "bod",    "name": "Battle of Dazar'alor",     "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Jaina/Rastakhan encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "cos",    "name": "Crucible of Storms",       "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 60,  "notes": "Uu'nat encounter. 2-boss mini-raid. Flex normal/heroic, 20-man mythic."},
+    {"code": "ep",     "name": "The Eternal Palace",       "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Queen Azshara encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "nya",    "name": "Ny'alotha, the Waking City","default_raid_size": 20, "supports_heroic": True, "default_duration_minutes": 300, "notes": "N'Zoth encounter. Flex normal/heroic, 20-man mythic."},
+]
+
+# ---------------------------------------------------------------------------
+# Shadowlands raids (expansion 8 on Wowhead)
+# ---------------------------------------------------------------------------
+
+SL_RAIDS: list[dict] = [
+    {"code": "cn",     "name": "Castle Nathria",           "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Sire Denathrius encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "sod",    "name": "Sanctum of Domination",    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Sylvanas encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "sofo",   "name": "Sepulcher of the First Ones","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 300, "notes": "The Jailer encounter. Flex normal/heroic, 20-man mythic."},
+]
+
+# ---------------------------------------------------------------------------
+# Dragonflight raids (expansion 9 on Wowhead)
+# ---------------------------------------------------------------------------
+
+DF_RAIDS: list[dict] = [
+    {"code": "voti",   "name": "Vault of the Incarnates",  "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Raszageth encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "asc",    "name": "Aberrus, the Shadowed Crucible","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 240, "notes": "Scalecommander Sarkareth. Flex normal/heroic, 20-man mythic."},
+    {"code": "adh",    "name": "Amirdrassil, the Dream's Hope","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 240, "notes": "Fyrakk encounter. Flex normal/heroic, 20-man mythic."},
+]
+
+# ---------------------------------------------------------------------------
+# The War Within raids (expansion 10 on Wowhead)
+# ---------------------------------------------------------------------------
+
+TWW_RAIDS: list[dict] = [
+    {"code": "nap",    "name": "Nerub-ar Palace",          "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Queen Ansurek encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "lou",    "name": "Liberation of Undermine",  "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Flex normal/heroic, 20-man mythic."},
 ]
 
 
@@ -224,15 +437,18 @@ def _seed_single_expansion(
 
 
 def seed_expansions() -> int:
-    """Seed Classic, TBC, and WotLK expansions with classes, specs, roles, and raids.
+    """Seed ALL WoW expansions with classes, specs, roles, and raids.
+
+    Expansions are ordered by ``sort_order`` (1–10).  Selecting a later
+    expansion automatically includes all earlier ones via the cumulative
+    expansion system.
 
     Idempotent — skips items that already exist.
     Returns the total number of items created.
     """
     created = 0
 
-    # Seed in sort_order: Classic (1), TBC (2), WotLK (3)
-    # Classic and TBC use the shared _BASE_CLASS_SPECS / _BASE_SPEC_ROLE_MAP
+    # sort_order 1: Classic
     created += _seed_single_expansion(
         name="Classic",
         slug="classic",
@@ -242,6 +458,7 @@ def seed_expansions() -> int:
         raids=CLASSIC_RAIDS,
     )
 
+    # sort_order 2: The Burning Crusade
     created += _seed_single_expansion(
         name="The Burning Crusade",
         slug="tbc",
@@ -251,7 +468,7 @@ def seed_expansions() -> int:
         raids=TBC_RAIDS,
     )
 
-    # WotLK adds Death Knight on top of the base 9 classes
+    # sort_order 3: Wrath of the Lich King (adds Death Knight)
     created += _seed_single_expansion(
         name="Wrath of the Lich King",
         slug="wotlk",
@@ -259,6 +476,86 @@ def seed_expansions() -> int:
         class_specs=WOTLK_CLASS_SPECS,
         spec_role_map=WOTLK_SPEC_ROLE_MAP,
         raids=WOTLK_RAIDS,
+    )
+
+    # sort_order 4: Cataclysm (Druid gets Guardian spec)
+    created += _seed_single_expansion(
+        name="Cataclysm",
+        slug="cata",
+        sort_order=4,
+        class_specs=_CATA_CLASS_SPECS,
+        spec_role_map=_CATA_SPEC_ROLE_MAP,
+        raids=CATA_RAIDS,
+    )
+
+    # sort_order 5: Mists of Pandaria (adds Monk)
+    created += _seed_single_expansion(
+        name="Mists of Pandaria",
+        slug="mop",
+        sort_order=5,
+        class_specs=MOP_CLASS_SPECS,
+        spec_role_map=MOP_SPEC_ROLE_MAP,
+        raids=MOP_RAIDS,
+    )
+
+    # sort_order 6: Warlords of Draenor
+    created += _seed_single_expansion(
+        name="Warlords of Draenor",
+        slug="wod",
+        sort_order=6,
+        class_specs=WOD_CLASS_SPECS,
+        spec_role_map=WOD_SPEC_ROLE_MAP,
+        raids=WOD_RAIDS,
+    )
+
+    # sort_order 7: Legion (adds Demon Hunter, Rogue Outlaw, Survival melee)
+    created += _seed_single_expansion(
+        name="Legion",
+        slug="legion",
+        sort_order=7,
+        class_specs=LEGION_CLASS_SPECS,
+        spec_role_map=LEGION_SPEC_ROLE_MAP,
+        raids=LEGION_RAIDS,
+    )
+
+    # sort_order 8: Battle for Azeroth
+    created += _seed_single_expansion(
+        name="Battle for Azeroth",
+        slug="bfa",
+        sort_order=8,
+        class_specs=BFA_CLASS_SPECS,
+        spec_role_map=BFA_SPEC_ROLE_MAP,
+        raids=BFA_RAIDS,
+    )
+
+    # sort_order 9: Shadowlands
+    created += _seed_single_expansion(
+        name="Shadowlands",
+        slug="sl",
+        sort_order=9,
+        class_specs=SL_CLASS_SPECS,
+        spec_role_map=SL_SPEC_ROLE_MAP,
+        raids=SL_RAIDS,
+    )
+
+    # sort_order 10: Dragonflight (adds Evoker)
+    created += _seed_single_expansion(
+        name="Dragonflight",
+        slug="df",
+        sort_order=10,
+        class_specs=DF_CLASS_SPECS,
+        spec_role_map=DF_SPEC_ROLE_MAP,
+        raids=DF_RAIDS,
+    )
+
+    # sort_order 11: The War Within
+    created += _seed_single_expansion(
+        name="The War Within",
+        slug="tww",
+        sort_order=11,
+        class_specs=TWW_CLASS_SPECS,
+        spec_role_map=TWW_SPEC_ROLE_MAP,
+        raids=TWW_RAIDS,
     )
 
     db.session.commit()

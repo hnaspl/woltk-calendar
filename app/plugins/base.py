@@ -91,9 +91,11 @@ class PluginRegistry:
         # Import built-in plugins so they self-register
         from app.plugins.armory.plugin import ArmoryPlugin  # noqa: F401
         from app.plugins.discord.plugin import DiscordPlugin  # noqa: F401
+        from app.plugins.wowhead.plugin import WowheadPlugin  # noqa: F401
 
         cls.register(ArmoryPlugin())
         cls.register(DiscordPlugin())
+        cls.register(WowheadPlugin())
 
         # Let each plugin register its blueprints
         for plugin in cls._plugins.values():

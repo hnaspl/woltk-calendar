@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-      <h2 class="wow-heading text-base">{{ t('admin.raidDefinitions.title', { count: definitions.length }) }}</h2>
+      <h2 class="wow-heading text-base">{{ t('admin.raidDefinitions.title', { count: filteredDefinitions.length }) }}</h2>
       <WowButton @click="openCreateModal">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -10,15 +10,33 @@
       </WowButton>
     </div>
 
+    <!-- Expansion filter -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+        :class="!selectedExpansion ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+        @click="selectedExpansion = null"
+      >{{ t('common.labels.all') }}</button>
+      <button
+        v-for="exp in expansions"
+        :key="exp.id"
+        type="button"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+        :class="selectedExpansion === exp.slug ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+        @click="selectedExpansion = exp.slug"
+      >{{ exp.name }}</button>
+    </div>
+
     <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
     </div>
     <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
-    <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
+    <div v-else-if="filteredDefinitions.length === 0" class="text-center py-12 text-text-muted">
       {{ t('admin.raidDefinitions.noDefinitions') }}
     </div>
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-      <WowCard v-for="d in definitions" :key="d.id">
+      <WowCard v-for="d in filteredDefinitions" :key="d.id">
         <div class="flex items-start gap-3 mb-3">
           <img :src="getRaidIcon(d.raid_type)" :alt="d.raid_type" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
           <div class="flex-1 min-w-0">
@@ -28,6 +46,7 @@
             </div>
             <div class="flex items-center gap-1.5 mt-1">
               <RaidSizeBadge v-if="d.size" :size="d.size" />
+              <span v-if="d.expansion" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-700/40 uppercase">{{ d.expansion }}</span>
             </div>
           </div>
         </div>
@@ -141,13 +160,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import { useUiStore } from '@/stores/ui'
+import { useConstantsStore } from '@/stores/constants'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as rdApi from '@/api/raidDefinitions'
@@ -155,6 +175,7 @@ import { DEFAULT_ROLE_SLOT_COUNTS, ROLE_VALUES } from '@/constants'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
+const constantsStore = useConstantsStore()
 const { getRaidIcon } = useWowIcons()
 const { raidTypes } = useExpansionData()
 
@@ -163,6 +184,16 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const formError = ref(null)
+const selectedExpansion = ref(null)
+
+const expansions = computed(() => {
+  return [...constantsStore.expansions].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+})
+
+const filteredDefinitions = computed(() => {
+  if (!selectedExpansion.value) return definitions.value
+  return definitions.value.filter(d => d.expansion === selectedExpansion.value)
+})
 
 const showEditModal = ref(false)
 const editingDef = ref(null)

@@ -100,7 +100,7 @@ class TestTenantModel:
         assert tenant.owner_id == owner.id
         assert tenant.slug == "test-workspace"
         assert tenant.plan == "free"
-        assert tenant.max_guilds == 3
+        assert tenant.max_guilds == 5
         assert tenant.is_active is True
 
     def test_tenant_to_dict(self, tenant):
