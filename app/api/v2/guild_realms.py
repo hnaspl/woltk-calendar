@@ -47,6 +47,7 @@ def add_realm_endpoint(guild_id: int, membership):
             guild_id,
             data["name"],
             is_default=data.get("is_default", False),
+            tenant_id=membership.tenant_id,
         )
         db.session.commit()
     except ValueError as exc:
