@@ -172,7 +172,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
 import { useUiStore } from '@/stores/ui'
-import { ROLE_LABEL_MAP, ROLE_VALUES, LINEUP_COLUMNS, ROLE_TO_GROUP, LINEUP_GROUP_KEYS, DEFAULT_ROLE, DEFAULT_ROLE_SLOT_COUNTS } from '@/constants'
+import { ROLE_LABEL_MAP, ROLE_VALUES, LINEUP_COLUMNS, ROLE_TO_GROUP, LINEUP_GROUP_KEYS, DEFAULT_ROLE, DEFAULT_ROLE_SLOT_COUNTS, ROLE_TO_SLOT_PROP } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
@@ -207,20 +207,11 @@ const benchQueue = ref([]) // Ordered list of bench signup objects from API
 const showRoleChangeModal = ref(false)
 const roleChangePending = ref(null) // { signup, targetKey, targetCol }
 
-// Map role value to the matching prop name
-const roleToSlotProp = {
-  main_tank: 'mainTankSlots',
-  off_tank: 'offTankSlots',
-  melee_dps: 'meleeDpsSlots',
-  healer: 'healerSlots',
-  range_dps: 'rangeDpsSlots',
-}
-
 const allColumns = computed(() =>
-  LINEUP_COLUMNS.map(col => ({
-    ...col,
-    slots: props[roleToSlotProp[col.role]] ?? DEFAULT_ROLE_SLOT_COUNTS[col.role],
-  }))
+  LINEUP_COLUMNS.map(col => {
+    const propName = ROLE_TO_SLOT_PROP[col.role]
+    return { ...col, slots: props[propName] ?? DEFAULT_ROLE_SLOT_COUNTS[col.role] }
+  })
 )
 
 /** Only show columns that have at least 1 slot configured */

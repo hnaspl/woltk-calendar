@@ -101,6 +101,29 @@ export const LINEUP_COLUMNS = ROLE_OPTIONS.map(r => ({
   labelClass: ROLE_LABEL_CLASS[r.value],
 }))
 
+/**
+ * Role value → Vue prop name for slot count props.
+ * Shared by LineupBoard and CompositionSummary to avoid duplication.
+ */
+export const ROLE_TO_SLOT_PROP = {
+  main_tank: 'mainTankSlots',
+  off_tank: 'offTankSlots',
+  melee_dps: 'meleeDpsSlots',
+  healer: 'healerSlots',
+  range_dps: 'rangeDpsSlots',
+}
+
+/**
+ * Role → progress bar CSS class for CompositionSummary.
+ */
+export const ROLE_BAR_CLASS = {
+  main_tank: 'bg-blue-300',
+  off_tank: 'bg-cyan-400',
+  melee_dps: 'bg-blue-400',
+  healer: 'bg-green-400',
+  range_dps: 'bg-red-400',
+}
+
 /** Valid event status values. Keep in sync with app/enums.py EventStatus. */
 export const EVENT_STATUSES = ['draft', 'open', 'locked', 'completed', 'cancelled']
 

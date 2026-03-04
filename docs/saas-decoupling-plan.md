@@ -1188,6 +1188,21 @@ guild admins can customize.
   - [x] Remove static `CLASS_ROLES` usage in signup validation (all go through matrix resolver)
   - [x] Clean up any compatibility shims between old static mapping and new matrix system
   - [x] Run full lint + build + test suite on clean branch
+- [x] **🧹 Phase 3 SPOF cleanup — remove ALL hardcoded role strings across codebase:**
+  - [x] Extract shared constants to `app/constants.py`: `ROLE_TO_GROUP`, `GROUP_TO_ROLE`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `DEFAULT_ROLE_SLOT_COUNTS`, `get_slot_counts_from_rd()`
+  - [x] Extract shared constants to `src/constants.js`: `ROLE_TO_GROUP`, `GROUP_TO_ROLE`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `DEFAULT_ROLE_SLOT_COUNTS`, `ROLE_STYLE_MAP`, `ROLE_LABEL_CLASS`, `LINEUP_COLUMNS`, `ROLE_VALUES`, `ROLE_TO_SLOT_PROP`, `ROLE_BAR_CLASS`
+  - [x] Refactor `lineup_service.py` — use `ROLE_TO_GROUP`, `GROUP_TO_ROLE`, `DEFAULT_ROLE`, `get_slot_counts_from_rd()` instead of hardcoded strings
+  - [x] Refactor `signup_service.py` — use `get_slot_counts_from_rd()` instead of hardcoded slot defaults
+  - [x] Refactor `RoleBadge.vue` — use `ROLE_STYLE_MAP` from shared constants
+  - [x] Refactor `LineupBoard.vue` — use `LINEUP_COLUMNS`, `ROLE_TO_GROUP`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `ROLE_TO_SLOT_PROP`, `applyLineupData()` helper
+  - [x] Refactor `SignupForm.vue` / `SignupList.vue` — use `ROLE_VALUES` for default `availableRoles`
+  - [x] Refactor `CompositionSummary.vue` — use `ROLE_OPTIONS`, `DEFAULT_ROLE_SLOT_COUNTS`, `ROLE_TO_SLOT_PROP`, `ROLE_BAR_CLASS`
+  - [x] Refactor `DefaultRaidDefinitionsTab.vue` — use `DEFAULT_ROLE_SLOT_COUNTS`, `ROLE_VALUES` for form defaults and totalSlots
+  - [x] All shared helpers extracted to `src/constants.js` — zero local duplications across components
+
+> **⚡ Phase 3 → Phase 4 Interconnection (SPOF cleanup carried forward):**
+> - The `WARMANE_REALMS` constant in `app/constants.py` and `src/constants.js` remains hardcoded. Phase 4 should replace it with per-guild realm customization (see Phase 4 checklist item: "Guild owner can specify custom realm names").
+> - Service-layer `ValueError` messages in `app/services/guild_service.py` use hardcoded English strings. Phase 4 or later should migrate these to `_t()` i18n keys for full localization.
 
 ### Phase 4: Multi-Expansion Support
 **Goal:** Support guilds running different WoW expansions within the same tenant.
@@ -4481,14 +4496,33 @@ Phase 3 introduces the class-role matrix, replacing static mappings.
 grep -rn "CLASS_ROLES\[" app/services/ --include="*.py"
 # Expected: empty (all go through matrix resolver) ✅
 
+# No hardcoded role strings in services (all use shared constants)
+grep -rn '"main_tank"\|"off_tank"\|"healer"\|"melee_dps"\|"range_dps"' app/services/lineup_service.py app/services/signup_service.py
+# Expected: empty ✅
+
 # All 783 tests pass
 python -m pytest tests/ -q
 # 783 passed ✅
 
 # Frontend builds
 npx vite build
-# ✓ built in 3.5s ✅
+# ✓ built in 3.8s ✅
 ```
+
+**Phase 3 SPOF cleanup — hardcoded role string removal:**
+
+| Location | What | Action | Status |
+|----------|------|--------|--------|
+| `app/constants.py` | Shared role constants | **Added** — `ROLE_TO_GROUP`, `GROUP_TO_ROLE`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `DEFAULT_ROLE_SLOT_COUNTS`, `get_slot_counts_from_rd()` | ✅ Done |
+| `src/constants.js` | Shared role constants | **Added** — `ROLE_TO_GROUP`, `GROUP_TO_ROLE`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `DEFAULT_ROLE_SLOT_COUNTS`, `ROLE_STYLE_MAP`, `ROLE_LABEL_CLASS`, `LINEUP_COLUMNS`, `ROLE_VALUES`, `ROLE_TO_SLOT_PROP`, `ROLE_BAR_CLASS` | ✅ Done |
+| `app/services/lineup_service.py` | Hardcoded role strings | **Replaced** — imports `ROLE_TO_GROUP`, `GROUP_TO_ROLE`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `get_slot_counts_from_rd()` | ✅ Done |
+| `app/services/signup_service.py` | Hardcoded slot defaults | **Replaced** — uses `get_slot_counts_from_rd()` | ✅ Done |
+| `src/components/common/RoleBadge.vue` | Hardcoded CSS switch | **Replaced** — uses `ROLE_STYLE_MAP` from shared constants | ✅ Done |
+| `src/components/raids/LineupBoard.vue` | Hardcoded role strings (30+ occurrences) | **Replaced** — uses `LINEUP_COLUMNS`, `ROLE_TO_GROUP`, `LINEUP_GROUP_KEYS`, `DEFAULT_ROLE`, `ROLE_TO_SLOT_PROP`, `applyLineupData()` helper | ✅ Done |
+| `src/components/raids/SignupForm.vue` | Hardcoded `availableRoles` default | **Replaced** — uses `ROLE_VALUES` from constants | ✅ Done |
+| `src/components/raids/SignupList.vue` | Hardcoded `availableRoles` default | **Replaced** — uses `ROLE_VALUES` from constants | ✅ Done |
+| `src/components/raids/CompositionSummary.vue` | Hardcoded role summary | **Replaced** — uses `ROLE_OPTIONS`, `ROLE_TO_SLOT_PROP`, `ROLE_BAR_CLASS`, `DEFAULT_ROLE_SLOT_COUNTS` | ✅ Done |
+| `src/components/admin/DefaultRaidDefinitionsTab.vue` | Hardcoded slot defaults | **Replaced** — uses `DEFAULT_ROLE_SLOT_COUNTS`, `ROLE_VALUES` | ✅ Done |
 
 #### 13.3.5 Phase 4 Cleanup Checklist
 

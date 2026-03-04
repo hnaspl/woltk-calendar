@@ -57,11 +57,11 @@ DEFAULT_ROLE_SLOT_COUNTS: dict[str, int] = {
 }
 
 
-def get_slot_counts_from_rd(rd) -> dict[str, int]:
+def get_slot_counts_from_rd(rd: object | None) -> dict[str, int]:
     """Build role→slot_count dict from a RaidDefinition, falling back to defaults.
 
     Args:
-        rd: A RaidDefinition model instance, or None.
+        rd: A RaidDefinition model instance (with ``<role>_slots`` attrs), or None.
 
     Returns:
         Dict mapping each Role value to its slot count integer.
