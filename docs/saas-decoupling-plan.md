@@ -1049,6 +1049,7 @@ backup. Frontend migrates to v2 endpoints in this phase.
   - [x] Run full lint + build + test suite on clean branch
   - [x] Invite accept page requires login/register first (redirects to `/login?redirect=/invite/TOKEN`)
   - [x] Login/Register views show invite banner and preserve redirect query params
+  - [x] `allow_self_join` default changed from `True` to `False` in guild_service.py and guilds API (Phase 2 deprecated self-join; defaults must reflect this)
 
 ### Phase 1: Foundation Decoupling — DB-Driven Expansion Registry
 **Goal:** Replace hardcoded class/role/spec/raid Python enums, dicts, and
@@ -1310,10 +1311,10 @@ the admin panel — they are DB-driven and pluggable.
   - [x] Guilds manage their own realms via `GuildRealm` model + GuildRealmsTab UI
 - [x] Migrate all service-layer hardcoded English strings to `_t()` i18n (guild_service, tenant_service, signup_service — 30+ strings)
 - [x] Add 60+ i18n keys (plugin, guild.errors, tenant.errors, signup.errors) in en.json + pl.json
-- [x] 25 plugin tests (ArmoryPlugin, PluginRegistry, v2 API, provider tests)
+- [x] 25 plugin tests (ArmoryPlugin, PluginRegistry, v2 API, provider tests) — now 27 tests
 - [ ] Create plugin developer documentation
-- [ ] **New admin permissions:**
-  - [ ] `manage_plugins` — global admin: enable/disable system plugins
+- [x] **New admin permissions:**
+  - [x] `manage_plugins` — global admin: enable/disable system plugins (added to seeds/permissions.py and assigned to global_admin role; plugin config endpoint protected)
 - [ ] **🧹 Phase 5 cleanup** (see [§13.3.6](#1336-phase-5-cleanup-checklist)):
   - [x] Remove all hardcoded realm lists (WARMANE_REALMS → zero references in codebase)
   - [ ] Remove inline Warmane API calls from services — all go through plugin interface (deferred: existing armory provider system already provides abstraction)
@@ -4385,6 +4386,8 @@ Phase 0 introduces tenancy. It also obsoletes several pre-tenancy patterns.
 | `AppSidebar.vue` `availableGuilds` computed | Computed property filtering `allGuilds` by `allow_self_join` | **Remove** — replaced by tenant invitation system | ✅ Done |
 | `guild_service.py` `list_all_guilds()` | Lists ALL guilds in the system (no tenant filter) | **Refactor** — must filter by `tenant_id`; old global listing is a security risk | ✅ Done |
 | `guilds.py` API `GET /guilds/all` | Returns all guilds without tenant scoping | **Refactor** — scope to active tenant; global admin has separate endpoint | ✅ Done |
+| `guild_service.py` `create_guild()` | `allow_self_join` parameter defaults to `True` | **Fixed** — default changed to `False` (Phase 2 deprecated self-join) | ✅ Done |
+| `guilds.py` API `POST /guilds/create` | `allow_self_join` defaults to `True` | **Fixed** — default changed to `False` | ✅ Done |
 | Any `console.log` / `print()` debug statements | Left from development | **Remove** — use proper logging (Python `logging` module, no `print()`) | ✅ Done |
 
 **Test fixtures to update:**
@@ -4591,6 +4594,8 @@ Phase 5 creates a generic, server-agnostic armory plugin and wraps Discord as a 
 | `src/api/armory.js` | Frontend armory API module | Kept — used by armory config management | Deferred |
 | `app/api/v1/warmane.py` | Warmane blueprint | Kept in v1 registration — plugin does not re-register | Deferred |
 | `WARMANE_REALMS` everywhere | Hardcoded realm lists | ✅ **Removed entirely** — zero references in codebase. Realms are dynamic (from provider API or manual per-guild config) | ✅ Done |
+| `app/seeds/permissions.py` | Missing `manage_plugins` permission | ✅ **Added** — `manage_plugins` in permissions seed, assigned to `global_admin` role | ✅ Done |
+| `app/api/v2/plugins.py` | Plugin config endpoint missing authorization | ✅ **Fixed** — `get_plugin_config` now requires `manage_plugins` via `require_system_permission()` | ✅ Done |
 | `useWowheadTooltips.js` | Inline Wowhead script injection | **Consider** moving to plugin if Wowhead integration becomes optional | Deferred |
 
 **Verification:**

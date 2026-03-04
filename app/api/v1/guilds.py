@@ -305,7 +305,7 @@ def create_guild():
             tenant_id=current_user.active_tenant_id,
             faction=data.get("faction"),
             region=data.get("region"),
-            allow_self_join=data.get("allow_self_join", True),
+            allow_self_join=data.get("allow_self_join", False),
             warmane_source=bool(data.get("warmane_source", False)),
             timezone=data.get("timezone", "Europe/Warsaw"),
             armory_provider=armory_provider,

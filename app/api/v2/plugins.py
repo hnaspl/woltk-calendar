@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify
 
 from app.plugins.base import PluginRegistry
 from app.utils.auth import login_required
+from app.utils.api_helpers import require_system_permission
 from app.i18n import _t
 
 bp = Blueprint("v2_plugins", __name__)
@@ -35,7 +36,10 @@ def get_plugin(key: str):
 @bp.get("/<key>/config")
 @login_required
 def get_plugin_config(key: str):
-    """Get a plugin's default configuration."""
+    """Get a plugin's default configuration. Requires manage_plugins."""
+    err = require_system_permission("manage_plugins")
+    if err:
+        return err
     plugin = PluginRegistry.get(key)
     if plugin is None:
         return jsonify({"error": _t("plugin.notFound")}), 404

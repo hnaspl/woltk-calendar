@@ -20,7 +20,7 @@ def create_guild(
     tenant_id: Optional[int] = None,
     faction: Optional[str] = None,
     region: Optional[str] = None,
-    allow_self_join: bool = True,
+    allow_self_join: bool = False,
     warmane_source: bool = False,
     timezone: str = "Europe/Warsaw",
     armory_provider: str = "warmane",

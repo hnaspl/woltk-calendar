@@ -64,10 +64,11 @@ def _login_as(client, user):
         sess["_user_id"] = str(user.id)
 
 
-def _make_user(db_session, *, username="testuser", email="test@test.com"):
+def _make_user(db_session, *, username="testuser", email="test@test.com",
+               is_admin=False):
     user = User(
         username=username, email=email,
-        password_hash="x", is_active=True,
+        password_hash="x", is_active=True, is_admin=is_admin,
     )
     db_session.session.add(user)
     db_session.session.flush()
@@ -211,7 +212,7 @@ class TestPluginAPI:
 
     def test_get_armory_plugin_config(self, app, db):
         client = app.test_client()
-        user = _make_user(db)
+        user = _make_user(db, is_admin=True)
         _login_as(client, user)
         resp = client.get("/api/v2/plugins/armory/config")
         assert resp.status_code == 200
@@ -221,7 +222,7 @@ class TestPluginAPI:
 
     def test_get_plugin_config_not_found(self, app, db):
         client = app.test_client()
-        user = _make_user(db)
+        user = _make_user(db, is_admin=True)
         _login_as(client, user)
         resp = client.get("/api/v2/plugins/nonexistent/config")
         assert resp.status_code == 404
@@ -236,6 +237,14 @@ class TestPluginAPI:
         assert isinstance(data, list)
         names = [p["name"] for p in data]
         assert "warmane" in names
+
+    def test_get_plugin_config_requires_admin(self, app, db):
+        """Non-admin user should get 403 on plugin config endpoint."""
+        client = app.test_client()
+        user = _make_user(db)
+        _login_as(client, user)
+        resp = client.get("/api/v2/plugins/armory/config")
+        assert resp.status_code == 403
 
     def test_get_provider_realms(self, app, db):
         """Provider realms endpoint returns a list (may be empty)."""
