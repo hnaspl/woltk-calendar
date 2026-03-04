@@ -1060,6 +1060,12 @@
       "tenantIdRequired": "tenant_id jest wymagane",
       "userIdRequired": "user_id jest wymagane",
       "roleRequired": "role jest wymagane"
+    },
+    "meta": {
+      "expansionNotFound": "Nie znaleziono rozszerzenia",
+      "raidNotFound": "Nie znaleziono raidu",
+      "nameRequired": "Nazwa jest wymagana",
+      "slugRequired": "Slug jest wymagany"
     }
   },
   "notify": {

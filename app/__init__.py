@@ -346,6 +346,19 @@ def _seed_permissions_if_empty(app: Flask) -> None:
     except Exception as exc:
         app.logger.warning("Failed to seed system settings: %s", exc)
 
+    # Seed expansion data if missing
+    try:
+        from app.models.expansion import Expansion
+        exp_count = db.session.execute(
+            sa.select(sa.func.count()).select_from(Expansion)
+        ).scalar()
+        if exp_count == 0:
+            from app.seeds.expansions import seed_expansions
+            exp_created = seed_expansions()
+            app.logger.info("Seeded %d expansion item(s).", exp_created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed expansions: %s", exc)
+
 
 def _register_commands(app: Flask) -> None:
     import click
@@ -378,6 +391,10 @@ def _register_commands(app: Flask) -> None:
         seeded_settings = _seed_system_settings_if_missing()
         if seeded_settings:
             click.echo(f"Seeded {seeded_settings} system setting(s).")
+
+        from app.seeds.expansions import seed_expansions
+        exp_count = seed_expansions()
+        click.echo(f"Seeded {exp_count} expansion item(s).")
 
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")
