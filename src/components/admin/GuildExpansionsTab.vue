@@ -6,8 +6,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
         <div>
-          <h2 class="text-sm font-semibold text-text-primary">Guild Expansions</h2>
-          <p class="text-xs text-text-muted mt-0.5">Enable or disable expansion packs for your guild. Expansions are cumulative — enabling a later one auto-enables all earlier ones.</p>
+          <h2 class="text-sm font-semibold text-text-primary">{{ t('guild.expansions.title') }}</h2>
+          <p class="text-xs text-text-muted mt-0.5">{{ t('guild.expansions.description') }}</p>
         </div>
       </div>
 
@@ -16,7 +16,7 @@
       </div>
 
       <div v-else-if="allExpansions.length === 0" class="py-6 text-center">
-        <p class="text-sm text-text-muted">No expansions available.</p>
+        <p class="text-sm text-text-muted">{{ t('guild.expansions.noExpansions') }}</p>
       </div>
 
       <div v-else class="space-y-3">
@@ -36,10 +36,10 @@
                   ? 'bg-green-600/15 text-green-400 border-green-600/40'
                   : 'bg-bg-secondary text-text-muted border-border-default'"
               >
-                {{ isEnabled(exp.id) ? 'Enabled' : 'Disabled' }}
+                {{ isEnabled(exp.id) ? t('guild.expansions.enabled') : t('guild.expansions.disabled') }}
               </span>
               <span v-if="wouldAutoEnable(exp.id)" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-600/15 text-blue-400 border border-blue-600/40">
-                Auto-enables earlier
+                {{ t('guild.expansions.autoEnables') }}
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -48,19 +48,19 @@
                 class="text-xs py-1 px-3"
                 :loading="togglingId === exp.id"
                 @click="doEnable(exp)"
-              >Enable</WowButton>
+              >{{ t('guild.expansions.enable') }}</WowButton>
               <WowButton
                 v-else
                 variant="danger"
                 class="text-xs py-1 px-3"
                 :loading="togglingId === exp.id"
                 @click="doDisable(exp)"
-              >Disable</WowButton>
+              >{{ t('guild.expansions.disable') }}</WowButton>
             </div>
           </div>
           <div class="flex items-center gap-3 mt-1 text-xs text-text-muted">
             <span>{{ exp.slug }}</span>
-            <span>Order: {{ exp.sort_order ?? 0 }}</span>
+            <span>{{ t('guild.expansions.order') }}: {{ exp.sort_order ?? 0 }}</span>
           </div>
         </div>
       </div>
@@ -70,6 +70,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
@@ -80,6 +81,7 @@ import * as guildExpansionsApi from '@/api/guild_expansions'
 const guildStore = useGuildStore()
 const expansionStore = useExpansionStore()
 const uiStore = useUiStore()
+const { t } = useI18n()
 
 const loading = ref(false)
 const enabledIds = ref(new Set())
@@ -113,7 +115,7 @@ async function loadData() {
     const data = await guildExpansionsApi.getGuildExpansions(guildId)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
   } catch {
-    uiStore.showToast('Failed to load expansion data', 'error')
+    uiStore.showToast(t('guild.expansions.failedToLoad'), 'error')
   }
   loading.value = false
 }
@@ -125,9 +127,9 @@ async function doEnable(exp) {
   try {
     const data = await guildExpansionsApi.enableExpansion(guildId, exp.id)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
-    uiStore.showToast(`${exp.name} enabled`, 'success')
+    uiStore.showToast(t('guild.expansions.enabled_toast', { name: exp.name }), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Failed to enable expansion', 'error')
+    uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToEnable'), 'error')
   }
   togglingId.value = null
 }
@@ -139,9 +141,9 @@ async function doDisable(exp) {
   try {
     const data = await guildExpansionsApi.disableExpansion(guildId, exp.id)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
-    uiStore.showToast(`${exp.name} disabled`, 'success')
+    uiStore.showToast(t('guild.expansions.disabled_toast', { name: exp.name }), 'success')
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Failed to disable expansion', 'error')
+    uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToDisable'), 'error')
   }
   togglingId.value = null
 }
