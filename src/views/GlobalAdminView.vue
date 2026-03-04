@@ -49,6 +49,7 @@
           <DefaultRaidDefinitionsTab v-else-if="activeTab === 'raid-definitions'" />
           <ExpansionsTab v-else-if="activeTab === 'expansions'" />
           <PluginsTab v-else-if="activeTab === 'plugins'" />
+          <FunctionsTab v-else-if="activeTab === 'functions'" />
           <PlansTab v-else-if="activeTab === 'plans'" />
           <SettingsTab v-else-if="activeTab === 'settings'" />
         </KeepAlive>
@@ -69,6 +70,7 @@ import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitions
 import ExpansionsTab from '@/components/admin/ExpansionsTab.vue'
 import SettingsTab from '@/components/admin/SettingsTab.vue'
 import PluginsTab from '@/components/admin/PluginsTab.vue'
+import FunctionsTab from '@/components/admin/FunctionsTab.vue'
 import PlansTab from '@/components/admin/PlansTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
@@ -119,6 +121,7 @@ const tabs = [
   { id: 'raid-definitions', label: t('admin.raidDefinitions.tabTitle'), icon: icons.raidDefs },
   { id: 'expansions', label: t('admin.expansions.title'), icon: icons.expansions },
   { id: 'plugins', label: t('plugin.title'), icon: icons.plugins },
+  { id: 'functions', label: t('admin.functions.title'), icon: icons.settings },
   { id: 'plans', label: t('admin.plans.tabTitle'), icon: icons.plans },
   { id: 'settings', label: t('admin.system.title'), icon: icons.settings },
 ]

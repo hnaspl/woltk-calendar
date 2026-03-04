@@ -382,3 +382,67 @@ def update_guild_features(guild_id: int):
         set_feature(guild_id, str(key), bool(enabled))
     from app.services.feature_service import get_guild_features as _get_features
     return jsonify(_get_features(guild_id)), 200
+
+
+# ---------------------------------------------------------------------------
+# Platform features (global admin — enable/disable globally, paywall control)
+# ---------------------------------------------------------------------------
+
+@bp.get("/platform-features")
+@login_required
+def list_platform_features():
+    """List all platform feature definitions with global enable/disable and paywall status."""
+    err = require_system_permission("manage_system_settings")
+    if err:
+        return err
+    from app.services.feature_service import list_platform_features as _list
+    features = _list()
+    return jsonify([f.to_dict() for f in features]), 200
+
+
+@bp.put("/platform-features/<feature_key>")
+@login_required
+def update_platform_feature(feature_key: str):
+    """Update a platform feature's global settings (enable/disable, paywall)."""
+    err = require_system_permission("manage_system_settings")
+    if err:
+        return err
+    from app.services.feature_service import set_platform_feature
+    data = get_json()
+    pf = set_platform_feature(
+        feature_key,
+        globally_enabled=data.get("globally_enabled"),
+        requires_plan=data.get("requires_plan"),
+        display_name=data.get("display_name"),
+        description=data.get("description"),
+    )
+    return jsonify(pf.to_dict()), 200
+
+
+# ---------------------------------------------------------------------------
+# Tenant features (per-tenant feature control)
+# ---------------------------------------------------------------------------
+
+@bp.get("/tenants/<int:tenant_id>/features")
+@login_required
+def get_tenant_features(tenant_id: int):
+    """Get feature flags for a tenant (merged with platform defaults)."""
+    err = require_system_permission("manage_system_settings")
+    if err:
+        return err
+    from app.services.feature_service import get_tenant_features as _get
+    return jsonify(_get(tenant_id)), 200
+
+
+@bp.put("/tenants/<int:tenant_id>/features")
+@login_required
+def update_tenant_features(tenant_id: int):
+    """Update feature flags for a tenant."""
+    err = require_system_permission("manage_system_settings")
+    if err:
+        return err
+    from app.services.feature_service import set_tenant_feature, get_tenant_features as _get
+    data = get_json()
+    for key, enabled in data.items():
+        set_tenant_feature(tenant_id, str(key), bool(enabled))
+    return jsonify(_get(tenant_id)), 200

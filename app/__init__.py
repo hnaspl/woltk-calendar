@@ -405,6 +405,14 @@ def _register_commands(app: Flask) -> None:
         exp_count = seed_expansions()
         click.echo(f"Seeded {exp_count} expansion item(s).")
 
+        from app.seeds.plans import seed_plans
+        plan_count = seed_plans()
+        click.echo(f"Seeded {plan_count} plan(s).")
+
+        from app.seeds.platform_features import seed_platform_features
+        feat_count = seed_platform_features()
+        click.echo(f"Seeded {feat_count} platform feature(s).")
+
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")
     @click.option("--username", default=None, help="Admin username (or set ADMIN_USERNAME env var).")

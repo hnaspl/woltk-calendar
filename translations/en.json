@@ -81,6 +81,8 @@
       "all": "All",
       "noData": "No data available.",
       "total": "total",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
       "actions": "Actions",
       "type": "Type",
       "system": "System",
@@ -1036,6 +1038,16 @@
       "guildLimitUpdated": "Guild limit updated"
     },
     "yourRole": "Your role: ",
+    "functions": {
+      "title": "Functions",
+      "description": "Manage platform features — enable/disable globally and control paywall access. Individual tenants and guilds can enable or disable features from their admin panels.",
+      "feature": "Feature",
+      "globallyEnabled": "Global Status",
+      "requiresPlan": "Access",
+      "paid": "Paid Only",
+      "free": "Free",
+      "empty": "No platform features configured. Run database seeds to populate defaults."
+    },
     "plans": {
       "tabTitle": "Plans",
       "title": "Subscription Plans",
