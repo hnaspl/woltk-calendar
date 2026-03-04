@@ -14,16 +14,16 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 
+from app.enums import Role
 from app.extensions import db
 
-VALID_ROLES = frozenset(["main_tank", "off_tank", "healer", "melee_dps", "range_dps"])
-"""All valid role identifiers for the class-role matrix."""
-
-_ROLE_ORDER = ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]
+VALID_ROLES = frozenset(r.value for r in Role)
+"""All valid role identifiers, derived from the Role enum."""
 
 
 def _sort_roles(roles: set[str] | list[str]) -> list[str]:
-    return sorted(roles, key=lambda r: _ROLE_ORDER.index(r) if r in _ROLE_ORDER else 99)
+    """Return roles in deterministic (alphabetical) order."""
+    return sorted(roles)
 
 
 def get_expansion_defaults() -> dict[str, list[str]]:

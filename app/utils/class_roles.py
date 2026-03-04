@@ -61,9 +61,8 @@ def allowed_roles_for_class(class_name: str, *, guild_id: int | None = None) -> 
             roles.add("melee_dps")
         else:
             roles.add(spec_role)
-    # Deterministic order: main_tank, off_tank, healer, melee_dps, range_dps
-    _ROLE_ORDER = ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]
-    return sorted(roles, key=lambda r: _ROLE_ORDER.index(r) if r in _ROLE_ORDER else 99) if roles else None
+    from app.services.matrix_service import _sort_roles
+    return _sort_roles(roles) if roles else None
 
 
 def validate_class_role(class_name: str | None, chosen_role: str, *, guild_id: int | None = None) -> None:
