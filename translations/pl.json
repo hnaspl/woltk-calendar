@@ -672,7 +672,42 @@
     "matrixNoOverrides": "Brak nadpisań gildii — używane domyślne",
     "matrixCustomized": "Zmienione",
     "matrixDefault": "Domyślne",
-    "matrixSelectAtLeastOne": "Wybierz co najmniej jedną rolę"
+    "matrixSelectAtLeastOne": "Wybierz co najmniej jedną rolę",
+    "expansions": {
+      "title": "Rozszerzenia gildii",
+      "description": "Włącz lub wyłącz pakiety rozszerzeń dla swojej gildii. Rozszerzenia są kumulatywne — włączenie późniejszego automatycznie włącza wszystkie wcześniejsze.",
+      "noExpansions": "Brak dostępnych rozszerzeń.",
+      "enabled": "Włączone",
+      "disabled": "Wyłączone",
+      "autoEnables": "Automatycznie włącza wcześniejsze",
+      "enable": "Włącz",
+      "disable": "Wyłącz",
+      "order": "Kolejność",
+      "failedToLoad": "Nie udało się załadować danych rozszerzeń",
+      "enabled_toast": "{name} włączone",
+      "disabled_toast": "{name} wyłączone",
+      "failedToEnable": "Nie udało się włączyć rozszerzenia",
+      "failedToDisable": "Nie udało się wyłączyć rozszerzenia"
+    },
+    "realms": {
+      "title": "Serwery gildii",
+      "description": "Zarządzaj serwerami dostępnymi dla członków gildii.",
+      "noRealms": "Nie skonfigurowano serwerów. Dodaj poniżej.",
+      "default": "Domyślny",
+      "setDefault": "Ustaw domyślny",
+      "addRealm": "Dodaj serwer",
+      "realmName": "Nazwa serwera",
+      "placeholder": "np. Icecrown",
+      "added": "Serwer dodany",
+      "updated": "Serwer zaktualizowany",
+      "removed": "Serwer usunięty",
+      "setDefaultSuccess": "{name} ustawiony jako domyślny",
+      "failedToLoad": "Nie udało się załadować serwerów",
+      "failedToAdd": "Nie udało się dodać serwera",
+      "failedToUpdate": "Nie udało się zaktualizować serwera",
+      "failedToRemove": "Nie udało się usunąć serwera",
+      "failedToSetDefault": "Nie udało się ustawić domyślnego"
+    }
   },
   "members": {
     "addMember": "+ Dodaj członka",
@@ -1549,5 +1584,18 @@
     "loginToAccept": "Zaloguj się, aby zaakceptować",
     "registerToAccept": "Zarejestruj się, aby zaakceptować",
     "title": "Zostałeś zaproszony!"
+  },
+  "expansion": {
+    "errors": {
+      "not_found": "Nie znaleziono rozszerzenia",
+      "cannot_remove_last": "Nie można usunąć ostatniego włączonego rozszerzenia"
+    }
+  },
+  "realm": {
+    "errors": {
+      "not_found": "Nie znaleziono serwera",
+      "duplicate_name": "Serwer o tej nazwie już istnieje",
+      "cannot_remove_last": "Nie można usunąć ostatniego serwera"
+    }
   }
 }

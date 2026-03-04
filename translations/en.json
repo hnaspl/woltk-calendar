@@ -672,7 +672,42 @@
     "matrixNoOverrides": "No guild overrides — using expansion defaults",
     "matrixCustomized": "Customized",
     "matrixDefault": "Default",
-    "matrixSelectAtLeastOne": "Select at least one role"
+    "matrixSelectAtLeastOne": "Select at least one role",
+    "expansions": {
+      "title": "Guild Expansions",
+      "description": "Enable or disable expansion packs for your guild. Expansions are cumulative — enabling a later one auto-enables all earlier ones.",
+      "noExpansions": "No expansions available.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "autoEnables": "Auto-enables earlier",
+      "enable": "Enable",
+      "disable": "Disable",
+      "order": "Order",
+      "failedToLoad": "Failed to load expansion data",
+      "enabled_toast": "{name} enabled",
+      "disabled_toast": "{name} disabled",
+      "failedToEnable": "Failed to enable expansion",
+      "failedToDisable": "Failed to disable expansion"
+    },
+    "realms": {
+      "title": "Guild Realms",
+      "description": "Manage realms available for your guild members.",
+      "noRealms": "No realms configured. Add one below.",
+      "default": "Default",
+      "setDefault": "Set Default",
+      "addRealm": "Add Realm",
+      "realmName": "Realm Name",
+      "placeholder": "e.g. Icecrown",
+      "added": "Realm added",
+      "updated": "Realm updated",
+      "removed": "Realm removed",
+      "setDefaultSuccess": "{name} set as default",
+      "failedToLoad": "Failed to load realms",
+      "failedToAdd": "Failed to add realm",
+      "failedToUpdate": "Failed to update realm",
+      "failedToRemove": "Failed to remove realm",
+      "failedToSetDefault": "Failed to set default"
+    }
   },
   "members": {
     "addMember": "+ Add Member",
@@ -1549,5 +1584,18 @@
     "loginToAccept": "Login to Accept",
     "registerToAccept": "Register to Accept",
     "title": "You've Been Invited!"
+  },
+  "expansion": {
+    "errors": {
+      "not_found": "Expansion not found",
+      "cannot_remove_last": "Cannot remove the last enabled expansion"
+    }
+  },
+  "realm": {
+    "errors": {
+      "not_found": "Realm not found",
+      "duplicate_name": "A realm with this name already exists",
+      "cannot_remove_last": "Cannot remove the last realm"
+    }
   }
 }
