@@ -684,10 +684,10 @@
       "disable": "Disable",
       "order": "Order",
       "failedToLoad": "Failed to load expansion data",
-      "enabled_toast": "{name} enabled",
-      "disabled_toast": "{name} disabled",
       "failedToEnable": "Failed to enable expansion",
-      "failedToDisable": "Failed to disable expansion"
+      "failedToDisable": "Failed to disable expansion",
+      "enabledToast": "{name} enabled",
+      "disabledToast": "{name} disabled"
     },
     "realms": {
       "title": "Guild Realms",

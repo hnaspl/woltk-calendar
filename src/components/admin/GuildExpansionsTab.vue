@@ -127,7 +127,7 @@ async function doEnable(exp) {
   try {
     const data = await guildExpansionsApi.enableExpansion(guildId, exp.id)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
-    uiStore.showToast(t('guild.expansions.enabled_toast', { name: exp.name }), 'success')
+    uiStore.showToast(t('guild.expansions.enabledToast', { name: exp.name }), 'success')
   } catch (err) {
     uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToEnable'), 'error')
   }
@@ -141,7 +141,7 @@ async function doDisable(exp) {
   try {
     const data = await guildExpansionsApi.disableExpansion(guildId, exp.id)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
-    uiStore.showToast(t('guild.expansions.disabled_toast', { name: exp.name }), 'success')
+    uiStore.showToast(t('guild.expansions.disabledToast', { name: exp.name }), 'success')
   } catch (err) {
     uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToDisable'), 'error')
   }

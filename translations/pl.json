@@ -684,10 +684,10 @@
       "disable": "Wyłącz",
       "order": "Kolejność",
       "failedToLoad": "Nie udało się załadować danych rozszerzeń",
-      "enabled_toast": "{name} włączone",
-      "disabled_toast": "{name} wyłączone",
       "failedToEnable": "Nie udało się włączyć rozszerzenia",
-      "failedToDisable": "Nie udało się wyłączyć rozszerzenia"
+      "failedToDisable": "Nie udało się wyłączyć rozszerzenia",
+      "enabledToast": "{name} włączone",
+      "disabledToast": "{name} wyłączone"
     },
     "realms": {
       "title": "Serwery gildii",
