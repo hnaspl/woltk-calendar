@@ -834,7 +834,17 @@
       "raidCode": "Kod",
       "raidSize": "Rozmiar Raidu",
       "duration": "Czas trwania (min)",
-      "heroic": "Heroiczny"
+      "heroic": "Heroiczny",
+      "specs": "Specjalizacje",
+      "addClass": "Dodaj klasę",
+      "editClass": "Edytuj klasę",
+      "addSpec": "Dodaj specjalizację",
+      "editSpec": "Edytuj specjalizację",
+      "className": "Nazwa klasy",
+      "specName": "Nazwa specjalizacji",
+      "specRole": "Rola",
+      "noClasses": "Brak klas zdefiniowanych dla tej ekspansji.",
+      "noSpecs": "Brak specjalizacji dla tej klasy."
     },
     "globalAdmin": {
       "title": "Panel Admina Globalnego",
@@ -1195,7 +1205,9 @@
       "expansionNotFound": "Nie znaleziono rozszerzenia",
       "raidNotFound": "Nie znaleziono raidu",
       "nameRequired": "Nazwa jest wymagana",
-      "slugRequired": "Slug jest wymagany"
+      "slugRequired": "Slug jest wymagany",
+      "classNotFound": "Nie znaleziono klasy",
+      "specNotFound": "Nie znaleziono specjalizacji"
     },
     "notifications": {
       "notFound": "Powiadomienie nie znalezione"

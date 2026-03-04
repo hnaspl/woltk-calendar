@@ -287,3 +287,124 @@ def import_expansion():
         db.session.rollback()
         return jsonify({"error": _t("expansion.errors.import_failed")}), 400
     return jsonify({"message": _t("expansion.import_success"), "expansion": expansion.to_dict(include_nested=True)}), 201
+
+
+# --------------------------------------------------------------------------- class CRUD
+
+@bp.post("/<int:expansion_id>/classes")
+@login_required
+def add_class(expansion_id: int):
+    """Add a class to an expansion."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    expansion = db.session.get(Expansion, expansion_id)
+    if not expansion:
+        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    data = get_json()
+    missing = validate_required(data, "name")
+    if missing:
+        return missing
+    cls = ExpansionClass(
+        expansion_id=expansion.id,
+        name=data["name"],
+        icon=data.get("icon"),
+        sort_order=data.get("sort_order", 0),
+    )
+    db.session.add(cls)
+    db.session.commit()
+    return jsonify(cls.to_dict()), 201
+
+
+@bp.put("/classes/<int:class_id>")
+@login_required
+def update_class(class_id: int):
+    """Update an expansion class."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    cls = db.session.get(ExpansionClass, class_id)
+    if not cls:
+        return jsonify({"error": _t("api.meta.classNotFound")}), 404
+    data = get_json()
+    for field in ("name", "icon", "sort_order"):
+        if field in data:
+            setattr(cls, field, data[field])
+    db.session.commit()
+    return jsonify(cls.to_dict()), 200
+
+
+@bp.delete("/classes/<int:class_id>")
+@login_required
+def delete_class(class_id: int):
+    """Delete an expansion class and its specs."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    cls = db.session.get(ExpansionClass, class_id)
+    if not cls:
+        return jsonify({"error": _t("api.meta.classNotFound")}), 404
+    db.session.delete(cls)
+    db.session.commit()
+    return jsonify({"ok": True}), 200
+
+
+# --------------------------------------------------------------------------- spec CRUD
+
+@bp.post("/classes/<int:class_id>/specs")
+@login_required
+def add_spec(class_id: int):
+    """Add a spec to a class."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    cls = db.session.get(ExpansionClass, class_id)
+    if not cls:
+        return jsonify({"error": _t("api.meta.classNotFound")}), 404
+    data = get_json()
+    missing = validate_required(data, "name")
+    if missing:
+        return missing
+    spec = ExpansionSpec(
+        class_id=cls.id,
+        name=data["name"],
+        role=data.get("role", "dps"),
+        icon=data.get("icon"),
+        sort_order=data.get("sort_order", 0),
+    )
+    db.session.add(spec)
+    db.session.commit()
+    return jsonify(spec.to_dict()), 201
+
+
+@bp.put("/specs/<int:spec_id>")
+@login_required
+def update_spec(spec_id: int):
+    """Update a spec."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    spec = db.session.get(ExpansionSpec, spec_id)
+    if not spec:
+        return jsonify({"error": _t("api.meta.specNotFound")}), 404
+    data = get_json()
+    for field in ("name", "role", "icon", "sort_order"):
+        if field in data:
+            setattr(spec, field, data[field])
+    db.session.commit()
+    return jsonify(spec.to_dict()), 200
+
+
+@bp.delete("/specs/<int:spec_id>")
+@login_required
+def delete_spec(spec_id: int):
+    """Delete a spec."""
+    err = require_system_permission("manage_expansions")
+    if err:
+        return err
+    spec = db.session.get(ExpansionSpec, spec_id)
+    if not spec:
+        return jsonify({"error": _t("api.meta.specNotFound")}), 404
+    db.session.delete(spec)
+    db.session.commit()
+    return jsonify({"ok": True}), 200

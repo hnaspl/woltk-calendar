@@ -834,7 +834,17 @@
       "raidCode": "Code",
       "raidSize": "Raid Size",
       "duration": "Duration (min)",
-      "heroic": "Heroic"
+      "heroic": "Heroic",
+      "specs": "Specs",
+      "addClass": "Add Class",
+      "editClass": "Edit Class",
+      "addSpec": "Add Spec",
+      "editSpec": "Edit Spec",
+      "className": "Class Name",
+      "specName": "Spec Name",
+      "specRole": "Role",
+      "noClasses": "No classes defined for this expansion.",
+      "noSpecs": "No specs defined for this class."
     },
     "globalAdmin": {
       "title": "Global Admin Panel",
@@ -1195,7 +1205,9 @@
       "expansionNotFound": "Expansion not found",
       "raidNotFound": "Raid not found",
       "nameRequired": "Name is required",
-      "slugRequired": "Slug is required"
+      "slugRequired": "Slug is required",
+      "classNotFound": "Class not found",
+      "specNotFound": "Spec not found"
     },
     "notifications": {
       "notFound": "Notification not found"

@@ -1,8 +1,28 @@
-"""API v1 package: registers all blueprints under /api/v1."""
+"""API v1 package: registers all blueprints under /api/v1.
+
+**Deprecation notice (Phase 6):** v1 endpoints are maintained for backward
+compatibility.  New endpoints should be added to v2.  The ``Deprecation``
+response header is injected on every v1 response to signal that clients
+should migrate to v2 counterparts when available.
+"""
 
 from __future__ import annotations
 
 from flask import Flask
+
+
+def _add_deprecation_header(app: Flask) -> None:
+    """Add Deprecation header to all /api/v1/ responses."""
+
+    @app.after_request
+    def _v1_deprecation(response):
+        from flask import request
+
+        if request.path.startswith("/api/v1/"):
+            response.headers["Deprecation"] = "true"
+            response.headers["Sunset"] = "2027-01-01"
+            response.headers["Link"] = '</api/v2/>; rel="successor-version"'
+        return response
 
 
 def register_blueprints(app: Flask) -> None:
@@ -46,3 +66,5 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(warmane.bp, url_prefix=f"{prefix}/warmane")
     app.register_blueprint(roles.bp, url_prefix=f"{prefix}/roles")
     app.register_blueprint(armory.bp, url_prefix=f"{prefix}/armory")
+
+    _add_deprecation_header(app)

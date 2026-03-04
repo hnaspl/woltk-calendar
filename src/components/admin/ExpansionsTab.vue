@@ -97,6 +97,120 @@
       </div>
     </template>
 
+    <!-- Classes & Specs section for selected expansion -->
+    <template v-if="selectedExpansion">
+      <div class="border-t border-border-default pt-6 space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+          <h3 class="wow-heading text-base">{{ t('admin.expansions.classes') }} — {{ selectedExpansion.name }}</h3>
+          <WowButton @click="openAddClassModal">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            {{ t('admin.expansions.addClass') }}
+          </WowButton>
+        </div>
+
+        <div v-if="classesLoading" class="text-center py-4 text-text-muted text-sm">{{ t('common.labels.loading') }}</div>
+        <div v-else-if="classes.length === 0" class="text-center py-8 text-text-muted text-sm">
+          {{ t('admin.expansions.noClasses') }}
+        </div>
+        <div v-else class="space-y-3">
+          <div v-for="cls in classes" :key="cls.id"
+            class="rounded-lg border border-border-default bg-bg-secondary p-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-text-primary">{{ cls.name }}</span>
+                <span v-if="cls.icon" class="text-xs text-text-muted">{{ cls.icon }}</span>
+              </div>
+              <div class="flex gap-1.5">
+                <button type="button" class="text-xs text-accent-gold hover:text-accent-gold/80" @click="openEditClassModal(cls)">{{ t('common.buttons.edit') }}</button>
+                <button type="button" class="text-xs text-red-400 hover:text-red-300" @click="doDeleteClass(cls)">✕</button>
+                <button type="button" class="text-xs text-blue-400 hover:text-blue-300" @click="toggleClassSpecs(cls)">
+                  {{ expandedClassId === cls.id ? '▼' : '▶' }} {{ t('admin.expansions.specs') }}
+                </button>
+              </div>
+            </div>
+            <!-- Specs for this class -->
+            <div v-if="expandedClassId === cls.id" class="mt-2 pl-4 border-l-2 border-border-default space-y-2">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs text-text-muted font-medium">{{ t('admin.expansions.specs') }}</span>
+                <button type="button" class="text-xs text-accent-gold hover:text-accent-gold/80" @click="openAddSpecModal(cls)">+ {{ t('admin.expansions.addSpec') }}</button>
+              </div>
+              <div v-if="specsLoading" class="text-xs text-text-muted">{{ t('common.labels.loading') }}</div>
+              <div v-else-if="classSpecs.length === 0" class="text-xs text-text-muted">{{ t('admin.expansions.noSpecs') }}</div>
+              <div v-else v-for="spec in classSpecs" :key="spec.id"
+                class="flex items-center justify-between py-1 px-2 rounded bg-bg-primary text-sm">
+                <div class="flex items-center gap-2">
+                  <span class="text-text-primary">{{ spec.name }}</span>
+                  <span class="text-xs text-text-muted px-1.5 py-0.5 rounded bg-bg-tertiary">{{ spec.role }}</span>
+                </div>
+                <div class="flex gap-1.5">
+                  <button type="button" class="text-xs text-accent-gold hover:text-accent-gold/80" @click="openEditSpecModal(spec, cls)">{{ t('common.buttons.edit') }}</button>
+                  <button type="button" class="text-xs text-red-400 hover:text-red-300" @click="doDeleteSpec(spec)">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Add / Edit Class Modal -->
+    <div v-if="showClassModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div class="bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-sm">
+        <div class="p-4 border-b border-border-default">
+          <h3 class="text-lg font-semibold text-text-primary">{{ editingClass ? t('admin.expansions.editClass') : t('admin.expansions.addClass') }}</h3>
+        </div>
+        <form class="p-4 space-y-3" @submit.prevent="saveClass">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.expansions.className') }}</label>
+            <input v-model="classForm.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-accent-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Icon</label>
+            <input v-model="classForm.icon" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-accent-gold outline-none" />
+          </div>
+          <div v-if="classFormError" class="text-sm text-red-400">{{ classFormError }}</div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" class="px-3 py-1.5 rounded-lg text-sm text-text-muted" @click="showClassModal = false">{{ t('common.buttons.cancel') }}</button>
+            <button type="submit" class="px-3 py-1.5 rounded-lg bg-accent-gold/20 text-accent-gold text-sm font-medium" :disabled="saving">{{ t('common.buttons.save') }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add / Edit Spec Modal -->
+    <div v-if="showSpecModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div class="bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-sm">
+        <div class="p-4 border-b border-border-default">
+          <h3 class="text-lg font-semibold text-text-primary">{{ editingSpec ? t('admin.expansions.editSpec') : t('admin.expansions.addSpec') }}</h3>
+        </div>
+        <form class="p-4 space-y-3" @submit.prevent="saveSpec">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.expansions.specName') }}</label>
+            <input v-model="specForm.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-accent-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.expansions.specRole') }}</label>
+            <select v-model="specForm.role" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-accent-gold outline-none">
+              <option value="dps">DPS</option>
+              <option value="tank">Tank</option>
+              <option value="healer">Healer</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Icon</label>
+            <input v-model="specForm.icon" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-accent-gold outline-none" />
+          </div>
+          <div v-if="specFormError" class="text-sm text-red-400">{{ specFormError }}</div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" class="px-3 py-1.5 rounded-lg text-sm text-text-muted" @click="showSpecModal = false">{{ t('common.buttons.cancel') }}</button>
+            <button type="submit" class="px-3 py-1.5 rounded-lg bg-accent-gold/20 text-accent-gold text-sm font-medium" :disabled="saving">{{ t('common.buttons.save') }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Add / Edit Raid Modal -->
     <WowModal v-model="showRaidModal" :title="editingRaid ? t('admin.expansions.editRaid') : t('admin.expansions.addRaid')" size="lg">
       <form @submit.prevent="saveRaid" class="space-y-4">
@@ -290,7 +404,10 @@ async function loadRaids(slug) {
 
 function selectExpansion(exp) {
   selectedExpansion.value = exp
+  expandedClassId.value = null
+  classSpecs.value = []
   loadRaids(exp.slug)
+  loadClasses()
 }
 
 // --- Expansion CRUD ---
@@ -453,6 +570,148 @@ async function doDeleteRaid() {
     uiStore.showToast(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'), 'error')
   } finally {
     saving.value = false
+  }
+}
+
+// --- Class / Spec CRUD ---
+
+const classes = ref([])
+const classSpecs = ref([])
+const classesLoading = ref(false)
+const specsLoading = ref(false)
+const expandedClassId = ref(null)
+
+const showClassModal = ref(false)
+const editingClass = ref(null)
+const classForm = ref({ name: '', icon: '' })
+const classFormError = ref('')
+
+const showSpecModal = ref(false)
+const editingSpec = ref(null)
+const specParentClass = ref(null)
+const specForm = ref({ name: '', role: 'dps', icon: '' })
+const specFormError = ref('')
+
+async function loadClasses() {
+  if (!selectedExpansion.value) return
+  classesLoading.value = true
+  try {
+    classes.value = await expansionsApi.getClasses(selectedExpansion.value.slug)
+  } catch {
+    classes.value = []
+  } finally {
+    classesLoading.value = false
+  }
+}
+
+async function loadSpecsForClass(cls) {
+  specsLoading.value = true
+  try {
+    classSpecs.value = await expansionsApi.getClassSpecs(selectedExpansion.value.slug, cls.name)
+  } catch {
+    classSpecs.value = []
+  } finally {
+    specsLoading.value = false
+  }
+}
+
+function toggleClassSpecs(cls) {
+  if (expandedClassId.value === cls.id) {
+    expandedClassId.value = null
+    classSpecs.value = []
+  } else {
+    expandedClassId.value = cls.id
+    loadSpecsForClass(cls)
+  }
+}
+
+function openAddClassModal() {
+  editingClass.value = null
+  classForm.value = { name: '', icon: '' }
+  classFormError.value = ''
+  showClassModal.value = true
+}
+
+function openEditClassModal(cls) {
+  editingClass.value = cls
+  classForm.value = { name: cls.name, icon: cls.icon || '' }
+  classFormError.value = ''
+  showClassModal.value = true
+}
+
+async function saveClass() {
+  classFormError.value = ''
+  saving.value = true
+  try {
+    if (editingClass.value) {
+      await expansionsApi.updateClass(editingClass.value.id, classForm.value)
+    } else {
+      await expansionsApi.addClass(selectedExpansion.value.id, classForm.value)
+    }
+    showClassModal.value = false
+    await loadClasses()
+  } catch (err) {
+    classFormError.value = err?.response?.data?.error || err?.response?.data?.message || 'Failed to save class'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function doDeleteClass(cls) {
+  if (!confirm(`Delete class "${cls.name}" and all its specs?`)) return
+  try {
+    await expansionsApi.deleteClass(cls.id)
+    if (expandedClassId.value === cls.id) {
+      expandedClassId.value = null
+      classSpecs.value = []
+    }
+    await loadClasses()
+  } catch {
+    // ignore
+  }
+}
+
+function openAddSpecModal(cls) {
+  editingSpec.value = null
+  specParentClass.value = cls
+  specForm.value = { name: '', role: 'dps', icon: '' }
+  specFormError.value = ''
+  showSpecModal.value = true
+}
+
+function openEditSpecModal(spec, cls) {
+  editingSpec.value = spec
+  specParentClass.value = cls
+  specForm.value = { name: spec.name, role: spec.role || 'dps', icon: spec.icon || '' }
+  specFormError.value = ''
+  showSpecModal.value = true
+}
+
+async function saveSpec() {
+  specFormError.value = ''
+  saving.value = true
+  try {
+    if (editingSpec.value) {
+      await expansionsApi.updateSpec(editingSpec.value.id, specForm.value)
+    } else {
+      await expansionsApi.addSpec(specParentClass.value.id, specForm.value)
+    }
+    showSpecModal.value = false
+    await loadSpecsForClass(specParentClass.value)
+  } catch (err) {
+    specFormError.value = err?.response?.data?.error || err?.response?.data?.message || 'Failed to save spec'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function doDeleteSpec(spec) {
+  if (!confirm(`Delete spec "${spec.name}"?`)) return
+  try {
+    await expansionsApi.deleteSpec(spec.id)
+    await loadSpecsForClass({ name: classes.value.find(c => expandedClassId.value === c.id)?.name, id: expandedClassId.value })
+  } catch {
+    // ignore
   }
 }
 

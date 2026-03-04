@@ -20,3 +20,13 @@ export const setDefaultExpansion = (slug) => api.put('/v2/meta/expansions/defaul
 export const addRaid = (expansionId, data) => api.post(`/v2/meta/expansions/${expansionId}/raids`, data)
 export const updateRaid = (raidId, data) => api.put(`/v2/meta/expansions/raids/${raidId}`, data)
 export const deleteRaid = (raidId) => api.delete(`/v2/meta/expansions/raids/${raidId}`)
+
+// Class CRUD
+export const addClass = (expansionId, data) => api.post(`/v2/meta/expansions/${expansionId}/classes`, data)
+export const updateClass = (classId, data) => api.put(`/v2/meta/expansions/classes/${classId}`, data)
+export const deleteClass = (classId) => api.delete(`/v2/meta/expansions/classes/${classId}`)
+
+// Spec CRUD
+export const addSpec = (classId, data) => api.post(`/v2/meta/expansions/classes/${classId}/specs`, data)
+export const updateSpec = (specId, data) => api.put(`/v2/meta/expansions/specs/${specId}`, data)
+export const deleteSpec = (specId) => api.delete(`/v2/meta/expansions/specs/${specId}`)
