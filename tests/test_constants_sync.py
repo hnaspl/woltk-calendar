@@ -1,14 +1,10 @@
-"""Validate that backend and frontend constants are in sync.
+"""Validate that constants are consistent across the system.
 
-These tests parse src/constants.js to extract RAID_TYPES, WARMANE_REALMS,
-CLASS_SPECS, and CLASS_ROLES, then compare them against the Python equivalents
-in app/constants.py and app/enums.py.
-
-Additionally, tests validate the ``/api/v1/meta/constants`` endpoint returns
-the same values, ensuring the API is the true single source of truth.
-
-If a test here fails, it means the backend and frontend have drifted apart
-and one side needs to be updated to match the other.
+With Phase 1, expansion-specific data (classes, specs, roles, raids) is
+fully DB-driven.  These tests validate:
+- Non-expansion frontend/backend constants remain in sync (WARMANE_REALMS, roles)
+- The v1 meta API returns DB-driven data correctly
+- normalize_spec_name works via DB lookup
 """
 
 from __future__ import annotations
@@ -18,15 +14,8 @@ from pathlib import Path
 
 import pytest
 
-# Backend constants
-from app.constants import (
-    CLASS_ROLES,
-    CLASS_SPECS,
-    ROLE_LABELS,
-    WARMANE_REALMS,
-    WOTLK_RAIDS,
-    normalize_spec_name,
-)
+# Backend constants (only non-expansion constants remain)
+from app.constants import ROLE_LABELS, WARMANE_REALMS, normalize_spec_name
 from app.enums import Role
 
 CONSTANTS_JS = Path(__file__).resolve().parent.parent / "src" / "constants.js"
@@ -47,33 +36,6 @@ def _parse_js_array(name: str) -> list[str]:
     return re.findall(r"'([^']+)'", m.group(1))
 
 
-def _parse_js_object_of_arrays(name: str) -> dict[str, list[str]]:
-    """Extract a ``{ 'Key': ['a','b'], ... }`` constant from src/constants.js."""
-    js = _read_js()
-    m = re.search(
-        rf"export\s+const\s+{name}\s*=\s*\{{(.*?)\}}", js, re.DOTALL,
-    )
-    assert m, f"Could not find {name} in src/constants.js"
-    body = m.group(1)
-    result: dict[str, list[str]] = {}
-    for entry in re.finditer(r"'([^']+)':\s*\[([^\]]+)\]", body):
-        result[entry.group(1)] = re.findall(r"'([^']+)'", entry.group(2))
-    return result
-
-
-def _parse_js_raid_types() -> list[dict]:
-    """Extract RAID_TYPES ``[{value, label}, ...]`` from src/constants.js."""
-    js = _read_js()
-    m = re.search(
-        r"export\s+const\s+RAID_TYPES\s*=\s*\[(.*?)\]", js, re.DOTALL,
-    )
-    assert m, "Could not find RAID_TYPES in src/constants.js"
-    entries = re.findall(
-        r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", m.group(1),
-    )
-    return [{"code": code, "name": name} for code, name in entries]
-
-
 def _parse_js_role_options() -> dict[str, str]:
     """Extract ROLE_OPTIONS ``[{value, label}, ...]`` as a value→label map."""
     js = _read_js()
@@ -85,34 +47,6 @@ def _parse_js_role_options() -> dict[str, str]:
         r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", m.group(1),
     )
     return {value: label for value, label in entries}
-
-
-# ---------------------------------------------------------------------------
-# RAID_TYPES sync
-# ---------------------------------------------------------------------------
-
-
-class TestRaidTypesSync:
-    """Ensure frontend RAID_TYPES matches backend WOTLK_RAIDS."""
-
-    def test_raid_codes_match(self):
-        js_raids = _parse_js_raid_types()
-        py_codes = [r["code"] for r in WOTLK_RAIDS]
-        js_codes = [r["code"] for r in js_raids]
-        assert js_codes == py_codes, (
-            f"Raid codes differ.\n  Backend: {py_codes}\n  Frontend: {js_codes}"
-        )
-
-    def test_raid_names_match(self):
-        js_raids = _parse_js_raid_types()
-        py_names = {r["code"]: r["name"] for r in WOTLK_RAIDS}
-        js_names = {r["code"]: r["name"] for r in js_raids}
-        for code in py_names:
-            assert code in js_names, f"Raid code '{code}' missing from frontend"
-            assert py_names[code] == js_names[code], (
-                f"Raid name mismatch for '{code}': "
-                f"backend='{py_names[code]}' vs frontend='{js_names[code]}'"
-            )
 
 
 # ---------------------------------------------------------------------------
@@ -131,109 +65,118 @@ class TestWarmaneRealmsSync:
 
 
 # ---------------------------------------------------------------------------
-# CLASS_SPECS sync
-# ---------------------------------------------------------------------------
-
-
-class TestClassSpecsSync:
-    """Ensure frontend CLASS_SPECS matches backend."""
-
-    def test_class_specs_match(self):
-        js_specs = _parse_js_object_of_arrays("CLASS_SPECS")
-        py_specs = {cls.value: specs for cls, specs in CLASS_SPECS.items()}
-        assert set(js_specs.keys()) == set(py_specs.keys()), (
-            f"Class names differ.\n  Backend: {sorted(py_specs.keys())}\n"
-            f"  Frontend: {sorted(js_specs.keys())}"
-        )
-        for cls in py_specs:
-            assert js_specs[cls] == py_specs[cls], (
-                f"Specs differ for {cls}.\n"
-                f"  Backend: {py_specs[cls]}\n  Frontend: {js_specs[cls]}"
-            )
-
-
-# ---------------------------------------------------------------------------
-# CLASS_ROLES sync
-# ---------------------------------------------------------------------------
-
-
-class TestClassRolesSync:
-    """Ensure frontend CLASS_ROLES matches backend."""
-
-    def test_class_roles_match(self):
-        js_roles = _parse_js_object_of_arrays("CLASS_ROLES")
-        py_roles = {
-            cls.value: [r.value for r in roles]
-            for cls, roles in CLASS_ROLES.items()
-        }
-        assert set(js_roles.keys()) == set(py_roles.keys()), (
-            f"Class names differ.\n  Backend: {sorted(py_roles.keys())}\n"
-            f"  Frontend: {sorted(js_roles.keys())}"
-        )
-        for cls in py_roles:
-            assert js_roles[cls] == py_roles[cls], (
-                f"Roles differ for {cls}.\n"
-                f"  Backend: {py_roles[cls]}\n  Frontend: {js_roles[cls]}"
-            )
-
-
-# ---------------------------------------------------------------------------
-# normalize_spec_name consistency
+# normalize_spec_name (DB-driven)
 # ---------------------------------------------------------------------------
 
 
 class TestNormalizeSpecNameSync:
-    """Verify backend normalize_spec_name covers all known specs."""
+    """Verify DB-driven normalize_spec_name covers all seeded specs."""
 
-    def test_every_spec_normalizes_to_itself(self):
+    @pytest.fixture(autouse=True)
+    def _seed(self, db, app):
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
+
+    def test_every_spec_normalizes_to_itself(self, app):
         """Each canonical spec name should normalize to itself."""
-        for cls, specs in CLASS_SPECS.items():
+        from app.models.expansion import ExpansionClass, ExpansionSpec
+        from app.extensions import db
+        import sqlalchemy as sa
+        classes = db.session.execute(sa.select(ExpansionClass)).scalars().all()
+        for cls in classes:
+            specs = db.session.execute(
+                sa.select(ExpansionSpec.name).where(ExpansionSpec.class_id == cls.id)
+            ).scalars().all()
             for spec in specs:
-                result = normalize_spec_name(spec, cls.value)
+                result = normalize_spec_name(spec, cls.name)
                 assert result == spec, (
-                    f"normalize_spec_name({spec!r}, {cls.value!r}) = {result!r}, "
+                    f"normalize_spec_name({spec!r}, {cls.name!r}) = {result!r}, "
                     f"expected {spec!r}"
                 )
 
-    def test_feral_quirk(self):
+    def test_feral_quirk(self, app):
         """Warmane sends 'Feral' for Druids; should normalize to 'Feral Combat'."""
         result = normalize_spec_name("Feral", "Druid")
         assert result == "Feral Combat"
 
 
 # ---------------------------------------------------------------------------
-# API endpoint ↔ frontend sync
+# API endpoint ↔ DB validation
 # ---------------------------------------------------------------------------
 
 
-class TestApiVsFrontendSync:
-    """Verify the meta/constants API returns data matching frontend statics."""
+class TestApiVsDbSync:
+    """Verify the meta/constants API returns expansion data from DB."""
+
+    @pytest.fixture(autouse=True)
+    def _seed(self, db, app):
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
 
     def _api_data(self, app):
         with app.test_client() as client:
             return client.get("/api/v1/meta/constants").get_json()
 
-    def test_api_realms_match_frontend(self, app):
+    def test_api_realms_match_backend(self, app):
         api = self._api_data(app)
-        js_realms = _parse_js_array("WARMANE_REALMS")
-        assert api["warmane_realms"] == js_realms
+        assert api["warmane_realms"] == WARMANE_REALMS
 
-    def test_api_raid_names_match_frontend(self, app):
+    def test_api_returns_db_classes(self, app, db):
+        """API wow_classes should match seeded expansion classes."""
+        from app.models.expansion import Expansion, ExpansionClass
+        from app.extensions import db as _db
+        import sqlalchemy as sa
         api = self._api_data(app)
-        js_raids = _parse_js_raid_types()
-        api_map = {r["code"]: r["name"] for r in api["raid_types"]}
-        js_map = {r["code"]: r["name"] for r in js_raids}
-        assert api_map == js_map
+        expansion = _db.session.execute(
+            sa.select(Expansion).where(Expansion.slug == "wotlk")
+        ).scalars().first()
+        if expansion:
+            db_classes = _db.session.execute(
+                sa.select(ExpansionClass.name)
+                .where(ExpansionClass.expansion_id == expansion.id)
+                .order_by(ExpansionClass.sort_order)
+            ).scalars().all()
+            assert api["wow_classes"] == list(db_classes)
 
-    def test_api_class_specs_match_frontend(self, app):
+    def test_api_returns_db_specs(self, app, db):
+        """API class_specs should match seeded expansion specs."""
+        from app.models.expansion import Expansion, ExpansionClass, ExpansionSpec
+        from app.extensions import db as _db
+        import sqlalchemy as sa
         api = self._api_data(app)
-        js_specs = _parse_js_object_of_arrays("CLASS_SPECS")
-        assert api["class_specs"] == js_specs
+        expansion = _db.session.execute(
+            sa.select(Expansion).where(Expansion.slug == "wotlk")
+        ).scalars().first()
+        if expansion:
+            classes = _db.session.execute(
+                sa.select(ExpansionClass)
+                .where(ExpansionClass.expansion_id == expansion.id)
+            ).scalars().all()
+            for cls in classes:
+                db_specs = _db.session.execute(
+                    sa.select(ExpansionSpec.name).where(ExpansionSpec.class_id == cls.id)
+                ).scalars().all()
+                assert cls.name in api["class_specs"], f"Missing class {cls.name}"
+                assert set(api["class_specs"][cls.name]) == set(db_specs)
 
-    def test_api_class_roles_match_frontend(self, app):
+    def test_api_returns_db_raids(self, app, db):
+        """API raid_types should match seeded expansion raids."""
+        from app.models.expansion import Expansion, ExpansionRaid
+        from app.extensions import db as _db
+        import sqlalchemy as sa
         api = self._api_data(app)
-        js_roles = _parse_js_object_of_arrays("CLASS_ROLES")
-        assert api["class_roles"] == js_roles
+        expansion = _db.session.execute(
+            sa.select(Expansion).where(Expansion.slug == "wotlk")
+        ).scalars().first()
+        if expansion:
+            db_raids = _db.session.execute(
+                sa.select(ExpansionRaid.code, ExpansionRaid.name)
+                .where(ExpansionRaid.expansion_id == expansion.id)
+            ).all()
+            api_map = {r["code"]: r["name"] for r in api["raid_types"]}
+            for code, name in db_raids:
+                assert code in api_map, f"Missing raid {code}"
+                assert api_map[code] == name
 
     def test_api_role_labels_match_frontend(self, app):
         api = self._api_data(app)

@@ -7,6 +7,7 @@ import api from '@/api'
 export const listExpansions = () => api.get('/v2/meta/expansions')
 export const getClasses = (slug) => api.get(`/v2/meta/expansions/${slug}/classes`)
 export const getSpecs = (slug) => api.get(`/v2/meta/expansions/${slug}/specs`)
+export const getClassSpecs = (slug, className) => api.get(`/v2/meta/expansions/${slug}/classes/${encodeURIComponent(className)}/specs`)
 export const getRaids = (slug) => api.get(`/v2/meta/expansions/${slug}/raids`)
 export const getRoles = (slug) => api.get(`/v2/meta/expansions/${slug}/roles`)
 export const getDefaultExpansion = () => api.get('/v2/meta/expansions/default-expansion')

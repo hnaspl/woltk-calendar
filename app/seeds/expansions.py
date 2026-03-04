@@ -6,8 +6,6 @@ import logging
 
 import sqlalchemy as sa
 
-from app.constants import CLASS_SPECS, WOTLK_RAIDS
-from app.enums import WowClass
 from app.extensions import db
 from app.models.expansion import (
     Expansion,
@@ -19,18 +17,37 @@ from app.models.expansion import (
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# WotLK-specific seed data (self-contained, no imports from constants)
+# All data sourced from WoW wiki: https://wowpedia.fandom.com/wiki/Wrath_of_the_Lich_King
+# ---------------------------------------------------------------------------
+
+# class_name → [spec_name, ...]
+WOTLK_CLASS_SPECS: dict[str, list[str]] = {
+    "Death Knight": ["Blood", "Frost", "Unholy"],
+    "Druid":        ["Balance", "Feral Combat", "Restoration"],
+    "Hunter":       ["Beast Mastery", "Marksmanship", "Survival"],
+    "Mage":         ["Arcane", "Fire", "Frost"],
+    "Paladin":      ["Holy", "Protection", "Retribution"],
+    "Priest":       ["Discipline", "Holy", "Shadow"],
+    "Rogue":        ["Assassination", "Combat", "Subtlety"],
+    "Shaman":       ["Elemental", "Enhancement", "Restoration"],
+    "Warlock":      ["Affliction", "Demonology", "Destruction"],
+    "Warrior":      ["Arms", "Fury", "Protection"],
+}
+
 # Spec → role mapping for WotLK
 SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
-    WowClass.DEATH_KNIGHT.value: {"Blood": "tank", "Frost": "melee_dps", "Unholy": "melee_dps"},
-    WowClass.DRUID.value: {"Balance": "range_dps", "Feral Combat": "melee_dps", "Restoration": "healer"},
-    WowClass.HUNTER.value: {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "range_dps"},
-    WowClass.MAGE.value: {"Arcane": "range_dps", "Fire": "range_dps", "Frost": "range_dps"},
-    WowClass.PALADIN.value: {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
-    WowClass.PRIEST.value: {"Discipline": "healer", "Holy": "healer", "Shadow": "range_dps"},
-    WowClass.ROGUE.value: {"Assassination": "melee_dps", "Combat": "melee_dps", "Subtlety": "melee_dps"},
-    WowClass.SHAMAN.value: {"Elemental": "range_dps", "Enhancement": "melee_dps", "Restoration": "healer"},
-    WowClass.WARLOCK.value: {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
-    WowClass.WARRIOR.value: {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
+    "Death Knight": {"Blood": "tank", "Frost": "melee_dps", "Unholy": "melee_dps"},
+    "Druid":        {"Balance": "range_dps", "Feral Combat": "tank", "Restoration": "healer"},
+    "Hunter":       {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "range_dps"},
+    "Mage":         {"Arcane": "range_dps", "Fire": "range_dps", "Frost": "range_dps"},
+    "Paladin":      {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
+    "Priest":       {"Discipline": "healer", "Holy": "healer", "Shadow": "range_dps"},
+    "Rogue":        {"Assassination": "melee_dps", "Combat": "melee_dps", "Subtlety": "melee_dps"},
+    "Shaman":       {"Elemental": "range_dps", "Enhancement": "melee_dps", "Restoration": "healer"},
+    "Warlock":      {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
+    "Warrior":      {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
 }
 
 EXPANSION_ROLES = [
@@ -39,6 +56,17 @@ EXPANSION_ROLES = [
     ("healer", "Healer", 3),
     ("melee_dps", "Melee DPS", 4),
     ("range_dps", "Range DPS", 5),
+]
+
+WOTLK_RAIDS: list[dict] = [
+    {"code": "naxx",   "name": "Naxxramas",              "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Original Lich King tier 7 raid in Dragonblight."},
+    {"code": "os",     "name": "The Obsidian Sanctum",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Sartharion encounter with optional Drake tiers (3D)."},
+    {"code": "eoe",    "name": "The Eye of Eternity",     "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Malygos encounter above the Nexus."},
+    {"code": "voa",    "name": "Vault of Archavon",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "PvP-gated raid in Wintergrasp; up to 4 bosses."},
+    {"code": "ulduar", "name": "Ulduar",                  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Titan facility raid with hard-mode encounters."},
+    {"code": "toc",    "name": "Trial of the Crusader",   "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Argent Tournament arena raid — normal & heroic."},
+    {"code": "icc",    "name": "Icecrown Citadel",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "notes": "12-boss raid culminating in the Lich King encounter."},
+    {"code": "rs",     "name": "The Ruby Sanctum",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 60,  "notes": "Halion encounter; bridge between WotLK and Cataclysm."},
 ]
 
 
@@ -66,27 +94,26 @@ def seed_expansions() -> int:
         created += 1
 
     # --- Classes & Specs ---------------------------------------------------
-    for sort_idx, wow_class in enumerate(WowClass, start=1):
+    for sort_idx, (class_name, spec_names) in enumerate(WOTLK_CLASS_SPECS.items(), start=1):
         existing_cls = db.session.execute(
             sa.select(ExpansionClass).where(
                 ExpansionClass.expansion_id == expansion.id,
-                ExpansionClass.name == wow_class.value,
+                ExpansionClass.name == class_name,
             )
         ).scalar_one_or_none()
 
         if existing_cls is None:
             existing_cls = ExpansionClass(
                 expansion_id=expansion.id,
-                name=wow_class.value,
+                name=class_name,
                 sort_order=sort_idx,
             )
             db.session.add(existing_cls)
             db.session.flush()
             created += 1
 
-        specs = CLASS_SPECS.get(wow_class, [])
-        role_map = SPEC_ROLE_MAP.get(wow_class.value, {})
-        for spec_name in specs:
+        role_map = SPEC_ROLE_MAP.get(class_name, {})
+        for spec_name in spec_names:
             existing_spec = db.session.execute(
                 sa.select(ExpansionSpec).where(
                     ExpansionSpec.class_id == existing_cls.id,

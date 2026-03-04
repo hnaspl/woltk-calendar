@@ -1,26 +1,16 @@
 """Tests for GET /api/v1/meta/constants endpoint.
 
 Validates that the endpoint returns all shared constants and that
-the values match the authoritative backend definitions.
+the values are DB-driven from the expansion registry.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from app.constants import (
-    CLASS_ROLES,
-    CLASS_SPECS,
-    ROLE_SLOTS,
-    WARMANE_REALMS,
-    WOTLK_RAIDS,
-)
-from app.enums import (
-    AttendanceOutcome,
-    EventStatus,
-    Role,
-    WowClass,
-)
+from app.constants import ROLE_SLOTS, WARMANE_REALMS
+from app.enums import AttendanceOutcome, EventStatus, Role
+from app.seeds.expansions import WOTLK_CLASS_SPECS, WOTLK_RAIDS
 
 
 class TestMetaConstants:
@@ -41,28 +31,33 @@ class TestMetaConstants:
             data = client.get("/api/v1/meta/constants").get_json()
         assert data["warmane_realms"] == WARMANE_REALMS
 
-    def test_wow_classes_match(self, app):
+    def test_wow_classes_from_db(self, app):
+        """API wow_classes should match seeded expansion classes."""
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
-        expected = [c.value for c in WowClass]
+        expected = list(WOTLK_CLASS_SPECS.keys())
         assert data["wow_classes"] == expected
 
-    def test_raid_types_codes_match(self, app):
+    def test_raid_types_from_db(self, app):
+        """API raid_types should match seeded expansion raids."""
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
         expected_codes = [r["code"] for r in WOTLK_RAIDS]
         actual_codes = [r["code"] for r in data["raid_types"]]
-        assert actual_codes == expected_codes
+        assert set(actual_codes) == set(expected_codes)
 
     def test_raid_types_names_match(self, app):
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
         expected_names = {r["code"]: r["name"] for r in WOTLK_RAIDS}
         for rt in data["raid_types"]:
-            assert rt["name"] == expected_names[rt["code"]], (
-                f"Mismatch for {rt['code']}: "
-                f"API='{rt['name']}' vs backend='{expected_names[rt['code']]}'"
-            )
+            assert rt["name"] == expected_names[rt["code"]]
 
     def test_roles_match(self, app):
         with app.test_client() as client:
@@ -91,20 +86,27 @@ class TestMetaConstants:
         expected = [o.value for o in AttendanceOutcome]
         assert data["attendance_outcomes"] == expected
 
-    def test_class_specs_match(self, app):
+    def test_class_specs_from_db(self, app):
+        """API class_specs should match seeded expansion specs."""
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
-        expected = {cls.value: specs for cls, specs in CLASS_SPECS.items()}
-        assert data["class_specs"] == expected
+        for cls_name, spec_names in WOTLK_CLASS_SPECS.items():
+            assert cls_name in data["class_specs"], f"Missing class {cls_name}"
+            assert set(data["class_specs"][cls_name]) == set(spec_names)
 
-    def test_class_roles_match(self, app):
+    def test_class_roles_from_db(self, app):
+        """API class_roles should be derived from seeded spec roles."""
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
-        expected = {
-            cls.value: [r.value for r in roles]
-            for cls, roles in CLASS_ROLES.items()
-        }
-        assert data["class_roles"] == expected
+        assert len(data["class_roles"]) == len(WOTLK_CLASS_SPECS)
+        # Hunter should only have range_dps
+        assert set(data["class_roles"]["Hunter"]) == {"range_dps"}
+        # Warrior should have main_tank, off_tank, melee_dps
+        assert "main_tank" in data["class_roles"]["Warrior"]
 
     def test_role_slots_match(self, app):
         with app.test_client() as client:

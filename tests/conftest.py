@@ -63,6 +63,9 @@ def ctx(app):
 @pytest.fixture
 def seed(db, ctx):
     """Create seed data: guild, 2 users, raid definition, raid event with 2 DPS slots."""
+    from app.seeds.expansions import seed_expansions
+    seed_expansions()
+
     guild = Guild(name="Test Guild", realm_name="Icecrown", created_by=None)
     db.session.add(guild)
     db.session.flush()

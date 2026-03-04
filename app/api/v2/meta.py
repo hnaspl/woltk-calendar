@@ -73,6 +73,22 @@ def get_specs(slug: str):
     return jsonify([s.to_dict() for s in specs]), 200
 
 
+@bp.get("/<slug>/classes/<class_name>/specs")
+@login_required
+def get_class_specs(slug: str, class_name: str):
+    """Return specs for a specific class within an expansion."""
+    expansion, err = _get_expansion_or_404(slug)
+    if err:
+        return err
+    cls = db.session.query(ExpansionClass).filter_by(
+        expansion_id=expansion.id, name=class_name,
+    ).first()
+    if not cls:
+        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    specs = db.session.query(ExpansionSpec).filter_by(class_id=cls.id).all()
+    return jsonify([s.to_dict() for s in specs]), 200
+
+
 @bp.get("/<slug>/raids")
 @login_required
 def get_raids(slug: str):

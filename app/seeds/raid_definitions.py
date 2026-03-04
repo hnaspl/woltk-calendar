@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 
 import sqlalchemy as sa
 
-from app.constants import WOTLK_RAIDS
 from app.extensions import db
 from app.models.raid import RaidDefinition
+from app.seeds.expansions import WOTLK_RAIDS
 
 
 def seed_raid_definitions() -> int:
