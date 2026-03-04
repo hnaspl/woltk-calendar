@@ -16,7 +16,7 @@ from app.models.permission import SystemRole, Permission, RolePermission, RoleGr
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _caller_max_role_level(user_id: int) -> int:
+def get_caller_max_role_level(user_id: int) -> int:
     """Return the highest role level *user_id* holds across all active guilds."""
     memberships = db.session.execute(
         sa.select(GuildMembership.role).where(

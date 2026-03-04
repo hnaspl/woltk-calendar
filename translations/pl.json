@@ -577,7 +577,7 @@
     "confirmRevoke": "Wycofać to zaproszenie?",
     "copyLink": "Kopiuj link",
     "createGuild": "Utwórz gildię",
-    "createHelp": "Wpisz nazwę gildii i wybierz dostawcę armory, aby ją wyszukać. Realm i frakcja zostaną uzupełnione automatycznie. Wybierz Ręcznie, jeśli twój serwer nie ma armory.",
+    "createHelp": "Wpisz nazwę gildii i wybierz dostawcę Armory, aby ją wyszukać. Realm i frakcja zostaną uzupełnione automatycznie. Wybierz Ręcznie, jeśli twój serwer nie ma Armory.",
     "createInvite": "Utwórz link zaproszeniowy",
     "createInviteHelp": "Generuj link, aby zaprosić graczy do gildii. Muszą być najpierw członkami przestrzeni roboczej.",
     "decline": "Odrzuć",
@@ -650,7 +650,7 @@
       "joined": "Dołączono do {name}!",
       "failedToSearchWarmane": "Nie udało się przeszukać API Warmane",
       "failedToCreate": "Nie udało się utworzyć gildii",
-      "failedToSearchArmory": "Nie udało się wyszukać w API armory"
+      "failedToSearchArmory": "Nie udało się wyszukać w API Armory"
     },
     "unlimited": "∞",
     "used": "Użyte",
@@ -723,10 +723,10 @@
       "onlyPendingDecline": "Tylko oczekujące aplikacje mogą być odrzucone"
     },
     "searchOnArmory": "Szukaj w Armory",
-    "foundOnArmory": "Znaleziono w armory — pola uzupełnione automatycznie",
+    "foundOnArmory": "Znaleziono w Armory — pola uzupełnione automatycznie",
     "notFoundOnArmory": "Nie znaleziono gildii na żadnym realmie. Możesz wprowadzić dane ręcznie.",
-    "manualEntryInfo": "Tryb ręczny — gildia nie jest połączona z dostawcą armory. Możesz skonfigurować ustawienia armory później w ustawieniach gildii.",
-    "manualNoArmory": "Ręcznie (bez armory)",
+    "manualEntryInfo": "Tryb ręczny — gildia nie jest połączona z dostawcą Armory. Możesz skonfigurować ustawienia Armory później w ustawieniach gildii.",
+    "manualNoArmory": "Ręcznie (bez Armory)",
     "armoryProvider": "Dostawca Armory",
     "realmPlaceholder": "Wpisz nazwę realmu"
   },

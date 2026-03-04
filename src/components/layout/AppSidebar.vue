@@ -406,10 +406,10 @@ const GUILD_TIMEZONES = [
 // Available armory providers from constants store
 const availableProviders = computed(() => Object.keys(constantsStore.providerRealms))
 
-// Realms for the selected provider (or all realms if manual)
+// Realms for the selected provider (empty for manual mode to show free-text input)
 const selectedProviderRealms = computed(() => {
   const provider = newGuild.armory_provider
-  if (!provider || provider === 'manual') return constantsStore.allRealms
+  if (!provider || provider === 'manual') return []
   return constantsStore.providerRealms[provider] || []
 })
 
@@ -512,13 +512,13 @@ async function doCreateGuild() {
   createGuildError.value = null
   creatingGuild.value = true
   try {
-    const provider = guildLookupMatch.value ? newGuild.armory_provider : (guildManualMode.value ? 'manual' : newGuild.armory_provider)
+    const provider = newGuild.armory_provider === 'manual' ? '' : newGuild.armory_provider
     const guild = await guildsApi.createGuild({
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
       warmane_source: !!guildLookupMatch.value,
-      armory_provider: provider === 'manual' ? '' : provider,
+      armory_provider: provider,
       timezone: newGuild.timezone,
     })
     await guildStore.fetchGuilds()

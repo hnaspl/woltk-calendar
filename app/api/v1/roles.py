@@ -82,7 +82,7 @@ def list_roles():
     """
     max_level = None
     if not getattr(current_user, "is_admin", False):
-        max_level = role_service._caller_max_role_level(current_user.id)
+        max_level = role_service.get_caller_max_role_level(current_user.id)
 
     roles = role_service.list_roles(max_level=max_level)
     return jsonify([r.to_dict() for r in roles]), 200
@@ -120,7 +120,7 @@ def create_role():
     is_admin = getattr(current_user, "is_admin", False)
     requested_level = data.get("level", 0)
     if not is_admin:
-        max_level = role_service._caller_max_role_level(current_user.id)
+        max_level = role_service.get_caller_max_role_level(current_user.id)
         if requested_level > max_level:
             return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
@@ -155,7 +155,7 @@ def update_role(role_id: int):
     # Non-admin users cannot edit roles above their own level
     is_admin = getattr(current_user, "is_admin", False)
     if not is_admin:
-        max_level = role_service._caller_max_role_level(current_user.id)
+        max_level = role_service.get_caller_max_role_level(current_user.id)
         if role.level > max_level:
             return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
@@ -248,7 +248,7 @@ def create_grant_rule():
 
     # Non-admin callers cannot reference roles above their own level
     if not getattr(current_user, "is_admin", False):
-        max_level = role_service._caller_max_role_level(current_user.id)
+        max_level = role_service.get_caller_max_role_level(current_user.id)
         granter = role_service.get_role(granter_id)
         grantee = role_service.get_role(grantee_id)
         if not granter or not grantee:
@@ -285,7 +285,7 @@ def delete_grant_rule(rule_id: int):
 
     # Non-admin callers cannot touch rules involving roles above their level
     if not getattr(current_user, "is_admin", False):
-        max_level = role_service._caller_max_role_level(current_user.id)
+        max_level = role_service.get_caller_max_role_level(current_user.id)
         granter = role_service.get_role(rule.granter_role_id)
         grantee = role_service.get_role(rule.grantee_role_id)
         if (granter and granter.level > max_level) or (grantee and grantee.level > max_level):

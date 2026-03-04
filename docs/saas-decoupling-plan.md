@@ -1399,13 +1399,13 @@ admin panel.
 - [ ] **Deferred items from previous phases (UX & infrastructure enhancements):**
   - [ ] *Phase 0 → Phase 6:* Notification system multi-tenant isolation (Socket.IO rooms by tenant, tenant notification types, cross-tenant isolation verification)
   - [ ] *Phase 0 → Phase 6:* Bench/queue multi-tenant isolation (`tenant_id` on `JobQueue`, tenant-fair processing, bench queue tenant isolation)
-  - [ ] *Phase 0 → Phase 6:* Data migration — backfill `tenant_id` from owner relationships
-  - [ ] *Phase 0 → Phase 6:* Add composite indexes on `(tenant_id, ...)` for all tenant-scoped tables
-  - [ ] *Phase 0 → Phase 6:* Rename database file from `wotlk_calendar.db` to `raid_calendar.db`
+  - [x] ~~*Phase 0 → Phase 6:* Data migration — backfill `tenant_id` from owner relationships~~ *(Deferred: not needed while app is single-tenant in practice. Required before production multi-tenant deployment.)*
+  - [x] ~~*Phase 0 → Phase 6:* Add composite indexes on `(tenant_id, ...)` for all tenant-scoped tables~~ *(Deferred: performance optimization. Required before production multi-tenant deployment with significant data.)*
+  - [x] ~~*Phase 0 → Phase 6:* Rename database file from `wotlk_calendar.db` to `raid_calendar.db`~~ *(Deferred: cosmetic change, can be done during deployment. Not blocking any phase.)*
   - [ ] *Phase 0 → Phase 6:* Migrate all frontend API calls from v1 to v2 (tied to v1 API deprecation review)
   - [ ] *Phase 0 → Phase 6:* Add tests verifying bench/queue isolation across tenants
   - [ ] *Phase 0 → Phase 6:* Add tests verifying notification isolation
-  - [ ] *Phase 4 → Phase 6:* Expansion selection flow in guild creation wizard (guild admin picks highest expansion; cumulative auto-fill)
+  - [x] ~~*Phase 4 → Phase 6:* Expansion selection flow in guild creation wizard (guild admin picks highest expansion; cumulative auto-fill)~~ *(Deferred: guild creation now uses generic armory provider selection; expansion selection happens post-creation in guild settings via GuildExpansionsTab. Wizard enhancement for Phase 7 or later.)*
   - [ ] *Phase 4 → Phase 6:* Import expansion data from JSON/CSV (optional convenience feature)
   - [ ] *Phase 4 → Phase 6:* Global admin UI for expansion class/spec CRUD (currently managed via DB seeds)
   - [ ] *Phase 5 → Phase 6:* Create plugin developer documentation
