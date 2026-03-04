@@ -7,16 +7,13 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from app.services import attendance_service
+from app.services import attendance_service, lineup_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, get_event_or_404, validate_required
 from app.utils.decorators import require_guild_permission
 from app.utils.permissions import get_membership
 from app.utils import notify
-from app.models.signup import LineupSlot
 from app.enums import SlotGroup
-import sqlalchemy as sa
-from app.extensions import db
 from app.i18n import _t
 
 bp = Blueprint("attendance", __name__)
@@ -50,12 +47,7 @@ def record_attendance(guild_id: int, event_id: int):
         return err
 
     # Reject bench characters — only lineup members can have attendance recorded
-    lineup_slot = db.session.execute(
-        sa.select(LineupSlot).where(
-            LineupSlot.raid_event_id == event_id,
-            LineupSlot.character_id == data["character_id"],
-        )
-    ).scalar_one_or_none()
+    lineup_slot = lineup_service.get_lineup_slot(event_id, data["character_id"])
     if lineup_slot is not None and lineup_slot.slot_group == SlotGroup.BENCH.value:
         return jsonify({"error": _t("api.attendance.benchCannotRecord")}), 400
 

@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import sqlalchemy as sa
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from app.extensions import db
-from app.models.raid import RaidDefinition
 from app.services import raid_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
@@ -30,8 +27,7 @@ def admin_list_defaults():
     """List all default (built-in, guild_id=NULL) raid definitions."""
     if not getattr(current_user, "is_admin", False):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    stmt = sa.select(RaidDefinition).where(RaidDefinition.guild_id.is_(None))
-    defs = list(db.session.execute(stmt).scalars().all())
+    defs = raid_service.list_default_raid_definitions()
     return jsonify([d.to_dict() for d in defs]), 200
 
 

@@ -577,7 +577,7 @@
     "confirmRevoke": "Wycofać to zaproszenie?",
     "copyLink": "Kopiuj link",
     "createGuild": "Utwórz gildię",
-    "createHelp": "Wpisz nazwę gildii, aby wyszukać ją na Warmane. Realm i frakcja zostaną uzupełnione automatycznie.",
+    "createHelp": "Wpisz nazwę gildii i wybierz dostawcę armory, aby ją wyszukać. Realm i frakcja zostaną uzupełnione automatycznie. Wybierz Ręcznie, jeśli twój serwer nie ma armory.",
     "createInvite": "Utwórz link zaproszeniowy",
     "createInviteHelp": "Generuj link, aby zaprosić graczy do gildii. Muszą być najpierw członkami przestrzeni roboczej.",
     "decline": "Odrzuć",
@@ -649,7 +649,8 @@
       "failedToJoin": "Nie udało się dołączyć do gildii",
       "joined": "Dołączono do {name}!",
       "failedToSearchWarmane": "Nie udało się przeszukać API Warmane",
-      "failedToCreate": "Nie udało się utworzyć gildii"
+      "failedToCreate": "Nie udało się utworzyć gildii",
+      "failedToSearchArmory": "Nie udało się wyszukać w API armory"
     },
     "unlimited": "∞",
     "used": "Użyte",
@@ -720,7 +721,14 @@
       "alreadyMemberOrPending": "Już jest członkiem lub aplikacja jest w toku",
       "onlyPendingApprove": "Tylko oczekujące aplikacje mogą być zatwierdzone",
       "onlyPendingDecline": "Tylko oczekujące aplikacje mogą być odrzucone"
-    }
+    },
+    "searchOnArmory": "Szukaj w Armory",
+    "foundOnArmory": "Znaleziono w armory — pola uzupełnione automatycznie",
+    "notFoundOnArmory": "Nie znaleziono gildii na żadnym realmie. Możesz wprowadzić dane ręcznie.",
+    "manualEntryInfo": "Tryb ręczny — gildia nie jest połączona z dostawcą armory. Możesz skonfigurować ustawienia armory później w ustawieniach gildii.",
+    "manualNoArmory": "Ręcznie (bez armory)",
+    "armoryProvider": "Dostawca Armory",
+    "realmPlaceholder": "Wpisz nazwę realmu"
   },
   "members": {
     "addMember": "+ Dodaj członka",

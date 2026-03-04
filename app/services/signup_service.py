@@ -358,6 +358,17 @@ def list_user_signups(user_id: int, event_ids: list[int] | None = None) -> list[
     return list(db.session.execute(query).scalars().unique().all())
 
 
+def get_event_signup_user_ids(raid_event_id: int) -> list[int]:
+    """Return distinct user IDs that have signups for an event."""
+    return list(
+        db.session.execute(
+            sa.select(Signup.user_id)
+            .where(Signup.raid_event_id == raid_event_id)
+            .distinct()
+        ).scalars().all()
+    )
+
+
 # ---------------------------------------------------------------------------
 # Raid bans
 # ---------------------------------------------------------------------------

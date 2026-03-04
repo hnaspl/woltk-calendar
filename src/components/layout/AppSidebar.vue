@@ -36,7 +36,7 @@
         v-if="canCreateGuild && hasTenant && !guildLimitReached"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
-        @click="showCreateGuild = true"
+        @click="showCreateGuild = true; _setDefaultProvider()"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -94,16 +94,23 @@
       <div class="relative bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md mx-4 p-6 z-10">
         <h3 class="wow-heading text-lg mb-4">{{ t('guild.createGuild') }}</h3>
 
-        <!-- Step 1: Lookup guild on Warmane -->
+        <!-- Step 1: Select provider & lookup guild on armory -->
         <div v-if="!guildLookupDone" class="space-y-4">
           <p class="text-sm text-text-muted">{{ t('guild.createHelp') }}</p>
           <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.armoryProvider') }}</label>
+            <select v-model="newGuild.armory_provider" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option v-for="p in availableProviders" :key="p" :value="p">{{ p.charAt(0).toUpperCase() + p.slice(1) }}</option>
+              <option value="manual">{{ t('guild.manualNoArmory') }}</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="lookupGuild" />
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="newGuild.armory_provider !== 'manual' ? lookupGuild() : enterManually()" />
           </div>
           <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
           <div v-if="guildLookupNotFound" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
-            {{ t('guild.notFound') }}
+            {{ t('guild.notFoundOnArmory') }}
           </div>
           <!-- Multiple realm matches -->
           <div v-if="guildLookupMatches.length > 1" class="space-y-2">
@@ -126,18 +133,21 @@
           <div class="flex justify-end gap-3">
             <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">{{ t('common.buttons.cancel') }}</button>
             <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">{{ t('guild.enterManually') }}</button>
-            <button type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
-              {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnWarmane') }}
+            <button v-if="newGuild.armory_provider !== 'manual'" type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
+              {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnArmory') }}
+            </button>
+            <button v-else type="button" :disabled="!newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="enterManually">
+              {{ t('common.buttons.continue') }}
             </button>
           </div>
         </div>
 
         <!-- Step 2: Confirm found guild or manual form -->
         <form v-else @submit.prevent="doCreateGuild" class="space-y-4">
-          <!-- Show Warmane match info -->
+          <!-- Show armory match info -->
           <div v-if="guildLookupMatch" class="p-3 rounded bg-green-900/20 border border-green-700 text-sm">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-green-300 font-medium">✓ {{ t('guild.foundOnWarmane') }}</span>
+              <span class="text-green-300 font-medium">✓ {{ t('guild.foundOnArmory') }}</span>
               <span v-if="guildLookupMatch.faction" class="px-2 py-0.5 rounded text-xs font-medium"
                 :class="guildLookupMatch.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >{{ guildLookupMatch.faction }}</span>
@@ -148,7 +158,7 @@
             ⚠ {{ t('guild.alreadyAddedWarning') }}
           </div>
           <div v-if="guildManualMode" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
-            {{ t('guild.manualEntry') }}
+            {{ t('guild.manualEntryInfo') }}
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
@@ -156,10 +166,11 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
-            <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
+            <select v-if="selectedProviderRealms.length" v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">{{ t('common.fields.selectRealm') }}</option>
-              <option v-for="r in constantsStore.allRealms" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in selectedProviderRealms" :key="r" :value="r">{{ r }}</option>
             </select>
+            <input v-else v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmPlaceholder')" :readonly="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.faction') }}</label>
@@ -374,7 +385,7 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
-const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw' })
+const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw', armory_provider: '' })
 
 const GUILD_TIMEZONES = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -392,7 +403,26 @@ const GUILD_TIMEZONES = [
   'UTC',
 ]
 
-// Guild Warmane lookup state
+// Available armory providers from constants store
+const availableProviders = computed(() => Object.keys(constantsStore.providerRealms))
+
+// Realms for the selected provider (or all realms if manual)
+const selectedProviderRealms = computed(() => {
+  const provider = newGuild.armory_provider
+  if (!provider || provider === 'manual') return constantsStore.allRealms
+  return constantsStore.providerRealms[provider] || []
+})
+
+// Set default provider when providers load
+const _setDefaultProvider = () => {
+  if (!newGuild.armory_provider && availableProviders.value.length > 0) {
+    newGuild.armory_provider = availableProviders.value[0]
+  } else if (!newGuild.armory_provider) {
+    newGuild.armory_provider = 'manual'
+  }
+}
+
+// Guild armory lookup state
 const lookingUpGuild = ref(false)
 const guildLookupDone = ref(false)
 const guildLookupError = ref(null)
@@ -433,8 +463,9 @@ async function lookupGuild() {
 
   const matches = []
 
-  // Search all realms from constants store (API-driven, provider-based)
-  for (const realm of constantsStore.allRealms) {
+  // Search realms for the selected armory provider
+  const realms = selectedProviderRealms.value
+  for (const realm of realms) {
     try {
       const data = await warmaneApi.lookupGuild(realm, name)
       if (data) {
@@ -448,7 +479,7 @@ async function lookupGuild() {
       // 404 = not found on this realm, try next; other errors are real failures
       if (err?.response?.status && err.response.status !== 404) {
         lookingUpGuild.value = false
-        guildLookupError.value = err?.response?.data?.message ?? t('guild.toasts.failedToSearchWarmane')
+        guildLookupError.value = err?.response?.data?.message ?? t('guild.toasts.failedToSearchArmory')
         return
       }
     }
@@ -481,11 +512,13 @@ async function doCreateGuild() {
   createGuildError.value = null
   creatingGuild.value = true
   try {
+    const provider = guildLookupMatch.value ? newGuild.armory_provider : (guildManualMode.value ? 'manual' : newGuild.armory_provider)
     const guild = await guildsApi.createGuild({
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
       warmane_source: !!guildLookupMatch.value,
+      armory_provider: provider === 'manual' ? '' : provider,
       timezone: newGuild.timezone,
     })
     await guildStore.fetchGuilds()
@@ -495,6 +528,7 @@ async function doCreateGuild() {
     newGuild.realm_name = ''
     newGuild.faction = ''
     newGuild.timezone = 'Europe/Warsaw'
+    newGuild.armory_provider = availableProviders.value[0] || 'manual'
     guildLookupDone.value = false
     guildLookupMatch.value = null
     guildLookupMatches.value = []

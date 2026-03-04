@@ -577,7 +577,7 @@
     "confirmRevoke": "Revoke this invitation?",
     "copyLink": "Copy Link",
     "createGuild": "Create Guild",
-    "createHelp": "Enter your guild name to look it up on Warmane. Realm and faction will be filled automatically.",
+    "createHelp": "Enter your guild name and select your armory provider to look it up. Realm and faction will be filled automatically. Choose Manual if your server has no armory.",
     "createInvite": "Create Invitation Link",
     "createInviteHelp": "Generate a link to invite players to this guild. They must be workspace members first.",
     "decline": "Decline",
@@ -649,7 +649,8 @@
       "failedToJoin": "Failed to join guild",
       "joined": "Joined {name}!",
       "failedToSearchWarmane": "Failed to search Warmane API",
-      "failedToCreate": "Failed to create guild"
+      "failedToCreate": "Failed to create guild",
+      "failedToSearchArmory": "Failed to search armory API"
     },
     "unlimited": "∞",
     "used": "Used",
@@ -720,7 +721,14 @@
       "alreadyMemberOrPending": "Already a member or application pending",
       "onlyPendingApprove": "Only pending applications can be approved",
       "onlyPendingDecline": "Only pending applications can be declined"
-    }
+    },
+    "searchOnArmory": "Search on Armory",
+    "foundOnArmory": "Found on armory — fields populated automatically",
+    "notFoundOnArmory": "Guild not found on any realm. You can enter details manually.",
+    "manualEntryInfo": "Manual entry mode — guild not linked to an armory provider. You can configure armory settings later in guild settings.",
+    "manualNoArmory": "Manual (no armory)",
+    "armoryProvider": "Armory Provider",
+    "realmPlaceholder": "Enter realm name"
   },
   "members": {
     "addMember": "+ Add Member",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from app.services import lineup_service
+from app.services import lineup_service, signup_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, get_event_or_404, build_guild_role_map
 from app.utils.decorators import require_guild_permission
@@ -18,16 +18,7 @@ bp = Blueprint("lineup", __name__)
 
 def _build_guild_role_map_for_event(guild_id: int, event_id: int) -> dict:
     """Build a guild role map for all users who have signups in this event."""
-    import sqlalchemy as sa
-    from app.extensions import db
-    from app.models.signup import Signup
-
-    user_ids = list(db.session.execute(
-        sa.select(Signup.user_id).where(
-            Signup.raid_event_id == event_id
-        ).distinct()
-    ).scalars().all())
-
+    user_ids = signup_service.get_event_signup_user_ids(event_id)
     return build_guild_role_map(guild_id, user_ids)
 
 

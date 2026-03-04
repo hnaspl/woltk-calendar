@@ -1502,7 +1502,7 @@ all subsequent phases.
 Before starting Phase 1, complete these from the existing cleanup plan:
 - [x] Consolidate frontend role label maps (7 duplicates) — resolved: components use `useExpansionData()` composable
 - [x] Consolidate CLASS_ROLES/CLASS_SPECS between frontend and backend — resolved: removed from both, now DB-driven
-- [ ] Add service layers for modules that access DB directly (raid_definitions, templates, series, roles)
+- [x] Add service layers for modules that access DB directly (raid_definitions, templates, series, roles) — resolved: `role_service.py` created (15+ db.session calls extracted from `roles.py`); `raid_service.list_default_raid_definitions()` added; `lineup_service.get_lineup_slot()` added; `signup_service.get_event_signup_user_ids()` added. `templates.py` and `series.py` already used service layers. `admin.py` retains direct queries (admin-only dashboard stats & system settings — acceptable for admin-scoped endpoints).
 
 > **Current status (post-Phase 1):**
 > - All expansion data (classes, specs, roles, raids) is DB-driven — no hardcoded enums used for validation
@@ -1511,6 +1511,7 @@ Before starting Phase 1, complete these from the existing cleanup plan:
 > - Frontend uses shared utilities (`WowCard`, `WowButton`, `WowModal`, `InviteLinkCard`, etc.) — no inline styling or code duplication
 > - Guild membership is invitation-based (not armory-based) in multi-tenant model
 > - Invite accept requires login/register first (router guard redirects with redirect param)
+> - **Guild creation uses generic armory provider selection** — admins pick provider (or manual), then guild lookup uses provider-specific realms. No Warmane-specific UI.
 
 ### 9.4 Additional Requirements (Future Implementation Points)
 

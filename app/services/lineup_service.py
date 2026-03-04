@@ -33,6 +33,18 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
     )
 
 
+def get_lineup_slot(
+    raid_event_id: int, character_id: int
+) -> Optional[LineupSlot]:
+    """Return the :class:`LineupSlot` for *character_id* in *raid_event_id*, or ``None``."""
+    return db.session.execute(
+        sa.select(LineupSlot).where(
+            LineupSlot.raid_event_id == raid_event_id,
+            LineupSlot.character_id == character_id,
+        )
+    ).scalar_one_or_none()
+
+
 def _lineup_version(grouped: dict) -> str:
     """Compute a fingerprint from lineup signup IDs for conflict detection."""
     parts = []

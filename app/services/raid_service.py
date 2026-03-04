@@ -94,6 +94,12 @@ def list_raid_definitions(guild_id: int) -> list[RaidDefinition]:
     return list(db.session.execute(stmt).scalars().all())
 
 
+def list_default_raid_definitions() -> list[RaidDefinition]:
+    """Return all default (built-in, guild_id=NULL) raid definitions."""
+    stmt = sa.select(RaidDefinition).where(RaidDefinition.guild_id.is_(None))
+    return list(db.session.execute(stmt).scalars().all())
+
+
 def copy_raid_definition_to_guild(
     source: RaidDefinition, guild_id: int, created_by: int
 ) -> RaidDefinition:
