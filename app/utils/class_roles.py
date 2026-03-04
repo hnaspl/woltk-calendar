@@ -12,7 +12,13 @@ from app.extensions import db
 
 
 def _get_expansion_class(class_name: str):
-    """Resolve an ExpansionClass row by name (handles enum values too)."""
+    """Resolve an ExpansionClass row by name (handles enum values too).
+
+    Note: queries by name only (no expansion filter).  If multiple expansions
+    define the same class name, the first match is returned.  This is
+    acceptable for Phase 1 (single-expansion) and will be scoped per-expansion
+    in Phase 4 (multi-expansion).
+    """
     from app.models.expansion import ExpansionClass
     name = class_name.value if hasattr(class_name, "value") else class_name
     return name, db.session.execute(
@@ -46,7 +52,9 @@ def allowed_roles_for_class(class_name: str) -> list[str] | None:
             roles.add("melee_dps")
         else:
             roles.add(spec_role)
-    return list(roles) if roles else None
+    # Deterministic order: main_tank, off_tank, healer, melee_dps, range_dps
+    _ROLE_ORDER = ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]
+    return sorted(roles, key=lambda r: _ROLE_ORDER.index(r) if r in _ROLE_ORDER else 99) if roles else None
 
 
 def validate_class_role(class_name: str | None, chosen_role: str) -> None:

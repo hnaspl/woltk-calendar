@@ -124,14 +124,13 @@ class TestApiVsDbSync:
     def test_api_returns_db_classes(self, app, db):
         """API wow_classes should match seeded expansion classes."""
         from app.models.expansion import Expansion, ExpansionClass
-        from app.extensions import db as _db
         import sqlalchemy as sa
         api = self._api_data(app)
-        expansion = _db.session.execute(
+        expansion = db.session.execute(
             sa.select(Expansion).where(Expansion.slug == "wotlk")
         ).scalars().first()
         if expansion:
-            db_classes = _db.session.execute(
+            db_classes = db.session.execute(
                 sa.select(ExpansionClass.name)
                 .where(ExpansionClass.expansion_id == expansion.id)
                 .order_by(ExpansionClass.sort_order)
@@ -141,19 +140,18 @@ class TestApiVsDbSync:
     def test_api_returns_db_specs(self, app, db):
         """API class_specs should match seeded expansion specs."""
         from app.models.expansion import Expansion, ExpansionClass, ExpansionSpec
-        from app.extensions import db as _db
         import sqlalchemy as sa
         api = self._api_data(app)
-        expansion = _db.session.execute(
+        expansion = db.session.execute(
             sa.select(Expansion).where(Expansion.slug == "wotlk")
         ).scalars().first()
         if expansion:
-            classes = _db.session.execute(
+            classes = db.session.execute(
                 sa.select(ExpansionClass)
                 .where(ExpansionClass.expansion_id == expansion.id)
             ).scalars().all()
             for cls in classes:
-                db_specs = _db.session.execute(
+                db_specs = db.session.execute(
                     sa.select(ExpansionSpec.name).where(ExpansionSpec.class_id == cls.id)
                 ).scalars().all()
                 assert cls.name in api["class_specs"], f"Missing class {cls.name}"
@@ -162,14 +160,13 @@ class TestApiVsDbSync:
     def test_api_returns_db_raids(self, app, db):
         """API raid_types should match seeded expansion raids."""
         from app.models.expansion import Expansion, ExpansionRaid
-        from app.extensions import db as _db
         import sqlalchemy as sa
         api = self._api_data(app)
-        expansion = _db.session.execute(
+        expansion = db.session.execute(
             sa.select(Expansion).where(Expansion.slug == "wotlk")
         ).scalars().first()
         if expansion:
-            db_raids = _db.session.execute(
+            db_raids = db.session.execute(
                 sa.select(ExpansionRaid.code, ExpansionRaid.name)
                 .where(ExpansionRaid.expansion_id == expansion.id)
             ).all()
