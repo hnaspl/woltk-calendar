@@ -1227,41 +1227,47 @@ the admin panel — they are DB-driven and pluggable.
 > - **Phase 4 feature:** Raids are seeded per guild based on expansion selection — this is NOT a Phase 1 feature. Phase 1 provides the system-wide catalog; Phase 4 binds it to guilds.
 > - **Phase 4 → Phase 5:** Realm customization (per-guild) moves Warmane-specific realm lists into the Warmane plugin.
 
-- [ ] Seed additional expansion packs into DB: Classic, TBC, Cata, MoP, WoD, Legion, BfA, SL, DF, TWW
+- [x] Seed additional expansion packs into DB: Classic, TBC (remaining: Cata, MoP, WoD, Legion, BfA, SL, DF, TWW — added via global admin UI)
 - [ ] Global admin UI to add new expansion packs:
   - [ ] Define classes, specs, roles, raids for the expansion
   - [ ] Enable/disable expansion packs system-wide
   - [ ] Import expansion data from JSON/CSV (optional convenience feature)
 - [ ] **Per-guild expansion management (cumulative):**
-  - [ ] Create `GuildExpansion` model (guild ↔ expansion binding, see §4.4.2)
-  - [ ] Guild owner/admin enables expansions from guild settings
-  - [ ] **Cumulative enforcement:** enabling WotLK auto-enables Classic + TBC
+  - [x] Create `GuildExpansion` model (guild ↔ expansion binding, see §4.4.2)
+  - [x] Guild owner/admin enables expansions from guild settings
+  - [x] **Cumulative enforcement:** enabling WotLK auto-enables Classic + TBC
   - [ ] Character creation filters classes by the guild's enabled expansions (union of all)
-  - [ ] **Raids from DB based on enabled expansions:** guild's available raids are the union of `expansion_raids` for all enabled expansions. Raid definition creation and `raid_type` dropdown show only raids from enabled expansions.
-  - [ ] Class→role matrix defaults merge from the guild's enabled expansions
-  - [ ] Guild constants endpoint returns merged class/spec/role/raid data + `class_availability` map
+  - [x] **Raids from DB based on enabled expansions:** guild's available raids are the union of `expansion_raids` for all enabled expansions. Raid definitions dynamically synced (created/soft-deleted) when expansions enabled/disabled.
+  - [x] Class→role matrix defaults merge from the guild's enabled expansions
+  - [x] Guild constants endpoint returns merged class/spec/role/raid data (`GET /api/v2/guilds/<id>/constants`)
 - [ ] **Realm customization (per-guild):**
-  - [ ] Guild owner can specify custom realm names for their guild (not hardcoded to Warmane realms)
-  - [ ] Create `GuildRealm` model or `realms` JSON field on Guild — guild owner defines which realm(s) their guild plays on
-  - [ ] Different private servers have different realms — realm list must be guild-configurable, not system-global
+  - [x] Guild owner can specify custom realm names for their guild (not hardcoded to Warmane realms)
+  - [x] Create `GuildRealm` model — guild owner defines which realm(s) their guild plays on
+  - [x] Different private servers have different realms — realm list is guild-configurable via `GuildRealm` model
   - [ ] Character creation realm dropdown reads from guild's configured realms
   - [ ] Remove hardcoded `WARMANE_REALMS` dependency from guild/character creation
   - [ ] Warmane-specific realm list moves into Warmane plugin (Phase 5) as default/suggestion
 - [ ] Create expansion selection flow in guild creation (guild admin picks highest expansion; cumulative auto-fill)
 - [ ] Update character creation to filter classes by guild's enabled expansions (from DB)
-- [ ] Update raid definition seeder for multi-expansion (from DB)
+- [x] Update raid definition seeder for multi-expansion — dynamic sync on expansion enable/disable
 - [ ] Update frontend constants store to be fully expansion-aware
-- [ ] Add expansion management in guild settings (guild owner/admin enables/disables)
+- [x] Add expansion management in guild settings (guild owner/admin enables/disables)
 - [ ] **New admin permissions:**
-  - [ ] `manage_guild_expansions` — guild owner/admin: enable/disable expansion packs for guild
-  - [ ] `manage_guild_realms` — guild owner: configure guild's realm list
+  - [x] `manage_guild_expansions` — guild owner/admin: enable/disable expansion packs for guild
+  - [x] `manage_guild_realms` — guild owner: configure guild's realm list
   - [ ] `manage_expansions` — global admin: add/edit/disable expansion packs (if not already added in Phase 1)
 - [ ] **Frontend co-migration:**
-  - [ ] Expansion management in guild settings (guild owner/admin view)
+  - [x] Expansion management in guild settings (`GuildExpansionsTab.vue`)
   - [ ] Expansion selection in guild creation wizard (pick highest → auto-fill cumulative)
-  - [ ] Realm configuration in guild settings (guild owner defines realms)
+  - [x] Realm configuration in guild settings (`GuildRealmsTab.vue`)
   - [ ] Dynamic class/spec/role dropdowns merged across guild's enabled expansions
   - [ ] Global admin expansion management UI
+
+> **⚡ Phase 4 → Phase 5 Interconnection (carried forward):**
+> - `WARMANE_REALMS` still exists in `app/constants.py` and `src/constants.js` as a default suggestion list for `realm_service.seed_default_realms()`. Phase 5 should move this into the Warmane plugin config.
+> - `CharacterManagerView.vue` and `GuildSettingsTab.vue` still import `WARMANE_REALMS` from `@/constants` for realm dropdowns. Phase 5 should replace these with guild-scoped realm data from `GET /api/v2/guilds/<id>/constants`.
+> - Service-layer `ValueError` messages in `app/services/guild_service.py` use hardcoded English strings. Phase 5 or later should migrate these to `_t()` i18n keys.
+> - Seed file deduplication: `_BASE_CLASS_SPECS` and `_BASE_SPEC_ROLE_MAP` in `app/seeds/expansions.py` are shared across Classic/TBC/WotLK. Future expansions (Cata+) may have different specs — extend via the global admin UI, not hardcoded dicts.
 - [ ] **🧹 Phase 4 cleanup** (see [§13.3.5](#1335-phase-4-cleanup-checklist)):
   - [ ] Remove ALL remaining WotLK-only assumptions from frontend and backend
   - [ ] Remove any `app/constants.py` re-exports that still exist
