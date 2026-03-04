@@ -12,14 +12,83 @@ from app.utils.class_roles import allowed_roles_for_class, validate_class_spec
 
 
 def _default_role_for_class(class_name: str, *, guild_id: int | None = None) -> str | None:
-    """Return the first allowed role for a character class.
+    """Return the default role for a class based on the guild's expansion context.
 
-    Uses the DB-driven expansion registry via shared ``allowed_roles_for_class``
-    helper.  When *guild_id* is provided, the per-guild matrix resolver is used
-    so guild-level overrides are respected.
+    Scoped to the guild's highest enabled expansion so the result is
+    consistent with WoW lore (e.g. Hunter Survival is ranged in WotLK
+    but melee in Legion+).
+
+    Uses majority-vote across the relevant expansion's specs:
+    Hunter has 2 ranged + 1 melee spec in most expansions → range_dps.
     """
-    roles = allowed_roles_for_class(class_name, guild_id=guild_id)
-    return roles[0] if roles else None
+    from app.models.expansion import Expansion, ExpansionClass, ExpansionSpec
+    from app.models.guild import GuildExpansion
+    from collections import Counter
+
+    cn = class_name.value if hasattr(class_name, "value") else class_name
+
+    # Determine which expansion to use for role defaults
+    target_expansion_id: int | None = None
+    if guild_id is not None:
+        # Use the guild's highest enabled expansion
+        row = db.session.execute(
+            sa.select(GuildExpansion.expansion_id)
+            .join(Expansion, Expansion.id == GuildExpansion.expansion_id)
+            .where(GuildExpansion.guild_id == guild_id)
+            .order_by(Expansion.sort_order.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        target_expansion_id = row
+
+    if target_expansion_id is None:
+        # Fallback: use the highest seeded expansion
+        target_expansion_id = db.session.execute(
+            sa.select(Expansion.id).order_by(Expansion.sort_order.desc()).limit(1)
+        ).scalar_one_or_none()
+
+    if target_expansion_id is None:
+        roles = allowed_roles_for_class(class_name, guild_id=guild_id)
+        return roles[0] if roles else None
+
+    # Query specs for this class in the target expansion
+    class_id = db.session.execute(
+        sa.select(ExpansionClass.id).where(
+            ExpansionClass.expansion_id == target_expansion_id,
+            ExpansionClass.name == cn,
+        )
+    ).scalar_one_or_none()
+
+    if class_id is None:
+        roles = allowed_roles_for_class(class_name, guild_id=guild_id)
+        return roles[0] if roles else None
+
+    spec_roles = db.session.execute(
+        sa.select(ExpansionSpec.role).where(ExpansionSpec.class_id == class_id)
+    ).scalars().all()
+
+    if not spec_roles:
+        return None
+
+    # Map spec role to display role (tank → main_tank)
+    display_roles: list[str] = []
+    for r in spec_roles:
+        if r == "tank":
+            display_roles.append("main_tank")
+        else:
+            display_roles.append(r)
+
+    # If guild_id, also filter by guild matrix overrides
+    if guild_id is not None:
+        allowed = allowed_roles_for_class(class_name, guild_id=guild_id)
+        if allowed:
+            display_roles = [r for r in display_roles if r in allowed]
+
+    if not display_roles:
+        roles = allowed_roles_for_class(class_name, guild_id=guild_id)
+        return roles[0] if roles else None
+
+    counter = Counter(display_roles)
+    return counter.most_common(1)[0][0]
 
 
 def _validate_specs(class_name: str | None, data: dict) -> None:

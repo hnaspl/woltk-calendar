@@ -46,12 +46,17 @@ def allowed_roles_for_class(class_name: str, *, guild_id: int | None = None) -> 
         roles = matrix.get(name)
         return roles if roles else None
 
-    from app.models.expansion import ExpansionSpec
-    name, cls = _get_expansion_class(class_name)
-    if cls is None:
+    from app.models.expansion import ExpansionClass, ExpansionSpec
+    name = class_name.value if hasattr(class_name, "value") else class_name
+    class_ids = db.session.execute(
+        sa.select(ExpansionClass.id).where(ExpansionClass.name == name)
+    ).scalars().all()
+    if not class_ids:
         return None
     spec_roles = db.session.execute(
-        sa.select(ExpansionSpec.role).where(ExpansionSpec.class_id == cls.id)
+        sa.select(ExpansionSpec.role).where(
+            ExpansionSpec.class_id.in_(class_ids)
+        )
     ).scalars().all()
     roles: set[str] = set()
     for spec_role in spec_roles:
@@ -90,17 +95,30 @@ def validate_class_role(class_name: str | None, chosen_role: str, *, guild_id: i
 def allowed_specs_for_class(class_name: str) -> list[str] | None:
     """Return the list of allowed spec names for a WoW class name.
 
-    Reads from the ``expansion_specs`` table.
+    Reads from the ``expansion_specs`` table across ALL expansions that
+    define this class, returning a deduplicated list.
     Returns ``None`` if the class is not found in the DB.
     """
-    from app.models.expansion import ExpansionSpec
-    name, cls = _get_expansion_class(class_name)
-    if cls is None:
+    from app.models.expansion import ExpansionClass, ExpansionSpec
+    name = class_name.value if hasattr(class_name, "value") else class_name
+    class_ids = db.session.execute(
+        sa.select(ExpansionClass.id).where(ExpansionClass.name == name)
+    ).scalars().all()
+    if not class_ids:
         return None
     specs = db.session.execute(
-        sa.select(ExpansionSpec.name).where(ExpansionSpec.class_id == cls.id)
+        sa.select(ExpansionSpec.name).where(
+            ExpansionSpec.class_id.in_(class_ids)
+        )
     ).scalars().all()
-    return list(specs) if specs else None
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    result: list[str] = []
+    for s in specs:
+        if s not in seen:
+            seen.add(s)
+            result.append(s)
+    return result if result else None
 
 
 def validate_class_spec(class_name: str | None, chosen_spec: str) -> None:

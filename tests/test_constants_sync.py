@@ -80,9 +80,15 @@ class TestNormalizeSpecNameSync:
                 )
 
     def test_feral_quirk(self, app):
-        """Armory API sends 'Feral' for Druids; should normalize to 'Feral Combat'."""
+        """Armory API sends 'Feral' for Druids; with all expansions seeded,
+        'Feral' is a canonical spec name (Cata+), so it normalizes to itself.
+        'Feral Combat' (Classic/TBC/WotLK) also normalizes to itself."""
         result = normalize_spec_name("Feral", "Druid")
-        assert result == "Feral Combat"
+        # "Feral" is a valid canonical spec name in Cata+ expansions
+        assert result == "Feral"
+        # "Feral Combat" is also valid in Classic/TBC/WotLK
+        result2 = normalize_spec_name("Feral Combat", "Druid")
+        assert result2 == "Feral Combat"
 
 
 # ---------------------------------------------------------------------------
