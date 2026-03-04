@@ -986,7 +986,12 @@
       "suspend": "Suspend",
       "activate": "Activate",
       "confirmSuspend": "Suspend tenant \"{name}\"? Users will lose access.",
-      "confirmDelete": "Delete tenant \"{name}\"? All data will be permanently removed."
+      "confirmDelete": "Delete tenant \"{name}\"? All data will be permanently removed.",
+      "assignPlan": "Assign Plan",
+      "selectPlan": "Select a plan",
+      "usage": "Usage",
+      "usageTitle": "Resource Usage",
+      "events": "Events"
     },
     "title": "Admin Panel",
     "users": {
@@ -1007,7 +1012,30 @@
       "setGuildLimit": "Set Guild Limit",
       "guildLimitUpdated": "Guild limit updated"
     },
-    "yourRole": "Your role: "
+    "yourRole": "Your role: ",
+    "plans": {
+      "tabTitle": "Plans",
+      "title": "Subscription Plans",
+      "description": "Manage subscription plans and their limits",
+      "create": "Create Plan",
+      "createTitle": "Create New Plan",
+      "editTitle": "Edit Plan",
+      "nameLabel": "Plan Name",
+      "slugLabel": "Slug",
+      "descriptionLabel": "Description",
+      "maxGuilds": "Max Guilds",
+      "maxMembers": "Max Members",
+      "maxEvents": "Max Events/Mo",
+      "price": "Price",
+      "free": "Free",
+      "inactive": "Inactive",
+      "isFree": "Free plan",
+      "isActive": "Active",
+      "noPlans": "No plans configured yet.",
+      "confirmDelete": "Delete plan \"{name}\"?",
+      "limitReached": "Limit reached",
+      "upgradePrompt": "Upgrade your plan to unlock this feature."
+    }
   },
   "signup": {
     "alreadySignedUp": "Already signed up characters are hidden. Select another character to add.",

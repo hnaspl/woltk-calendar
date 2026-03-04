@@ -49,6 +49,7 @@
           <DefaultRaidDefinitionsTab v-else-if="activeTab === 'raid-definitions'" />
           <ExpansionsTab v-else-if="activeTab === 'expansions'" />
           <PluginsTab v-else-if="activeTab === 'plugins'" />
+          <PlansTab v-else-if="activeTab === 'plans'" />
           <SettingsTab v-else-if="activeTab === 'settings'" />
         </KeepAlive>
       </template>
@@ -68,6 +69,7 @@ import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitions
 import ExpansionsTab from '@/components/admin/ExpansionsTab.vue'
 import SettingsTab from '@/components/admin/SettingsTab.vue'
 import PluginsTab from '@/components/admin/PluginsTab.vue'
+import PlansTab from '@/components/admin/PlansTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 
@@ -102,6 +104,9 @@ const icons = {
   ]),
   plugins: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
+  ]),
+  plans: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' })
   ])
 }
 
@@ -114,6 +119,7 @@ const tabs = [
   { id: 'raid-definitions', label: t('admin.raidDefinitions.tabTitle'), icon: icons.raidDefs },
   { id: 'expansions', label: t('admin.expansions.title'), icon: icons.expansions },
   { id: 'plugins', label: t('plugin.title'), icon: icons.plugins },
+  { id: 'plans', label: t('admin.plans.tabTitle'), icon: icons.plans },
   { id: 'settings', label: t('admin.system.title'), icon: icons.settings },
 ]
 

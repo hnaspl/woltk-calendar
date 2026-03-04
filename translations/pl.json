@@ -986,7 +986,12 @@
       "suspend": "Zawieś",
       "activate": "Aktywuj",
       "confirmSuspend": "Zawiesić najemcę \"{name}\"? Użytkownicy stracą dostęp.",
-      "confirmDelete": "Usunąć najemcę \"{name}\"? Wszystkie dane zostaną trwale usunięte."
+      "confirmDelete": "Usunąć najemcę \"{name}\"? Wszystkie dane zostaną trwale usunięte.",
+      "assignPlan": "Przypisz plan",
+      "selectPlan": "Wybierz plan",
+      "usage": "Użycie",
+      "usageTitle": "Użycie zasobów",
+      "events": "Wydarzenia"
     },
     "title": "Panel admina",
     "users": {
@@ -1007,7 +1012,30 @@
       "setGuildLimit": "Ustaw limit gildii",
       "guildLimitUpdated": "Limit gildii zaktualizowany"
     },
-    "yourRole": "Twoja rola: "
+    "yourRole": "Twoja rola: ",
+    "plans": {
+      "tabTitle": "Plany",
+      "title": "Plany subskrypcyjne",
+      "description": "Zarządzaj planami subskrypcyjnymi i ich limitami",
+      "create": "Utwórz plan",
+      "createTitle": "Utwórz nowy plan",
+      "editTitle": "Edytuj plan",
+      "nameLabel": "Nazwa planu",
+      "slugLabel": "Slug",
+      "descriptionLabel": "Opis",
+      "maxGuilds": "Maks. gildie",
+      "maxMembers": "Maks. członków",
+      "maxEvents": "Maks. wydarzeń/mies.",
+      "price": "Cena",
+      "free": "Darmowy",
+      "inactive": "Nieaktywny",
+      "isFree": "Plan darmowy",
+      "isActive": "Aktywny",
+      "noPlans": "Brak skonfigurowanych planów.",
+      "confirmDelete": "Usunąć plan \"{name}\"?",
+      "limitReached": "Limit osiągnięty",
+      "upgradePrompt": "Ulepsz swój plan, aby odblokować tę funkcję."
+    }
   },
   "signup": {
     "alreadySignedUp": "Już zapisane postacie są ukryte. Wybierz inną postać, aby dodać.",
