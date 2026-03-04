@@ -734,7 +734,14 @@
     "expansionHelp": "Select the highest expansion your guild plays. All prior expansion data (classes, specs, raids) will be automatically included.",
     "providerDetected": "Provider detected: {provider}",
     "noProviderDetected": "No known provider detected. Guild will be created in manual mode.",
-    "armoryUrlPlaceholder": "http://armory.example.com/api"
+    "armoryUrlPlaceholder": "http://armory.example.com/api",
+    "discoveringRealms": "Discovering available realms from armory...",
+    "realmsDiscovered": "{count} realm(s) discovered — ready to search",
+    "noRealmsDiscovered": "Could not auto-discover realms. Enter realm name manually below.",
+    "realmForSearch": "Realm Name",
+    "realmSearchPlaceholder": "e.g. Lordaeron, Icecrown",
+    "realmSearchHelp": "Enter the realm name to search for your guild on the armory.",
+    "noRealmsToSearch": "No realms available. Enter a realm name or provide a valid armory URL."
   },
   "members": {
     "addMember": "+ Add Member",

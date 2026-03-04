@@ -127,6 +127,55 @@ class GenericArmoryProvider(ArmoryProvider):
     def api_base_url(self) -> str:
         return self._api_base_url
 
+    def fetch_realms(self) -> list[str]:
+        """Attempt to discover realms from the armory API.
+
+        Tries common WoW private-server armory realm endpoints:
+        - ``/realms`` (most common)
+        - ``/realm/list``
+        Returns realm names or an empty list if discovery fails.
+        """
+        if not self._api_base_url:
+            return []
+
+        endpoints = ["/realms", "/realm/list"]
+        for endpoint in endpoints:
+            url = f"{self._api_base_url}{endpoint}"
+            try:
+                resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                # Handle various response formats
+                if isinstance(data, list):
+                    realms = []
+                    for item in data:
+                        if isinstance(item, str):
+                            realms.append(item)
+                        elif isinstance(item, dict):
+                            name = item.get("name") or item.get("realm") or item.get("realmName")
+                            if name:
+                                realms.append(name)
+                    if realms:
+                        return sorted(realms)
+                elif isinstance(data, dict):
+                    # Some APIs wrap in {"realms": [...]}
+                    realm_list = data.get("realms") or data.get("data") or []
+                    realms = []
+                    for item in realm_list:
+                        if isinstance(item, str):
+                            realms.append(item)
+                        elif isinstance(item, dict):
+                            name = item.get("name") or item.get("realm") or item.get("realmName")
+                            if name:
+                                realms.append(name)
+                    if realms:
+                        return sorted(realms)
+            except (requests.RequestException, ValueError) as exc:
+                logger.debug("Realm discovery failed for %s: %s", url, exc)
+                continue
+        return []
+
     def fetch_character(self, realm: str, name: str) -> Optional[dict]:
         """Fetch character summary from the armory API.
 

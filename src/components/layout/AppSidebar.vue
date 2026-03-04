@@ -99,16 +99,31 @@
           <p class="text-sm text-text-muted">{{ t('guild.createHelp') }}</p>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="detectedProvider ? lookupGuild() : enterManually()" />
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="canDoLookup ? lookupGuild() : enterManually()" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('guild.armoryUrl') }}</label>
-            <input v-model="newGuild.armory_url" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.armoryUrlPlaceholder')" />
+            <input v-model="newGuild.armory_url" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.armoryUrlPlaceholder')" @blur="onArmoryUrlChange" />
             <p class="text-xs text-text-muted mt-1">{{ t('guild.armoryUrlHelp') }}</p>
           </div>
+          <!-- Realm discovery status -->
           <div v-if="newGuild.armory_url.trim()">
-            <p v-if="detectedProvider" class="text-xs text-green-400">{{ t('guild.providerDetected', { provider: detectedProvider.charAt(0).toUpperCase() + detectedProvider.slice(1) }) }}</p>
-            <p v-else class="text-xs text-yellow-400">{{ t('guild.noProviderDetected') }}</p>
+            <div v-if="discoveringRealms" class="flex items-center gap-2 text-xs text-text-muted">
+              <div class="w-3 h-3 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+              {{ t('guild.discoveringRealms') }}
+            </div>
+            <div v-else-if="discoveredRealms.length > 0" class="text-xs text-green-400">
+              ✓ {{ t('guild.realmsDiscovered', { count: discoveredRealms.length }) }}
+            </div>
+            <div v-else class="text-xs text-yellow-400">
+              {{ t('guild.noRealmsDiscovered') }}
+            </div>
+          </div>
+          <!-- Manual realm input (fallback when no realms auto-discovered) -->
+          <div v-if="newGuild.armory_url.trim() && !discoveringRealms && discoveredRealms.length === 0">
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.realmForSearch') }}</label>
+            <input v-model="lookupRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmSearchPlaceholder')" @keydown.enter.prevent="lookupGuild()" />
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.realmSearchHelp') }}</p>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
@@ -148,7 +163,7 @@
           <div class="flex justify-end gap-3">
             <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">{{ t('common.buttons.cancel') }}</button>
             <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">{{ t('guild.enterManually') }}</button>
-            <button v-if="detectedProvider" type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
+            <button v-if="canDoLookup" type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
               {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnArmory') }}
             </button>
             <button v-else type="button" :disabled="!newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="enterManually">
@@ -400,6 +415,7 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
+const lookupRealm = ref('')
 const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw', armory_url: '', expansion_id: null })
 
 const GUILD_TIMEZONES = [
@@ -428,14 +444,45 @@ const detectedProvider = computed(() => {
   return null
 })
 
-// Realms for the detected provider
+// Realms for the detected provider (from constants store)
 const detectedProviderRealms = computed(() => {
   if (!detectedProvider.value) return []
   return constantsStore.providerRealms[detectedProvider.value] || []
 })
 
-// Realms for step 2 (uses detected provider or empty for manual)
-const selectedProviderRealms = computed(() => detectedProviderRealms.value)
+// Realms for step 2 (uses discovered realms, then detected provider, then empty for manual)
+const selectedProviderRealms = computed(() => {
+  if (discoveredRealms.value.length > 0) return discoveredRealms.value
+  return detectedProviderRealms.value
+})
+
+// Dynamic realm discovery from armory URL
+const discoveringRealms = ref(false)
+const discoveredRealms = ref([])
+let _lastDiscoveredUrl = ''
+
+async function onArmoryUrlChange() {
+  const url = newGuild.armory_url.trim()
+  if (!url || url === _lastDiscoveredUrl) return
+  _lastDiscoveredUrl = url
+  discoveringRealms.value = true
+  discoveredRealms.value = []
+  try {
+    const result = await armoryLookupApi.discoverRealms(url)
+    discoveredRealms.value = result.realms || []
+  } catch {
+    discoveredRealms.value = []
+  } finally {
+    discoveringRealms.value = false
+  }
+}
+
+// Can perform armory lookup: armory URL + either discovered/known realms or manual realm input
+const canDoLookup = computed(() => {
+  const url = newGuild.armory_url.trim()
+  if (!url) return false
+  return discoveredRealms.value.length > 0 || detectedProviderRealms.value.length > 0 || lookupRealm.value.trim().length > 0
+})
 
 // Expansions sorted by sort_order descending (highest first)
 const sortedExpansions = computed(() => {
@@ -476,6 +523,9 @@ function resetCreateGuild() {
   guildLookupMatches.value = []
   guildManualMode.value = false
   createGuildError.value = null
+  lookupRealm.value = ''
+  discoveredRealms.value = []
+  _lastDiscoveredUrl = ''
   newGuild.realm_name = ''
   newGuild.faction = ''
 }
@@ -500,8 +550,25 @@ async function lookupGuild() {
 
   const matches = []
 
-  // Search realms for the detected armory provider
-  const realms = detectedProviderRealms.value
+  // Build list of realms to search: discovered realms (priority), then provider realms, then manual input
+  const realms = []
+  if (discoveredRealms.value.length > 0) {
+    realms.push(...discoveredRealms.value)
+  } else if (detectedProviderRealms.value.length > 0) {
+    realms.push(...detectedProviderRealms.value)
+  }
+  const manualRealm = lookupRealm.value.trim()
+  if (manualRealm && !realms.map(r => r.toLowerCase()).includes(manualRealm.toLowerCase())) {
+    realms.push(manualRealm)
+  }
+
+  // If no realms at all, show error
+  if (realms.length === 0) {
+    lookingUpGuild.value = false
+    guildLookupError.value = t('guild.noRealmsToSearch')
+    return
+  }
+
   for (const realm of realms) {
     try {
       const data = await armoryLookupApi.lookupGuild(realm, name)

@@ -734,7 +734,14 @@
     "expansionHelp": "Wybierz najwyższy dodatek, w który gra Twoja gildia. Dane z wcześniejszych dodatków (klasy, specjalizacje, rajdy) zostaną automatycznie uwzględnione.",
     "providerDetected": "Wykryto dostawcę: {provider}",
     "noProviderDetected": "Nie wykryto znanego dostawcy. Gildia zostanie utworzona w trybie ręcznym.",
-    "armoryUrlPlaceholder": "http://armory.example.com/api"
+    "armoryUrlPlaceholder": "http://armory.example.com/api",
+    "discoveringRealms": "Wykrywanie dostępnych realmów z armory...",
+    "realmsDiscovered": "Wykryto {count} realm(ów) — gotowe do wyszukiwania",
+    "noRealmsDiscovered": "Nie udało się automatycznie wykryć realmów. Wpisz nazwę realmu ręcznie poniżej.",
+    "realmForSearch": "Nazwa Realmu",
+    "realmSearchPlaceholder": "np. Lordaeron, Icecrown",
+    "realmSearchHelp": "Wpisz nazwę realmu, aby wyszukać swoją gildię w armory.",
+    "noRealmsToSearch": "Brak dostępnych realmów. Wpisz nazwę realmu lub podaj prawidłowy adres URL armory."
   },
   "members": {
     "addMember": "+ Dodaj członka",

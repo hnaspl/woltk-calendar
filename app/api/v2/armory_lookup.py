@@ -64,6 +64,34 @@ def lookup_guild(realm: str, guild_name: str):
     }), 200
 
 
+@bp.post("/discover-realms")
+@login_required
+def discover_realms():
+    """Discover available realms from an armory API URL.
+
+    Accepts ``{"armory_url": "http://armory.example.com/api"}`` and attempts
+    to fetch realm lists from common endpoints on that server.
+    Returns ``{"realms": ["Realm1", "Realm2", ...]}`` on success.
+    """
+    from app.plugins.armory.provider import GenericArmoryProvider
+    from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+
+    body = get_json()
+    armory_url = (body.get("armory_url") or "").strip()
+    if not armory_url:
+        return jsonify({"error": _t("armory.urlRequired"), "realms": []}), 400
+
+    # Validate URL security
+    allowed_domains = get_allowed_domains_from_settings()
+    url_error = validate_armory_url(armory_url, allowed_domains)
+    if url_error:
+        return jsonify({"error": url_error, "realms": []}), 400
+
+    provider = GenericArmoryProvider(api_base_url=armory_url)
+    realms = provider.fetch_realms()
+    return jsonify({"realms": realms}), 200
+
+
 @bp.post("/sync-character")
 @login_required
 def sync_character():
