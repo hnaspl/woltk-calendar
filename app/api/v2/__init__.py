@@ -7,6 +7,7 @@ from flask import Flask
 
 def register_blueprints(app: Flask) -> None:
     from app.api.v2 import tenants, admin_tenants, meta, guild_invitations, guild_matrix
+    from app.api.v2 import guild_expansions, guild_realms
 
     prefix = "/api/v2"
 
@@ -19,3 +20,5 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(guild_invitations.guild_invite_accept_bp, url_prefix=f"{prefix}/guild-invite")
     app.register_blueprint(guild_invitations.guild_discovery_bp, url_prefix=f"{prefix}/discover-guilds")
     app.register_blueprint(guild_matrix.bp, url_prefix=f"{prefix}/guilds")
+    app.register_blueprint(guild_expansions.bp, url_prefix=f"{prefix}/guilds")
+    app.register_blueprint(guild_realms.bp, url_prefix=f"{prefix}/guilds")

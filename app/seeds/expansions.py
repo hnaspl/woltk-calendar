@@ -1,4 +1,10 @@
-"""Seed expansion data (Classic, TBC, WotLK) with classes, specs, roles, raids."""
+"""Seed expansion data (Classic, TBC, WotLK) with classes, specs, roles, raids.
+
+All shared class/spec/role data is defined ONCE in the ``_BASE_*`` dicts and
+reused across expansions.  Only expansion-specific additions (e.g. Death Knight
+in WotLK) are appended on top.  Role names and labels are sourced from the
+canonical ``Role`` enum and ``ROLE_LABELS`` in ``app/constants``.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +12,8 @@ import logging
 
 import sqlalchemy as sa
 
+from app.constants import ROLE_LABELS
+from app.enums import Role
 from app.extensions import db
 from app.models.expansion import (
     Expansion,
@@ -18,22 +26,24 @@ from app.models.expansion import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Shared role definitions (same across all expansions)
+# Shared role definitions — derived from the Role enum + ROLE_LABELS
+# (role_value, display_name, sort_order)
 # ---------------------------------------------------------------------------
 
-EXPANSION_ROLES = [
-    ("main_tank", "Main Tank", 1),
-    ("off_tank", "Off Tank", 2),
-    ("healer", "Healer", 3),
-    ("melee_dps", "Melee DPS", 4),
-    ("range_dps", "Range DPS", 5),
+EXPANSION_ROLES: list[tuple[str, str, int]] = [
+    (Role.MAIN_TANK.value, ROLE_LABELS[Role.MAIN_TANK.value], 1),
+    (Role.OFF_TANK.value, ROLE_LABELS[Role.OFF_TANK.value], 2),
+    (Role.HEALER.value, ROLE_LABELS[Role.HEALER.value], 3),
+    (Role.MELEE_DPS.value, ROLE_LABELS[Role.MELEE_DPS.value], 4),
+    (Role.RANGE_DPS.value, ROLE_LABELS[Role.RANGE_DPS.value], 5),
 ]
 
 # ---------------------------------------------------------------------------
-# Classic seed data
+# Base class/spec data shared by Classic, TBC and WotLK (9 original classes).
+# Each expansion re-uses this; WotLK adds Death Knight on top.
 # ---------------------------------------------------------------------------
 
-CLASSIC_CLASS_SPECS: dict[str, list[str]] = {
+_BASE_CLASS_SPECS: dict[str, list[str]] = {
     "Warrior":  ["Arms", "Fury", "Protection"],
     "Paladin":  ["Holy", "Protection", "Retribution"],
     "Hunter":   ["Beast Mastery", "Marksmanship", "Survival"],
@@ -45,7 +55,7 @@ CLASSIC_CLASS_SPECS: dict[str, list[str]] = {
     "Druid":    ["Balance", "Feral Combat", "Restoration"],
 }
 
-CLASSIC_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
+_BASE_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
     "Warrior":  {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
     "Paladin":  {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
     "Hunter":   {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "range_dps"},
@@ -56,6 +66,21 @@ CLASSIC_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
     "Warlock":  {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
     "Druid":    {"Balance": "range_dps", "Feral Combat": "tank", "Restoration": "healer"},
 }
+
+# WotLK adds Death Knight on top of the base 9 classes
+WOTLK_CLASS_SPECS: dict[str, list[str]] = {
+    "Death Knight": ["Blood", "Frost", "Unholy"],
+    **_BASE_CLASS_SPECS,
+}
+
+WOTLK_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
+    "Death Knight": {"Blood": "tank", "Frost": "melee_dps", "Unholy": "melee_dps"},
+    **_BASE_SPEC_ROLE_MAP,
+}
+
+# ---------------------------------------------------------------------------
+# Per-expansion raid data (these are genuinely different per expansion)
+# ---------------------------------------------------------------------------
 
 CLASSIC_RAIDS: list[dict] = [
     {"code": "mc",     "name": "Molten Core",             "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "notes": "40-man raid beneath Blackrock Mountain."},
@@ -65,34 +90,6 @@ CLASSIC_RAIDS: list[dict] = [
     {"code": "naxx40", "name": "Naxxramas",               "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 300, "notes": "Original 40-man Naxxramas floating above Eastern Plaguelands."},
     {"code": "zg",     "name": "Zul'Gurub",               "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "notes": "20-man troll raid in Stranglethorn Vale."},
 ]
-
-# ---------------------------------------------------------------------------
-# TBC seed data
-# ---------------------------------------------------------------------------
-
-TBC_CLASS_SPECS: dict[str, list[str]] = {
-    "Warrior":  ["Arms", "Fury", "Protection"],
-    "Paladin":  ["Holy", "Protection", "Retribution"],
-    "Hunter":   ["Beast Mastery", "Marksmanship", "Survival"],
-    "Rogue":    ["Assassination", "Combat", "Subtlety"],
-    "Priest":   ["Discipline", "Holy", "Shadow"],
-    "Shaman":   ["Elemental", "Enhancement", "Restoration"],
-    "Mage":     ["Arcane", "Fire", "Frost"],
-    "Warlock":  ["Affliction", "Demonology", "Destruction"],
-    "Druid":    ["Balance", "Feral Combat", "Restoration"],
-}
-
-TBC_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
-    "Warrior":  {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
-    "Paladin":  {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
-    "Hunter":   {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "range_dps"},
-    "Rogue":    {"Assassination": "melee_dps", "Combat": "melee_dps", "Subtlety": "melee_dps"},
-    "Priest":   {"Discipline": "healer", "Holy": "healer", "Shadow": "range_dps"},
-    "Shaman":   {"Elemental": "range_dps", "Enhancement": "melee_dps", "Restoration": "healer"},
-    "Mage":     {"Arcane": "range_dps", "Fire": "range_dps", "Frost": "range_dps"},
-    "Warlock":  {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
-    "Druid":    {"Balance": "range_dps", "Feral Combat": "tank", "Restoration": "healer"},
-}
 
 TBC_RAIDS: list[dict] = [
     {"code": "kara",  "name": "Karazhan",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 180, "notes": "10-man raid in Deadwind Pass."},
@@ -104,39 +101,6 @@ TBC_RAIDS: list[dict] = [
     {"code": "bt",    "name": "Black Temple",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 300, "notes": "25-man raid in Shadowmoon Valley."},
     {"code": "swp",   "name": "Sunwell Plateau",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid on the Isle of Quel'Danas."},
 ]
-
-# ---------------------------------------------------------------------------
-# WotLK-specific seed data (self-contained, no imports from constants)
-# All data sourced from WoW wiki: https://wowpedia.fandom.com/wiki/Wrath_of_the_Lich_King
-# ---------------------------------------------------------------------------
-
-# class_name → [spec_name, ...]
-WOTLK_CLASS_SPECS: dict[str, list[str]] = {
-    "Death Knight": ["Blood", "Frost", "Unholy"],
-    "Druid":        ["Balance", "Feral Combat", "Restoration"],
-    "Hunter":       ["Beast Mastery", "Marksmanship", "Survival"],
-    "Mage":         ["Arcane", "Fire", "Frost"],
-    "Paladin":      ["Holy", "Protection", "Retribution"],
-    "Priest":       ["Discipline", "Holy", "Shadow"],
-    "Rogue":        ["Assassination", "Combat", "Subtlety"],
-    "Shaman":       ["Elemental", "Enhancement", "Restoration"],
-    "Warlock":      ["Affliction", "Demonology", "Destruction"],
-    "Warrior":      ["Arms", "Fury", "Protection"],
-}
-
-# Spec → role mapping for WotLK
-WOTLK_SPEC_ROLE_MAP: dict[str, dict[str, str]] = {
-    "Death Knight": {"Blood": "tank", "Frost": "melee_dps", "Unholy": "melee_dps"},
-    "Druid":        {"Balance": "range_dps", "Feral Combat": "tank", "Restoration": "healer"},
-    "Hunter":       {"Beast Mastery": "range_dps", "Marksmanship": "range_dps", "Survival": "range_dps"},
-    "Mage":         {"Arcane": "range_dps", "Fire": "range_dps", "Frost": "range_dps"},
-    "Paladin":      {"Holy": "healer", "Protection": "tank", "Retribution": "melee_dps"},
-    "Priest":       {"Discipline": "healer", "Holy": "healer", "Shadow": "range_dps"},
-    "Rogue":        {"Assassination": "melee_dps", "Combat": "melee_dps", "Subtlety": "melee_dps"},
-    "Shaman":       {"Elemental": "range_dps", "Enhancement": "melee_dps", "Restoration": "healer"},
-    "Warlock":      {"Affliction": "range_dps", "Demonology": "range_dps", "Destruction": "range_dps"},
-    "Warrior":      {"Arms": "melee_dps", "Fury": "melee_dps", "Protection": "tank"},
-}
 
 WOTLK_RAIDS: list[dict] = [
     {"code": "naxx",   "name": "Naxxramas",              "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Original Lich King tier 7 raid in Dragonblight."},
@@ -268,12 +232,13 @@ def seed_expansions() -> int:
     created = 0
 
     # Seed in sort_order: Classic (1), TBC (2), WotLK (3)
+    # Classic and TBC use the shared _BASE_CLASS_SPECS / _BASE_SPEC_ROLE_MAP
     created += _seed_single_expansion(
         name="Classic",
         slug="classic",
         sort_order=1,
-        class_specs=CLASSIC_CLASS_SPECS,
-        spec_role_map=CLASSIC_SPEC_ROLE_MAP,
+        class_specs=_BASE_CLASS_SPECS,
+        spec_role_map=_BASE_SPEC_ROLE_MAP,
         raids=CLASSIC_RAIDS,
     )
 
@@ -281,11 +246,12 @@ def seed_expansions() -> int:
         name="The Burning Crusade",
         slug="tbc",
         sort_order=2,
-        class_specs=TBC_CLASS_SPECS,
-        spec_role_map=TBC_SPEC_ROLE_MAP,
+        class_specs=_BASE_CLASS_SPECS,
+        spec_role_map=_BASE_SPEC_ROLE_MAP,
         raids=TBC_RAIDS,
     )
 
+    # WotLK adds Death Knight on top of the base 9 classes
     created += _seed_single_expansion(
         name="Wrath of the Lich King",
         slug="wotlk",
