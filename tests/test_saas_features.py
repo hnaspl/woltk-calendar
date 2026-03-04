@@ -46,6 +46,9 @@ def _make_user(
     )
     db.session.add(u)
     db.session.commit()
+    # Auto-create tenant workspace (mirrors registration behaviour)
+    from app.services import tenant_service
+    tenant_service.create_tenant(owner=u)
     return u
 
 
@@ -64,7 +67,8 @@ def _seed_permissions():
 def _grant_create_guild(user):
     """Give a non-admin user the create_guild permission by making them
     guild_admin in a helper guild (does NOT count toward their created_by limit)."""
-    helper = Guild(name="__perm_helper__", realm_name="Icecrown", created_by=None)
+    helper = Guild(name="__perm_helper__", realm_name="Icecrown", created_by=None,
+                   tenant_id=user.active_tenant_id)
     db.session.add(helper)
     db.session.flush()
     db.session.add(GuildMembership(

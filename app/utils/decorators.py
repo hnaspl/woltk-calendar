@@ -42,8 +42,9 @@ def require_guild_permission(permission_code: str | None = None) -> Callable:
                 return jsonify({"error": "guild_id is required"}), 400
 
             # Tenant isolation: verify guild belongs to user's active tenant
+            # Global admins (is_admin=True) bypass tenant isolation
             active_tid = getattr(current_user, "active_tenant_id", None)
-            if active_tid is not None:
+            if active_tid is not None and not getattr(current_user, "is_admin", False):
                 from app.extensions import db
                 from app.models.guild import Guild
                 guild = db.session.get(Guild, guild_id)

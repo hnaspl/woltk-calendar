@@ -151,6 +151,8 @@ class TestTimezoneAPIRoundtrip:
                      password_hash="x", is_active=True, is_admin=True)
         db.session.add(admin)
         db.session.commit()
+        from app.services import tenant_service
+        tenant_service.create_tenant(owner=admin)
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(admin.id)

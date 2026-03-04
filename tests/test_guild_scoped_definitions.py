@@ -62,11 +62,6 @@ def seeded(db, ctx):
     """Seed permissions, create two guilds, users with various roles."""
     seed_permissions()
 
-    guild_a = Guild(name="Guild Alpha", realm_name="Icecrown")
-    guild_b = Guild(name="Guild Beta", realm_name="Lordaeron")
-    _db.session.add_all([guild_a, guild_b])
-    _db.session.flush()
-
     # Global admin — has is_admin=True
     admin_user = User(username="globaladmin", email="ga@test.com",
                       password_hash="x", is_active=True, is_admin=True)
@@ -85,6 +80,19 @@ def seeded(db, ctx):
 
     _db.session.add_all([admin_user, gadmin_user, officer_user,
                          member_user, gadmin_b_user])
+    _db.session.flush()
+
+    # Create tenants for users who create guilds via API
+    from app.services import tenant_service
+    admin_tenant = tenant_service.create_tenant(owner=admin_user)
+    gadmin_tenant = tenant_service.create_tenant(owner=gadmin_user)
+
+    # Create guilds with tenant association
+    guild_a = Guild(name="Guild Alpha", realm_name="Icecrown",
+                    tenant_id=gadmin_tenant.id)
+    guild_b = Guild(name="Guild Beta", realm_name="Lordaeron",
+                    tenant_id=admin_tenant.id)
+    _db.session.add_all([guild_a, guild_b])
     _db.session.flush()
 
     # Memberships
