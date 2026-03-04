@@ -9,7 +9,6 @@ from flask import Blueprint, jsonify
 
 from app.plugins.base import PluginRegistry
 from app.utils.auth import login_required
-from app.utils.api_helpers import require_system_permission
 from app.i18n import _t
 
 bp = Blueprint("v2_plugins", __name__)
