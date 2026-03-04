@@ -978,6 +978,13 @@ all data is scoped by `tenant_id`.
 > [Section 10](#10-phase-0-per-user-tenancy--detailed-plan) for the
 > complete table-by-table, query-by-query, file-by-file change plan.
 
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 0 → Phase 1:** Expansion models use `TenantMixin` for tenant isolation. Expansion seed data is system-wide (`tenant_id=NULL`).
+> - **Phase 0 → Phase 2:** Tenant invitation system (implemented here) is the foundation for guild-level invitations in Phase 2. The `allow_self_join` guild field is deprecated — membership is invitation-based.
+> - **Phase 0 → Phase 4:** Per-guild expansion selection (Phase 4) requires tenant isolation to be in place first.
+> - **Phase 0 → Phase 6:** Tenant model is the billing unit for subscription plans.
+> - **Partially complete items:** Notification/bench multi-tenant isolation, data migration backfill, DB rename, composite indexes, and full v1→v2 frontend migration are deferred to future cleanup passes. These do not block Phase 1+.
+
 **API versioning:** Create `/api/v2/` blueprint structure mirroring v1. All new
 tenant-aware endpoints go into v2. Existing v1 endpoints remain unchanged as
 backup. Frontend migrates to v2 endpoints in this phase.
@@ -1035,11 +1042,13 @@ backup. Frontend migrates to v2 endpoints in this phase.
   - [x] Create tenant store, tenant switcher, and all frontend tenant components (see [§11](#11-frontend-multi-tenant-migration--complete-plan))
 - [x] **🧹 Phase 0 cleanup** (see [§13.3.1](#1331-phase-0-cleanup-checklist)):
   - [x] Delete orphaned `src/components/admin/SystemTab.vue` (unused, replaced by UsersTab + SettingsTab)
-  - [ ] Remove pre-tenant `allow_self_join` guild-level self-join flow from AppSidebar (replaced by tenant invitation system)
+  - [x] Remove pre-tenant `allow_self_join` checkbox from guild creation form (replaced by tenant invitation system)
   - [ ] Remove "available guilds to join" sidebar section (guild discovery now happens within tenant)
   - [x] Audit and remove any temporary migration helpers/scripts
   - [x] Verify no dead imports remain after model/service changes
   - [x] Run full lint + build + test suite on clean branch
+  - [x] Invite accept page requires login/register first (redirects to `/login?redirect=/invite/TOKEN`)
+  - [x] Login/Register views show invite banner and preserve redirect query params
 
 ### Phase 1: Foundation Decoupling — DB-Driven Expansion Registry
 **Goal:** Replace hardcoded class/role/spec/raid Python enums, dicts, and
@@ -1051,6 +1060,14 @@ catalog lives in the `expansion_raids` table, not in `WOTLK_RAIDS` or
 > **Decision §9.1 #1, #8:** Expansion definitions (classes, specs, roles,
 > **and raids**) are stored in DB tables, not Python dicts or enums. This
 > allows global admins to add new expansions without code changes.
+
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 1 ← Phase 0:** Requires tenant isolation to be in place. Expansion models are system-wide (`tenant_id=NULL`), but guild-scoped usage will need tenant context.
+> - **Phase 1 → Phase 3:** Class-role matrix (Phase 3) reads its defaults from the expansion DB tables created here. Without Phase 1, there's no data source for matrix defaults.
+> - **Phase 1 → Phase 4:** Per-guild expansion selection (Phase 4) depends on the expansion registry created here. Phase 4 adds the `GuildExpansion` binding model.
+> - **Phase 1 → Phase 4:** Raid seeding based on guild expansion selection is a Phase 4 feature — Phase 1 only provides the system-wide expansion/raid catalog.
+> - **Phase 1 → Phase 5:** Plugin architecture (Phase 5) will wrap expansion packs as plugins. The DB-driven registry created here is the data layer that plugins populate.
+> - **Remaining `WowClass` enum:** The `WowClass` Python enum may still exist in code but is unused for validation — all validation is DB-driven via `validate_class_spec()` and `allowed_roles_for_class()` in `app/utils/class_roles.py`.
 
 - [x] Create expansion DB tables:
   - [x] `expansions` — id, name, slug, sort_order, is_active, metadata
@@ -1107,6 +1124,12 @@ catalog lives in the `expansion_raids` table, not in `WOTLK_RAIDS` or
 > **Decision §9.1 #6:** Guild visibility is configurable per guild within tenant;
 > hidden guilds do NOT appear in the sidebar.
 
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 2 ← Phase 0:** Tenant invitation system (Phase 0) provides the pattern. Guild invitations extend this to guild-level within a tenant.
+> - **Phase 2 ← Phase 0:** The `allow_self_join` field was already deprecated in Phase 0 cleanup (checkbox removed from guild creation). Phase 2 completes this by removing the backend field entirely.
+> - **Phase 2 → Phase 4:** Guild discovery page (Phase 2) must respect per-guild expansion settings (Phase 4) when showing guild details.
+> - **Not blocked by Phase 1:** Guild membership hardening is independent of expansion registry.
+
 - [ ] Add `GuildVisibility` enum and `visibility` field to Guild model
 - [ ] Ensure hidden guilds are NOT shown in sidebar navigation (only visible in explicit guild browser)
 - [ ] Add `GuildInvitation` model (guild-level invites within a tenant)
@@ -1140,6 +1163,11 @@ guild admins can customize.
 
 > **Decision §9.1 #4:** Class-role matrix is per-guild. Defaults from expansion
 > DB data, with guild-level overrides.
+
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 3 ← Phase 1:** Matrix defaults come from `expansion_classes` and `expansion_roles` tables created in Phase 1. Without Phase 1, there is no data source for the matrix.
+> - **Phase 3 ← Phase 4:** Full multi-expansion matrix merging requires Phase 4's per-guild expansion binding. Phase 3 can work with the system default expansion until Phase 4 is implemented.
+> - **Phase 3 → Phase 5:** Matrix configuration may become a plugin-provided UI component in Phase 5.
 
 - [ ] Create `GuildClassRoleOverride` model (references `expansion_classes`, `expansion_roles`)
 - [ ] Create v2 matrix API endpoints (GET/PUT/DELETE)
@@ -1175,6 +1203,13 @@ the admin panel — they are DB-driven and pluggable.
 > **Decision §9.1 #3:** When a new expansion comes, it should be pluggable
 > from the global admin panel. No code changes needed — admin uploads/configures
 > the expansion data (classes, specs, roles, raids) via the admin UI.
+
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 4 ← Phase 0:** Requires tenant isolation for guild-scoped expansion settings.
+> - **Phase 4 ← Phase 1:** Requires the expansion registry (tables, seed data, admin UI) created in Phase 1. Phase 4 adds the `GuildExpansion` binding on top.
+> - **Phase 4 ← Phase 3:** Class-role matrix merging across multiple expansions extends Phase 3's single-expansion matrix.
+> - **Phase 4 feature:** Raids are seeded per guild based on expansion selection — this is NOT a Phase 1 feature. Phase 1 provides the system-wide catalog; Phase 4 binds it to guilds.
+> - **Phase 4 → Phase 5:** Realm customization (per-guild) moves Warmane-specific realm lists into the Warmane plugin.
 
 - [ ] Seed additional expansion packs into DB: Classic, TBC, Cata, MoP, WoD, Legion, BfA, SL, DF, TWW
 - [ ] Global admin UI to add new expansion packs:
@@ -1223,6 +1258,11 @@ the admin panel — they are DB-driven and pluggable.
 ### Phase 5: Plugin Architecture
 **Goal:** Make features truly pluggable.
 
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 5 ← Phase 1:** Expansion packs become plugins that populate the expansion registry tables.
+> - **Phase 5 ← Phase 4:** Per-guild expansion settings and realm configuration are managed through plugin interfaces.
+> - **Phase 5 completes:** Warmane armory integration moves from inline service calls to a plugin. Guild member addition via armory is no longer the default — it's a Warmane-plugin-specific feature. The default flow is invitation-based (Phase 0/2).
+
 - [ ] Create `app/plugins/` framework (BasePlugin, PluginRegistry)
 - [ ] Refactor Warmane integration into a plugin
 - [ ] Refactor Discord integration into a plugin
@@ -1251,6 +1291,11 @@ admin panel.
 > **Decision §9.4 #1:** Global admin must be able to create and configure
 > subscription plans (one free plan, multiple paid plans with different limits).
 > Global admin can assign plans to specific tenants.
+
+> **⚡ Cross-Phase Dependencies & Interconnections:**
+> - **Phase 6 ← Phase 0:** Tenant model is the billing unit. `max_guilds`/`max_members` fields on Tenant (Phase 0) become plan-driven.
+> - **Phase 6 ← Phase 5:** Plugin system provides the feature toggle mechanism for plan-based feature gating.
+> - **Phase 6 completes:** v1 API deprecation review — assess if v1 endpoints can be fully removed.
 
 - [x] ~~Evaluate need for row-level tenancy (tenant_id enforcement)~~ → **Moved to Phase 0**
 - [ ] Create `Plan` model (name, slug, limits, features, is_free, price_info)
@@ -1374,6 +1419,14 @@ Before starting Phase 1, complete these from the existing cleanup plan:
 - [x] Consolidate frontend role label maps (7 duplicates) — resolved: components use `useExpansionData()` composable
 - [x] Consolidate CLASS_ROLES/CLASS_SPECS between frontend and backend — resolved: removed from both, now DB-driven
 - [ ] Add service layers for modules that access DB directly (raid_definitions, templates, series, roles)
+
+> **Current status (post-Phase 1):**
+> - All expansion data (classes, specs, roles, raids) is DB-driven — no hardcoded enums used for validation
+> - `normalize_spec_name()` moved to `app/utils/class_roles.py` (DB-driven, expansion-pluggable)
+> - `require_system_permission()` extracted to shared `app/utils/api_helpers.py`
+> - Frontend uses shared utilities (`WowCard`, `WowButton`, `WowModal`, `InviteLinkCard`, etc.) — no inline styling or code duplication
+> - Guild membership is invitation-based (not armory-based) in multi-tenant model
+> - Invite accept requires login/register first (router guard redirects with redirect param)
 
 ### 9.4 Additional Requirements (Future Implementation Points)
 

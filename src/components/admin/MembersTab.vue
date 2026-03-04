@@ -118,59 +118,25 @@
     <!-- Add Member modal -->
     <WowModal v-model="showAddMember" :title="t('members.addMemberTitle')" size="sm">
       <div class="space-y-3">
-        <!-- Warmane roster fetch for Warmane-sourced guilds -->
-        <div v-if="isWarmaneSource">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-xs text-text-muted">{{ t('members.fetchRoster') }}</p>
-            <WowButton variant="secondary" class="text-xs py-1 px-3" :loading="fetchingRoster" @click="fetchWarmaneRoster">
-              {{ fetchingRoster ? t('common.labels.fetching') : t('members.fetchRosterBtn') }}
-            </WowButton>
-          </div>
-          <div v-if="warmaneRosterError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneRosterError }}</div>
-          <div v-if="warmaneRoster.length > 0" class="space-y-1">
-            <label class="block text-xs text-text-muted mb-1">{{ t('members.filterByName') }}</label>
-            <input
-              v-model="rosterFilter"
-              :placeholder="t('members.filterPlaceholder')"
-              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none mb-2"
-            />
-            <div class="max-h-48 overflow-y-auto space-y-1">
-              <button
-                v-for="ch in filteredRoster"
-                :key="ch.name"
-                type="button"
-                class="w-full flex items-center justify-between px-3 py-2 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors text-sm"
-                @click="doAddMemberByName(ch.name)"
-              >
-                <div class="flex items-center gap-2">
-                  <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-5 h-5 rounded flex-shrink-0" />
-                  <span class="font-medium" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
-                  <span class="text-text-muted text-xs">{{ ch.class_name }} · Lv{{ ch.level }}</span>
-                </div>
-                <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
-              </button>
-            </div>
-            <p v-if="rosterFilter && filteredRoster.length === 0" class="text-xs text-text-muted py-2">{{ t('members.noMatchingChars') }}</p>
-          </div>
-          <!-- Multi-match user selection (shown when a roster click finds multiple users) -->
-          <div v-if="availableUsers.length > 0" class="mt-3 space-y-1">
-            <p class="text-xs text-text-muted">{{ t('members.multipleMatches', { query: addMemberQuery }) }}</p>
-            <div class="max-h-40 overflow-y-auto space-y-1">
-              <button
-                v-for="u in availableUsers"
-                :key="u.id"
-                type="button"
-                class="w-full flex items-center justify-between px-3 py-2 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors text-sm"
-                @click="doAddMember(u)"
-              >
-                <span class="text-text-primary">{{ u.username }}</span>
-                <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
-              </button>
-            </div>
-          </div>
+        <!-- Invitation suggestion -->
+        <div class="p-3 rounded-lg bg-accent-gold/10 border border-accent-gold/30">
+          <p class="text-sm text-accent-gold mb-2">{{ t('members.inviteSuggestion') }}</p>
+          <RouterLink
+            to="/tenant/invites"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors"
+          >
+            {{ t('tenant.invitePlayers') }}
+          </RouterLink>
         </div>
-        <!-- Standard search for non-Warmane guilds -->
-        <div v-else>
+
+        <div class="flex items-center gap-3">
+          <div class="flex-1 border-t border-border-default"></div>
+          <span class="text-text-muted text-xs uppercase">{{ t('auth.orSeparator') }}</span>
+          <div class="flex-1 border-t border-border-default"></div>
+        </div>
+
+        <!-- Standard search for existing registered users -->
+        <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('members.searchByUsername') }}</label>
           <input
             v-model="addMemberQuery"
@@ -180,7 +146,7 @@
           />
         </div>
         <div v-if="searchingUsers" class="text-xs text-text-muted">{{ t('common.labels.searching') }}</div>
-        <div v-if="availableUsers.length > 0 && !isWarmaneSource" class="max-h-40 overflow-y-auto space-y-1">
+        <div v-if="availableUsers.length > 0" class="max-h-40 overflow-y-auto space-y-1">
           <button
             v-for="u in availableUsers"
             :key="u.id"
@@ -192,7 +158,7 @@
             <span class="text-xs text-accent-gold">{{ t('common.buttons.add') }}</span>
           </button>
         </div>
-        <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers && !isWarmaneSource" class="text-xs text-text-muted">
+        <div v-else-if="addMemberQuery.length >= 2 && !searchingUsers" class="text-xs text-text-muted">
           {{ t('members.noMatchingUsers') }}
         </div>
       </div>
@@ -359,6 +325,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -408,7 +375,6 @@ const showBanConfirm = ref(false)
 const banTarget = ref(null)
 const banning = ref(false)
 
-const isWarmaneSource = computed(() => !!guildStore.currentGuild?.warmane_source)
 
 async function fetchRoles() {
   try {
@@ -641,60 +607,6 @@ async function doAddMember(user) {
     addMemberQuery.value = ''
     availableUsers.value = []
     uiStore.showToast(`${user.username} added to guild`, 'success')
-  } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
-  }
-}
-
-
-// Warmane roster fetch
-const fetchingRoster = ref(false)
-const warmaneRoster = ref([])
-const warmaneRosterError = ref(null)
-const rosterFilter = ref('')
-
-const filteredRoster = computed(() => {
-  if (!rosterFilter.value) return warmaneRoster.value
-  const q = rosterFilter.value.toLowerCase()
-  return warmaneRoster.value.filter(ch => ch.name.toLowerCase().includes(q))
-})
-
-async function fetchWarmaneRoster() {
-  const g = guildStore.currentGuild
-  if (!g) return
-  fetchingRoster.value = true
-  warmaneRosterError.value = null
-  try {
-    const data = await guildsApi.getWarmaneRoster(g.id)
-    warmaneRoster.value = data.roster || []
-  } catch (err) {
-    warmaneRosterError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('members.toasts.failedToFetchRoster')
-  } finally {
-    fetchingRoster.value = false
-  }
-}
-
-// Auto-fetch roster for Warmane-sourced guilds on mount
-onMounted(() => {
-  if (isWarmaneSource.value) {
-    fetchWarmaneRoster()
-  }
-})
-
-async function doAddMemberByName(characterName) {
-  try {
-    // Search for a user account matching this character name
-    const users = await guildsApi.getAvailableUsers(guildStore.currentGuild.id, characterName)
-    if (users.length === 1) {
-      await doAddMember(users[0])
-    } else if (users.length > 1) {
-      // Show available matches for manual selection
-      availableUsers.value = users
-      addMemberQuery.value = characterName
-      uiStore.showToast(`Multiple users match "${characterName}" — select one below.`, 'info')
-    } else {
-      uiStore.showToast(`No registered user found for "${characterName}". They need to create an account first.`, 'info')
-    }
   } catch (err) {
     uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
   }
