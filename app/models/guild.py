@@ -16,6 +16,7 @@ from app.enums import GuildVisibility, MemberStatus
 from app.extensions import db
 
 if TYPE_CHECKING:
+    from app.models.expansion import ExpansionClass
     from app.models.user import User
 
 
@@ -248,3 +249,56 @@ class GuildInvitation(db.Model):
 
     def __repr__(self) -> str:
         return f"<GuildInvitation id={self.id} guild={self.guild_id} status={self.status}>"
+
+
+class GuildClassRoleOverride(db.Model):
+    """Per-guild override for class→role assignments.
+
+    When a guild has overrides, they REPLACE the expansion defaults
+    for that class. If no overrides exist for a class, expansion
+    defaults are used (passthrough).
+    """
+
+    __tablename__ = "guild_class_role_overrides"
+    __table_args__ = (
+        sa.UniqueConstraint("guild_id", "expansion_class_id", "role",
+                           name="uq_guild_class_role"),
+        sa.Index("ix_gcro_guild", "guild_id"),
+    )
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    guild_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("guilds.id", ondelete="CASCADE"), nullable=False
+    )
+    expansion_class_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey("expansion_classes.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(sa.String(30), nullable=False)
+    is_allowed: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, default=True, server_default=sa.text("1")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    guild: Mapped[Guild] = relationship(
+        "Guild",
+        backref=sa.orm.backref("class_role_overrides", lazy="select", cascade="all, delete-orphan"),
+    )
+    expansion_class: Mapped["ExpansionClass"] = relationship("ExpansionClass", lazy="select")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "guild_id": self.guild_id,
+            "expansion_class_id": self.expansion_class_id,
+            "role": self.role,
+            "is_allowed": self.is_allowed,
+            "created_at": utc_iso(self.created_at),
+        }
+
+    def __repr__(self) -> str:
+        return f"<GuildClassRoleOverride guild_id={self.guild_id} class_id={self.expansion_class_id} role={self.role!r}>"

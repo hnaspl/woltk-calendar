@@ -1139,6 +1139,14 @@
       "tenantIdRequired": "tenant_id is required",
       "userIdRequired": "user_id is required",
       "roleRequired": "role is required"
+    },
+    "matrix": {
+      "rolesRequired": "At least one role must be specified",
+      "invalidRoles": "Invalid roles: {roles}",
+      "classUpdated": "Class-role overrides updated",
+      "classReset": "Class reset to expansion defaults",
+      "matrixReset": "Matrix reset to expansion defaults",
+      "unknownClass": "Unknown class"
     }
   },
   "notify": {

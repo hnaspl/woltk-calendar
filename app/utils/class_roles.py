@@ -28,8 +28,10 @@ def _get_expansion_class(class_name: str):
 
 # ------------------------------------------------------------------ roles
 
-def allowed_roles_for_class(class_name: str) -> list[str] | None:
+def allowed_roles_for_class(class_name: str, *, guild_id: int | None = None) -> list[str] | None:
     """Return the list of allowed role values for a WoW class name.
+
+    When guild_id is provided, uses the per-guild matrix resolver.
 
     Reads from the ``expansion_specs`` table, deriving roles from spec→role
     mappings.  The spec role ``"tank"`` expands to ``["main_tank", "off_tank"]``
@@ -37,6 +39,13 @@ def allowed_roles_for_class(class_name: str) -> list[str] | None:
 
     Returns ``None`` if the class is not found.
     """
+    if guild_id is not None:
+        from app.services import matrix_service
+        matrix = matrix_service.resolve_matrix(guild_id)
+        name = class_name.value if hasattr(class_name, "value") else class_name
+        roles = matrix.get(name)
+        return roles if roles else None
+
     from app.models.expansion import ExpansionSpec
     name, cls = _get_expansion_class(class_name)
     if cls is None:
@@ -57,11 +66,21 @@ def allowed_roles_for_class(class_name: str) -> list[str] | None:
     return sorted(roles, key=lambda r: _ROLE_ORDER.index(r) if r in _ROLE_ORDER else 99) if roles else None
 
 
-def validate_class_role(class_name: str | None, chosen_role: str) -> None:
-    """Raise ValueError if *class_name* cannot take *chosen_role*."""
+def validate_class_role(class_name: str | None, chosen_role: str, *, guild_id: int | None = None) -> None:
+    """Raise ValueError if *class_name* cannot take *chosen_role*.
+
+    When guild_id is provided, uses the per-guild matrix resolver.
+    """
     if not class_name:
         return
     name = class_name.value if hasattr(class_name, "value") else class_name
+
+    if guild_id is not None:
+        from app.services import matrix_service
+        if not matrix_service.is_role_allowed(guild_id, name, chosen_role):
+            raise ValueError(f"{name} cannot take the {chosen_role} role in this guild")
+        return
+
     allowed = allowed_roles_for_class(name)
     if allowed is not None and chosen_role not in allowed:
         raise ValueError(f"{name} cannot take the {chosen_role} role")
