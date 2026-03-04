@@ -10,7 +10,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 from flask import Blueprint, jsonify
 
-from app.constants import ROLE_LABELS, ROLE_SLOTS, WARMANE_REALMS
+from app.constants import ROLE_LABELS, ROLE_SLOTS
 from app.enums import AttendanceOutcome, EventStatus, Role
 from app.extensions import db
 from app.models.expansion import (
@@ -80,9 +80,20 @@ def get_constants():
         )
         raid_types = [{"code": r.code, "name": r.name} for r in raids]
 
+    # Build provider realm suggestions (dynamic from armory providers)
+    from app.services.armory.registry import list_providers, get_provider
+    provider_realms: dict[str, list[str]] = {}
+    for pname in list_providers():
+        try:
+            provider = get_provider(pname)
+            realms = provider.fetch_realms() or provider.get_default_realms()
+            provider_realms[pname] = realms
+        except KeyError:
+            pass
+
     return jsonify(
         {
-            "warmane_realms": WARMANE_REALMS,
+            "provider_realms": provider_realms,
             "wow_classes": wow_classes,
             "raid_types": raid_types,
             "roles": [

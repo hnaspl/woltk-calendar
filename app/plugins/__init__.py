@@ -13,7 +13,7 @@ Usage::
     PluginRegistry.init_app(app)
 
     # At runtime
-    warmane = PluginRegistry.get("warmane")
+    armory = PluginRegistry.get("armory")
     all_plugins = PluginRegistry.all()
 """
 

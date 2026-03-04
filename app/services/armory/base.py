@@ -40,3 +40,22 @@ class ArmoryProvider(abc.ABC):
     @abc.abstractmethod
     def build_armory_url(self, realm: str, name: str) -> str:
         """Build a user-facing armory URL for a character."""
+
+    def get_default_realms(self) -> list[str]:
+        """Return the provider's known realm list.
+
+        The base implementation returns an empty list.  Providers that
+        can discover realms dynamically (e.g. via their API) should
+        override this.  Guilds manage their own realm lists via the
+        :class:`GuildRealm` model; this method is only used as optional
+        realm *suggestions*.
+        """
+        return []
+
+    def fetch_realms(self) -> list[str]:
+        """Attempt to fetch available realms from the provider's API.
+
+        Returns an empty list if the provider does not support dynamic
+        realm discovery.  Subclasses may override to query their API.
+        """
+        return []

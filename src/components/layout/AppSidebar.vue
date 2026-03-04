@@ -158,7 +158,7 @@
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">{{ t('common.fields.selectRealm') }}</option>
-              <option v-for="r in constantsStore.warmaneRealms" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in constantsStore.allRealms" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
           <div>
@@ -433,8 +433,8 @@ async function lookupGuild() {
 
   const matches = []
 
-  // Search all realms from constants store (API-driven)
-  for (const realm of constantsStore.warmaneRealms) {
+  // Search all realms from constants store (API-driven, provider-based)
+  for (const realm of constantsStore.allRealms) {
     try {
       const data = await warmaneApi.lookupGuild(realm, name)
       if (data) {

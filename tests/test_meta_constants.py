@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.constants import ROLE_SLOTS, WARMANE_REALMS
+from app.constants import ROLE_SLOTS
 from app.enums import AttendanceOutcome, EventStatus, Role
 from app.seeds.expansions import WOTLK_CLASS_SPECS, WOTLK_RAIDS
 
@@ -26,10 +26,14 @@ class TestMetaConstants:
             resp = client.get("/api/v1/meta/constants")
             assert resp.content_type.startswith("application/json")
 
-    def test_warmane_realms_match(self, app):
+    def test_provider_realms_present(self, app):
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
-        assert data["warmane_realms"] == WARMANE_REALMS
+        assert "provider_realms" in data
+        assert isinstance(data["provider_realms"], dict)
+        # Warmane provider exists but has no hardcoded realms
+        assert "warmane" in data["provider_realms"]
+        assert isinstance(data["provider_realms"]["warmane"], list)
 
     def test_wow_classes_from_db(self, app):
         """API wow_classes should match seeded expansion classes."""
@@ -118,7 +122,7 @@ class TestMetaConstants:
         with app.test_client() as client:
             data = client.get("/api/v1/meta/constants").get_json()
         expected_keys = {
-            "warmane_realms",
+            "provider_realms",
             "wow_classes",
             "raid_types",
             "roles",

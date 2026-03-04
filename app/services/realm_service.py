@@ -1,14 +1,13 @@
 """Guild realm management service.
 
 Handles per-guild realm configuration — adding, updating, removing, and
-seeding default realms from the Warmane realm list.
+seeding default realms from armory provider suggestions.
 """
 
 from __future__ import annotations
 
 import sqlalchemy as sa
 
-from app.constants import WARMANE_REALMS
 from app.extensions import db
 from app.i18n import _t
 from app.models.guild import GuildRealm
@@ -119,10 +118,18 @@ def remove_realm(realm_id: int) -> None:
 def seed_default_realms(
     guild_id: int,
     tenant_id: int | None = None,
+    realms: list[str] | None = None,
 ) -> list[GuildRealm]:
-    """Seed Warmane default realms for a guild. Called during guild creation."""
-    realms: list[GuildRealm] = []
-    for idx, name in enumerate(WARMANE_REALMS):
+    """Bulk-add realms for a guild from an explicit list.
+
+    No hardcoded defaults — callers must provide the *realms* list.
+    Returns an empty list when *realms* is ``None`` or empty.
+    """
+    if not realms:
+        return []
+
+    result: list[GuildRealm] = []
+    for idx, name in enumerate(realms):
         realm = GuildRealm(
             guild_id=guild_id,
             name=name,
@@ -131,9 +138,9 @@ def seed_default_realms(
             tenant_id=tenant_id or 0,
         )
         db.session.add(realm)
-        realms.append(realm)
+        result.append(realm)
     db.session.flush()
-    return realms
+    return result
 
 
 # ── helpers ───────────────────────────────────────────────────────────────

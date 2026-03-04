@@ -4,22 +4,11 @@
  * Expansion-specific data (classes, specs, roles, raids) is provided
  * by the expansion store / useExpansionData composable.
  *
+ * Realm data is dynamic — provided by armory providers via the plugin
+ * system.  There are no hardcoded realm lists.
+ *
  * Keep in sync with app/constants.py (backend Python equivalent).
  */
-
-// Warmane realm list — static fallback until the constants store loads
-// from the backend API.  The authoritative source is the Warmane plugin
-// (app/plugins/warmane/plugin.py WARMANE_DEFAULT_REALMS).
-// NOTE: This will be removed once all consumers use the constants store.
-export const WARMANE_REALMS = [
-  'Icecrown',
-  'Lordaeron',
-  'Onyxia',
-  'Blackrock',
-  'Frostwolf',
-  'Frostmourne',
-  'Neltharion',
-]
 
 export const ROLE_OPTIONS = [
   { value: 'melee_dps', label: 'Melee DPS' },

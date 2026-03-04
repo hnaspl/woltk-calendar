@@ -13,8 +13,9 @@ from app import create_app
 from app.extensions import db as _db
 from app.models.user import User
 from app.plugins.base import BasePlugin, PluginRegistry
-from app.plugins.warmane.plugin import WarmanePlugin, WARMANE_DEFAULT_REALMS
+from app.plugins.armory.plugin import ArmoryPlugin
 from app.plugins.discord.plugin import DiscordPlugin
+from app.services.armory.warmane import WarmaneProvider
 from app.seeds.expansions import seed_expansions
 
 
@@ -78,41 +79,52 @@ def _make_user(db_session, *, username="testuser", email="test@test.com"):
 # ---------------------------------------------------------------------------
 
 class TestBasePlugin:
-    def test_warmane_plugin_metadata(self):
-        plugin = WarmanePlugin()
-        assert plugin.key == "warmane"
-        assert plugin.display_name == "Warmane Integration"
+    def test_armory_plugin_metadata(self):
+        plugin = ArmoryPlugin()
+        assert plugin.key == "armory"
+        assert plugin.display_name == "Armory Integration"
         assert plugin.plugin_type == "integration"
         assert plugin.version == "1.0.0"
 
-    def test_warmane_plugin_feature_flags(self):
-        plugin = WarmanePlugin()
+    def test_armory_plugin_feature_flags(self):
+        plugin = ArmoryPlugin()
         flags = plugin.get_feature_flags()
         assert flags["character_sync"] is True
         assert flags["armory_integration"] is True
         assert flags["realm_suggestions"] is True
 
-    def test_warmane_plugin_default_config(self):
-        plugin = WarmanePlugin()
+    def test_armory_plugin_default_config_has_providers(self, ctx):
+        plugin = ArmoryPlugin()
         config = plugin.get_default_config()
-        assert "default_realms" in config
-        assert config["default_realms"] == list(WARMANE_DEFAULT_REALMS)
+        assert "providers" in config
+        assert "warmane" in config["providers"]
+        assert "realms" in config["providers"]["warmane"]
 
-    def test_warmane_plugin_get_default_realms(self):
-        plugin = WarmanePlugin()
-        realms = plugin.get_default_realms()
-        assert "Icecrown" in realms
-        assert "Lordaeron" in realms
-        assert len(realms) == 7
+    def test_armory_plugin_provider_realms_empty_by_default(self, ctx):
+        """Providers return no hardcoded realms — realms are managed per-guild."""
+        plugin = ArmoryPlugin()
+        realms = plugin.get_provider_realms("warmane")
+        assert isinstance(realms, list)
 
-    def test_warmane_plugin_to_dict(self):
-        plugin = WarmanePlugin()
+    def test_armory_plugin_list_providers(self, ctx):
+        plugin = ArmoryPlugin()
+        providers = plugin.list_providers()
+        assert "warmane" in providers
+
+    def test_armory_plugin_to_dict(self, ctx):
+        plugin = ArmoryPlugin()
         d = plugin.to_dict()
-        assert d["key"] == "warmane"
-        assert d["display_name"] == "Warmane Integration"
+        assert d["key"] == "armory"
+        assert d["display_name"] == "Armory Integration"
         assert d["plugin_type"] == "integration"
         assert "feature_flags" in d
         assert d["feature_flags"]["character_sync"] is True
+        assert "providers" in d
+
+    def test_armory_plugin_unknown_provider_realms(self, ctx):
+        plugin = ArmoryPlugin()
+        realms = plugin.get_provider_realms("nonexistent")
+        assert realms == []
 
     def test_discord_plugin_metadata(self):
         plugin = DiscordPlugin()
@@ -133,10 +145,10 @@ class TestBasePlugin:
 
 
 class TestPluginRegistry:
-    def test_registry_has_warmane(self, ctx):
-        plugin = PluginRegistry.get("warmane")
+    def test_registry_has_armory(self, ctx):
+        plugin = PluginRegistry.get("armory")
         assert plugin is not None
-        assert plugin.key == "warmane"
+        assert plugin.key == "armory"
 
     def test_registry_has_discord(self, ctx):
         plugin = PluginRegistry.get("discord")
@@ -145,12 +157,12 @@ class TestPluginRegistry:
 
     def test_registry_list_keys(self, ctx):
         keys = PluginRegistry.list_keys()
-        assert "warmane" in keys
+        assert "armory" in keys
         assert "discord" in keys
 
     def test_registry_all(self, ctx):
         all_plugins = PluginRegistry.all()
-        assert "warmane" in all_plugins
+        assert "armory" in all_plugins
         assert "discord" in all_plugins
 
     def test_registry_get_nonexistent(self, ctx):
@@ -176,18 +188,19 @@ class TestPluginAPI:
         data = resp.get_json()
         assert isinstance(data, list)
         keys = [p["key"] for p in data]
-        assert "warmane" in keys
+        assert "armory" in keys
         assert "discord" in keys
 
-    def test_get_plugin(self, app, db):
+    def test_get_armory_plugin(self, app, db):
         client = app.test_client()
         user = _make_user(db)
         _login_as(client, user)
-        resp = client.get("/api/v2/plugins/warmane")
+        resp = client.get("/api/v2/plugins/armory")
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data["key"] == "warmane"
-        assert data["display_name"] == "Warmane Integration"
+        assert data["key"] == "armory"
+        assert data["display_name"] == "Armory Integration"
+        assert "providers" in data
 
     def test_get_plugin_not_found(self, app, db):
         client = app.test_client()
@@ -196,15 +209,15 @@ class TestPluginAPI:
         resp = client.get("/api/v2/plugins/nonexistent")
         assert resp.status_code == 404
 
-    def test_get_plugin_config(self, app, db):
+    def test_get_armory_plugin_config(self, app, db):
         client = app.test_client()
         user = _make_user(db)
         _login_as(client, user)
-        resp = client.get("/api/v2/plugins/warmane/config")
+        resp = client.get("/api/v2/plugins/armory/config")
         assert resp.status_code == 200
         data = resp.get_json()
-        assert "default_realms" in data
-        assert "Icecrown" in data["default_realms"]
+        assert "providers" in data
+        assert "warmane" in data["providers"]
 
     def test_get_plugin_config_not_found(self, app, db):
         client = app.test_client()
@@ -213,21 +226,45 @@ class TestPluginAPI:
         resp = client.get("/api/v2/plugins/nonexistent/config")
         assert resp.status_code == 404
 
+    def test_list_armory_providers(self, app, db):
+        client = app.test_client()
+        user = _make_user(db)
+        _login_as(client, user)
+        resp = client.get("/api/v2/plugins/armory/providers")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert isinstance(data, list)
+        names = [p["name"] for p in data]
+        assert "warmane" in names
+
+    def test_get_provider_realms(self, app, db):
+        """Provider realms endpoint returns a list (may be empty)."""
+        client = app.test_client()
+        user = _make_user(db)
+        _login_as(client, user)
+        resp = client.get("/api/v2/plugins/armory/providers/warmane/realms")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert isinstance(data, list)
+
 
 # ---------------------------------------------------------------------------
-# Constants backwards compatibility
+# WarmaneProvider tests (armory provider, not plugin)
 # ---------------------------------------------------------------------------
 
-class TestConstantsCompat:
-    def test_warmane_realms_importable_from_constants(self):
-        """WARMANE_REALMS should still be importable from app.constants."""
-        from app.constants import WARMANE_REALMS
-        assert isinstance(WARMANE_REALMS, list)
-        assert "Icecrown" in WARMANE_REALMS
-        assert WARMANE_REALMS == list(WARMANE_DEFAULT_REALMS)
+class TestWarmaneProvider:
+    def test_provider_has_no_hardcoded_realms(self, ctx):
+        """WarmaneProvider should not have hardcoded realm defaults."""
+        provider = WarmaneProvider()
+        realms = provider.get_default_realms()
+        assert realms == []
 
-    def test_warmane_realms_matches_plugin(self):
-        """Constants re-export must match the plugin's canonical list."""
-        from app.constants import WARMANE_REALMS
-        plugin = WarmanePlugin()
-        assert WARMANE_REALMS == plugin.get_default_realms()
+    def test_provider_fetch_realms_returns_empty(self, ctx):
+        """Base fetch_realms returns empty (no dynamic API)."""
+        provider = WarmaneProvider()
+        realms = provider.fetch_realms()
+        assert realms == []
+
+    def test_provider_name(self):
+        provider = WarmaneProvider()
+        assert provider.provider_name == "warmane"

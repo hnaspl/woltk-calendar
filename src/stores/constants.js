@@ -6,9 +6,14 @@
  * the store fetches from `GET /api/v1/meta/constants` and replaces
  * the static defaults with the authoritative backend values.
  *
+ * Realm data is dynamic — provided by armory providers via the plugin
+ * system.  There are no hardcoded realm lists.  Use
+ * `providerRealms` (keyed by provider name) for realm suggestions, or
+ * guild-scoped realm APIs for per-guild realm management.
+ *
  * Components can use this store reactively:
  *   const cs = useConstantsStore()
- *   cs.warmaneRealms   // reactive ref
+ *   cs.providerRealms   // { warmane: ["Icecrown", ...] }
  *
  * Static imports from `@/constants` remain available for places that
  * need constants at import/module-evaluation time (e.g. route guards).
@@ -21,7 +26,6 @@ import * as metaApi from '@/api/meta'
 // Static defaults (identical to src/constants.js).
 // These are used until the API fetch resolves.
 import {
-  WARMANE_REALMS as _REALMS,
   ROLE_OPTIONS as _ROLES,
   EVENT_STATUSES as _STATUSES,
   ATTENDANCE_OUTCOMES as _OUTCOMES,
@@ -31,7 +35,6 @@ export const useConstantsStore = defineStore('constants', () => {
   // ---------------------------------------------------------------------------
   // State – initialised with static defaults
   // ---------------------------------------------------------------------------
-  const warmaneRealms = ref([..._REALMS])
   const wowClasses = ref([])
   const raidTypes = ref([])
   const roles = ref([..._ROLES])
@@ -40,6 +43,10 @@ export const useConstantsStore = defineStore('constants', () => {
   const classSpecs = ref({})
   const classRoles = ref({})
   const roleSlots = ref({})
+
+  // Provider-based realm suggestions (dynamic, not hardcoded).
+  // Keyed by provider name, e.g. { warmane: ["Icecrown", ...] }
+  const providerRealms = ref({})
 
   const loaded = ref(false)
   const loading = ref(false)
@@ -52,6 +59,17 @@ export const useConstantsStore = defineStore('constants', () => {
     Object.fromEntries(roles.value.map(r => [r.value, r.label]))
   )
 
+  /** Flat list of all realm suggestions across all providers. */
+  const allRealms = computed(() => {
+    const all = []
+    for (const realms of Object.values(providerRealms.value)) {
+      for (const r of realms) {
+        if (!all.includes(r)) all.push(r)
+      }
+    }
+    return all
+  })
+
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
@@ -61,7 +79,6 @@ export const useConstantsStore = defineStore('constants', () => {
     error.value = null
     try {
       const data = await metaApi.getConstants()
-      warmaneRealms.value = data.warmane_realms
       wowClasses.value = data.wow_classes
       raidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
       roles.value = data.roles
@@ -70,6 +87,9 @@ export const useConstantsStore = defineStore('constants', () => {
       classSpecs.value = data.class_specs
       classRoles.value = data.class_roles
       roleSlots.value = data.role_slots
+      if (data.provider_realms) {
+        providerRealms.value = data.provider_realms
+      }
       loaded.value = true
     } catch (err) {
       error.value = err?.response?.data?.message || 'Failed to load constants'
@@ -80,7 +100,6 @@ export const useConstantsStore = defineStore('constants', () => {
 
   return {
     // state
-    warmaneRealms,
     wowClasses,
     raidTypes,
     roles,
@@ -89,11 +108,13 @@ export const useConstantsStore = defineStore('constants', () => {
     classSpecs,
     classRoles,
     roleSlots,
+    providerRealms,
     loaded,
     loading,
     error,
     // derived
     roleLabelMap,
+    allRealms,
     // actions
     fetchConstants,
   }

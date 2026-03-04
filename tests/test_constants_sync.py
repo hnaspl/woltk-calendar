@@ -2,7 +2,7 @@
 
 With Phase 1, expansion-specific data (classes, specs, roles, raids) is
 fully DB-driven.  These tests validate:
-- Non-expansion frontend/backend constants remain in sync (WARMANE_REALMS, roles)
+- Non-expansion frontend/backend constants remain in sync (roles)
 - The v1 meta API returns DB-driven data correctly
 - normalize_spec_name works via DB lookup
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 # Backend constants (only non-expansion constants remain)
-from app.constants import ROLE_LABELS, WARMANE_REALMS, normalize_spec_name
+from app.constants import ROLE_LABELS, normalize_spec_name
 from app.enums import Role
 
 CONSTANTS_JS = Path(__file__).resolve().parent.parent / "src" / "constants.js"
@@ -47,21 +47,6 @@ def _parse_js_role_options() -> dict[str, str]:
         r"\{\s*value:\s*'([^']+)',\s*label:\s*'([^']+)'\s*\}", m.group(1),
     )
     return {value: label for value, label in entries}
-
-
-# ---------------------------------------------------------------------------
-# WARMANE_REALMS sync
-# ---------------------------------------------------------------------------
-
-
-class TestWarmaneRealmsSync:
-    """Ensure frontend WARMANE_REALMS matches backend."""
-
-    def test_realms_match(self):
-        js_realms = _parse_js_array("WARMANE_REALMS")
-        assert js_realms == WARMANE_REALMS, (
-            f"Realm lists differ.\n  Backend: {WARMANE_REALMS}\n  Frontend: {js_realms}"
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -117,9 +102,12 @@ class TestApiVsDbSync:
         with app.test_client() as client:
             return client.get("/api/v1/meta/constants").get_json()
 
-    def test_api_realms_match_backend(self, app):
+    def test_api_returns_provider_realms(self, app):
         api = self._api_data(app)
-        assert api["warmane_realms"] == WARMANE_REALMS
+        assert "provider_realms" in api
+        assert isinstance(api["provider_realms"], dict)
+        # Warmane provider is registered (realms are dynamic, may be empty)
+        assert "warmane" in api["provider_realms"]
 
     def test_api_returns_db_classes(self, app, db):
         """API wow_classes should match seeded expansion classes."""

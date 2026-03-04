@@ -40,3 +40,32 @@ def get_plugin_config(key: str):
     if plugin is None:
         return jsonify({"error": _t("plugin.notFound")}), 404
     return jsonify(plugin.get_default_config()), 200
+
+
+# ── Armory-specific convenience endpoints ────────────────────────────
+
+@bp.get("/armory/providers")
+@login_required
+def list_armory_providers():
+    """List available armory providers and their realm suggestions."""
+    armory = PluginRegistry.get("armory")
+    if armory is None:
+        return jsonify([]), 200
+    result = []
+    for name in armory.list_providers():
+        result.append({
+            "name": name,
+            "realms": armory.get_provider_realms(name),
+        })
+    return jsonify(result), 200
+
+
+@bp.get("/armory/providers/<provider_name>/realms")
+@login_required
+def get_provider_realms(provider_name: str):
+    """Get realm suggestions from a specific armory provider."""
+    armory = PluginRegistry.get("armory")
+    if armory is None:
+        return jsonify([]), 200
+    realms = armory.get_provider_realms(provider_name)
+    return jsonify(realms), 200

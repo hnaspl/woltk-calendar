@@ -15,7 +15,7 @@ class BasePlugin(abc.ABC):
     Subclasses must define *key* and *display_name* at the class level.
     """
 
-    key: str  # Unique identifier, e.g. "warmane"
+    key: str  # Unique identifier, e.g. "armory"
     display_name: str  # Human-readable name
     version: str = "1.0.0"
     description: str = ""
@@ -89,10 +89,10 @@ class PluginRegistry:
             return
 
         # Import built-in plugins so they self-register
-        from app.plugins.warmane.plugin import WarmanePlugin  # noqa: F401
+        from app.plugins.armory.plugin import ArmoryPlugin  # noqa: F401
         from app.plugins.discord.plugin import DiscordPlugin  # noqa: F401
 
-        cls.register(WarmanePlugin())
+        cls.register(ArmoryPlugin())
         cls.register(DiscordPlugin())
 
         # Let each plugin register its blueprints

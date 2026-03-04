@@ -1,1 +1,0 @@
-"""Warmane plugin package."""
