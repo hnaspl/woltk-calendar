@@ -19,7 +19,8 @@ export function useAuth() {
 
   async function register(username, email, password) {
     await authStore.register(username, email, password)
-    router.push('/dashboard')
+    const redirect = router.currentRoute.value.query.redirect || '/dashboard'
+    router.push(redirect)
   }
 
   async function logout() {

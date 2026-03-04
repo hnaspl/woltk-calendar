@@ -15,6 +15,11 @@
       <WowCard :gold="true">
         <h2 class="text-lg font-semibold text-text-primary mb-6">{{ t('auth.signIn') }}</h2>
 
+        <!-- Invite redirect banner -->
+        <div v-if="isInviteRedirect" class="mb-4 p-3 rounded bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-sm">
+          {{ t('auth.loginToAcceptInvite') }}
+        </div>
+
         <div v-if="error" class="mb-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">
           {{ error }}
         </div>
@@ -68,7 +73,7 @@
 
         <p class="text-center text-sm text-text-muted mt-6">
           {{ t('auth.noAccount') }}
-          <RouterLink to="/register" class="text-accent-gold hover:text-yellow-400 transition-colors">
+          <RouterLink :to="registerLink" class="text-accent-gold hover:text-yellow-400 transition-colors">
             {{ t('auth.register') }}
           </RouterLink>
         </p>
@@ -78,8 +83,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/composables/useAuth'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -91,6 +96,7 @@ import WowButton from '@/components/common/WowButton.vue'
 const { t } = useI18n()
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
+const route = useRoute()
 
 const { login, isLoading, authError } = useAuth()
 
@@ -100,6 +106,16 @@ const error = ref(null)
 const loading = ref(false)
 const discordEnabled = ref(false)
 const discordLoading = ref(false)
+
+const isInviteRedirect = computed(() => {
+  const redirect = route.query.redirect || ''
+  return redirect.startsWith('/invite/')
+})
+
+const registerLink = computed(() => {
+  const redirect = route.query.redirect
+  return redirect ? { path: '/register', query: { redirect } } : '/register'
+})
 
 onMounted(async () => {
   // Check URL params for Discord error

@@ -159,10 +159,6 @@
               <option value="Horde">Horde</option>
             </select>
           </div>
-          <div class="flex items-center gap-2">
-            <input id="allow-self-join" v-model="newGuild.allow_self_join" type="checkbox" class="w-4 h-4 rounded bg-bg-tertiary border border-border-default accent-accent-gold" />
-            <label for="allow-self-join" class="text-sm text-text-muted">{{ t('guild.allowSelfJoin') }}</label>
-          </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.timezone') }}</label>
             <select v-model="newGuild.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
@@ -351,7 +347,7 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
-const newGuild = reactive({ name: '', realm_name: '', faction: '', allow_self_join: true, timezone: 'Europe/Warsaw' })
+const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw' })
 
 const GUILD_TIMEZONES = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -462,7 +458,6 @@ async function doCreateGuild() {
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
-      allow_self_join: newGuild.allow_self_join,
       warmane_source: !!guildLookupMatch.value,
       timezone: newGuild.timezone,
     })
@@ -472,7 +467,6 @@ async function doCreateGuild() {
     newGuild.name = ''
     newGuild.realm_name = ''
     newGuild.faction = ''
-    newGuild.allow_self_join = true
     newGuild.timezone = 'Europe/Warsaw'
     guildLookupDone.value = false
     guildLookupMatch.value = null

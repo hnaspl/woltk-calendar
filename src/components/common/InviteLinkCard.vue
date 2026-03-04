@@ -51,11 +51,21 @@ const inviteUrl = computed(() => {
   return `${window.location.origin}/invite/${props.invitation.invite_token}`
 })
 
-function doCopy() {
-  if (inviteUrl.value) {
-    navigator.clipboard.writeText(inviteUrl.value)
-    copied.value = true
-    setTimeout(() => { copied.value = false }, 2000)
+async function doCopy() {
+  if (!inviteUrl.value) return
+  try {
+    await navigator.clipboard.writeText(inviteUrl.value)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = inviteUrl.value
+    ta.style.position = 'fixed'
+    ta.style.left = '-9999px'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
   }
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 2000)
 }
 </script>
