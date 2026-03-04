@@ -59,14 +59,8 @@ def _count_assigned_slots_by_role(
 
 def _get_role_slots(event) -> dict:
     """Return the slot limits per role from the event's raid definition."""
-    rd = event.raid_definition
-    return {
-        "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
-        "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
-        "melee_dps": rd.melee_dps_slots if rd and rd.melee_dps_slots is not None else 0,
-        "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
-        "range_dps": rd.range_dps_slots if rd and rd.range_dps_slots is not None else 18,
-    }
+    from app.constants import get_slot_counts_from_rd
+    return get_slot_counts_from_rd(event.raid_definition)
 
 
 def _user_has_role_slot(raid_event_id: int, user_id: int, exclude_signup_id: int | None = None) -> bool:

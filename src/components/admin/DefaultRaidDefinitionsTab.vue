@@ -151,6 +151,7 @@ import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as rdApi from '@/api/raidDefinitions'
+import { DEFAULT_ROLE_SLOT_COUNTS, ROLE_VALUES } from '@/constants'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
@@ -171,7 +172,10 @@ const showDeleteModal = ref(false)
 const deleteTarget = ref(null)
 
 function defaultForm() {
-  return { name: '', raid_type: '', size: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 }
+  const slotDefaults = Object.fromEntries(
+    ROLE_VALUES.map(r => [`${r}_slots`, DEFAULT_ROLE_SLOT_COUNTS[r]])
+  )
+  return { name: '', raid_type: '', size: '', default_duration_minutes: 180, ...slotDefaults }
 }
 
 async function loadDefinitions() {
@@ -196,16 +200,15 @@ function openCreateModal() {
 
 function openEditModal(d) {
   editingDef.value = d
+  const slotValues = Object.fromEntries(
+    ROLE_VALUES.map(r => [`${r}_slots`, d[`${r}_slots`] ?? DEFAULT_ROLE_SLOT_COUNTS[r]])
+  )
   form.value = {
     name: d.name,
     raid_type: d.raid_type || d.code || '',
     size: d.size || d.default_raid_size,
     default_duration_minutes: d.default_duration_minutes ?? 180,
-    main_tank_slots: d.main_tank_slots ?? 1,
-    off_tank_slots: d.off_tank_slots ?? 1,
-    melee_dps_slots: d.melee_dps_slots ?? 0,
-    healer_slots: d.healer_slots ?? 5,
-    range_dps_slots: d.range_dps_slots ?? 18,
+    ...slotValues,
   }
   formError.value = null
   showEditModal.value = true
@@ -217,7 +220,7 @@ async function saveDefinition() {
     formError.value = t('raidDefinitions.toasts.nameTypeSizeRequired')
     return
   }
-  const totalSlots = (form.value.main_tank_slots || 0) + (form.value.off_tank_slots || 0) + (form.value.melee_dps_slots || 0) + (form.value.healer_slots || 0) + (form.value.range_dps_slots || 0)
+  const totalSlots = ROLE_VALUES.reduce((sum, r) => sum + (form.value[`${r}_slots`] || 0), 0)
   if (totalSlots > form.value.size) {
     formError.value = t('raidDefinitions.toasts.slotsExceedSize', { total: totalSlots, size: form.value.size })
     return

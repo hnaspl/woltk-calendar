@@ -284,7 +284,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useGuildStore } from '@/stores/guild'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
@@ -300,7 +300,7 @@ const props = defineProps({
   canManage: { type: Boolean, default: false },
   guildId: { type: [Number, String], default: null },
   eventId: { type: [Number, String], default: null },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] }
+  availableRoles: { type: Array, default: () => ROLE_VALUES }
 })
 
 const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])

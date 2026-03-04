@@ -149,7 +149,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
@@ -161,7 +161,7 @@ const props = defineProps({
   existingSignup: { type: Object, default: null },
   signedUpCharacterIds: { type: Array, default: () => [] },
   bannedCharacterIds: { type: Array, default: () => [] },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] },
+  availableRoles: { type: Array, default: () => ROLE_VALUES },
   roleSlotInfo: { type: Object, default: () => ({}) }
 })
 

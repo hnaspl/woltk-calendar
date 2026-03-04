@@ -46,58 +46,52 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
+import { ROLE_OPTIONS, DEFAULT_ROLE_SLOT_COUNTS } from '@/constants'
 
 const { t } = useI18n()
+
+const ROLE_BAR_CLASS = {
+  main_tank: 'bg-blue-300',
+  off_tank: 'bg-cyan-400',
+  melee_dps: 'bg-blue-400',
+  healer: 'bg-green-400',
+  range_dps: 'bg-red-400',
+}
 
 const props = defineProps({
   lineupCounts: { type: Object, default: null },
   maxSize: { type: Number, default: null },
   // Slot targets from the raid definition
-  meleeDpsSlots:  { type: Number, default: 2 },
-  mainTankSlots:  { type: Number, default: 1 },
-  offTankSlots:   { type: Number, default: 1 },
-  healerSlots:    { type: Number, default: 5 },
-  rangeDpsSlots:  { type: Number, default: 18 }
+  meleeDpsSlots:  { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.melee_dps },
+  mainTankSlots:  { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.main_tank },
+  offTankSlots:   { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.off_tank },
+  healerSlots:    { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.healer },
+  rangeDpsSlots:  { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.range_dps }
 })
+
+// Map role value to the matching prop name
+const roleToProp = {
+  main_tank: 'mainTankSlots',
+  off_tank: 'offTankSlots',
+  melee_dps: 'meleeDpsSlots',
+  healer: 'healerSlots',
+  range_dps: 'rangeDpsSlots',
+}
 
 function countRole(role) {
   return props.lineupCounts?.[role] ?? 0
 }
 
 const total = computed(() =>
-  countRole('main_tank') + countRole('off_tank') + countRole('melee_dps') + countRole('healer') + countRole('range_dps')
+  ROLE_OPTIONS.reduce((sum, r) => sum + countRole(r.value), 0)
 )
 
-const roleSummary = computed(() => [
-  {
-    name: 'main_tank',
-    count: countRole('main_tank'),
-    target: props.mainTankSlots,
-    barClass: 'bg-blue-300'
-  },
-  {
-    name: 'off_tank',
-    count: countRole('off_tank'),
-    target: props.offTankSlots,
-    barClass: 'bg-cyan-400'
-  },
-  {
-    name: 'melee_dps',
-    count: countRole('melee_dps'),
-    target: props.meleeDpsSlots,
-    barClass: 'bg-blue-400'
-  },
-  {
-    name: 'healer',
-    count: countRole('healer'),
-    target: props.healerSlots,
-    barClass: 'bg-green-400'
-  },
-  {
-    name: 'range_dps',
-    count: countRole('range_dps'),
-    target: props.rangeDpsSlots,
-    barClass: 'bg-red-400'
-  }
-].filter(r => r.target > 0))
+const roleSummary = computed(() =>
+  ROLE_OPTIONS.map(r => ({
+    name: r.value,
+    count: countRole(r.value),
+    target: props[roleToProp[r.value]] ?? DEFAULT_ROLE_SLOT_COUNTS[r.value],
+    barClass: ROLE_BAR_CLASS[r.value] ?? 'bg-gray-400'
+  })).filter(r => r.target > 0)
+)
 </script>

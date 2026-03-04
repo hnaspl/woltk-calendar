@@ -30,6 +30,77 @@ export const ROLE_LABEL_MAP = Object.fromEntries(
   ROLE_OPTIONS.map(r => [r.value, r.label])
 )
 
+/** All valid role values, derived from ROLE_OPTIONS. */
+export const ROLE_VALUES = ROLE_OPTIONS.map(r => r.value)
+
+/**
+ * Role value → lineup group key (singular → plural).
+ * Keep in sync with app/constants.py ROLE_TO_GROUP.
+ */
+export const ROLE_TO_GROUP = {
+  main_tank: 'main_tanks',
+  off_tank: 'off_tanks',
+  melee_dps: 'melee_dps',
+  healer: 'healers',
+  range_dps: 'range_dps',
+}
+
+/** Lineup group key → role value (reverse of ROLE_TO_GROUP). */
+export const GROUP_TO_ROLE = Object.fromEntries(
+  Object.entries(ROLE_TO_GROUP).map(([k, v]) => [v, k])
+)
+
+/** Ordered list of lineup group keys. */
+export const LINEUP_GROUP_KEYS = Object.values(ROLE_TO_GROUP)
+
+/** Default fallback role when a role is missing or unknown. */
+export const DEFAULT_ROLE = 'range_dps'
+
+/**
+ * Default slot counts per role (used when raid definition is absent).
+ * Keep in sync with app/constants.py DEFAULT_ROLE_SLOT_COUNTS.
+ */
+export const DEFAULT_ROLE_SLOT_COUNTS = {
+  main_tank: 1,
+  off_tank: 1,
+  melee_dps: 0,
+  healer: 5,
+  range_dps: 18,
+}
+
+/**
+ * Role → CSS style classes for RoleBadge component.
+ */
+export const ROLE_STYLE_MAP = {
+  melee_dps: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+  main_tank: 'bg-blue-600/20 text-blue-200 border border-blue-400/30',
+  off_tank: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30',
+  healer: 'bg-green-500/20 text-green-300 border border-green-500/30',
+  range_dps: 'bg-red-500/20 text-red-300 border border-red-500/30',
+}
+
+/**
+ * Role → header/label CSS text-color class for lineup columns.
+ */
+export const ROLE_LABEL_CLASS = {
+  main_tank: 'text-blue-200',
+  off_tank: 'text-cyan-300',
+  melee_dps: 'text-blue-300',
+  healer: 'text-green-300',
+  range_dps: 'text-red-300',
+}
+
+/**
+ * Lineup column configuration array, derived from ROLE_OPTIONS.
+ * Each entry has { key, role, label, labelClass }.
+ */
+export const LINEUP_COLUMNS = ROLE_OPTIONS.map(r => ({
+  key: ROLE_TO_GROUP[r.value],
+  role: r.value,
+  label: r.label,
+  labelClass: ROLE_LABEL_CLASS[r.value],
+}))
+
 /** Valid event status values. Keep in sync with app/enums.py EventStatus. */
 export const EVENT_STATUSES = ['draft', 'open', 'locked', 'completed', 'cancelled']
 

@@ -5,7 +5,8 @@ DB-driven expansion registry (see app/models/expansion.py) and validated
 through app/utils/class_roles.py.
 
 Only truly generic constants remain here: realm lists, role labels/slots,
-and the spec-name normalisation utility (which delegates to the DB).
+role→group mappings, default slot counts, and the spec-name normalisation
+utility (which delegates to the DB).
 """
 
 from __future__ import annotations
@@ -22,6 +23,55 @@ ROLE_LABELS: dict[str, str] = {
     Role.HEALER.value: "Heal",
     Role.RANGE_DPS.value: "Range DPS",
 }
+
+# ---------------------------------------------------------------------------
+# Role → lineup group key mapping (singular → plural)
+# Used by lineup_service to group characters into role buckets.
+# ---------------------------------------------------------------------------
+ROLE_TO_GROUP: dict[str, str] = {
+    Role.MAIN_TANK.value: "main_tanks",
+    Role.OFF_TANK.value: "off_tanks",
+    Role.MELEE_DPS.value: "melee_dps",
+    Role.HEALER.value: "healers",
+    Role.RANGE_DPS.value: "range_dps",
+}
+
+GROUP_TO_ROLE: dict[str, str] = {v: k for k, v in ROLE_TO_GROUP.items()}
+
+LINEUP_GROUP_KEYS: list[str] = list(ROLE_TO_GROUP.values())
+
+# ---------------------------------------------------------------------------
+# Default fallback role when a role is missing or unknown
+# ---------------------------------------------------------------------------
+DEFAULT_ROLE: str = Role.RANGE_DPS.value
+
+# ---------------------------------------------------------------------------
+# Default slot counts per role (used when raid definition is absent)
+# ---------------------------------------------------------------------------
+DEFAULT_ROLE_SLOT_COUNTS: dict[str, int] = {
+    Role.MAIN_TANK.value: 1,
+    Role.OFF_TANK.value: 1,
+    Role.MELEE_DPS.value: 0,
+    Role.HEALER.value: 5,
+    Role.RANGE_DPS.value: 18,
+}
+
+
+def get_slot_counts_from_rd(rd) -> dict[str, int]:
+    """Build role→slot_count dict from a RaidDefinition, falling back to defaults.
+
+    Args:
+        rd: A RaidDefinition model instance, or None.
+
+    Returns:
+        Dict mapping each Role value to its slot count integer.
+    """
+    result: dict[str, int] = {}
+    for role, default in DEFAULT_ROLE_SLOT_COUNTS.items():
+        col = f"{role}_slots"
+        val = getattr(rd, col, None) if rd else None
+        result[role] = val if val is not None else default
+    return result
 
 
 def normalize_spec_name(

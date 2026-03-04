@@ -7,6 +7,13 @@ from typing import Optional
 
 import sqlalchemy as sa
 
+from app.constants import (
+    DEFAULT_ROLE,
+    GROUP_TO_ROLE,
+    LINEUP_GROUP_KEYS,
+    ROLE_TO_GROUP,
+    get_slot_counts_from_rd,
+)
 from app.extensions import db
 from app.models.signup import LineupSlot, Signup
 from app.utils.class_roles import validate_class_role
@@ -29,7 +36,7 @@ def get_lineup(raid_event_id: int) -> list[LineupSlot]:
 def _lineup_version(grouped: dict) -> str:
     """Compute a fingerprint from lineup signup IDs for conflict detection."""
     parts = []
-    for key in ("main_tanks", "off_tanks", "melee_dps", "healers", "range_dps", "bench_queue"):
+    for key in LINEUP_GROUP_KEYS + ["bench_queue"]:
         ids = ",".join(str(s["id"]) for s in grouped.get(key, []))
         parts.append(f"{key}:{ids}")
     return "|".join(parts)
@@ -38,15 +45,14 @@ def _lineup_version(grouped: dict) -> str:
 def get_lineup_grouped(raid_event_id: int, guild_role_map: dict | None = None) -> dict:
     """Return lineup grouped by role with full signup data for the frontend."""
     slots = get_lineup(raid_event_id)
-    grouped: dict[str, list] = {"main_tanks": [], "off_tanks": [], "melee_dps": [], "healers": [], "range_dps": []}
+    grouped: dict[str, list] = {key: [] for key in LINEUP_GROUP_KEYS}
     bench_queue: list = []
-    role_map = {"main_tank": "main_tanks", "off_tank": "off_tanks", "melee_dps": "melee_dps", "healer": "healers", "range_dps": "range_dps"}
     for slot in slots:
         if slot.slot_group == "bench":
             if slot.signup is not None:
                 bench_queue.append(slot.signup.to_dict(guild_role_map=guild_role_map))
             continue
-        key = role_map.get(slot.slot_group, "range_dps")
+        key = ROLE_TO_GROUP.get(slot.slot_group, ROLE_TO_GROUP[DEFAULT_ROLE])
         if slot.signup is not None:
             grouped[key].append(slot.signup.to_dict(guild_role_map=guild_role_map))
     grouped["bench_queue"] = bench_queue
@@ -241,7 +247,7 @@ def update_lineup_grouped(
     )
     db.session.flush()
 
-    role_map = {"main_tanks": "main_tank", "off_tanks": "off_tank", "melee_dps": "melee_dps", "healers": "healer", "range_dps": "range_dps"}
+    role_map = GROUP_TO_ROLE
     # Track users who already have a character in a role slot to enforce
     # one-character-per-player.  When a conflict is detected the NEW
     # placement wins (admin explicitly put the character there) and the
@@ -255,14 +261,7 @@ def update_lineup_grouped(
     from app.models.raid import RaidEvent
     event = db.session.get(RaidEvent, raid_event_id)
     if event:
-        rd = event.raid_definition
-        slot_limits = {
-            "main_tank": rd.main_tank_slots if rd and rd.main_tank_slots is not None else 1,
-            "off_tank": rd.off_tank_slots if rd and rd.off_tank_slots is not None else 1,
-            "melee_dps": rd.melee_dps_slots if rd and rd.melee_dps_slots is not None else 0,
-            "healer": rd.healer_slots if rd and rd.healer_slots is not None else 5,
-            "range_dps": rd.range_dps_slots if rd and rd.range_dps_slots is not None else 18,
-        }
+        slot_limits = get_slot_counts_from_rd(event.raid_definition)
         for key, slot_group in role_map.items():
             limit = slot_limits.get(slot_group)
             if limit is not None:
@@ -475,7 +474,7 @@ def reorder_bench_queue(
     for slot in bench_slots:
         signup = db.session.get(Signup, slot.signup_id)
         if signup:
-            role = signup.chosen_role or "range_dps"
+            role = signup.chosen_role or DEFAULT_ROLE
             role_counters.setdefault(role, 0)
             role_counters[role] += 1
             old_positions_by_role[slot.signup_id] = (role, role_counters[role])
@@ -524,7 +523,7 @@ def reorder_bench_queue(
         signup = db.session.get(Signup, signup_id)
         if not signup:
             continue
-        role = signup.chosen_role or "range_dps"
+        role = signup.chosen_role or DEFAULT_ROLE
         new_role_counters.setdefault(role, 0)
         new_role_counters[role] += 1
         new_pos = new_role_counters[role]
