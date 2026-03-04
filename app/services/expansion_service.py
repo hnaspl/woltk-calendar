@@ -73,7 +73,7 @@ def enable_expansion(
                 guild_id=guild_id,
                 expansion_id=exp.id,
                 enabled_by=user_id,
-                tenant_id=tenant_id,
+                tenant_id=tenant_id or 0,
             ))
             newly_enabled_ids.append(exp.id)
 
@@ -249,7 +249,7 @@ def _sync_raid_definitions_for_expansions(
 
             db.session.add(RaidDefinition(
                 guild_id=guild_id,
-                tenant_id=tenant_id,
+                tenant_id=tenant_id or 0,
                 created_by=user_id,
                 code=raid.code,
                 name=raid.name,
