@@ -10,20 +10,26 @@ export const useGuildStore = defineStore('guild', () => {
   const loading = ref(false)
   const error = ref(null)
 
-  // Watch for tenant switches — reload guild list
-  try {
-    const { useTenantStore } = require('@/stores/tenant')
-    const tenantStore = useTenantStore()
-    watch(() => tenantStore.activeTenantId, (newId, oldId) => {
-      if (newId !== oldId && oldId !== null) {
-        currentGuild.value = null
-        members.value = []
-        fetchGuilds()
-      }
-    })
-  } catch {
-    // Tenant store not yet initialized — skip watcher
+  // Watch for tenant switches — reload guild list (lazy to avoid circular dep)
+  let _tenantWatchSet = false
+  const _setupTenantWatch = () => {
+    if (_tenantWatchSet) return
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      const tenantStore = useTenantStore()
+      watch(() => tenantStore.activeTenantId, (newId, oldId) => {
+        if (newId !== oldId && oldId !== null) {
+          currentGuild.value = null
+          members.value = []
+          fetchGuilds()
+        }
+      })
+      _tenantWatchSet = true
+    } catch {
+      // Tenant store not yet initialized — skip watcher
+    }
   }
+  _setupTenantWatch()
 
   async function fetchGuilds() {
     loading.value = true

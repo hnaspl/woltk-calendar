@@ -1044,6 +1044,21 @@
     },
     "common": {
       "missingFields": "Brakujące pola: {fields}"
+    },
+    "tenants": {
+      "notFound": "Nie znaleziono workspace'u",
+      "notMember": "Nie jesteś członkiem tego workspace'u",
+      "adminRequired": "Tylko właściciel lub admin workspace'u może wykonać tę akcję",
+      "ownerRequired": "Tylko właściciel workspace'u może wykonać tę akcję",
+      "memberNotFound": "Nie znaleziono członka",
+      "memberRemoved": "Członek usunięty",
+      "deleted": "Workspace usunięty",
+      "invitationNotFound": "Nie znaleziono zaproszenia",
+      "invitationRevoked": "Zaproszenie anulowane",
+      "invalidToken": "Nieprawidłowy token zaproszenia",
+      "tenantIdRequired": "tenant_id jest wymagane",
+      "userIdRequired": "user_id jest wymagane",
+      "roleRequired": "role jest wymagane"
     }
   },
   "notify": {

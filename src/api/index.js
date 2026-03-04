@@ -6,17 +6,21 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
+// Cached reference to tenant store, resolved lazily on first request
+let _tenantStore = null
+
 // Request interceptor – inject X-Tenant-Id header from tenant store
 api.interceptors.request.use(config => {
-  // Lazy import to avoid circular dependency at module load time
-  try {
-    const { useTenantStore } = require('@/stores/tenant')
-    const tenantStore = useTenantStore()
-    if (tenantStore.activeTenantId) {
-      config.headers['X-Tenant-Id'] = tenantStore.activeTenantId
+  if (!_tenantStore) {
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      _tenantStore = useTenantStore()
+    } catch {
+      // Store not yet initialized — skip header
     }
-  } catch {
-    // Store not yet initialized — skip header
+  }
+  if (_tenantStore?.activeTenantId) {
+    config.headers['X-Tenant-Id'] = _tenantStore.activeTenantId
   }
   return config
 })

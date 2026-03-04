@@ -72,9 +72,6 @@ async function doAccept() {
 }
 
 onMounted(() => {
-  // Auto-accept if there's a token
-  if (route.params.token) {
-    // Don't auto-accept, let user click the button
-  }
+  // Token is displayed from route.params; user must click Accept to proceed.
 })
 </script>

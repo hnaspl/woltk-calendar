@@ -1044,6 +1044,21 @@
     },
     "common": {
       "missingFields": "Missing fields: {fields}"
+    },
+    "tenants": {
+      "notFound": "Tenant not found",
+      "notMember": "Not a member of this tenant",
+      "adminRequired": "Only tenant owner or admin can perform this action",
+      "ownerRequired": "Only the tenant owner can perform this action",
+      "memberNotFound": "Member not found",
+      "memberRemoved": "Member removed",
+      "deleted": "Tenant deleted",
+      "invitationNotFound": "Invitation not found",
+      "invitationRevoked": "Invitation revoked",
+      "invalidToken": "Invalid invitation token",
+      "tenantIdRequired": "tenant_id is required",
+      "userIdRequired": "user_id is required",
+      "roleRequired": "role is required"
     }
   },
   "notify": {

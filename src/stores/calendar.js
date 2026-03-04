@@ -8,18 +8,24 @@ export const useCalendarStore = defineStore('calendar', () => {
   const loading = ref(false)
   const error = ref(null)
 
-  // Watch for tenant switches — clear calendar data
-  try {
-    const { useTenantStore } = require('@/stores/tenant')
-    const tenantStore = useTenantStore()
-    watch(() => tenantStore.activeTenantId, (newId, oldId) => {
-      if (newId !== oldId && oldId !== null) {
-        events.value = []
-      }
-    })
-  } catch {
-    // Tenant store not yet initialized — skip watcher
+  // Watch for tenant switches — clear calendar data (lazy to avoid circular dep)
+  let _tenantWatchSet = false
+  const _setupTenantWatch = () => {
+    if (_tenantWatchSet) return
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      const tenantStore = useTenantStore()
+      watch(() => tenantStore.activeTenantId, (newId, oldId) => {
+        if (newId !== oldId && oldId !== null) {
+          events.value = []
+        }
+      })
+      _tenantWatchSet = true
+    } catch {
+      // Tenant store not yet initialized — skip watcher
+    }
   }
+  _setupTenantWatch()
 
   const filters = ref({
     raidType: '',
