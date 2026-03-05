@@ -228,9 +228,9 @@ async function loadGuildData() {
       const realmList = (data.realms || []).map(r => r.name)
       // Always include the current guild realm in the list
       if (g.realm_name && !realmList.includes(g.realm_name)) {
-        realmList.unshift(g.realm_name)
+        realmList.push(g.realm_name)
       }
-      guildRealmNames.value = realmList
+      guildRealmNames.value = realmList.sort()
     } catch {
       // Fallback: at least show the current realm
       guildRealmNames.value = g.realm_name ? [g.realm_name] : []
