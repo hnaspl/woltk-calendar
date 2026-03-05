@@ -74,8 +74,8 @@ async function doAccept() {
   accepting.value = true
   status.value = 'loading'
   try {
-    const { data } = await guildsApi.acceptGuildInvite(token)
-    guildName.value = data.guild_name || ''
+    const result = await guildsApi.acceptGuildInvite(token)
+    guildName.value = result.guild_name || ''
     status.value = 'accepted'
     await guildStore.fetchGuilds()
   } catch (err) {

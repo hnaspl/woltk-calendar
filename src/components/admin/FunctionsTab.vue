@@ -90,8 +90,7 @@ async function loadFeatures() {
   loading.value = true
   error.value = null
   try {
-    const { data } = await api.get('/admin/platform-features')
-    features.value = data
+    features.value = await api.get('/admin/platform-features')
   } catch (err) {
     error.value = err?.response?.data?.error || 'Failed to load features'
   } finally {
@@ -102,10 +101,10 @@ async function loadFeatures() {
 async function toggleGlobal(feat) {
   saving.value = feat.feature_key
   try {
-    const { data } = await api.put(`/admin/platform-features/${feat.feature_key}`, {
+    const updated = await api.put(`/admin/platform-features/${feat.feature_key}`, {
       globally_enabled: !feat.globally_enabled
     })
-    Object.assign(feat, data)
+    Object.assign(feat, updated)
   } catch (err) {
     error.value = err?.response?.data?.error || 'Failed to update feature'
   } finally {
@@ -116,10 +115,10 @@ async function toggleGlobal(feat) {
 async function togglePaywall(feat) {
   saving.value = feat.feature_key
   try {
-    const { data } = await api.put(`/admin/platform-features/${feat.feature_key}`, {
+    const updated = await api.put(`/admin/platform-features/${feat.feature_key}`, {
       requires_plan: !feat.requires_plan
     })
-    Object.assign(feat, data)
+    Object.assign(feat, updated)
   } catch (err) {
     error.value = err?.response?.data?.error || 'Failed to update feature'
   } finally {

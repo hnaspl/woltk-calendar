@@ -462,7 +462,7 @@ async function fetchArmoryGuild() {
   }
   fetchingArmory.value = true
   try {
-    armoryGuildData.value = await armoryLookupApi.lookupGuild(realm, name)
+    armoryGuildData.value = await armoryLookupApi.lookupGuild(realm, name, guildStore.currentGuild?.id)
   } catch (err) {
     armoryError.value = err?.response?.data?.message ?? 'Guild not found on armory'
   } finally {

@@ -77,8 +77,7 @@ const applyingId = ref(null)
 
 onMounted(async () => {
   try {
-    const { data } = await guildsApi.discoverGuilds()
-    guilds.value = data
+    guilds.value = await guildsApi.discoverGuilds()
   } catch { /* ignore */ }
   loading.value = false
 })
