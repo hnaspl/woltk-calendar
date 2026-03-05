@@ -1699,7 +1699,7 @@
     "revoke": "Revoke",
     "revokeConfirm": "Are you sure you want to revoke this invitation?",
     "revoked": "Revoked",
-    "roleAdmin": "Admin",
+    "roleAdmin": "Tenant Admin",
     "roleAdminHelp": "Can manage workspace settings, members, and invitations",
     "roleMember": "Member",
     "roleMemberHelp": "Can use workspace features and join guilds",

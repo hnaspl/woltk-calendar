@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 DEFAULT_ROLES = [
     ("global_admin", "Global Admin", "System-wide administrator with full access", 100),
+    ("tenant_admin", "Tenant Admin", "Tenant workspace administrator with full tenant management access", 90),
     ("guild_admin", "Guild Admin", "Full guild control including role management", 80),
     ("officer", "Officer", "Can manage events, lineup, members, and attendance", 60),
     ("raid_leader", "Raid Leader", "Can manage lineup and signups for events", 40),
@@ -160,6 +161,28 @@ ROLE_PERMISSIONS = {
         # Tenant management (guild admin = tenant admin for their workspace)
         "manage_tenant_members", "manage_tenant_settings",
     ],
+    "tenant_admin": [
+        # All guild_admin permissions +
+        "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
+        "manage_own_characters", "view_attendance", "view_guild",
+        "view_notifications",
+        "view_signups",
+        "update_lineup", "confirm_lineup", "reorder_bench",
+        "manage_signups", "ban_characters", "unban_characters",
+        "request_replacement", "view_member_characters",
+        "create_events", "edit_events", "delete_events",
+        "lock_signups", "cancel_events", "duplicate_events",
+        "record_attendance",
+        "manage_raid_definitions", "manage_templates", "manage_series",
+        "add_members", "remove_members", "update_member_roles",
+        "invite_members", "approve_applications", "manage_guild_visibility",
+        "manage_class_role_matrix", "update_guild_settings",
+        "create_guild", "delete_guild", "manage_guild_roles",
+        "manage_guild_expansions", "manage_guild_realms",
+        "manage_tenant_members", "manage_tenant_settings",
+        # Tenant admin specifics
+        "manage_billing",
+    ],
     "global_admin": [
         # All permissions
         "view_events", "sign_up", "delete_own_signup", "decline_own_signup",
@@ -195,7 +218,8 @@ ROLE_PERMISSIONS = {
 # Grant rules: which role can assign which role
 # ---------------------------------------------------------------------------
 GRANT_RULES = {
-    "global_admin": ["guild_admin", "officer", "raid_leader", "member"],
+    "global_admin": ["tenant_admin", "guild_admin", "officer", "raid_leader", "member"],
+    "tenant_admin": ["guild_admin", "officer", "raid_leader", "member"],
     "guild_admin": ["guild_admin", "officer", "raid_leader", "member"],
     "officer": ["raid_leader", "member"],
 }
