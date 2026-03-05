@@ -56,6 +56,52 @@ def get_expansion_defaults() -> dict[str, list[str]]:
     return matrix
 
 
+def _get_guild_expansion_defaults(guild_id: int) -> dict[str, list[str]]:
+    """Return class→roles matrix filtered by the guild's enabled expansions.
+
+    Only returns classes from expansions the guild has enabled.
+    """
+    from app.models.expansion import ExpansionClass, ExpansionSpec
+    from app.models.guild import GuildExpansion
+
+    enabled_ids = list(
+        db.session.execute(
+            sa.select(GuildExpansion.expansion_id)
+            .where(GuildExpansion.guild_id == guild_id)
+        ).scalars().all()
+    )
+
+    if not enabled_ids:
+        return get_expansion_defaults()
+
+    classes = db.session.execute(
+        sa.select(ExpansionClass)
+        .where(ExpansionClass.expansion_id.in_(enabled_ids))
+    ).scalars().all()
+
+    matrix: dict[str, list[str]] = {}
+    for cls in classes:
+        if cls.name in matrix:
+            continue
+        specs = db.session.execute(
+            sa.select(ExpansionSpec.role).where(ExpansionSpec.class_id == cls.id)
+        ).scalars().all()
+        roles: set[str] = set()
+        for spec_role in specs:
+            if spec_role == "tank":
+                roles.add("main_tank")
+                roles.add("off_tank")
+                roles.add("melee_dps")
+            else:
+                roles.add(spec_role)
+        # Merge with any existing roles for this class (from other expansions)
+        existing = matrix.get(cls.name, [])
+        merged = set(existing) | roles
+        matrix[cls.name] = _sort_roles(merged)
+
+    return matrix
+
+
 def get_guild_overrides(guild_id: int) -> dict[str, list[str]]:
     """Return guild-specific class→roles overrides.
 
@@ -92,11 +138,14 @@ def resolve_matrix(guild_id: int | None = None) -> dict[str, list[str]]:
     If guild_id is None, returns expansion defaults only.
     If guild_id has overrides for a class, those REPLACE the defaults
     for that class. Classes without overrides keep expansion defaults.
-    """
-    defaults = get_expansion_defaults()
 
+    Only includes classes from the guild's enabled expansions.
+    """
     if guild_id is None:
+        defaults = get_expansion_defaults()
         return defaults
+
+    defaults = _get_guild_expansion_defaults(guild_id)
 
     overrides = get_guild_overrides(guild_id)
 

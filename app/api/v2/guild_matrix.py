@@ -28,13 +28,12 @@ bp = Blueprint("guild_matrix", __name__)
 def get_matrix(guild_id: int, membership):
     """Get the resolved class-role matrix for a guild."""
     matrix = matrix_service.resolve_matrix(guild_id)
-    defaults = matrix_service.get_expansion_defaults()
     overrides = matrix_service.get_guild_overrides(guild_id)
 
     return jsonify({
         "guild_id": guild_id,
         "matrix": matrix,
-        "defaults": defaults,
+        "defaults": matrix_service._get_guild_expansion_defaults(guild_id),
         "overrides": overrides,
         "has_overrides": bool(overrides),
     })

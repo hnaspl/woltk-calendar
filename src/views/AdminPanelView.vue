@@ -55,6 +55,7 @@
           <ClassRoleMatrixTab v-else-if="activeTab === 'matrix'" />
           <RolesTab v-else-if="activeTab === 'roles'" mode="guild" />
           <GuildSettingsTab v-else-if="activeTab === 'guild'" />
+          <GuildExpansionsTab v-else-if="activeTab === 'expansions'" />
         </KeepAlive>
       </template>
     </div>
@@ -69,6 +70,7 @@ import GuildInvitationsTab from '@/components/admin/GuildInvitationsTab.vue'
 import ClassRoleMatrixTab from '@/components/admin/ClassRoleMatrixTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildSettingsTab from '@/components/admin/GuildSettingsTab.vue'
+import GuildExpansionsTab from '@/components/admin/GuildExpansionsTab.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
@@ -117,6 +119,9 @@ const icons = {
   ]),
   matrix: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 10h16M4 14h16M4 18h16' })
+  ]),
+  expansions: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' })
   ])
 }
 
@@ -127,6 +132,7 @@ const allTabs = [
   { id: 'matrix', label: t('admin.tabs.classRoleMatrix'), icon: icons.matrix, permission: 'manage_class_role_matrix' },
   { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles, permission: 'manage_guild_roles' },
   { id: 'guild', label: t('admin.tabs.guildSettings'), icon: icons.guild, permission: 'update_guild_settings' },
+  { id: 'expansions', label: t('guild.expansions.title'), icon: icons.expansions, permission: 'manage_guild_expansions' },
 ]
 
 const visibleTabs = computed(() =>

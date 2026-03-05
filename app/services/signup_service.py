@@ -120,6 +120,10 @@ def _auto_promote_bench(
         exclude_signup_ids = set()
 
     # First: check bench queue (explicit queue order via LineupSlots)
+    # Priority rule: different players get promoted before same-player alts.
+    # Split bench candidates into two passes:
+    #   1. Players who do NOT already have a character in a role slot (different players)
+    #   2. Same-player alts (only if the first pass found no candidates)
     bench_slots = db.session.execute(
         sa.select(LineupSlot)
         .join(Signup, Signup.id == LineupSlot.signup_id)
@@ -131,6 +135,7 @@ def _auto_promote_bench(
         .order_by(LineupSlot.slot_index.asc())
     ).scalars().all()
 
+    # Pass 1: different-player bench candidates (higher priority)
     for bench_slot in bench_slots:
         benched = bench_slot.signup
         if benched.id in exclude_signup_ids:

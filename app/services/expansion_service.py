@@ -247,6 +247,15 @@ def _sync_raid_definitions_for_expansions(
             expansion = db.session.get(Expansion, raid.expansion_id)
             slug = expansion.slug if expansion else "wotlk"
 
+            # Look up the global (guild_id=None) definition for role slots
+            # and supported_sizes, since ExpansionRaid doesn't carry those.
+            global_rd = db.session.execute(
+                sa.select(RaidDefinition).where(
+                    RaidDefinition.code == raid.code,
+                    RaidDefinition.guild_id.is_(None),
+                )
+            ).scalar_one_or_none()
+
             db.session.add(RaidDefinition(
                 guild_id=guild_id,
                 tenant_id=tenant_id or 0,
@@ -256,6 +265,7 @@ def _sync_raid_definitions_for_expansions(
                 expansion=slug,
                 category="raid",
                 default_raid_size=raid.default_raid_size,
+                supported_sizes=global_rd.supported_sizes if global_rd else None,
                 supports_10=raid.supports_10,
                 supports_25=raid.supports_25,
                 supports_heroic=raid.supports_heroic,
@@ -265,6 +275,11 @@ def _sync_raid_definitions_for_expansions(
                 raid_type=raid.code,
                 notes=raid.notes,
                 expansion_raid_id=raid.id,
+                main_tank_slots=global_rd.main_tank_slots if global_rd else None,
+                off_tank_slots=global_rd.off_tank_slots if global_rd else None,
+                healer_slots=global_rd.healer_slots if global_rd else None,
+                melee_dps_slots=global_rd.melee_dps_slots if global_rd else None,
+                range_dps_slots=global_rd.range_dps_slots if global_rd else None,
             ))
 
     db.session.flush()
