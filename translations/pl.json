@@ -257,7 +257,16 @@
     "upcomingRaids": "Nadchodzące rajdy",
     "wantsToReplace": "chce zamienić",
     "welcome": "Witaj ponownie, {name}!",
-    "with": "na"
+    "with": "na",
+    "totalEvents": "Łączna liczba wydarzeń",
+    "raidActivity": "Aktywność rajdowa",
+    "thisWeek": "Ten tydzień",
+    "nextWeek": "Następny tydzień",
+    "averageSignups": "Śr. zapisów/rajd",
+    "raids": "rajdów",
+    "benchQueue": "Kolejka rezerwowych",
+    "noPlayersOnBench": "Brak graczy na ławce",
+    "more": "więcej"
   },
   "calendar": {
     "allRaids": "Wszystkie rajdy",
@@ -339,7 +348,14 @@
     "wowheadResources": "Zasoby Wowhead",
     "viewOnWowhead": "Zobacz na Wowhead",
     "bossNpc": "NPC",
-    "bossLoot": "Łupy"
+    "bossLoot": "Łupy",
+    "bossesAndLoot": "Bossowie i łupy",
+    "zoneInfo": "Informacje o strefie",
+    "tooltips": "Podpowiedzi",
+    "wowheadZone": "Strefa Wowhead",
+    "viewZone": "Zobacz strefę",
+    "tooltipInfo": "Podpowiedzi Wowhead są ładowane automatycznie dla przedmiotów i zaklęć powiązanych z tym rajdem.",
+    "wowheadBase": "Bazowy URL Wowhead"
   },
   "characters": {
     "addAnother": "Dodaj kolejną postać",

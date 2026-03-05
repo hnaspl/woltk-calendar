@@ -259,7 +259,16 @@
     "upcomingRaids": "Upcoming Raids",
     "wantsToReplace": "wants to replace",
     "welcome": "Welcome back, {name}!",
-    "with": "with"
+    "with": "with",
+    "totalEvents": "Total Events",
+    "raidActivity": "Raid Activity",
+    "thisWeek": "This week",
+    "nextWeek": "Next week",
+    "averageSignups": "Avg signups/raid",
+    "raids": "raids",
+    "benchQueue": "Bench Queue",
+    "noPlayersOnBench": "No players on bench",
+    "more": "more"
   },
   "calendar": {
     "allRaids": "All raids",
@@ -342,7 +351,14 @@
     "wowheadResources": "Wowhead Resources",
     "viewOnWowhead": "View on Wowhead",
     "bossNpc": "NPC",
-    "bossLoot": "Loot"
+    "bossLoot": "Loot",
+    "bossesAndLoot": "Bosses & Loot",
+    "zoneInfo": "Zone Info",
+    "tooltips": "Tooltips",
+    "wowheadZone": "Wowhead Zone",
+    "viewZone": "View Zone",
+    "tooltipInfo": "Wowhead tooltips are loaded automatically for items and spells linked in this raid.",
+    "wowheadBase": "Wowhead base URL"
   },
   "characters": {
     "addAnother": "Add Another Character",

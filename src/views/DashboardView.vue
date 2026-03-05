@@ -45,6 +45,68 @@
         </WowCard>
       </div>
 
+      <!-- Guild & Tenant info -->
+      <div v-if="!loading && guildStore.currentGuild" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+        <WowCard>
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">⚔️</span>
+            <div>
+              <div class="text-sm font-semibold text-text-primary">{{ guildStore.currentGuild.name }}</div>
+              <div class="text-xs text-text-muted">{{ guildStore.currentGuild.realm_name }}</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-bg-tertiary rounded p-2 text-center">
+              <div class="text-lg font-bold text-accent-gold">{{ guildStore.members?.length ?? 0 }}</div>
+              <div class="text-text-muted">{{ t('common.labels.members') }}</div>
+            </div>
+            <div class="bg-bg-tertiary rounded p-2 text-center">
+              <div class="text-lg font-bold text-purple-400">{{ totalEvents }}</div>
+              <div class="text-text-muted">{{ t('dashboard.totalEvents') }}</div>
+            </div>
+          </div>
+        </WowCard>
+        <WowCard>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">📊</span>
+            <span class="text-sm font-semibold text-text-primary">{{ t('dashboard.raidActivity') }}</span>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-text-muted">{{ t('dashboard.thisWeek') }}</span>
+              <span class="text-text-primary font-medium">{{ eventsThisWeek }} {{ t('dashboard.raids') }}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-text-muted">{{ t('dashboard.nextWeek') }}</span>
+              <span class="text-text-primary font-medium">{{ eventsNextWeek }} {{ t('dashboard.raids') }}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-text-muted">{{ t('dashboard.averageSignups') }}</span>
+              <span class="text-text-primary font-medium">{{ avgSignupsPerRaid }}</span>
+            </div>
+          </div>
+        </WowCard>
+        <WowCard>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">⏳</span>
+            <span class="text-sm font-semibold text-text-primary">{{ t('dashboard.benchQueue') }}</span>
+          </div>
+          <div v-if="benchedSignups.length === 0" class="text-xs text-text-muted py-2">
+            {{ t('dashboard.noPlayersOnBench') }}
+          </div>
+          <div v-else class="space-y-1.5">
+            <div v-for="su in benchedSignups.slice(0, 5)" :key="su.id" class="flex items-center gap-2 text-xs">
+              <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
+              <span class="text-text-primary truncate flex-1">{{ su.character?.name ?? t('dashboard.signedUp') }}</span>
+              <span class="text-yellow-400 text-[10px]">{{ t('dashboard.queue') }} #{{ su.bench_info?.queue_position ?? '?' }}</span>
+            </div>
+            <p v-if="benchedSignups.length > 5" class="text-[10px] text-text-muted">
+              +{{ benchedSignups.length - 5 }} {{ t('dashboard.more') }}
+            </p>
+          </div>
+        </WowCard>
+      </div>
+
       <!-- Pending Replacement Requests -->
       <div v-if="replacementRequests.length > 0" class="space-y-3">
         <h2 class="wow-heading text-lg">⚡ {{ t('dashboard.pendingSwaps') }}</h2>
@@ -334,6 +396,7 @@ onMounted(async () => {
           guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
         }
       }).catch(() => { /* ignore — fall back to expansion data */ })
+      guildStore.fetchMembers(guildStore.currentGuild.id).catch(() => {})
     }
     await refreshDashboard()
   } finally {
@@ -396,6 +459,40 @@ const missingResponseCount = computed(() => {
   const signedUpEventIds = new Set(mySignups.value.map(s => s.raid_event_id))
   return upcomingEvents.value.filter(ev => !signedUpEventIds.has(ev.id)).length
 })
+
+const totalEvents = computed(() => calStore.events.length)
+
+const eventsThisWeek = computed(() => {
+  const nowMs = now.value.getTime()
+  const weekEnd = nowMs + 7 * 86400000
+  return calStore.events.filter(ev => {
+    const ts = new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date).getTime()
+    return ts >= nowMs && ts <= weekEnd && ev.status !== 'cancelled'
+  }).length
+})
+
+const eventsNextWeek = computed(() => {
+  const nowMs = now.value.getTime()
+  const weekStart = nowMs + 7 * 86400000
+  const weekEnd = nowMs + 14 * 86400000
+  return calStore.events.filter(ev => {
+    const ts = new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date).getTime()
+    return ts >= weekStart && ts <= weekEnd && ev.status !== 'cancelled'
+  }).length
+})
+
+const avgSignupsPerRaid = computed(() => {
+  const upcoming = upcomingEvents.value
+  if (upcoming.length === 0) return '—'
+  const total = upcoming.reduce((sum, ev) => sum + (ev.signup_count ?? 0), 0)
+  return (total / upcoming.length).toFixed(1)
+})
+
+const benchedSignups = computed(() =>
+  mySignups.value
+    .filter(s => s.lineup_status === 'bench')
+    .sort((a, b) => (a.bench_info?.queue_position ?? 999) - (b.bench_info?.queue_position ?? 999))
+)
 
 // Sort: lineup first, then bench ordered by queue position, then declined
 const sortedMySignups = computed(() => {
