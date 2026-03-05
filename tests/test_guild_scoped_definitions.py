@@ -144,9 +144,26 @@ class TestGuildScopedDefinitions:
         assert not any(d.id == rd.id for d in defs_b)
 
     def test_builtin_importable_to_guilds(self, seeded):
-        """Built-in (global) definitions are listed as importable for guilds."""
+        """Built-in (global) definitions are listed as importable for guilds
+        that have the corresponding expansions enabled."""
+        from app.seeds.expansions import seed_expansions
+        from app.models.expansion import Expansion
+        from app.models.guild import GuildExpansion
+
+        seed_expansions()
         count = seed_raid_definitions()
         assert count > 0
+
+        # Enable all expansions for both guilds
+        all_exps = _db.session.execute(sa.select(Expansion)).scalars().all()
+        for guild in [seeded["guild_a"], seeded["guild_b"]]:
+            for exp in all_exps:
+                _db.session.add(GuildExpansion(
+                    guild_id=guild.id,
+                    expansion_id=exp.id,
+                    tenant_id=guild.tenant_id,
+                ))
+        _db.session.commit()
 
         importable_a = raid_service.list_importable_definitions(seeded["guild_a"].id)
         importable_b = raid_service.list_importable_definitions(seeded["guild_b"].id)

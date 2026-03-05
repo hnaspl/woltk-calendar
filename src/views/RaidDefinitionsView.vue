@@ -65,7 +65,8 @@
               </div>
               <div class="flex items-center gap-1.5 mt-1">
                 <RaidSizeBadge v-if="def.size" :size="def.size" />
-                <span v-if="def.expansion" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-700/40 uppercase">{{ def.expansion }}</span>
+                <span v-if="def.supported_sizes && def.supported_sizes.length > 1" class="text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-muted border border-border-default">{{ def.supported_sizes.join('/') }}-man</span>
+                <span v-if="def.expansion" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-700/40 uppercase">{{ constantsStore.expansionLabelMap[def.expansion] || def.expansion }}</span>
                 <RealmBadge v-if="def.realm" :realm="def.realm" />
               </div>
             </div>
@@ -259,7 +260,8 @@
               <div class="flex-1 min-w-0">
                 <span class="font-medium text-text-primary text-sm">{{ def.name }}</span>
                 <div class="text-xs text-text-muted flex items-center gap-2">
-                  <span>{{ def.default_raid_size }}-man</span>
+                  <span v-if="def.supported_sizes && def.supported_sizes.length > 1">{{ def.supported_sizes.join('/') }}-man</span>
+                  <span v-else>{{ def.default_raid_size }}-man</span>
                 </div>
               </div>
             </div>
@@ -427,6 +429,10 @@ onMounted(async () => {
     return
   }
   loadDefinitions()
+  // Ensure constants store has expansions for label lookups
+  if (constantsStore.expansions.length === 0) {
+    constantsStore.fetchConstants().catch(() => {})
+  }
   // Load guild expansions for the filter
   try {
     const guildId = guildStore.currentGuildId
@@ -578,6 +584,10 @@ async function openImportModal() {
   importLoading.value = true
   selectedImports.value = []
   importableDefinitions.value = []
+  // Ensure expansion labels are available
+  if (constantsStore.expansions.length === 0) {
+    constantsStore.fetchConstants().catch(() => {})
+  }
   try {
     const data = await raidDefsApi.getAvailableDefinitions(guildStore.currentGuild.id)
     importableDefinitions.value = Array.isArray(data) ? data : []
