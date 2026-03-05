@@ -355,8 +355,11 @@ onMounted(async () => {
   loadDefinitions()
   // Load guild expansions for the filter
   try {
-    guildExpansions.value = await guildExpansionsApi.getGuildExpansions(guildStore.currentGuild.id)
-    guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    const guildId = guildStore.currentGuildId
+    if (guildId) {
+      guildExpansions.value = await guildExpansionsApi.getGuildExpansions(guildId)
+      guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    }
   } catch {
     guildExpansions.value = []
   }

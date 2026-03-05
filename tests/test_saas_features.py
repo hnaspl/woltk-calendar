@@ -234,22 +234,17 @@ class TestGuildCreationLimits:
         _grant_create_guild(user)
         _login(client, "limiter@test.com")
 
-        # Set tenant max_guilds to 2 (simulating a plan limit)
+        # Set tenant max_guilds to 3 to allow 2 user guilds + 1 helper guild
         from app.models.tenant import Tenant
         tenant = db.session.get(Tenant, user.active_tenant_id)
-        tenant.max_guilds = 2
+        tenant.max_guilds = 3
         db.session.commit()
 
         # First guild — OK
         resp = self._create_guild(client, "Guild 1")
         assert resp.status_code == 201, resp.get_json()
 
-        # Second guild — OK (at the limit, +1 for __perm_helper__)
-        # Note: __perm_helper__ guild also counts against the tenant limit
-        # so with max_guilds=2 + 1 helper, we need max_guilds=3 for 2 user guilds
-        tenant.max_guilds = 3
-        db.session.commit()
-
+        # Second guild — OK (at the limit: 1 helper + 2 user = 3)
         resp = self._create_guild(client, "Guild 2")
         assert resp.status_code == 201, resp.get_json()
 

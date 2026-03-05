@@ -164,7 +164,7 @@ class GenericArmoryProvider(ArmoryProvider):
             bases.append(f"{base}/api")
         else:
             # If URL already has /api, also try without
-            bases.insert(0, base[:-4])
+            bases.insert(0, base[: -len("/api")])
 
         # Add HTTP fallback for each HTTPS base
         http_bases = []
