@@ -8,6 +8,7 @@ import sqlalchemy as sa
 
 from app.extensions import db
 from app.models.raid import RaidDefinition
+from app.models.expansion import Expansion
 
 
 def create_raid_definition(guild_id: int | None, created_by: int, data: dict) -> RaidDefinition:
@@ -109,10 +110,21 @@ def list_default_raid_definitions() -> list[RaidDefinition]:
 def list_importable_definitions(guild_id: int) -> list[RaidDefinition]:
     """Return global definitions whose code is NOT already in the guild.
 
+    Only returns definitions from the guild's enabled expansions.
     This ensures the "Import" action never overwrites existing guild
     customisations — only definitions that don't yet exist in the guild
     are offered for import.
     """
+    from app.services import expansion_service
+
+    # Get enabled expansion slugs for this guild
+    guild_exps = expansion_service.get_guild_expansions(guild_id)
+    enabled_slugs = set()
+    for ge in guild_exps:
+        exp = db.session.get(Expansion, ge.expansion_id)
+        if exp:
+            enabled_slugs.add(exp.slug)
+
     # Codes already present in the guild
     existing_codes = set(
         db.session.execute(
@@ -122,14 +134,14 @@ def list_importable_definitions(guild_id: int) -> list[RaidDefinition]:
             )
         ).scalars().all()
     )
-    # All active global definitions
+    # All active global definitions, filtered by enabled expansions
     all_global = db.session.execute(
         sa.select(RaidDefinition).where(
             RaidDefinition.guild_id.is_(None),
             RaidDefinition.is_active.is_(True),
         )
     ).scalars().all()
-    return [d for d in all_global if d.code not in existing_codes]
+    return [d for d in all_global if d.code not in existing_codes and d.expansion in enabled_slugs]
 
 
 def import_definition_to_guild(

@@ -59,12 +59,12 @@
                 >{{ tenant.is_active ? t('admin.tenants.active') : t('admin.tenants.suspended') }}</span>
               </td>
               <td class="px-4 py-2.5 text-right">
-                <div class="flex flex-wrap gap-1 justify-end">
-                  <WowButton variant="secondary" class="!text-xs !py-1 !px-2" @click="showUsage(tenant)">{{ t('admin.tenants.usage') }}</WowButton>
-                  <WowButton variant="secondary" class="!text-xs !py-1 !px-2" @click="showFeatures(tenant)">{{ t('admin.tenants.features') }}</WowButton>
-                  <WowButton v-if="tenant.is_active" variant="secondary" class="!text-xs !py-1 !px-2" @click="doSuspend(tenant)">{{ t('admin.tenants.suspend') }}</WowButton>
-                  <WowButton v-else variant="secondary" class="!text-xs !py-1 !px-2" @click="doActivate(tenant)">{{ t('admin.tenants.activate') }}</WowButton>
-                  <WowButton variant="danger" class="!text-xs !py-1 !px-2" @click="doDelete(tenant)">{{ t('common.buttons.delete') }}</WowButton>
+                <div class="flex flex-wrap gap-2 justify-end">
+                  <WowButton variant="secondary" class="!text-xs !py-1.5 !px-3" @click="showUsage(tenant)">{{ t('admin.tenants.usage') }}</WowButton>
+                  <WowButton variant="secondary" class="!text-xs !py-1.5 !px-3" @click="showFeatures(tenant)">{{ t('admin.tenants.features') }}</WowButton>
+                  <WowButton v-if="tenant.is_active" variant="secondary" class="!text-xs !py-1.5 !px-3" @click="doSuspend(tenant)">{{ t('admin.tenants.suspend') }}</WowButton>
+                  <WowButton v-else variant="secondary" class="!text-xs !py-1.5 !px-3" @click="doActivate(tenant)">{{ t('admin.tenants.activate') }}</WowButton>
+                  <WowButton variant="danger" class="!text-xs !py-1.5 !px-3" @click="doDelete(tenant)">{{ t('common.buttons.delete') }}</WowButton>
                 </div>
               </td>
             </tr>
@@ -114,6 +114,9 @@
               class="ml-2 px-1.5 py-0.5 rounded text-xs bg-red-900/30 text-red-400">{{ t('admin.plans.limitReached') }}</span>
           </div>
         </div>
+      </div>
+      <div v-else class="text-center py-6">
+        <p class="text-sm text-text-muted">No usage data available for this tenant.</p>
       </div>
     </WowModal>
 

@@ -244,20 +244,24 @@
       <div v-else-if="importableDefinitions.length === 0" class="text-center py-8 text-text-muted">
         {{ t('raidDefinitions.noImportable') }}
       </div>
-      <div v-else class="space-y-2 max-h-96 overflow-y-auto">
-        <div
-          v-for="def in importableDefinitions"
-          :key="def.id"
-          class="flex items-center gap-3 p-3 rounded-lg border transition-colors"
-          :class="selectedImports.includes(def.id) ? 'bg-accent-gold/10 border-accent-gold/50' : 'bg-bg-tertiary border-border-default hover:border-border-gold'"
-        >
-          <input type="checkbox" :value="def.id" v-model="selectedImports" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
-          <img :src="getRaidIcon(def.raid_type || def.code)" :alt="def.name" class="w-8 h-8 rounded border border-border-default flex-shrink-0" />
-          <div class="flex-1 min-w-0">
-            <span class="font-medium text-text-primary text-sm">{{ def.name }}</span>
-            <div class="text-xs text-text-muted flex items-center gap-2">
-              <span class="capitalize">{{ def.expansion }}</span>
-              <span>{{ def.default_raid_size }}-man</span>
+      <div v-else class="space-y-4 max-h-96 overflow-y-auto">
+        <div v-for="group in importableByExpansion" :key="group.expansion">
+          <h3 class="text-xs uppercase tracking-wider text-text-muted font-semibold mb-2">{{ group.label }}</h3>
+          <div class="space-y-2">
+            <div
+              v-for="def in group.defs"
+              :key="def.id"
+              class="flex items-center gap-3 p-3 rounded-lg border transition-colors"
+              :class="selectedImports.includes(def.id) ? 'bg-accent-gold/10 border-accent-gold/50' : 'bg-bg-tertiary border-border-default hover:border-border-gold'"
+            >
+              <input type="checkbox" :value="def.id" v-model="selectedImports" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <img :src="getRaidIcon(def.raid_type || def.code)" :alt="def.name" class="w-8 h-8 rounded border border-border-default flex-shrink-0" />
+              <div class="flex-1 min-w-0">
+                <span class="font-medium text-text-primary text-sm">{{ def.name }}</span>
+                <div class="text-xs text-text-muted flex items-center gap-2">
+                  <span>{{ def.default_raid_size }}-man</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -290,6 +294,7 @@ import { useUiStore } from '@/stores/ui'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
@@ -300,6 +305,7 @@ const uiStore = useUiStore()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
 const { t } = useI18n()
+const constantsStore = useConstantsStore()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_raid_definitions'))
 const canManageDefaults = computed(() => permissions.can('manage_default_definitions'))
@@ -320,6 +326,25 @@ const importLoading = ref(false)
 const importSaving = ref(false)
 const importableDefinitions = ref([])
 const selectedImports = ref([])
+
+const importableByExpansion = computed(() => {
+  const groups = {}
+  for (const def of importableDefinitions.value) {
+    const exp = def.expansion || 'unknown'
+    if (!groups[exp]) {
+      const ge = guildExpansions.value.find(e => e.expansion_slug === exp)
+      groups[exp] = {
+        expansion: exp,
+        label: ge?.expansion_name || constantsStore.expansionLabelMap[exp] || exp,
+        sortOrder: ge?.sort_order ?? 999,
+        defs: []
+      }
+    }
+    groups[exp].defs.push(def)
+  }
+  return Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder)
+})
+
 const editing = ref(null)
 const deleteTarget = ref(null)
 const copySource = ref(null)

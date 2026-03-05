@@ -42,8 +42,7 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('guild.inviteRole') }}</label>
           <select v-model="addMemberRole" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="member">{{ t('guild.roleMember') }}</option>
-            <option value="officer">{{ t('guild.roleOfficer') }}</option>
+            <option v-for="r in guildRoles" :key="r.name" :value="r.name">{{ r.display_name }}</option>
           </select>
         </div>
       </div>
@@ -79,8 +78,7 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('guild.inviteRole') }}</label>
           <select v-model="form.role" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option value="member">{{ t('guild.roleMember') }}</option>
-            <option value="officer">{{ t('guild.roleOfficer') }}</option>
+            <option v-for="r in guildRoles" :key="r.name" :value="r.name">{{ r.display_name }}</option>
           </select>
         </div>
         <div>
@@ -184,6 +182,7 @@ import InviteLinkCard from '@/components/common/InviteLinkCard.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
 import * as guildsApi from '@/api/guilds'
+import api from '@/api'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
@@ -217,6 +216,7 @@ const addMemberRole = ref('member')
 const addingMember = ref(false)
 const searchingUsers = ref(false)
 const searchTimeout = ref(null)
+const guildRoles = ref([])
 
 onBeforeUnmount(() => {
   clearTimeout(searchTimeout.value)
@@ -283,6 +283,10 @@ watch(() => guildStore.currentGuildId, (newId) => {
   if (newId) {
     loadInvitations()
     if (canApprove.value) loadApplications()
+    // Load assignable roles
+    api.get('/roles').then(roles => {
+      guildRoles.value = (Array.isArray(roles) ? roles : []).filter(r => r.level <= 80)
+    }).catch(() => { guildRoles.value = [] })
   }
 }, { immediate: true })
 

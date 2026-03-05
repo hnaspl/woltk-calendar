@@ -321,7 +321,6 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
-            <option value="">{{ t('raidDetail.noneUseDefaults') }}</option>
             <template v-for="group in editRaidDefsByExpansion" :key="group.expansion">
               <optgroup :label="group.label">
                 <option v-for="rd in group.defs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
