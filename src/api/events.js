@@ -38,3 +38,6 @@ export const cancelEvent = (guildId, eventId) =>
 
 export const duplicateEvent = (guildId, eventId, payload = {}) =>
   api.post(`/guilds/${guildId}/events/${eventId}/duplicate`, payload)
+
+export const getEventWowhead = (guildId, eventId) =>
+  api.get(`/guilds/${guildId}/events/${eventId}/wowhead`)

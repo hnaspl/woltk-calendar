@@ -172,6 +172,50 @@ def duplicate_event(guild_id: int, event_id: int, membership):
     return jsonify(new_event.to_dict()), 201
 
 
+@bp.get("/<int:event_id>/wowhead")
+@login_required
+@require_guild_permission()
+def get_event_wowhead(guild_id: int, event_id: int, membership):
+    """Return Wowhead integration data for a raid event."""
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+
+    from app.plugins.wowhead.plugin import WowheadPlugin, RAID_ZONE_IDS, BOSS_NPC_IDS, WOWHEAD_BASES
+
+    raid_code = event.raid_type
+    expansion = event.raid_definition.expansion if event.raid_definition else "wotlk"
+
+    result = {
+        "expansion": expansion,
+        "raid_code": raid_code,
+        "wowhead_base": WOWHEAD_BASES.get(expansion, "https://www.wowhead.com"),
+    }
+
+    # Zone link
+    zone_url = WowheadPlugin.get_raid_zone_url(raid_code, expansion)
+    if zone_url:
+        result["zone_url"] = zone_url
+
+    # Boss loot URLs
+    bosses = WowheadPlugin.get_raid_bosses(raid_code, expansion)
+    if bosses:
+        result["bosses"] = [
+            {
+                "name": name,
+                "npc_id": npc_id,
+                "npc_url": WowheadPlugin.get_npc_url(npc_id, expansion),
+                "loot_url": WowheadPlugin.get_boss_loot_url(npc_id, expansion),
+            }
+            for name, npc_id in bosses.items()
+        ]
+
+    # Tooltip script
+    result["tooltip_script"] = WowheadPlugin.get_tooltip_script_tag(expansion)
+
+    return jsonify(result), 200
+
+
 # ---------------------------------------------------------------------------
 # Cross-guild events endpoint (realm & guild agnostic)
 # ---------------------------------------------------------------------------

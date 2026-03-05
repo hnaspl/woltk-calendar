@@ -284,6 +284,30 @@
             />
           </div>
         </div>
+        <!-- Wowhead Resources -->
+        <WowCard v-if="wowheadData?.zone_url || wowheadData?.bosses?.length" class="lg:col-span-3">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-accent-gold text-lg">🔗</span>
+            <h2 class="wow-heading text-base">{{ t('raidDetail.wowheadResources') }}</h2>
+            <a v-if="wowheadData.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
+               class="ml-auto text-xs text-accent-gold hover:text-accent-gold/80 flex items-center gap-1">
+              {{ t('raidDetail.viewOnWowhead') }} ↗
+            </a>
+          </div>
+
+          <!-- Boss Loot Table -->
+          <div v-if="wowheadData.bosses?.length" class="space-y-1">
+            <div v-for="boss in wowheadData.bosses" :key="boss.npc_id"
+                 class="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-tertiary border border-border-default hover:border-border-gold transition-colors">
+              <span class="text-sm text-text-primary font-medium flex-1">{{ boss.name }}</span>
+              <a :href="boss.npc_url" target="_blank" rel="noopener noreferrer"
+                 class="text-xs text-accent-gold hover:text-accent-gold/80">{{ t('raidDetail.bossNpc') }} ↗</a>
+              <a :href="boss.loot_url" target="_blank" rel="noopener noreferrer"
+                 class="text-xs text-accent-gold hover:text-accent-gold/80">{{ t('raidDetail.bossLoot') }} ↗</a>
+            </div>
+          </div>
+        </WowCard>
+
       </template>
     </div>
 
@@ -535,6 +559,7 @@ const mySignedUpCharacterIds = computed(() =>
 )
 
 const bans = ref([])
+const wowheadData = ref(null)
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)
 )
@@ -601,6 +626,8 @@ onMounted(async () => {
     }
     // Fetch pending character replacement requests
     await loadReplacementRequests()
+    // Load Wowhead integration data (optional, non-blocking)
+    loadWowheadData()
   } catch (err) {
     error.value = err?.response?.data?.message ?? t('common.errors.failedToLoad')
   } finally {
@@ -919,6 +946,16 @@ function onLineupUpdated(counts) {
 function onAttendanceSaved() {
   hasAttendance.value = true
   uiStore.showToast(t('raidDetail.toasts.attendanceRecorded'), 'success')
+}
+
+// --- Wowhead integration ---
+async function loadWowheadData() {
+  if (!guildId.value || !event.value?.id) return
+  try {
+    wowheadData.value = await eventsApi.getEventWowhead(guildId.value, event.value.id)
+  } catch {
+    // Wowhead data is optional
+  }
 }
 
 // --- Character replacement requests ---

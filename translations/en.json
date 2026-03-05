@@ -338,7 +338,11 @@
       "titleDateRequired": "Title and date are required"
     },
     "unlock": "Unlock",
-    "updateAttendance": "Update Attendance"
+    "updateAttendance": "Update Attendance",
+    "wowheadResources": "Wowhead Resources",
+    "viewOnWowhead": "View on Wowhead",
+    "bossNpc": "NPC",
+    "bossLoot": "Loot"
   },
   "characters": {
     "addAnother": "Add Another Character",

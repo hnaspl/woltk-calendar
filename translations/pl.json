@@ -335,7 +335,11 @@
       "titleDateRequired": "Tytuł i data są wymagane"
     },
     "unlock": "Odblokuj",
-    "updateAttendance": "Aktualizuj frekwencję"
+    "updateAttendance": "Aktualizuj frekwencję",
+    "wowheadResources": "Zasoby Wowhead",
+    "viewOnWowhead": "Zobacz na Wowhead",
+    "bossNpc": "NPC",
+    "bossLoot": "Łupy"
   },
   "characters": {
     "addAnother": "Dodaj kolejną postać",
