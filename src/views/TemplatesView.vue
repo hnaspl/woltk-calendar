@@ -77,6 +77,7 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onTemplateRaidDefChange">
+            <option value="" disabled>{{ t('calendar.selectRaid') }}</option>
             <template v-for="group in templateRaidDefsByExpansion" :key="group.expansion">
               <optgroup :label="group.label">
                 <option v-for="d in group.defs" :key="d.id" :value="d.id">{{ d.name }} ({{ d.default_raid_size ?? d.size }}-man)</option>
@@ -366,7 +367,7 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_definition_id: raidDefinitions.value[0]?.id ?? '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
+  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
   applyToOtherGuilds.value = false
   selectedGuildIds.value = []
   formError.value = null; showModal.value = true
