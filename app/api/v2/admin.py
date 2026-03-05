@@ -224,23 +224,13 @@ def update_system_settings():
             else:
                 db.session.add(SystemSetting(key=key, value=val))
     # Integer settings
-    int_keys = {"autosync_interval_minutes": 5, "max_guilds_per_user": 1}
+    int_keys = {"autosync_interval_minutes": 5}
     for key, min_val in int_keys.items():
         if key in data:
             try:
                 val = str(max(min_val, int(data[key])))
             except (ValueError, TypeError):
                 return jsonify({"error": _t("api.admin.invalidInteger", key=key)}), 400
-            existing = db.session.get(SystemSetting, key)
-            if existing:
-                existing.value = val
-            else:
-                db.session.add(SystemSetting(key=key, value=val))
-    # Free-text settings — stored as-is (stripped)
-    text_keys = {"armory_allowed_domains"}
-    for key in text_keys:
-        if key in data:
-            val = str(data[key]).strip()
             existing = db.session.get(SystemSetting, key)
             if existing:
                 existing.value = val

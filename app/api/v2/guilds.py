@@ -270,15 +270,15 @@ def create_guild():
     if not current_user.active_tenant_id:
         return jsonify({"error": _t("api.guilds.tenantRequired")}), 400
 
-    # --- Guild creation limit enforcement ---
+    # --- Guild creation limit enforcement (via tenant plan) ---
     if not getattr(current_user, "is_admin", False):
-        from app.models.system_setting import SystemSetting
-        limit = current_user.max_guilds_override
-        if limit is None:
-            setting = db.session.get(SystemSetting, "max_guilds_per_user")
-            limit = int(setting.value) if setting else 5
+        from app.models.tenant import Tenant
+        tenant = db.session.get(Tenant, current_user.active_tenant_id)
+        limit = tenant.max_guilds if tenant else 3
         count = db.session.execute(
-            sa.select(sa.func.count()).select_from(Guild).where(Guild.created_by == current_user.id)
+            sa.select(sa.func.count()).select_from(Guild).where(
+                Guild.tenant_id == current_user.active_tenant_id
+            )
         ).scalar()
         if count >= limit:
             return jsonify({"error": _t("api.guilds.guildLimitReached", limit=limit)}), 403
@@ -295,9 +295,8 @@ def create_guild():
 
     # Validate armory URL if provided
     if armory_url:
-        from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
-        allowed_domains = get_allowed_domains_from_settings()
-        url_error = validate_armory_url(armory_url, allowed_domains)
+        from app.utils.armory_validation import validate_armory_url
+        url_error = validate_armory_url(armory_url)
         if url_error:
             return jsonify({"error": url_error, "message": url_error}), 400
 

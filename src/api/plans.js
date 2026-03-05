@@ -14,8 +14,8 @@ export const deletePlan = (id) => api.delete(`/admin/plans/${id}`)
 export const assignPlanToTenant = (tenantId, planId) =>
   api.post('/admin/plans/assign', { tenant_id: tenantId, plan_id: planId })
 
-// --- Tenant usage (delegates to admin_tenants) ---
-export const getTenantUsage = (tenantId) => api.get(`/admin/tenants/${tenantId}/usage`)
+// --- Tenant usage ---
+export const getTenantUsage = (tenantId) => api.get(`/tenants/${tenantId}/usage`)
 
 // --- Public plans (no auth required) ---
 export const listActivePlans = () => api.get('/plans/')

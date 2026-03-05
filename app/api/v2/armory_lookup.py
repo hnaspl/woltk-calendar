@@ -107,7 +107,7 @@ def discover_realms():
     Returns ``{"realms": ["Realm1", "Realm2", ...]}`` on success.
     """
     from app.plugins.armory.provider import GenericArmoryProvider
-    from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+    from app.utils.armory_validation import validate_armory_url
 
     body = get_json()
     armory_url = (body.get("armory_url") or "").strip()
@@ -115,8 +115,7 @@ def discover_realms():
         return jsonify({"error": _t("armory.urlRequired"), "realms": []}), 400
 
     # Validate URL security
-    allowed_domains = get_allowed_domains_from_settings()
-    url_error = validate_armory_url(armory_url, allowed_domains)
+    url_error = validate_armory_url(armory_url)
     if url_error:
         return jsonify({"error": url_error, "realms": []}), 400
 
@@ -157,7 +156,7 @@ def search_guild():
     """
     import logging
     from app.plugins.armory.provider import GenericArmoryProvider
-    from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+    from app.utils.armory_validation import validate_armory_url
 
     logger = logging.getLogger(__name__)
 
@@ -172,8 +171,7 @@ def search_guild():
         return jsonify({"error": _t("armory.guildNameRequired"), "matches": []}), 400
 
     # Validate URL security
-    allowed_domains = get_allowed_domains_from_settings()
-    url_error = validate_armory_url(armory_url, allowed_domains)
+    url_error = validate_armory_url(armory_url)
     if url_error:
         return jsonify({"error": url_error, "matches": []}), 400
 

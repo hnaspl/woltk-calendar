@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import * as guildsApi from '@/api/guilds'
 
 export const useGuildStore = defineStore('guild', () => {
@@ -92,5 +92,7 @@ export const useGuildStore = defineStore('guild', () => {
     }
   }
 
-  return { guilds, allGuilds, currentGuild, members, loading, error, fetchGuilds, fetchAllGuilds, fetchGuild, setCurrentGuild, fetchMembers }
+  const currentGuildId = computed(() => currentGuild.value?.id ?? null)
+
+  return { guilds, allGuilds, currentGuild, currentGuildId, members, loading, error, fetchGuilds, fetchAllGuilds, fetchGuild, setCurrentGuild, fetchMembers }
 })

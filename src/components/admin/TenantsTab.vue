@@ -66,6 +66,11 @@
                   @click="showUsage(tenant)"
                 >{{ t('admin.tenants.usage') }}</button>
                 <button
+                  type="button"
+                  class="px-2 py-1 rounded text-xs font-medium bg-purple-900/30 text-purple-400 border border-purple-700/50 hover:bg-purple-900/50 transition-colors"
+                  @click="showFeatures(tenant)"
+                >{{ t('admin.tenants.features') }}</button>
+                <button
                   v-if="tenant.is_active"
                   type="button"
                   class="px-2 py-1 rounded text-xs font-medium bg-yellow-900/30 text-yellow-400 border border-yellow-700/50 hover:bg-yellow-900/50 transition-colors"
@@ -147,6 +152,39 @@
         </div>
       </div>
     </div>
+    <!-- Features modal -->
+    <div v-if="featuresTenant" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div class="bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-4 border-b border-border-default flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-text-primary">{{ t('admin.tenants.featuresTitle') }}</h3>
+            <p class="text-sm text-text-muted mt-0.5">{{ featuresTenant.name }}</p>
+          </div>
+          <button type="button" class="text-text-muted hover:text-text-primary" @click="featuresTenant = null">✕</button>
+        </div>
+        <div class="p-4">
+          <div v-if="loadingFeatures" class="text-center py-4 text-text-muted">{{ t('common.labels.loading') }}</div>
+          <div v-else-if="tenantFeatures" class="space-y-2">
+            <div v-for="(enabled, key) in tenantFeatures" :key="key"
+              class="flex items-center justify-between p-3 rounded-lg bg-bg-primary border border-border-default">
+              <span class="text-sm text-text-primary">{{ key }}</span>
+              <button
+                type="button"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+                :class="enabled ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+                @click="toggleTenantFeature(key)"
+              >
+                <span
+                  class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                  :class="enabled ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
+            </div>
+            <p v-if="!Object.keys(tenantFeatures).length" class="text-sm text-text-muted text-center py-4">{{ t('admin.tenants.noFeatures') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -155,6 +193,7 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as tenantsApi from '@/api/tenants'
 import * as plansApi from '@/api/plans'
+import * as adminApi from '@/api/admin'
 
 const { t } = useI18n()
 const tenants = ref([])
@@ -172,6 +211,11 @@ const assignError = ref('')
 const usageTenant = ref(null)
 const usageData = ref(null)
 const loadingUsageData = ref(false)
+
+// Tenant features
+const featuresTenant = ref(null)
+const tenantFeatures = ref(null)
+const loadingFeatures = ref(false)
 
 async function fetchTenants() {
   loading.value = true
@@ -224,6 +268,30 @@ async function showUsage(tenant) {
     usageData.value = null
   } finally {
     loadingUsageData.value = false
+  }
+}
+
+async function showFeatures(tenant) {
+  featuresTenant.value = tenant
+  tenantFeatures.value = null
+  loadingFeatures.value = true
+  try {
+    tenantFeatures.value = await adminApi.getTenantFeatures(tenant.id)
+  } catch {
+    tenantFeatures.value = null
+  } finally {
+    loadingFeatures.value = false
+  }
+}
+
+async function toggleTenantFeature(key) {
+  if (!featuresTenant.value || !tenantFeatures.value) return
+  const newVal = !tenantFeatures.value[key]
+  try {
+    tenantFeatures.value = await adminApi.updateTenantFeatures(featuresTenant.value.id, { [key]: newVal })
+  } catch {
+    // revert on error
+    tenantFeatures.value[key] = !newVal
   }
 }
 

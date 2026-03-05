@@ -1016,7 +1016,10 @@
       "selectPlan": "Select a plan",
       "usage": "Usage",
       "usageTitle": "Resource Usage",
-      "events": "Events"
+      "events": "Events",
+      "features": "Features",
+      "featuresTitle": "Tenant Features",
+      "noFeatures": "No features configured."
     },
     "title": "Admin Panel",
     "users": {

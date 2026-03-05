@@ -70,6 +70,17 @@ def delete_tenant(tenant_id: int):
     return jsonify({"message": _t("api.tenants.deleted")}), 200
 
 
+@bp.get("/<int:tenant_id>/usage")
+@login_required
+def get_tenant_usage(tenant_id: int):
+    """Get resource usage stats for the current user's tenant."""
+    if not tenant_service.is_tenant_member(tenant_id, current_user.id):
+        return jsonify({"error": _t("api.tenants.notMember")}), 403
+    from app.services import billing_service
+    usage = billing_service.get_tenant_usage(tenant_id)
+    return jsonify(usage), 200
+
+
 # ---------------------------------------------------------------------------
 # Membership
 # ---------------------------------------------------------------------------

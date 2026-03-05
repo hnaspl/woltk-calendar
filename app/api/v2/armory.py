@@ -12,7 +12,7 @@ from app.models.armory_config import ArmoryConfig
 from app.services.armory.registry import list_providers
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
-from app.utils.armory_validation import validate_armory_url, get_allowed_domains_from_settings
+from app.utils.armory_validation import validate_armory_url
 from app.i18n import _t
 
 bp = Blueprint("armory", __name__, url_prefix="/armory")
@@ -38,8 +38,7 @@ def _validate_config_data(data: dict) -> tuple[str, str, str, str | None]:
         return "", "", "", _t("armory.labelRequired")
 
     # Validate URL security
-    allowed_domains = get_allowed_domains_from_settings()
-    url_error = validate_armory_url(api_base_url, allowed_domains)
+    url_error = validate_armory_url(api_base_url)
     if url_error:
         return "", "", "", url_error
 

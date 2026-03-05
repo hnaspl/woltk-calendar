@@ -35,3 +35,7 @@ export const suspendTenant = (id) => api.post(`/admin/tenants/${id}/suspend`)
 export const activateTenant = (id) => api.post(`/admin/tenants/${id}/activate`)
 export const deleteAdminTenant = (id) => api.delete(`/admin/tenants/${id}`)
 export const updateTenantLimits = (id, data) => api.put(`/admin/tenants/${id}/limits`, data)
+
+// ── Tenant feature management ──
+export const getTenantFeatures = (tenantId) => api.get(`/admin/tenants/${tenantId}/features`)
+export const updateTenantFeatures = (tenantId, features) => api.put(`/admin/tenants/${tenantId}/features`, features)

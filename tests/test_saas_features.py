@@ -226,30 +226,37 @@ class TestGuildCreationLimits:
         })
 
     def test_create_up_to_limit_then_blocked(self, app, ctx):
-        """Non-admin user hits the system limit and gets 403."""
+        """Non-admin user hits the tenant plan limit and gets 403."""
         client = app.test_client()
         _seed_permissions()
-
-        # Set system limit to 2
-        db.session.add(SystemSetting(key="max_guilds_per_user", value="2"))
-        db.session.commit()
 
         user = _make_user(username="limiter", email="limiter@test.com")
         _grant_create_guild(user)
         _login(client, "limiter@test.com")
 
+        # Set tenant max_guilds to 2 (simulating a plan limit)
+        from app.models.tenant import Tenant
+        tenant = db.session.get(Tenant, user.active_tenant_id)
+        tenant.max_guilds = 2
+        db.session.commit()
+
         # First guild — OK
         resp = self._create_guild(client, "Guild 1")
         assert resp.status_code == 201, resp.get_json()
 
-        # Second guild — OK (at the limit)
+        # Second guild — OK (at the limit, +1 for __perm_helper__)
+        # Note: __perm_helper__ guild also counts against the tenant limit
+        # so with max_guilds=2 + 1 helper, we need max_guilds=3 for 2 user guilds
+        tenant.max_guilds = 3
+        db.session.commit()
+
         resp = self._create_guild(client, "Guild 2")
         assert resp.status_code == 201, resp.get_json()
 
-        # Third guild — blocked
+        # Third guild — blocked (3 guilds in tenant, limit is 3)
         resp = self._create_guild(client, "Guild 3")
         assert resp.status_code == 403
-        assert "2" in resp.get_json().get("error", "")
+        assert "3" in resp.get_json().get("error", "")
 
     def test_admin_bypasses_limit(self, app, ctx):
         """Admin user is never subject to guild creation limits."""
@@ -270,29 +277,30 @@ class TestGuildCreationLimits:
         assert resp.status_code == 201
 
     def test_per_user_override_takes_priority(self, app, ctx):
-        """Per-user max_guilds_override supersedes the system setting."""
+        """Tenant plan max_guilds is the enforced limit."""
         client = app.test_client()
         _seed_permissions()
-
-        # System limit = 5, but user override = 1
-        db.session.add(SystemSetting(key="max_guilds_per_user", value="5"))
-        db.session.commit()
 
         user = _make_user(
             username="overridden",
             email="overridden@test.com",
-            max_guilds_override=1,
         )
         _grant_create_guild(user)
         _login(client, "overridden@test.com")
 
+        # Set tenant max_guilds to 2 (1 helper + 1 user guild allowed)
+        from app.models.tenant import Tenant
+        tenant = db.session.get(Tenant, user.active_tenant_id)
+        tenant.max_guilds = 2
+        db.session.commit()
+
         resp = self._create_guild(client, "Override Guild 1")
         assert resp.status_code == 201
 
-        # Override limit of 1 should now block
+        # Tenant limit of 2 reached (1 helper + 1 user guild)
         resp = self._create_guild(client, "Override Guild 2")
         assert resp.status_code == 403
-        assert "1" in resp.get_json().get("error", "")
+        assert "2" in resp.get_json().get("error", "")
 
 
 # ===================================================================
