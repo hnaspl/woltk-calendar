@@ -73,7 +73,7 @@
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
-          <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+          <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onTemplateRaidDefChange">
             <option value="">{{ t('templates.selectRaid') }}</option>
             <option v-for="d in raidDefinitions" :key="d.id" :value="d.id">{{ d.name }}</option>
           </select>
@@ -193,11 +193,24 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Create Recurring Raid prompt after template creation -->
+    <WowModal v-model="showRecurringPrompt" :title="t('templates.createRecurringRaid')" size="sm">
+      <p class="text-text-muted text-sm">{{ t('templates.createRecurringPrompt') }}</p>
+      <p class="text-text-muted text-xs mt-2">{{ t('templates.subtitle') }}</p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showRecurringPrompt = false">{{ t('templates.skipRecurring') }}</WowButton>
+          <WowButton @click="goToRecurring">{{ t('templates.createRecurringRaid') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -217,6 +230,7 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
+const router = useRouter()
 const { t } = useI18n()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_templates'))
@@ -234,13 +248,14 @@ const showApply = ref(false)
 const showDeleteConfirm = ref(false)
 const showCopyModal = ref(false)
 const showNoGuildConfirm = ref(false)
+const showRecurringPrompt = ref(false)
 const editing = ref(null)
 const applyTarget = ref(null)
 const deleteTarget = ref(null)
 const copySource = ref(null)
 const applyDate = ref('')
 
-const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '' })
+const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
 const applyToOtherGuilds = ref(false)
 const selectedGuildIds = ref([])
 const copyGuildIds = ref([])
@@ -252,6 +267,18 @@ const otherGuilds = computed(() =>
 const currentGuildLabel = computed(() => {
   const g = guildStore.currentGuild
   return g ? `${g.name} (${g.realm_name})` : ''
+})
+
+const templateSelectedDef = computed(() =>
+  raidDefinitions.value.find(d => d.id === form.raid_definition_id) ?? null
+)
+const templateAvailableSizes = computed(() => {
+  const sizes = new Set()
+  for (const d of raidDefinitions.value) {
+    sizes.add(d.default_raid_size ?? d.size ?? 25)
+  }
+  if (sizes.size === 0) { sizes.add(10); sizes.add(25) }
+  return [...sizes].sort((a, b) => a - b)
 })
 
 const allOtherGuildsSelected = computed(() =>
@@ -314,7 +341,7 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '' })
+  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
   applyToOtherGuilds.value = false
   selectedGuildIds.value = []
   formError.value = null; showModal.value = true
@@ -322,12 +349,20 @@ function openAddModal() {
 
 function openEditModal(tpl) {
   editing.value = tpl
-  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', default_instructions: tpl.default_instructions ?? '' })
+  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', default_instructions: tpl.default_instructions ?? '', close_registration_minutes: tpl.close_registration_minutes ?? null })
   formError.value = null; showModal.value = true
 }
 
 function openApply(tpl) { applyTarget.value = tpl; applyDate.value = ''; showApply.value = true }
 function confirmDelete(tpl) { deleteTarget.value = tpl; showDeleteConfirm.value = true }
+
+function onTemplateRaidDefChange() {
+  const rd = raidDefinitions.value.find(d => d.id === form.raid_definition_id)
+  if (rd) {
+    form.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    form.difficulty = rd.supports_heroic ? 'heroic' : 'normal'
+  }
+}
 
 function openCopyModal(tpl) {
   copySource.value = tpl
@@ -365,7 +400,8 @@ async function doSave() {
     raid_definition_id: form.raid_definition_id,
     raid_size: form.raid_size,
     difficulty: form.difficulty,
-    default_instructions: form.default_instructions || undefined
+    default_instructions: form.default_instructions || undefined,
+    close_registration_minutes: form.close_registration_minutes || undefined
   }
   try {
     if (editing.value) {
@@ -384,8 +420,13 @@ async function doSave() {
       }
     }
     showModal.value = false
+    const isNew = !editing.value
     const guildLabel = currentGuildLabel.value
     uiStore.showToast(editing.value ? t('templates.toasts.templateUpdated') : t('templates.toasts.templateCreated', { guild: guildLabel }), 'success')
+    // Prompt to create recurring raid after new template creation
+    if (isNew) {
+      showRecurringPrompt.value = true
+    }
   } catch (err) {
     formError.value = err?.response?.data?.message ?? t('common.toasts.failedToSave')
   } finally { saving.value = false }
@@ -401,6 +442,11 @@ async function doApply() {
   } catch (err) {
     uiStore.showToast(err?.response?.data?.message ?? t('templates.toasts.failedToApply'), 'error')
   } finally { saving.value = false }
+}
+
+function goToRecurring() {
+  showRecurringPrompt.value = false
+  router.push('/guild/recurring-raids')
 }
 
 async function doDelete() {

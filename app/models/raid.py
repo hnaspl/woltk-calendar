@@ -181,6 +181,7 @@ class EventSeries(db.Model):
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="UTC")
     recurrence_rule: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    days_of_week: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     start_time_local: Mapped[str | None] = mapped_column(sa.String(10), nullable=True)
     duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     default_raid_size: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=25)
@@ -214,6 +215,7 @@ class EventSeries(db.Model):
             "realm_name": self.realm_name,
             "timezone": self.timezone,
             "recurrence_rule": self.recurrence_rule,
+            "days_of_week": self.days_of_week.split(",") if self.days_of_week else [],
             "start_time_local": self.start_time_local,
             "duration_minutes": self.duration_minutes,
             "default_raid_size": self.default_raid_size,

@@ -108,6 +108,9 @@ def copy_template_to_guild(
 # ---------------------------------------------------------------------------
 
 def create_series(guild_id: int, created_by: int, data: dict) -> EventSeries:
+    days = data.get("days_of_week")
+    if isinstance(days, list):
+        days = ",".join(str(d) for d in days)
     series = EventSeries(
         guild_id=guild_id,
         created_by=created_by,
@@ -116,6 +119,7 @@ def create_series(guild_id: int, created_by: int, data: dict) -> EventSeries:
         realm_name=data["realm_name"],
         timezone=data.get("timezone", "UTC"),
         recurrence_rule=data.get("recurrence_rule"),
+        days_of_week=days,
         start_time_local=data.get("start_time_local"),
         duration_minutes=data.get("duration_minutes", 180),
         default_raid_size=data.get("default_raid_size", 25),
@@ -139,6 +143,9 @@ def update_series(series: EventSeries, data: dict) -> EventSeries:
     for key, value in data.items():
         if key in allowed:
             setattr(series, key, value)
+    if "days_of_week" in data:
+        days = data["days_of_week"]
+        series.days_of_week = ",".join(str(d) for d in days) if isinstance(days, list) else days
     db.session.commit()
     return series
 
@@ -183,6 +190,7 @@ def copy_series_to_guild(
         realm_name=realm_name,
         timezone=source.timezone,
         recurrence_rule=source.recurrence_rule,
+        days_of_week=source.days_of_week,
         start_time_local=source.start_time_local,
         duration_minutes=source.duration_minutes,
         default_raid_size=source.default_raid_size,
@@ -197,36 +205,86 @@ def copy_series_to_guild(
 def generate_events_from_series(series: EventSeries, count: int = 4) -> list[RaidEvent]:
     """Generate ``count`` future RaidEvents from a series' recurrence rule.
 
-    Supports simple weekly/biweekly rules encoded as ``weekly`` or ``biweekly``.
-    For full iCal rrule support, integrate the ``dateutil`` library.
+    Supports:
+    - ``weekly`` / ``biweekly`` recurrence rules
+    - ``days_of_week`` comma-separated day numbers (0=Monday .. 6=Sunday)
+      When days_of_week is set, generates events on each specified day.
     """
     events: list[RaidEvent] = []
     now = datetime.now(timezone.utc)
-    delta = timedelta(weeks=1)
-    if series.recurrence_rule and "biweekly" in series.recurrence_rule.lower():
-        delta = timedelta(weeks=2)
 
-    # Determine base start datetime
-    base = now.replace(hour=19, minute=0, second=0, microsecond=0)
+    # Parse start time
+    hour, minute = 19, 0
+    if series.start_time_local:
+        parts = series.start_time_local.split(":")
+        if len(parts) >= 2:
+            hour, minute = int(parts[0]), int(parts[1])
 
-    for i in range(count):
-        starts_at = base + delta * (i + 1)
-        ends_at = starts_at + timedelta(minutes=series.duration_minutes)
-        event = RaidEvent(
-            guild_id=series.guild_id,
-            series_id=series.id,
-            template_id=series.template_id,
-            title=series.title,
-            realm_name=series.realm_name,
-            starts_at_utc=starts_at,
-            ends_at_utc=ends_at,
-            raid_size=series.default_raid_size,
-            difficulty=series.default_difficulty,
-            status="open",
-            created_by=series.created_by,
-        )
-        db.session.add(event)
-        events.append(event)
+    # Parse days_of_week (0=Monday .. 6=Sunday)
+    target_days = None
+    if series.days_of_week:
+        try:
+            target_days = [int(d.strip()) for d in series.days_of_week.split(",") if d.strip()]
+        except ValueError:
+            target_days = None
+
+    if target_days:
+        # Generate events for each target day of the week
+        base = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        # Move to tomorrow to avoid past events
+        base += timedelta(days=1)
+        generated = 0
+        day_cursor = base
+        max_days = count * 14 + 14  # safety limit
+        checked = 0
+        while generated < count and checked < max_days:
+            if day_cursor.weekday() in target_days:
+                starts_at = day_cursor
+                ends_at = starts_at + timedelta(minutes=series.duration_minutes)
+                event = RaidEvent(
+                    guild_id=series.guild_id,
+                    series_id=series.id,
+                    template_id=series.template_id,
+                    title=series.title,
+                    realm_name=series.realm_name,
+                    starts_at_utc=starts_at,
+                    ends_at_utc=ends_at,
+                    raid_size=series.default_raid_size,
+                    difficulty=series.default_difficulty,
+                    status="open",
+                    created_by=series.created_by,
+                )
+                db.session.add(event)
+                events.append(event)
+                generated += 1
+            day_cursor += timedelta(days=1)
+            checked += 1
+    else:
+        # Original weekly/biweekly logic
+        delta = timedelta(weeks=1)
+        if series.recurrence_rule and "biweekly" in series.recurrence_rule.lower():
+            delta = timedelta(weeks=2)
+
+        base = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+        for i in range(count):
+            starts_at = base + delta * (i + 1)
+            ends_at = starts_at + timedelta(minutes=series.duration_minutes)
+            event = RaidEvent(
+                guild_id=series.guild_id,
+                series_id=series.id,
+                template_id=series.template_id,
+                title=series.title,
+                realm_name=series.realm_name,
+                starts_at_utc=starts_at,
+                ends_at_utc=ends_at,
+                raid_size=series.default_raid_size,
+                difficulty=series.default_difficulty,
+                status="open",
+                created_by=series.created_by,
+            )
+            db.session.add(event)
+            events.append(event)
 
     db.session.commit()
     return events

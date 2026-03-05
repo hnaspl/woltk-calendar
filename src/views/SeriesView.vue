@@ -51,6 +51,7 @@
                 <RealmBadge v-if="s.realm_name" :realm="s.realm_name" />
                 <span v-if="s.template_id" class="text-accent-gold">📋 {{ templateName(s.template_id) }}</span>
                 <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
+                <span v-if="s.days_of_week?.length" class="text-text-muted">{{ s.days_of_week.map(d => dayLabels[d] || d).join(', ') }}</span>
                 <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
                 <span>⏱ {{ s.duration_minutes }}min</span>
               </div>
@@ -101,11 +102,24 @@
               <option value="">{{ t('common.fields.select') }}</option>
               <option value="weekly">{{ t('series.weekly') }}</option>
               <option value="biweekly">{{ t('series.biweekly') }}</option>
+              <option value="custom_days">{{ t('series.customDays') }}</option>
             </select>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('series.startTime') }}</label>
             <input v-model="form.start_time_local" type="time" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+        </div>
+        <div v-if="form.recurrence_rule === 'custom_days'" class="space-y-2">
+          <label class="block text-xs text-text-muted">{{ t('series.selectDays') }}</label>
+          <div class="flex flex-wrap gap-2">
+            <label v-for="(dayName, dayIdx) in dayLabels" :key="dayIdx"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded border cursor-pointer transition-colors text-sm"
+              :class="form.days_of_week.includes(dayIdx) ? 'bg-accent-gold/20 border-accent-gold text-accent-gold' : 'bg-bg-tertiary border-border-default text-text-muted hover:border-border-gold'"
+            >
+              <input type="checkbox" :value="dayIdx" v-model="form.days_of_week" class="sr-only" />
+              {{ dayName }}
+            </label>
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -274,6 +288,7 @@ const selectedGuildId = ref(null)
 const form = reactive({
   title: '',
   recurrence_rule: 'weekly',
+  days_of_week: [],
   start_time_local: '19:00',
   duration_minutes: 180,
   default_raid_size: 25,
@@ -360,9 +375,20 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
   if (newId && newId !== oldId) loadData()
 })
 
+const dayLabels = {
+  0: t('series.days.mon'),
+  1: t('series.days.tue'),
+  2: t('series.days.wed'),
+  3: t('series.days.thu'),
+  4: t('series.days.fri'),
+  5: t('series.days.sat'),
+  6: t('series.days.sun'),
+}
+
 function formatRecurrence(rule) {
   if (!rule) return ''
   if (rule.toLowerCase().includes('biweekly')) return t('series.everyTwoWeeks')
+  if (rule.toLowerCase().includes('custom_days')) return t('series.selectedDays')
   if (rule.toLowerCase().includes('weekly')) return t('series.everyWeek')
   return rule
 }
@@ -388,7 +414,7 @@ function openAddModal() {
   selectedGuildId.value = guildStore.currentGuild?.id ?? null
   Object.assign(form, {
     title: '',
-    recurrence_rule: 'weekly', start_time_local: '19:00',
+    recurrence_rule: 'weekly', days_of_week: [], start_time_local: '19:00',
     duration_minutes: 180, default_raid_size: 25, default_difficulty: 'normal',
     template_id: null
   })
@@ -403,6 +429,7 @@ function openEditModal(s) {
   Object.assign(form, {
     title: s.title,
     recurrence_rule: s.recurrence_rule ?? 'weekly',
+    days_of_week: Array.isArray(s.days_of_week) ? s.days_of_week.map(Number) : [],
     start_time_local: s.start_time_local ?? '19:00',
     duration_minutes: s.duration_minutes ?? 180,
     default_raid_size: s.default_raid_size ?? 25,
