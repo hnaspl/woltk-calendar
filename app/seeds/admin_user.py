@@ -10,6 +10,7 @@ import sqlalchemy as sa
 
 from app.extensions import bcrypt, db
 from app.models.user import User
+from app.services import tenant_service
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,6 @@ def seed_admin_user(
       - ADMIN_PASSWORD (REQUIRED in production – a random password is
         generated and logged if not set)
 
-    The admin user is a global administrator and does NOT get a personal
-    tenant workspace (unlike normal user registration).
-
     Returns True if a new user was inserted, False if it already existed.
     """
     email = (email or os.environ.get("ADMIN_EMAIL", "admin@wotlk-calendar.local")).strip().lower()
@@ -43,6 +41,13 @@ def seed_admin_user(
     ).scalars().first()
 
     if existing is not None:
+        # Ensure existing admin has a tenant workspace
+        if existing.active_tenant_id is None:
+            try:
+                tenant_service.create_tenant(owner=existing)
+                logger.info("Created missing tenant for existing admin user '%s'.", existing.username)
+            except ValueError:
+                pass  # already owns a tenant (race condition guard)
         return False
 
     if not password:
@@ -63,5 +68,6 @@ def seed_admin_user(
     )
     db.session.add(user)
     db.session.commit()
-    logger.info("Created default admin user '%s' (no tenant – global admin).", username)
+    tenant_service.create_tenant(owner=user)
+    logger.info("Created default admin user '%s' with tenant workspace.", username)
     return True

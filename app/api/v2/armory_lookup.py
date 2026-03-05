@@ -83,9 +83,8 @@ def lookup_guild(realm: str, guild_name: str):
     if data is None:
         return jsonify({"error": _t("armory.guildNotFound")}), 404
 
-    provider = armory_service._get(api_base_url=api_base_url)
     roster = [
-        provider.build_character_dict(m, realm)
+        armory_service.build_character_dict(m, realm, api_base_url=api_base_url)
         for m in data.get("roster", [])
     ]
 
