@@ -175,6 +175,7 @@ import { useTimezone } from '@/composables/useTimezone'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 
 const calStore = useCalendarStore()
@@ -192,9 +193,16 @@ const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref(null)
 const raidDefs = ref([])
+const guildExpansionSlugs = ref([])
 
-const builtinDefs = computed(() => raidDefs.value.filter(d => d.is_builtin))
-const customDefs = computed(() => raidDefs.value.filter(d => !d.is_builtin))
+// Filter raid definitions by guild's enabled expansions
+const filteredRaidDefs = computed(() => {
+  if (!guildExpansionSlugs.value.length) return raidDefs.value
+  return raidDefs.value.filter(d => guildExpansionSlugs.value.includes(d.expansion))
+})
+
+const builtinDefs = computed(() => filteredRaidDefs.value.filter(d => d.is_builtin))
+const customDefs = computed(() => filteredRaidDefs.value.filter(d => !d.is_builtin))
 
 const eventForm = reactive({
   title: '',
@@ -243,6 +251,11 @@ function openCreateModal() {
   showCreateModal.value = true
   if (eventForm.guild_id) {
     raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+    // Load guild's enabled expansions for filtering
+    guildExpansionsApi.getGuildExpansions(eventForm.guild_id).then(res => {
+      const exps = res?.expansions ?? res ?? []
+      guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
+    }).catch(() => { guildExpansionSlugs.value = [] })
   }
 }
 
@@ -252,8 +265,14 @@ function onGuildSelectChange() {
   eventForm.raid_definition_id = ''
   if (eventForm.guild_id) {
     raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+    // Load guild's enabled expansions for filtering
+    guildExpansionsApi.getGuildExpansions(eventForm.guild_id).then(res => {
+      const exps = res?.expansions ?? res ?? []
+      guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
+    }).catch(() => { guildExpansionSlugs.value = [] })
   } else {
     raidDefs.value = []
+    guildExpansionSlugs.value = []
   }
 }
 
@@ -263,6 +282,8 @@ function onRaidDefChange() {
     eventForm.raid_type = rd.raid_type || rd.code || ''
     eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
     if (rd.default_duration_minutes) eventForm.duration_minutes = rd.default_duration_minutes
+    // Auto-set difficulty based on raid definition
+    eventForm.difficulty = rd.supports_heroic ? 'heroic' : 'normal'
   }
 }
 

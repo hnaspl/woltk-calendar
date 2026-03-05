@@ -150,8 +150,7 @@ const generatedLink = computed(() => {
 })
 
 onMounted(() => {
-  loadInvitations()
-  if (canApprove.value) loadApplications()
+  // Initial load handled by the watch below with immediate: true
 })
 
 // Reload when guild becomes available or changes
@@ -160,7 +159,7 @@ watch(() => guildStore.currentGuildId, (newId) => {
     loadInvitations()
     if (canApprove.value) loadApplications()
   }
-})
+}, { immediate: true })
 
 async function loadInvitations() {
   const guildId = guildStore.currentGuildId

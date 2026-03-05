@@ -214,7 +214,7 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.classRequired') }}</label>
-            <select v-model="form.class" required :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" @change="onClassChange">
+            <select v-model="form.class" required :disabled="isArmoryLocked || classLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" @change="onClassChange">
               <option value="">{{ t('characters.selectClass') }}</option>
               <option v-for="c in wowClasses" :key="c" :value="c">{{ c }}</option>
             </select>
@@ -447,6 +447,7 @@ const guildRealms = computed(() => {
 })
 
 const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
+const classLocked = ref(false)
 
 /** Roles filtered by the selected class */
 const filteredRoles = computed(() => {
@@ -537,6 +538,7 @@ function openAddModal() {
   editingChar.value = null
   const guildRealm = guildStore.currentGuild?.realm_name ?? ''
   Object.assign(form, { name: '', class: '', realm: guildRealm, role: '', spec: '', secondary_spec: '', armory_url: '' })
+  classLocked.value = false
   formError.value = null
   lookingUp.value = false
   lookupResult.value = null
@@ -553,6 +555,8 @@ function addAnotherCharacter() {
 function onClassChange() {
   const allowed = classRoles.value[form.class] ?? []
   if (form.role && !allowed.includes(form.role)) form.role = ''
+  // Auto-select role when only one option is valid (e.g., Rogue → melee_dps)
+  if (!form.role && allowed.length === 1) form.role = allowed[0]
   const specs = classSpecs.value[form.class] ?? []
   if (form.spec && specs.length > 0 && !specs.includes(form.spec)) form.spec = ''
   if (form.secondary_spec && specs.length > 0 && !specs.includes(form.secondary_spec)) form.secondary_spec = ''
@@ -584,9 +588,12 @@ async function lookupFromArmory() {
     const data = await armoryLookupApi.lookupCharacter(form.realm, form.name, guildStore.currentGuildId)
     if (data?.class_name) {
       form.class = data.class_name
+      classLocked.value = true
       // Auto-populate default role from classRoles
       const allowed = classRoles.value[data.class_name] ?? []
-      if (allowed.length > 0 && !form.role) {
+      if (allowed.length === 1) {
+        form.role = allowed[0]
+      } else if (allowed.length > 0 && !form.role) {
         form.role = allowed[0]
       }
     }

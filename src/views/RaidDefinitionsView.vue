@@ -34,9 +34,9 @@
           :key="exp.id"
           type="button"
           class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-          :class="selectedExpansion === exp.slug ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
-          @click="selectedExpansion = exp.slug"
-        >{{ exp.name }}</button>
+          :class="selectedExpansion === (exp.expansion_slug || exp.slug) ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+          @click="selectedExpansion = exp.expansion_slug || exp.slug"
+        >{{ exp.expansion_name || exp.name }}</button>
       </div>
 
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">

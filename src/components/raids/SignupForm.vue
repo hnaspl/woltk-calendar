@@ -151,9 +151,20 @@ import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
 import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 
 const { t } = useI18n()
-const { classRoles } = useExpansionData()
+const { classRoles: expansionClassRoles } = useExpansionData()
+const constantsStore = useConstantsStore()
+const guildClassRoles = ref({})
+
+// Use guild-specific class roles → constants store → expansion data as fallback chain
+const classRoles = computed(() => {
+  if (Object.keys(guildClassRoles.value).length) return guildClassRoles.value
+  if (Object.keys(constantsStore.classRoles).length) return constantsStore.classRoles
+  return expansionClassRoles.value
+})
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -266,6 +277,13 @@ const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: ''
 const form = reactive({ ...INITIAL_FORM })
 
 onMounted(async () => {
+  // Load guild-specific class/role data
+  if (props.guildId) {
+    try {
+      const data = await guildExpansionsApi.getGuildConstants(props.guildId)
+      if (data?.class_roles) guildClassRoles.value = data.class_roles
+    } catch { /* fallback to constants store */ }
+  }
   try {
     characters.value = await charactersApi.getMyCharacters(props.guildId)
   } catch {
@@ -290,7 +308,14 @@ function onCharacterChange() {
     // Only auto-fill role if it's valid for the character's class
     const allowed = classRoles.value[selected.class_name] ?? []
     const defaultRole = selected.default_role || ''
-    form.chosenRole = allowed.includes(defaultRole) ? defaultRole : ''
+    if (allowed.includes(defaultRole)) {
+      form.chosenRole = defaultRole
+    } else if (allowed.length === 1) {
+      // Auto-select role when only one option is valid (e.g., Rogue → melee_dps)
+      form.chosenRole = allowed[0]
+    } else {
+      form.chosenRole = ''
+    }
     form.chosenSpec = selected.primary_spec || ''
   }
 }

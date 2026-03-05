@@ -421,10 +421,12 @@ import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
 import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as attendanceApi from '@/api/attendance'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
@@ -438,7 +440,16 @@ const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
 const { formatDateTime } = useFormatting()
 const { t } = useI18n()
-const { raidTypes } = useExpansionData()
+const { raidTypes: expansionRaidTypes } = useExpansionData()
+const constantsStore = useConstantsStore()
+const guildRaidTypes = ref([])
+
+// Use guild-specific raid types → constants store → expansion data as fallback chain
+const raidTypes = computed(() => {
+  if (guildRaidTypes.value.length) return guildRaidTypes.value
+  if (constantsStore.raidTypes.length) return constantsStore.raidTypes
+  return expansionRaidTypes.value
+})
 
 const event = ref(null)
 const signups = ref([])
@@ -542,6 +553,15 @@ onMounted(async () => {
     ])
     event.value = ev
     signups.value = su
+    // Load guild-specific raid types for the header display
+    if (guildId.value) {
+      try {
+        const constData = await guildExpansionsApi.getGuildConstants(guildId.value)
+        if (constData?.raid_types) {
+          guildRaidTypes.value = constData.raid_types.map(r => ({ value: r.code, label: r.name }))
+        }
+      } catch { /* fallback to constants store */ }
+    }
     // Fetch bans for this event
     try { bans.value = await signupsApi.getBans(guildId.value, route.params.id) } catch { bans.value = [] }
     // Check if attendance has been recorded for this event
