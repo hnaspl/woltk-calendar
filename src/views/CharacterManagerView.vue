@@ -324,6 +324,7 @@ import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import { useGuildStore } from '@/stores/guild'
+import { useConstantsStore } from '@/stores/constants'
 import { useUiStore } from '@/stores/ui'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { ROLE_OPTIONS, normalizeSpecName } from '@/constants'
@@ -336,6 +337,7 @@ import { useTimezone } from '@/composables/useTimezone'
 import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
+const constantsStore = useConstantsStore()
 const uiStore = useUiStore()
 const { getClassIcon } = useWowIcons()
 const tzHelper = useTimezone()
@@ -383,9 +385,21 @@ const guildClasses = ref(null)
 const guildSpecsMap = ref(null)
 const guildRolesMap = ref(null)
 
-const wowClasses = computed(() => guildClasses.value ?? systemClasses.value)
-const classSpecs = computed(() => guildSpecsMap.value ?? systemSpecs.value)
-const classRoles = computed(() => guildRolesMap.value ?? systemRoles.value)
+const wowClasses = computed(() => {
+  if (guildClasses.value?.length) return guildClasses.value
+  if (systemClasses.value?.length) return systemClasses.value
+  return constantsStore.wowClasses ?? []
+})
+const classSpecs = computed(() => {
+  if (guildSpecsMap.value && Object.keys(guildSpecsMap.value).length) return guildSpecsMap.value
+  if (systemSpecs.value && Object.keys(systemSpecs.value).length) return systemSpecs.value
+  return constantsStore.classSpecs ?? {}
+})
+const classRoles = computed(() => {
+  if (guildRolesMap.value && Object.keys(guildRolesMap.value).length) return guildRolesMap.value
+  if (systemRoles.value && Object.keys(systemRoles.value).length) return systemRoles.value
+  return constantsStore.classRoles ?? {}
+})
 
 const configuredRealms = ref([])
 

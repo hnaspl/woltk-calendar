@@ -87,6 +87,20 @@ def create_guild(
         expansion_service.enable_expansion(
             guild.id, expansion_id, created_by, tenant_id,
         )
+    else:
+        # Auto-enable the default expansion so class/spec/role data is available
+        from app.models.system_setting import SystemSetting
+        from app.models.expansion import Expansion
+        setting = db.session.get(SystemSetting, "default_expansion")
+        default_slug = setting.value if setting else "wotlk"
+        default_exp = db.session.execute(
+            sa.select(Expansion).where(Expansion.slug == default_slug)
+        ).scalar_one_or_none()
+        if default_exp:
+            from app.services import expansion_service
+            expansion_service.enable_expansion(
+                guild.id, default_exp.id, created_by, tenant_id,
+            )
 
     db.session.commit()
     return guild
