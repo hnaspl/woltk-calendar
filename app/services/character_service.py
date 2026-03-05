@@ -104,7 +104,10 @@ def _validate_specs(class_name: str | None, data: dict) -> None:
 def create_character(user_id: int, guild_id: int, data: dict) -> Character:
     existing = find_existing(guild_id, data["realm_name"], data["name"])
     if existing is not None:
-        raise ValueError(f"Character '{data['name']}' on {data['realm_name']} already exists in this guild")
+        if existing.user_id == user_id:
+            raise ValueError(f"Character '{data['name']}' on {data['realm_name']} already exists in this guild")
+        else:
+            raise ValueError(f"Character '{data['name']}' on {data['realm_name']} is already registered by another player in this guild")
 
     # Validate specs against expansion registry
     _validate_specs(data.get("class_name"), data)
@@ -242,5 +245,17 @@ def find_existing(guild_id: int, realm_name: str, name: str) -> Optional[Charact
             Character.guild_id == guild_id,
             Character.realm_name == realm_name,
             Character.name == name,
+        )
+    ).scalars().first()
+
+
+def find_cross_user_duplicate(guild_id: int, realm_name: str, name: str, user_id: int) -> Optional[Character]:
+    """Check if another user in the same guild has this character registered."""
+    return db.session.execute(
+        sa.select(Character).where(
+            Character.guild_id == guild_id,
+            Character.realm_name == realm_name,
+            Character.name == name,
+            Character.user_id != user_id,
         )
     ).scalars().first()

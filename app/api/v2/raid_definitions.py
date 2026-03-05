@@ -88,6 +88,39 @@ def admin_delete_default(rd_id: int):
 # ---------------------------------------------------------------------------
 
 
+@bp.get("/available")
+@login_required
+@require_guild_permission("manage_raid_definitions")
+def list_available_definitions(guild_id: int, membership):
+    """List global definitions that can be imported into this guild.
+
+    Returns only global definitions whose ``code`` is not already present
+    as a guild-scoped definition, so importing never overwrites existing
+    guild customisations.
+    """
+    available = raid_service.list_importable_definitions(guild_id)
+    return jsonify([d.to_dict() for d in available]), 200
+
+
+@bp.post("/import/<int:rd_id>")
+@login_required
+@require_guild_permission("manage_raid_definitions")
+def import_definition(guild_id: int, rd_id: int, membership):
+    """Import a global raid definition into the guild.
+
+    Creates a guild-scoped copy only if no definition with the same code
+    exists in the guild, preventing accidental overwrites.
+    """
+    rd = raid_service.get_raid_definition(rd_id)
+    if rd is None or rd.guild_id is not None:
+        return jsonify({"error": _t("api.raidDefinitions.notFound")}), 404
+    try:
+        imported = raid_service.import_definition_to_guild(rd, guild_id, current_user.id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(imported.to_dict()), 201
+
+
 @bp.get("")
 @login_required
 @require_guild_permission()

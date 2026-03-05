@@ -1,5 +1,10 @@
 <template>
   <div class="space-y-6">
+    <!-- No guild message -->
+    <div v-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
+      {{ t('guild.settings.noGuild') }}
+    </div>
+    <template v-else>
     <!-- Guild info form -->
     <WowCard>
       <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
@@ -139,6 +144,7 @@
         </div>
       </div>
     </WowCard>
+    </template>
   </div>
 </template>
 
@@ -169,6 +175,7 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const saveError = ref(null)
+const noGuild = ref(false)
 const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
 const guildRealmNames = ref([])
 const isArmorySource = ref(false)
@@ -206,18 +213,21 @@ const canManualRefresh = computed(() => {
 async function loadGuildData() {
   loading.value = true
   error.value = null
+  noGuild.value = false
   try {
     const g = guildStore.currentGuild
-    if (g) {
-      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
-      isArmorySource.value = !!g.armory_source
-      // Load guild-configured realms from API
-      try {
-        const data = await guildRealmsApi.getGuildRealms(g.id)
-        guildRealmNames.value = (data.realms || []).map(r => r.name)
-      } catch {
-        guildRealmNames.value = []
-      }
+    if (!g) {
+      noGuild.value = true
+      return
+    }
+    Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
+    isArmorySource.value = !!g.armory_source
+    // Load guild-configured realms from API
+    try {
+      const data = await guildRealmsApi.getGuildRealms(g.id)
+      guildRealmNames.value = (data.realms || []).map(r => r.name)
+    } catch {
+      guildRealmNames.value = []
     }
   } catch {
     error.value = t('guildSettings.failedToLoad')

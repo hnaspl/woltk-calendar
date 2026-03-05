@@ -143,18 +143,16 @@ class TestGuildScopedDefinitions:
         assert any(d.id == rd.id for d in defs_a)
         assert not any(d.id == rd.id for d in defs_b)
 
-    def test_builtin_visible_to_all_guilds(self, seeded):
-        """Built-in (global) definitions are visible from both guilds."""
+    def test_builtin_importable_to_guilds(self, seeded):
+        """Built-in (global) definitions are listed as importable for guilds."""
         count = seed_raid_definitions()
         assert count > 0
 
-        defs_a = raid_service.list_raid_definitions(seeded["guild_a"].id)
-        defs_b = raid_service.list_raid_definitions(seeded["guild_b"].id)
+        importable_a = raid_service.list_importable_definitions(seeded["guild_a"].id)
+        importable_b = raid_service.list_importable_definitions(seeded["guild_b"].id)
 
-        builtins_a = [d for d in defs_a if d.is_builtin]
-        builtins_b = [d for d in defs_b if d.is_builtin]
-        assert len(builtins_a) == len(builtins_b)
-        assert len(builtins_a) == count
+        assert len(importable_a) == count
+        assert len(importable_b) == count
 
     def test_guild_definition_not_cross_guild(self, seeded):
         """Guild A definitions don't leak to Guild B and vice versa."""
@@ -189,7 +187,7 @@ class TestCopyToGuild:
     def test_copy_creates_guild_definition(self, seeded):
         """Copying a builtin creates a non-builtin guild-scoped copy."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         assert len(builtins) > 0
         source = builtins[0]
 
@@ -204,7 +202,7 @@ class TestCopyToGuild:
     def test_copy_preserves_slots(self, seeded):
         """Copied definition preserves slot allocation from source."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         copy = raid_service.copy_raid_definition_to_guild(
@@ -220,7 +218,7 @@ class TestCopyToGuild:
     def test_copy_unique_naming(self, seeded):
         """Multiple copies get unique suffixed names."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         copy1 = raid_service.copy_raid_definition_to_guild(
@@ -235,7 +233,7 @@ class TestCopyToGuild:
     def test_copy_to_different_guild(self, seeded):
         """Copying same builtin to two different guilds works independently."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         copy_a = raid_service.copy_raid_definition_to_guild(
@@ -261,14 +259,17 @@ class TestBuiltinPermissions:
     def test_global_admin_bypasses_permission_check_via_api(self, seeded, app):
         """Global admin (is_admin=True) can edit builtins because has_permission bypasses for admins."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        # Import the first builtin into guild_a so it becomes guild-scoped
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.put(
-                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
                 json={"name": "Admin Edited"},
             )
             assert resp.status_code == 200
@@ -310,14 +311,16 @@ class TestBuiltinDefinitionAPI:
     def test_api_update_builtin_as_global_admin(self, seeded, app):
         """Global admin can update a builtin definition via API."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.put(
-                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
                 json={"name": "Updated Name"},
             )
             assert resp.status_code == 200
@@ -326,14 +329,16 @@ class TestBuiltinDefinitionAPI:
     def test_api_update_builtin_as_officer_rejected(self, seeded, app):
         """Officer cannot update a builtin definition (no manage_default_definitions)."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.put(
-                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
                 json={"name": "Hacked Name"},
             )
             assert resp.status_code == 403
@@ -341,14 +346,16 @@ class TestBuiltinDefinitionAPI:
     def test_api_delete_builtin_as_officer_rejected(self, seeded, app):
         """Officer cannot delete a builtin definition."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.delete(
-                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
             )
             assert resp.status_code == 403
 
@@ -372,7 +379,7 @@ class TestBuiltinDefinitionAPI:
     def test_api_copy_builtin_as_officer_allowed(self, seeded, app):
         """Officer can copy a builtin to guild (requires manage_raid_definitions, not manage_default_definitions)."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         with app.test_client() as client:
@@ -655,7 +662,7 @@ class TestCopyTemplateToGuild:
         """Copying a template creates a copy in the target guild."""
         from app.services import event_service
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         rd = builtins[0]
 
         tmpl = event_service.create_template(
@@ -674,7 +681,7 @@ class TestCopyTemplateToGuild:
         """Multiple copies of same template get unique names."""
         from app.services import event_service
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         rd = builtins[0]
 
         tmpl = event_service.create_template(
@@ -694,7 +701,7 @@ class TestCopyTemplateToGuild:
         """API endpoint copies template to another guild."""
         from app.services import event_service
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         rd = builtins[0]
 
         tmpl = event_service.create_template(

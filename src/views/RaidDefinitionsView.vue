@@ -13,12 +13,17 @@
       <template v-else>
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <h1 class="wow-heading text-xl sm:text-2xl">{{ t('raidDefinitions.title') }}</h1>
-        <WowButton @click="openAddModal">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          {{ t('raidDefinitions.newDefinition') }}
-        </WowButton>
+        <div class="flex items-center gap-2">
+          <WowButton variant="secondary" @click="openImportModal" :disabled="noGuild">
+            📥 {{ t('raidDefinitions.importFromGlobal') }}
+          </WowButton>
+          <WowButton @click="openAddModal" :disabled="noGuild">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            {{ t('raidDefinitions.newDefinition') }}
+          </WowButton>
+        </div>
       </div>
 
       <!-- Expansion filter -->
@@ -229,6 +234,45 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Import from Global modal -->
+    <WowModal v-model="showImportModal" :title="t('raidDefinitions.importFromGlobal')" size="md">
+      <div v-if="importLoading" class="flex items-center gap-2 text-text-muted py-4">
+        <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+        {{ t('common.labels.loading') }}
+      </div>
+      <div v-else-if="importableDefinitions.length === 0" class="text-center py-8 text-text-muted">
+        {{ t('raidDefinitions.noImportable') }}
+      </div>
+      <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+        <div
+          v-for="def in importableDefinitions"
+          :key="def.id"
+          class="flex items-center gap-3 p-3 rounded-lg border transition-colors"
+          :class="selectedImports.includes(def.id) ? 'bg-accent-gold/10 border-accent-gold/50' : 'bg-bg-tertiary border-border-default hover:border-border-gold'"
+        >
+          <input type="checkbox" :value="def.id" v-model="selectedImports" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+          <img :src="getRaidIcon(def.raid_type || def.code)" :alt="def.name" class="w-8 h-8 rounded border border-border-default flex-shrink-0" />
+          <div class="flex-1 min-w-0">
+            <span class="font-medium text-text-primary text-sm">{{ def.name }}</span>
+            <div class="text-xs text-text-muted flex items-center gap-2">
+              <span class="capitalize">{{ def.expansion }}</span>
+              <span>{{ def.default_raid_size }}-man</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-between w-full">
+          <span v-if="importableDefinitions.length > 0" class="text-xs text-text-muted">{{ t('raidDefinitions.selectedCount', { count: selectedImports.length }) }}</span>
+          <span v-else />
+          <div class="flex gap-3">
+            <WowButton variant="secondary" @click="showImportModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+            <WowButton :loading="importSaving" :disabled="selectedImports.length === 0" @click="doImport">{{ t('raidDefinitions.importSelected') }}</WowButton>
+          </div>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -271,6 +315,11 @@ const showModal = ref(false)
 const showDeleteConfirm = ref(false)
 const showCopyModal = ref(false)
 const showNoGuildConfirm = ref(false)
+const showImportModal = ref(false)
+const importLoading = ref(false)
+const importSaving = ref(false)
+const importableDefinitions = ref([])
+const selectedImports = ref([])
 const editing = ref(null)
 const deleteTarget = ref(null)
 const copySource = ref(null)
@@ -497,5 +546,41 @@ async function doCopy() {
     uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
+}
+
+async function openImportModal() {
+  showImportModal.value = true
+  importLoading.value = true
+  selectedImports.value = []
+  importableDefinitions.value = []
+  try {
+    const data = await raidDefsApi.getAvailableDefinitions(guildStore.currentGuild.id)
+    importableDefinitions.value = Array.isArray(data) ? data : []
+  } catch {
+    importableDefinitions.value = []
+  } finally {
+    importLoading.value = false
+  }
+}
+
+async function doImport() {
+  if (selectedImports.value.length === 0) return
+  importSaving.value = true
+  let succeeded = 0, failed = 0
+  for (const defId of selectedImports.value) {
+    try {
+      await raidDefsApi.importRaidDefinition(guildStore.currentGuild.id, defId)
+      succeeded++
+    } catch { failed++ }
+  }
+  showImportModal.value = false
+  importSaving.value = false
+  if (succeeded > 0) {
+    uiStore.showToast(t('raidDefinitions.importSuccess', { count: succeeded }), 'success')
+    loadDefinitions()
+  }
+  if (failed > 0) {
+    uiStore.showToast(t('raidDefinitions.importFailed', { count: failed }), 'warning')
+  }
 }
 </script>

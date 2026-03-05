@@ -3,7 +3,7 @@
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <h1 class="wow-heading text-xl sm:text-2xl">{{ t('characters.title') }}</h1>
-        <WowButton @click="openAddModal">
+        <WowButton @click="openAddModal" :disabled="errorIsNoGuild">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>

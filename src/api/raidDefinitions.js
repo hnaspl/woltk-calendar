@@ -18,6 +18,12 @@ export const deleteRaidDefinition = (guildId, defId) =>
 export const copyRaidDefinition = (guildId, defId) =>
   api.post(`/guilds/${guildId}/raid-definitions/${defId}/copy`)
 
+export const getAvailableDefinitions = (guildId) =>
+  api.get(`/guilds/${guildId}/raid-definitions/available`)
+
+export const importRaidDefinition = (guildId, defId) =>
+  api.post(`/guilds/${guildId}/raid-definitions/import/${defId}`)
+
 // Admin-only default raid definition management
 export const adminGetDefaultDefinitions = () =>
   api.get('/admin/raid-definitions')

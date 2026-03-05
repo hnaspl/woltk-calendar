@@ -62,7 +62,7 @@
           {{ t('calendar.clearFilters') }}
         </WowButton>
 
-        <WowButton v-if="permissions.can('create_events')" class="w-full text-sm" @click="openCreateModal">
+        <WowButton v-if="permissions.can('create_events')" class="w-full text-sm" @click="openCreateModal" :disabled="!guildStore.currentGuild">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>

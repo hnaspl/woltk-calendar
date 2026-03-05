@@ -9,6 +9,9 @@ import classicon_mage from '@/assets/icons/wow/classicon_mage.jpg'
 import classicon_warlock from '@/assets/icons/wow/classicon_warlock.jpg'
 import classicon_druid from '@/assets/icons/wow/classicon_druid.jpg'
 import classicon_deathknight from '@/assets/icons/wow/classicon_deathknight.jpg'
+import classicon_monk from '@/assets/icons/wow/classicon_monk.jpg'
+import classicon_demonhunter from '@/assets/icons/wow/classicon_demonhunter.jpg'
+import classicon_evoker from '@/assets/icons/wow/classicon_evoker.jpg'
 
 import icon_tank from '@/assets/icons/wow/ability_warrior_defensivestance.jpg'
 import icon_healer from '@/assets/icons/wow/spell_holy_flashheal.jpg'
@@ -22,6 +25,77 @@ import raid_ulduar from '@/assets/icons/wow/achievement_dungeon_ulduarraid_misc_
 import raid_toc from '@/assets/icons/wow/achievement_reputation_argentcrusader.jpg'
 import raid_icc from '@/assets/icons/wow/achievement_dungeon_icecrown_frostmourne.jpg'
 import raid_rs from '@/assets/icons/wow/inv_misc_head_dragon_red.jpg'
+
+// Classic raids
+import raid_mc from '@/assets/icons/wow/raid_mc.jpg'
+import raid_ony from '@/assets/icons/wow/raid_ony.jpg'
+import raid_bwl from '@/assets/icons/wow/raid_bwl.jpg'
+import raid_zg from '@/assets/icons/wow/raid_zg.jpg'
+import raid_aq20 from '@/assets/icons/wow/raid_aq20.jpg'
+import raid_aq40 from '@/assets/icons/wow/raid_aq40.jpg'
+import raid_naxx40 from '@/assets/icons/wow/raid_naxx40.jpg'
+
+// TBC raids
+import raid_kara from '@/assets/icons/wow/raid_kara.jpg'
+import raid_gruul from '@/assets/icons/wow/raid_gruul.jpg'
+import raid_mag from '@/assets/icons/wow/raid_mag.jpg'
+import raid_ssc from '@/assets/icons/wow/raid_ssc.jpg'
+import raid_tk from '@/assets/icons/wow/raid_tk.jpg'
+import raid_hyjal from '@/assets/icons/wow/raid_hyjal.jpg'
+import raid_bt from '@/assets/icons/wow/raid_bt.jpg'
+import raid_za from '@/assets/icons/wow/raid_za.jpg'
+import raid_swp from '@/assets/icons/wow/raid_swp.jpg'
+
+// WotLK extra
+import raid_ony25 from '@/assets/icons/wow/raid_ony25.jpg'
+
+// Cataclysm raids
+import raid_bwd from '@/assets/icons/wow/raid_bwd.jpg'
+import raid_bot from '@/assets/icons/wow/raid_bot.jpg'
+import raid_totfw from '@/assets/icons/wow/raid_totfw.jpg'
+import raid_bh from '@/assets/icons/wow/raid_bh.jpg'
+import raid_fl from '@/assets/icons/wow/raid_fl.jpg'
+import raid_ds from '@/assets/icons/wow/raid_ds.jpg'
+
+// MoP raids
+import raid_msv from '@/assets/icons/wow/raid_msv.jpg'
+import raid_hof from '@/assets/icons/wow/raid_hof.jpg'
+import raid_toes from '@/assets/icons/wow/raid_toes.jpg'
+import raid_tot from '@/assets/icons/wow/raid_tot.jpg'
+import raid_soo from '@/assets/icons/wow/raid_soo.jpg'
+
+// WoD raids
+import raid_hm from '@/assets/icons/wow/raid_hm.jpg'
+import raid_brf from '@/assets/icons/wow/raid_brf.jpg'
+import raid_hfc from '@/assets/icons/wow/raid_hfc.jpg'
+
+// Legion raids
+import raid_en from '@/assets/icons/wow/raid_en.jpg'
+import raid_tov from '@/assets/icons/wow/raid_tov.jpg'
+import raid_nh from '@/assets/icons/wow/raid_nh.jpg'
+import raid_tos from '@/assets/icons/wow/raid_tos.jpg'
+import raid_abt from '@/assets/icons/wow/raid_abt.jpg'
+
+// BfA raids
+import raid_uldir from '@/assets/icons/wow/raid_uldir.jpg'
+import raid_bod from '@/assets/icons/wow/raid_bod.jpg'
+import raid_cos from '@/assets/icons/wow/raid_cos.jpg'
+import raid_ep from '@/assets/icons/wow/raid_ep.jpg'
+import raid_nya from '@/assets/icons/wow/raid_nya.jpg'
+
+// Shadowlands raids
+import raid_cn from '@/assets/icons/wow/raid_cn.jpg'
+import raid_sod from '@/assets/icons/wow/raid_sod.jpg'
+import raid_sofo from '@/assets/icons/wow/raid_sofo.jpg'
+
+// Dragonflight raids
+import raid_voti from '@/assets/icons/wow/raid_voti.jpg'
+import raid_asc from '@/assets/icons/wow/raid_asc.jpg'
+import raid_adh from '@/assets/icons/wow/raid_adh.jpg'
+
+// War Within raids
+import raid_nap from '@/assets/icons/wow/raid_nap.jpg'
+import raid_lou from '@/assets/icons/wow/raid_lou.jpg'
 
 import icon_fallback from '@/assets/icons/wow/inv_misc_questionmark.jpg'
 
@@ -92,7 +166,13 @@ const CLASS_ICONS = {
   'death knight': classicon_deathknight,
   'death-knight': classicon_deathknight,
   deathknight:  classicon_deathknight,
-  dk:           classicon_deathknight
+  dk:           classicon_deathknight,
+  monk:         classicon_monk,
+  'demon hunter': classicon_demonhunter,
+  'demon-hunter': classicon_demonhunter,
+  demonhunter:  classicon_demonhunter,
+  dh:           classicon_demonhunter,
+  evoker:       classicon_evoker
 }
 
 const FACTION_ICONS = {
@@ -111,14 +191,74 @@ const ROLE_ICONS = {
 }
 
 const RAID_ICONS = {
+  // Classic
+  mc:      raid_mc,
+  ony:     raid_ony,
+  bwl:     raid_bwl,
+  zg:      raid_zg,
+  aq20:    raid_aq20,
+  aq40:    raid_aq40,
+  naxx40:  raid_naxx40,
+  // TBC
+  kara:    raid_kara,
+  gruul:   raid_gruul,
+  mag:     raid_mag,
+  ssc:     raid_ssc,
+  tk:      raid_tk,
+  hyjal:   raid_hyjal,
+  bt:      raid_bt,
+  za:      raid_za,
+  swp:     raid_swp,
+  // WotLK
   naxx:    raid_naxx,
   os:      raid_os,
   eoe:     raid_eoe,
   voa:     raid_voa,
   ulduar:  raid_ulduar,
   toc:     raid_toc,
+  ony25:   raid_ony25,
   icc:     raid_icc,
-  rs:      raid_rs
+  rs:      raid_rs,
+  // Cataclysm
+  bwd:     raid_bwd,
+  bot:     raid_bot,
+  totfw:   raid_totfw,
+  bh:      raid_bh,
+  fl:      raid_fl,
+  ds:      raid_ds,
+  // MoP
+  msv:     raid_msv,
+  hof:     raid_hof,
+  toes:    raid_toes,
+  tot:     raid_tot,
+  soo:     raid_soo,
+  // WoD
+  hm:      raid_hm,
+  brf:     raid_brf,
+  hfc:     raid_hfc,
+  // Legion
+  en:      raid_en,
+  tov:     raid_tov,
+  nh:      raid_nh,
+  tos:     raid_tos,
+  abt:     raid_abt,
+  // BfA
+  uldir:   raid_uldir,
+  bod:     raid_bod,
+  cos:     raid_cos,
+  ep:      raid_ep,
+  nya:     raid_nya,
+  // Shadowlands
+  cn:      raid_cn,
+  sod:     raid_sod,
+  sofo:    raid_sofo,
+  // Dragonflight
+  voti:    raid_voti,
+  asc:     raid_asc,
+  adh:     raid_adh,
+  // War Within
+  nap:     raid_nap,
+  lou:     raid_lou,
 }
 
 const PROFESSION_ICONS = {
@@ -152,7 +292,13 @@ const CLASS_COLORS = {
   'death knight': '#C41E3A',
   'death-knight': '#C41E3A',
   deathknight:   '#C41E3A',
-  dk:            '#C41E3A'
+  dk:            '#C41E3A',
+  monk:          '#00FF98',
+  'demon hunter': '#A330C9',
+  'demon-hunter': '#A330C9',
+  demonhunter:   '#A330C9',
+  dh:            '#A330C9',
+  evoker:        '#33937F'
 }
 
 export function useWowIcons() {
@@ -169,7 +315,7 @@ export function useWowIcons() {
   }
 
   function getRaidIcon(raidCode) {
-    return RAID_ICONS[raidCode?.toLowerCase()] ?? raid_ulduar
+    return RAID_ICONS[raidCode?.toLowerCase()] ?? icon_fallback
   }
 
   function getClassColor(className) {
