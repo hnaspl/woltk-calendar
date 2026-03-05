@@ -21,6 +21,24 @@
         </WowButton>
       </div>
 
+      <!-- Expansion filter -->
+      <div v-if="guildExpansions.length > 1" class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+          :class="!selectedExpansion ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+          @click="selectedExpansion = null"
+        >{{ t('common.labels.all') }}</button>
+        <button
+          v-for="exp in guildExpansions"
+          :key="exp.id"
+          type="button"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+          :class="selectedExpansion === exp.slug ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+          @click="selectedExpansion = exp.slug"
+        >{{ exp.name }}</button>
+      </div>
+
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
       </div>
@@ -28,11 +46,11 @@
         {{ t('raidDefinitions.noGuild') }}
       </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
-      <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
+      <div v-else-if="filteredDefinitions.length === 0" class="text-center py-12 text-text-muted">
         {{ t('raidDefinitions.noDefinitions') }}
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <WowCard v-for="def in definitions" :key="def.id">
+        <WowCard v-for="def in filteredDefinitions" :key="def.id">
           <div class="flex items-start gap-3 mb-3">
             <img :src="getRaidIcon(def.raid_type)" :alt="def.raid_type" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
             <div class="flex-1 min-w-0">
@@ -42,6 +60,7 @@
               </div>
               <div class="flex items-center gap-1.5 mt-1">
                 <RaidSizeBadge v-if="def.size" :size="def.size" />
+                <span v-if="def.expansion" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-700/40 uppercase">{{ def.expansion }}</span>
                 <RealmBadge v-if="def.realm" :realm="def.realm" />
               </div>
             </div>
@@ -228,6 +247,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useExpansionData } from '@/composables/useExpansionData'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
@@ -254,6 +274,8 @@ const showNoGuildConfirm = ref(false)
 const editing = ref(null)
 const deleteTarget = ref(null)
 const copySource = ref(null)
+const selectedExpansion = ref(null)
+const guildExpansions = ref([])
 
 const { raidTypes } = useExpansionData()
 
@@ -288,6 +310,11 @@ const allOtherGuildsSelected = computed(() =>
 const allCopyGuildsSelected = computed(() =>
   otherGuilds.value.length > 0 && otherGuilds.value.every(g => copyGuildIds.value.includes(g.id))
 )
+
+const filteredDefinitions = computed(() => {
+  if (!selectedExpansion.value) return definitions.value
+  return definitions.value.filter(d => d.expansion === selectedExpansion.value)
+})
 
 function toggleAllOtherGuilds(e) {
   selectedGuildIds.value = e.target.checked ? copyTargetGuilds.value.map(g => g.id) : []
@@ -326,11 +353,27 @@ onMounted(async () => {
     return
   }
   loadDefinitions()
+  // Load guild expansions for the filter
+  try {
+    guildExpansions.value = await guildExpansionsApi.getGuildExpansions(guildStore.currentGuild.id)
+    guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  } catch {
+    guildExpansions.value = []
+  }
 })
 
 // Reload when guild changes in sidebar
-watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
-  if (newId && newId !== oldId) loadDefinitions()
+watch(() => guildStore.currentGuild?.id, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadDefinitions()
+    selectedExpansion.value = null
+    try {
+      guildExpansions.value = await guildExpansionsApi.getGuildExpansions(newId)
+      guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    } catch {
+      guildExpansions.value = []
+    }
+  }
 })
 
 function openAddModal() {
