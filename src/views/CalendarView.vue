@@ -27,7 +27,14 @@
             @change="calStore.setFilter('raidType', $event.target.value)"
           >
             <option value="">{{ t('calendar.allRaids') }}</option>
-            <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            <template v-if="raidTypesByExpansion.length">
+              <optgroup v-for="group in raidTypesByExpansion" :key="group.expansion" :label="group.label">
+                <option v-for="r in group.types" :key="r.value" :value="r.value">{{ r.label }}</option>
+              </optgroup>
+            </template>
+            <template v-else>
+              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </template>
           </select>
         </div>
 
@@ -200,6 +207,44 @@ const raidTypes = computed(() => {
   if (guildRaidTypes.value.length) return guildRaidTypes.value
   if (constantsStore.raidTypes.length) return constantsStore.raidTypes
   return expansionRaidTypes.value
+})
+
+// Group raid types by expansion, derived from raid definitions' expansion field
+const raidTypesByExpansion = computed(() => {
+  const allTypes = raidTypes.value
+  if (!allTypes.length) return []
+  // Build raid_type code → expansion slug mapping from loaded raid definitions
+  const typeToExpansion = {}
+  for (const def of raidDefs.value) {
+    const code = def.raid_type || def.code
+    if (code && def.expansion && !typeToExpansion[code]) {
+      typeToExpansion[code] = def.expansion
+    }
+  }
+  // Group raid types by their expansion
+  const groups = {}
+  const ungrouped = []
+  for (const rt of allTypes) {
+    const exp = typeToExpansion[rt.value]
+    if (exp) {
+      if (!groups[exp]) groups[exp] = []
+      groups[exp].push(rt)
+    } else {
+      ungrouped.push(rt)
+    }
+  }
+  // If we couldn't map any types to expansions, return empty (fallback to flat list)
+  if (Object.keys(groups).length === 0) return []
+  const orderedSlugs = constantsStore.expansionSlugsDesc.length
+    ? constantsStore.expansionSlugsDesc
+    : Object.keys(groups).sort()
+  const result = orderedSlugs
+    .filter(exp => groups[exp]?.length)
+    .map(exp => ({ expansion: exp, label: constantsStore.expansionLabelMap[exp] || exp, types: groups[exp] }))
+  if (ungrouped.length) {
+    result.push({ expansion: '_other', label: t('calendar.customRaids'), types: ungrouped })
+  }
+  return result
 })
 
 const showCreateModal = ref(false)

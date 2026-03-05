@@ -50,6 +50,9 @@
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(tpl)">
                 📋 {{ t('common.buttons.copy') }}
               </WowButton>
+              <WowButton variant="secondary" class="text-xs py-1.5" @click="goToRecurring(tpl.id)">
+                🔁 {{ t('templates.createRecurringRaid') }}
+              </WowButton>
               <WowButton variant="secondary" class="text-xs py-1.5" @click="openApply(tpl)">
                 {{ t('common.buttons.apply') }}
               </WowButton>
@@ -255,6 +258,7 @@ const showDeleteConfirm = ref(false)
 const showCopyModal = ref(false)
 const showNoGuildConfirm = ref(false)
 const showRecurringPrompt = ref(false)
+const createdTemplateId = ref(null)
 const editing = ref(null)
 const applyTarget = ref(null)
 const deleteTarget = ref(null)
@@ -430,7 +434,9 @@ async function doSave() {
       const idx = templates.value.findIndex(t => t.id === editing.value.id)
       if (idx !== -1) templates.value[idx] = updated
     } else {
-      templates.value.push(await templatesApi.createTemplate(guildStore.currentGuild.id, payload))
+      const created = await templatesApi.createTemplate(guildStore.currentGuild.id, payload)
+      templates.value.push(created)
+      createdTemplateId.value = created.id
       // Also create in other selected guilds
       if (applyToOtherGuilds.value && selectedGuildIds.value.length > 0) {
         let failed = 0
@@ -465,9 +471,10 @@ async function doApply() {
   } finally { saving.value = false }
 }
 
-function goToRecurring() {
+function goToRecurring(templateId) {
   showRecurringPrompt.value = false
-  router.push('/guild/recurring-raids')
+  const id = templateId || createdTemplateId.value
+  router.push(id ? `/guild/recurring-raids?template_id=${id}` : '/guild/recurring-raids')
 }
 
 async function doDelete() {

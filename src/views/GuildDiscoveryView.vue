@@ -1,17 +1,10 @@
 <template>
   <AppShell>
-    <div class="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-3xl mx-auto">
+    <div class="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-5xl mx-auto">
       <!-- Header -->
-      <div class="flex items-center gap-3">
-        <RouterLink to="/dashboard" class="p-1.5 rounded-lg bg-bg-tertiary border border-border-default text-text-muted hover:text-accent-gold hover:border-border-gold transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </RouterLink>
-        <div class="flex-1">
-          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('guild.discoverTitle') }}</h1>
-          <p class="text-xs text-text-muted mt-0.5">{{ t('guild.discoverSubtitle') }}</p>
-        </div>
+      <div>
+        <h1 class="wow-heading text-xl sm:text-2xl">{{ t('guild.discoverTitle') }}</h1>
+        <p class="text-xs text-text-muted mt-0.5">{{ t('guild.discoverSubtitle') }}</p>
       </div>
 
       <div v-if="loading" class="py-8 text-center">
@@ -26,7 +19,7 @@
         <p class="text-sm text-text-muted">{{ t('guild.noGuildsFound') }}</p>
       </div>
 
-      <div v-else class="space-y-3">
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <WowCard v-for="g in guilds" :key="g.id">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 min-w-0">
@@ -60,7 +53,6 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'

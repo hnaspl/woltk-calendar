@@ -1,17 +1,10 @@
 <template>
   <AppShell>
-    <div class="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-3xl mx-auto">
-      <!-- Header with back button -->
-      <div class="flex items-center gap-3">
-        <RouterLink to="/tenant/settings" class="p-1.5 rounded-lg bg-bg-tertiary border border-border-default text-text-muted hover:text-accent-gold hover:border-border-gold transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </RouterLink>
-        <div>
-          <h1 class="wow-heading text-xl sm:text-2xl">{{ t('tenant.invitesTitle') }}</h1>
-          <p class="text-xs text-text-muted mt-0.5">{{ t('tenant.invitesSubtitle') }}</p>
-        </div>
+    <div class="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-5xl mx-auto">
+      <!-- Header -->
+      <div>
+        <h1 class="wow-heading text-xl sm:text-2xl">{{ t('tenant.invitesTitle') }}</h1>
+        <p class="text-xs text-text-muted mt-0.5">{{ t('tenant.invitesSubtitle') }}</p>
       </div>
 
       <!-- Create invitation -->
@@ -104,7 +97,6 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
