@@ -245,18 +245,19 @@ onUnmounted(() => {
   stopGuildWatch()
 })
 
+function loadRaidDefsForGuild(guildId) {
+  raidDefsApi.getRaidDefinitions(guildId).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+  guildExpansionsApi.getGuildExpansions(guildId).then(res => {
+    const exps = res?.expansions ?? res ?? []
+    guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
+  }).catch(() => { guildExpansionSlugs.value = [] })
+}
+
 function openCreateModal() {
   Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', duration_minutes: 180, difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
-  if (eventForm.guild_id) {
-    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
-    // Load guild's enabled expansions for filtering
-    guildExpansionsApi.getGuildExpansions(eventForm.guild_id).then(res => {
-      const exps = res?.expansions ?? res ?? []
-      guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
-    }).catch(() => { guildExpansionSlugs.value = [] })
-  }
+  if (eventForm.guild_id) loadRaidDefsForGuild(eventForm.guild_id)
 }
 
 function onGuildSelectChange() {
@@ -264,12 +265,7 @@ function onGuildSelectChange() {
   if (selected) eventForm.realm_name = selected.realm_name
   eventForm.raid_definition_id = ''
   if (eventForm.guild_id) {
-    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
-    // Load guild's enabled expansions for filtering
-    guildExpansionsApi.getGuildExpansions(eventForm.guild_id).then(res => {
-      const exps = res?.expansions ?? res ?? []
-      guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
-    }).catch(() => { guildExpansionSlugs.value = [] })
+    loadRaidDefsForGuild(eventForm.guild_id)
   } else {
     raidDefs.value = []
     guildExpansionSlugs.value = []

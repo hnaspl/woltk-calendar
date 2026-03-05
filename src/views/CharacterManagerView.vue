@@ -591,9 +591,7 @@ async function lookupFromArmory() {
       classLocked.value = true
       // Auto-populate default role from classRoles
       const allowed = classRoles.value[data.class_name] ?? []
-      if (allowed.length === 1) {
-        form.role = allowed[0]
-      } else if (allowed.length > 0 && !form.role) {
+      if (allowed.length > 0) {
         form.role = allowed[0]
       }
     }
