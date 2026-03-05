@@ -47,6 +47,7 @@
             :gold="char.is_main"
             class="relative"
           >
+            <div class="flex flex-col h-full">
             <!-- Main badge -->
             <span
               v-if="char.is_main"
@@ -70,22 +71,24 @@
               </div>
             </CharacterTooltip>
 
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              <ClassBadge :class-name="char.class" />
-              <RoleBadge v-if="char.role" :role="char.role" />
-              <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
-              <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
+            <div class="flex-1">
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <ClassBadge :class-name="char.class" />
+                <RoleBadge v-if="char.role" :role="char.role" />
+                <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
+                <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
+              </div>
+              <!-- Synced metadata -->
+              <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
+                {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
+              </div>
+              <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
+                Synced {{ tzHelper.formatGuildDate(char.metadata.last_synced) }}
+              </div>
+              <div v-else class="mb-3"></div>
             </div>
-            <!-- Synced metadata -->
-            <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
-              {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
-            </div>
-            <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
-              Synced {{ tzHelper.formatGuildDate(char.metadata.last_synced) }}
-            </div>
-            <div v-else class="mb-3"></div>
 
-            <div class="flex flex-wrap gap-1.5 sm:gap-2">
+            <div class="flex flex-wrap gap-1.5 sm:gap-2 mt-auto">
               <WowButton
                 v-if="!char.is_main"
                 variant="secondary"
@@ -108,6 +111,7 @@
                 class="text-xs py-1.5 px-3"
                 @click="confirmRemove(char)"
               >✕</WowButton>
+            </div>
             </div>
           </WowCard>
         </div>

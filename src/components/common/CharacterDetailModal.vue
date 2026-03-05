@@ -330,6 +330,7 @@ function slotIconClasses(item) {
 }
 
 function itemQualityText(item) {
+  if (item.quality == null) return ''
   return getItemQualityText(item)
 }
 
@@ -344,7 +345,8 @@ const QUALITY_HEX = {
   6: '#e6cc80', // Artifact (gold)
 }
 function itemQualityStyle(item) {
-  const q = item.quality ?? (item.item ? 3 : 1)
+  const q = item.quality
+  if (q == null) return {}
   const hex = QUALITY_HEX[q]
   return hex ? { color: hex } : {}
 }

@@ -23,6 +23,23 @@
               </select>
             </div>
             <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
+              <select v-model.number="form.expansion_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onExpansionChange">
+                <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
+              </select>
+              <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
+              <div v-if="form.expansion_id && includedExpansions.length" class="mt-2 flex flex-wrap gap-1">
+                <span v-for="exp in includedExpansions" :key="exp.id"
+                  class="px-2 py-0.5 rounded text-xs font-medium bg-green-900/30 text-green-300 border border-green-700/50">
+                  ✓ {{ exp.name }}
+                </span>
+              </div>
+              <div v-if="expansionSaving" class="mt-2 text-xs text-text-muted flex items-center gap-1">
+                <div class="w-3 h-3 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+                {{ t('common.labels.saving') }}
+              </div>
+            </div>
+            <div>
               <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
               <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
             </div>
@@ -223,14 +240,20 @@ import { useAuthStore } from '@/stores/auth'
 import * as guildsApi from '@/api/guilds'
 import * as armoryLookupApi from '@/api/armory_lookup'
 import * as guildRealmsApi from '@/api/guild_realms'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import api from '@/api'
 import { useI18n } from 'vue-i18n'
+import { useExpansionStore } from '@/stores/expansion'
+import { useConstantsStore } from '@/stores/constants'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const authStore = useAuthStore()
+const expansionStore = useExpansionStore()
+const constantsStore = useConstantsStore()
 const { t } = useI18n()
+const expansionSaving = ref(false)
 
 const loading = ref(true)
 const saving = ref(false)
@@ -241,7 +264,7 @@ const showKickConfirm = ref(false)
 const kickTarget = ref(null)
 const allRoles = ref([])
 
-const form = reactive({ name: '', realm: '', description: '' })
+const form = reactive({ name: '', realm: '', description: '', expansion_id: null })
 const guildRealmNames = ref([])
 
 async function fetchRoles() {
@@ -251,6 +274,20 @@ async function fetchRoles() {
     allRoles.value = []
   }
 }
+
+const sortedExpansions = computed(() => {
+  const exps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
+  return [...exps].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
+})
+
+const includedExpansions = computed(() => {
+  const selected = sortedExpansions.value.find(e => e.id === form.expansion_id)
+  if (!selected) return []
+  const allExps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
+  return [...allExps]
+    .filter(e => (e.sort_order ?? 0) <= (selected.sort_order ?? 0))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+})
 
 /** Roles the current user is allowed to grant, based on the roles API can_grant list */
 const grantableRoles = computed(() => {
@@ -288,6 +325,28 @@ async function loadGuildData() {
         loadGuildRealmNames(g.id),
       ])
       members.value = guildStore.members
+
+      // Load current guild expansion
+      try {
+        if (expansionStore.expansions.length === 0 && constantsStore.expansions.length === 0) {
+          await expansionStore.fetchExpansions(true)
+        }
+        const expData = await guildExpansionsApi.getGuildExpansions(g.id)
+        const enabledExps = (expData.expansions || [])
+        if (enabledExps.length > 0) {
+          const allExps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
+          let highestEnabled = null
+          for (const ge of enabledExps) {
+            const full = allExps.find(e => e.id === ge.expansion_id)
+            if (full && (!highestEnabled || (full.sort_order ?? 0) > (highestEnabled.sort_order ?? 0))) {
+              highestEnabled = full
+            }
+          }
+          if (highestEnabled) form.expansion_id = highestEnabled.id
+        } else if (sortedExpansions.value.length) {
+          form.expansion_id = sortedExpansions.value[0].id
+        }
+      } catch { /* ignore */ }
     }
   } catch {
     error.value = t('guildSettings.failedToLoad')
@@ -302,6 +361,45 @@ async function loadGuildRealmNames(guildId) {
     guildRealmNames.value = (data.realms || []).map(r => r.name)
   } catch {
     guildRealmNames.value = []
+  }
+}
+
+async function onExpansionChange() {
+  const guildId = guildStore.currentGuildId
+  if (!guildId || !form.expansion_id) return
+
+  expansionSaving.value = true
+  try {
+    const expData = await guildExpansionsApi.getGuildExpansions(guildId)
+    const currentEnabled = new Set((expData.expansions || []).map(e => e.expansion_id))
+
+    const selected = sortedExpansions.value.find(e => e.id === form.expansion_id)
+    if (!selected) return
+
+    const allExps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
+    const shouldBeEnabled = new Set(
+      allExps
+        .filter(e => (e.sort_order ?? 0) <= (selected.sort_order ?? 0))
+        .map(e => e.id)
+    )
+
+    for (const id of shouldBeEnabled) {
+      if (!currentEnabled.has(id)) {
+        await guildExpansionsApi.enableExpansion(guildId, id)
+      }
+    }
+
+    for (const id of currentEnabled) {
+      if (!shouldBeEnabled.has(id)) {
+        await guildExpansionsApi.disableExpansion(guildId, id)
+      }
+    }
+
+    uiStore.showToast(t('guild.expansions.expansionUpdated'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToUpdate'), 'error')
+  } finally {
+    expansionSaving.value = false
   }
 }
 
