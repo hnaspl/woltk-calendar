@@ -298,5 +298,10 @@ def get_or_create_discord_user(discord_info: dict) -> User:
         auth_provider="discord",
     )
     db.session.add(user)
-    db.session.commit()
+    db.session.flush()  # get user.id before creating tenant
+
+    # Auto-create tenant workspace for the new Discord user
+    from app.services import tenant_service
+    tenant_service.create_tenant(owner=user)
+
     return user

@@ -41,6 +41,13 @@ def seed_admin_user(
     ).scalars().first()
 
     if existing is not None:
+        # Ensure existing admin has a tenant workspace
+        if existing.active_tenant_id is None:
+            try:
+                tenant_service.create_tenant(owner=existing)
+                logger.info("Created missing tenant for existing admin user '%s'.", existing.username)
+            except ValueError:
+                pass  # already owns a tenant (race condition guard)
         return False
 
     if not password:

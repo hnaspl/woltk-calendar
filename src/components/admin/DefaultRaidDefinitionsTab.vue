@@ -91,7 +91,7 @@
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.raidType') }}</label>
             <select v-model="form.raid_type" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option value="">{{ t('common.fields.select') }}</option>
-              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+              <option v-for="r in allRaidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
         </div>
@@ -102,11 +102,22 @@
               <option value="">{{ t('common.fields.select') }}</option>
               <option :value="10">{{ t('calendar.tenMan') }}</option>
               <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+              <option :value="40">40-man</option>
+              <option :value="20">20-man</option>
             </select>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.defaultDuration') }}</label>
             <input v-model.number="form.default_duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Expansion</label>
+            <select v-model="form.expansion" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">{{ t('common.fields.select') }}</option>
+              <option v-for="exp in expansions" :key="exp.slug" :value="exp.slug">{{ exp.name }}</option>
+            </select>
           </div>
         </div>
         <div>
@@ -190,6 +201,23 @@ const expansions = computed(() => {
   return [...constantsStore.expansions].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 })
 
+/** Build raid type options from existing definitions so all expansions are covered */
+const allRaidTypes = computed(() => {
+  const seen = new Map()
+  // Include expansion store raid types first
+  for (const r of raidTypes.value) {
+    seen.set(r.value, r.label)
+  }
+  // Add any types from loaded definitions not already present
+  for (const d of definitions.value) {
+    const code = d.raid_type || d.code
+    if (code && !seen.has(code)) {
+      seen.set(code, d.name)
+    }
+  }
+  return Array.from(seen.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
+})
+
 const filteredDefinitions = computed(() => {
   if (!selectedExpansion.value) return definitions.value
   return definitions.value.filter(d => d.expansion === selectedExpansion.value)
@@ -206,7 +234,7 @@ function defaultForm() {
   const slotDefaults = Object.fromEntries(
     ROLE_VALUES.map(r => [`${r}_slots`, DEFAULT_ROLE_SLOT_COUNTS[r]])
   )
-  return { name: '', raid_type: '', size: '', default_duration_minutes: 180, ...slotDefaults }
+  return { name: '', raid_type: '', size: '', expansion: '', default_duration_minutes: 180, ...slotDefaults }
 }
 
 async function loadDefinitions() {
@@ -238,6 +266,7 @@ function openEditModal(d) {
     name: d.name,
     raid_type: d.raid_type || d.code || '',
     size: d.size || d.default_raid_size,
+    expansion: d.expansion || '',
     default_duration_minutes: d.default_duration_minutes ?? 180,
     ...slotValues,
   }

@@ -383,16 +383,6 @@ def _register_commands(app: Flask) -> None:
         db.create_all()
         click.echo("Created all tables.")
 
-        from app.seeds.raid_definitions import seed_raid_definitions
-        inserted = seed_raid_definitions()
-        click.echo(f"Seeded {inserted} raid definition(s).")
-
-        from app.seeds.admin_user import seed_admin_user
-        if seed_admin_user():
-            click.echo("Created default admin user.")
-        else:
-            click.echo("Admin user already exists, skipped.")
-
         from app.seeds.permissions import seed_permissions
         perm_count = seed_permissions()
         click.echo(f"Seeded {perm_count} role(s) with permissions.")
@@ -412,6 +402,17 @@ def _register_commands(app: Flask) -> None:
         from app.seeds.platform_features import seed_platform_features
         feat_count = seed_platform_features()
         click.echo(f"Seeded {feat_count} platform feature(s).")
+
+        from app.seeds.raid_definitions import seed_raid_definitions
+        inserted = seed_raid_definitions()
+        click.echo(f"Seeded {inserted} raid definition(s).")
+
+        # Admin user seeded AFTER plans so tenant gets proper billing plan
+        from app.seeds.admin_user import seed_admin_user
+        if seed_admin_user():
+            click.echo("Created default admin user.")
+        else:
+            click.echo("Admin user already exists, skipped.")
 
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")

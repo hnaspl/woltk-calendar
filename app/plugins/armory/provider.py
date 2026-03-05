@@ -215,34 +215,59 @@ class GenericArmoryProvider(ArmoryProvider):
         return realms
 
     def fetch_character(self, realm: str, name: str) -> Optional[dict]:
-        """Fetch character summary from the armory API.
+        """Fetch character data from the armory API.
+
+        Tries multiple URL patterns used by common private-server armories:
+        - ``/character/{name}/{realm}/summary`` — Warmane-style summary
+        - ``/character/{name}/{realm}/profile`` — Warmane-style profile
+        - ``/character/{name}/{realm}`` — simplified variant
+        - ``/api/character/{name}/{realm}`` — nested API variant
 
         Returns full character data or None if not found / API error.
-        Retries up to _MAX_RETRIES times on transient failures.
         """
         if not self._api_base_url:
             logger.warning("No armory URL configured — cannot fetch character %s/%s", realm, name)
             return None
-        url = f"{self._api_base_url}/character/{quote(name, safe='')}/{quote(realm, safe='')}/summary"
-        for attempt in range(_MAX_RETRIES):
-            try:
-                resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
-                if resp.status_code != 200:
-                    logger.warning("Armory API returned %s for %s/%s (attempt %d)", resp.status_code, realm, name, attempt + 1)
+
+        base = self._api_base_url.rstrip("/")
+        enc_name = quote(name, safe="")
+        enc_realm = quote(realm, safe="")
+
+        url_patterns = [
+            f"{base}/character/{enc_name}/{enc_realm}/summary",
+            f"{base}/character/{enc_name}/{enc_realm}/profile",
+            f"{base}/character/{enc_name}/{enc_realm}",
+            f"{base}/api/character/{enc_name}/{enc_realm}",
+        ]
+
+        for url in url_patterns:
+            for attempt in range(_MAX_RETRIES):
+                try:
+                    resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
+                    if resp.status_code == 404:
+                        break  # Not found on this pattern, try next
+                    if resp.status_code != 200:
+                        if attempt < _MAX_RETRIES - 1:
+                            time.sleep(_RETRY_DELAY)
+                            continue
+                        break
+                    content_type = resp.headers.get("content-type", "")
+                    if "json" not in content_type and "javascript" not in content_type:
+                        break  # HTML response (Cloudflare etc.), skip
+                    data = resp.json()
+                    if "error" in data:
+                        break
+                    # Valid character data — must have at least a name or class
+                    if data.get("name") or data.get("class"):
+                        return data
+                    break
+                except (requests.RequestException, ValueError) as exc:
+                    logger.debug("Armory fetch character %s/%s from %s: %s (attempt %d)",
+                                 realm, name, url, exc, attempt + 1)
                     if attempt < _MAX_RETRIES - 1:
                         time.sleep(_RETRY_DELAY)
                         continue
-                    return None
-                data = resp.json()
-                if "error" in data:
-                    return None
-                return data
-            except (requests.RequestException, ValueError) as exc:
-                logger.warning("Armory API error for character %s/%s: %s (attempt %d)", realm, name, exc, attempt + 1)
-                if attempt < _MAX_RETRIES - 1:
-                    time.sleep(_RETRY_DELAY)
-                    continue
-                return None
+                    break
         return None
 
     def fetch_guild(self, realm: str, guild_name: str) -> Optional[dict]:
@@ -328,9 +353,10 @@ class GenericArmoryProvider(ArmoryProvider):
         """Build a user-facing armory URL for a character.
 
         Derives the web URL from the configured API base, so it works
-        for ANY server.
+        for ANY server.  Uses ``/profile`` suffix which is the most
+        common pattern (Warmane, AzerothCore frontends, etc.).
         """
         if not self._api_base_url:
             return ""
         web_base = _derive_web_base(self._api_base_url)
-        return f"{web_base}/character/{name}/{realm}/summary"
+        return f"{web_base}/character/{name}/{realm}/profile"

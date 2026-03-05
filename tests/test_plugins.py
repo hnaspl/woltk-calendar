@@ -297,4 +297,4 @@ class TestGenericArmoryProvider:
         """build_armory_url derives web URL from API base."""
         provider = GenericArmoryProvider(api_base_url="http://armory.myserver.com/api")
         url = provider.build_armory_url("Realm1", "TestChar")
-        assert url == "https://armory.myserver.com/character/TestChar/Realm1/summary"
+        assert url == "https://armory.myserver.com/character/TestChar/Realm1/profile"
