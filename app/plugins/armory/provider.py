@@ -111,6 +111,13 @@ class GenericArmoryProvider(ArmoryProvider):
     Accepts ``api_base_url`` so each guild can point at its own server.
     Class/spec validation is NOT done here — it uses the guild's
     expansion data from the database.
+
+    Automatically derives URL variants to handle common armory setups:
+
+    - Many servers (e.g. Warmane) serve their API at ``http://host/api``
+      while the HTTPS web frontend is behind Cloudflare.
+    - The provider tries both the user-supplied URL and derived variants
+      (HTTP fallback, ``/api`` suffix) to find the working endpoint.
     """
 
     def __init__(self, api_base_url: str | None = None) -> None:
@@ -127,6 +134,49 @@ class GenericArmoryProvider(ArmoryProvider):
     def api_base_url(self) -> str:
         return self._api_base_url
 
+    def _derive_base_urls(self) -> list[str]:
+        """Derive URL base variants to try for armory API requests.
+
+        Many WoW private-server armories (notably Warmane) serve their
+        JSON API over plain HTTP at a ``/api`` path while the HTTPS web
+        frontend is behind Cloudflare or similar WAF that blocks
+        automated requests.
+
+        Given a user-supplied URL like ``https://armory.warmane.com/``,
+        this generates (in order):
+
+        1. ``https://armory.warmane.com``      — as provided
+        2. ``https://armory.warmane.com/api``   — with /api suffix
+        3. ``http://armory.warmane.com``        — HTTP fallback
+        4. ``http://armory.warmane.com/api``    — HTTP + /api
+
+        If the URL already ends with ``/api``, the non-api variant is
+        tried first, then the original.
+        """
+        if not self._api_base_url:
+            return []
+
+        base = self._api_base_url.rstrip("/")
+        bases = [base]
+
+        # Add /api variant if not already present
+        if not base.endswith("/api"):
+            bases.append(f"{base}/api")
+        else:
+            # If URL already has /api, also try without
+            bases.insert(0, base[:-4])
+
+        # Add HTTP fallback for each HTTPS base
+        http_bases = []
+        for b in list(bases):
+            if b.startswith("https://"):
+                http_variant = "http://" + b[8:]
+                if http_variant not in bases:
+                    http_bases.append(http_variant)
+        bases.extend(http_bases)
+
+        return bases
+
     def fetch_realms(self) -> list[str]:
         """Attempt to discover realms from the armory API.
 
@@ -141,20 +191,32 @@ class GenericArmoryProvider(ArmoryProvider):
         - ``/api/server/status`` — nested server status
         - ``/status`` — simple status endpoints
 
+        Also tries HTTP fallback and ``/api`` suffix variants of the
+        configured base URL to handle Cloudflare-protected armories.
+
         Returns realm names or an empty list if discovery fails.
         """
-        if not self._api_base_url:
+        bases = self._derive_base_urls()
+        if not bases:
             return []
 
-        base = self._api_base_url.rstrip("/")
-        endpoints = [
-            f"{base}/realms",
-            f"{base}/realm/list",
-            f"{base}/server/status",
-            f"{base}/api/realms",
-            f"{base}/api/server/status",
-            f"{base}/status",
+        suffixes = [
+            "/realms",
+            "/realm/list",
+            "/server/status",
+            "/status",
         ]
+
+        # Build a unique list of endpoints from all base+suffix combos
+        seen: set[str] = set()
+        endpoints: list[str] = []
+        for base in bases:
+            for suffix in suffixes:
+                url = f"{base}{suffix}"
+                if url not in seen:
+                    seen.add(url)
+                    endpoints.append(url)
+
         for url in endpoints:
             try:
                 resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=_HEADERS)
@@ -221,24 +283,35 @@ class GenericArmoryProvider(ArmoryProvider):
         - ``/character/{name}/{realm}/summary`` — Warmane-style summary
         - ``/character/{name}/{realm}/profile`` — Warmane-style profile
         - ``/character/{name}/{realm}`` — simplified variant
-        - ``/api/character/{name}/{realm}`` — nested API variant
+
+        Also tries HTTP fallback and ``/api`` suffix variants of the
+        configured base URL to handle Cloudflare-protected armories.
 
         Returns full character data or None if not found / API error.
         """
-        if not self._api_base_url:
+        bases = self._derive_base_urls()
+        if not bases:
             logger.warning("No armory URL configured — cannot fetch character %s/%s", realm, name)
             return None
 
-        base = self._api_base_url.rstrip("/")
         enc_name = quote(name, safe="")
         enc_realm = quote(realm, safe="")
 
-        url_patterns = [
-            f"{base}/character/{enc_name}/{enc_realm}/summary",
-            f"{base}/character/{enc_name}/{enc_realm}/profile",
-            f"{base}/character/{enc_name}/{enc_realm}",
-            f"{base}/api/character/{enc_name}/{enc_realm}",
+        suffixes = [
+            f"/character/{enc_name}/{enc_realm}/summary",
+            f"/character/{enc_name}/{enc_realm}/profile",
+            f"/character/{enc_name}/{enc_realm}",
         ]
+
+        # Build unique URL list from all base+suffix combos
+        seen: set[str] = set()
+        url_patterns: list[str] = []
+        for base in bases:
+            for suffix in suffixes:
+                url = f"{base}{suffix}"
+                if url not in seen:
+                    seen.add(url)
+                    url_patterns.append(url)
 
         for url in url_patterns:
             for attempt in range(_MAX_RETRIES):
@@ -274,27 +347,38 @@ class GenericArmoryProvider(ArmoryProvider):
         """Fetch guild summary + roster from the armory API.
 
         Tries multiple URL patterns used by common private-server armories:
-        - ``/guild/{name}/{realm}/summary`` — Warmane-style
+        - ``/guild/{name}/{realm}/summary`` — common summary endpoint
         - ``/guild/{name}/{realm}`` — simplified variant
-        - ``/api/guild/{name}/{realm}`` — nested API variant
         - ``/guild/{realm}/{name}`` — reversed order (some emulators)
+
+        Also tries HTTP fallback and ``/api`` suffix variants of the
+        configured base URL to handle Cloudflare-protected armories.
 
         Returns a dict with guild data or None if not found / API error.
         """
-        if not self._api_base_url:
+        bases = self._derive_base_urls()
+        if not bases:
             logger.warning("No armory URL configured — cannot fetch guild %s/%s", realm, guild_name)
             return None
 
-        base = self._api_base_url.rstrip("/")
         enc_name = quote(guild_name, safe="")
         enc_realm = quote(realm, safe="")
 
-        url_patterns = [
-            f"{base}/guild/{enc_name}/{enc_realm}/summary",
-            f"{base}/guild/{enc_name}/{enc_realm}",
-            f"{base}/api/guild/{enc_name}/{enc_realm}",
-            f"{base}/guild/{enc_realm}/{enc_name}",
+        suffixes = [
+            f"/guild/{enc_name}/{enc_realm}/summary",
+            f"/guild/{enc_name}/{enc_realm}",
+            f"/guild/{enc_realm}/{enc_name}",
         ]
+
+        # Build unique URL list from all base+suffix combos
+        seen: set[str] = set()
+        url_patterns: list[str] = []
+        for base in bases:
+            for suffix in suffixes:
+                url = f"{base}{suffix}"
+                if url not in seen:
+                    seen.add(url)
+                    url_patterns.append(url)
 
         for url in url_patterns:
             for attempt in range(_MAX_RETRIES):
