@@ -586,6 +586,7 @@ def get_armory_roster(guild_id: int):
     data = armory_service.fetch_guild(
         guild.realm_name, guild.name,
         provider_name=guild.armory_provider,
+        api_base_url=guild.armory_url,
     )
     if data is None:
         return jsonify({"error": _t("api.guilds.rosterFetchFailed")}), 502
@@ -594,6 +595,7 @@ def get_armory_roster(guild_id: int):
         armory_service.build_character_dict(
             m, guild.realm_name,
             provider_name=guild.armory_provider,
+            api_base_url=guild.armory_url,
         )
         for m in data.get("roster", [])
     ]

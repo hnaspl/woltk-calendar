@@ -4,11 +4,15 @@
  */
 import api from './index'
 
-export const lookupCharacter = (realm, name) =>
-  api.get(`/armory-lookup/character/${encodeURIComponent(realm)}/${encodeURIComponent(name)}`)
+export const lookupCharacter = (realm, name, guildId = null) => {
+  const params = guildId ? { guild_id: guildId } : {}
+  return api.get(`/armory-lookup/character/${encodeURIComponent(realm)}/${encodeURIComponent(name)}`, { params })
+}
 
-export const lookupGuild = (realm, guildName) =>
-  api.get(`/armory-lookup/guild/${encodeURIComponent(realm)}/${encodeURIComponent(guildName)}`)
+export const lookupGuild = (realm, guildName, guildId = null) => {
+  const params = guildId ? { guild_id: guildId } : {}
+  return api.get(`/armory-lookup/guild/${encodeURIComponent(realm)}/${encodeURIComponent(guildName)}`, { params })
+}
 
 export const syncCharacter = (characterId) =>
   api.post('/armory-lookup/sync-character', { character_id: characterId })

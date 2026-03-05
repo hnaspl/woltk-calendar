@@ -581,7 +581,7 @@ async function lookupFromArmory() {
   lookupResult.value = null
   formError.value = null
   try {
-    const data = await armoryLookupApi.lookupCharacter(form.realm, form.name)
+    const data = await armoryLookupApi.lookupCharacter(form.realm, form.name, guildStore.currentGuildId)
     if (data?.class_name) {
       form.class = data.class_name
       // Auto-populate default role from classRoles

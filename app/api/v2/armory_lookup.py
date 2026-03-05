@@ -31,14 +31,29 @@ ROSTER_PREVIEW_LIMIT = 5
 def lookup_character(realm: str, name: str):
     """Look up a character on the armory.
 
+    Accepts optional ``guild_id`` query parameter to use the guild's
+    configured armory URL.  Falls back to ``armory_url`` query parameter.
+
     Returns full character data: class, level, race, equipment, talents,
     professions, achievement points.
     """
-    data = armory_service.fetch_character(realm, name)
+    from flask import request
+    from app.models.guild import Guild
+
+    api_base_url = None
+    guild_id = request.args.get("guild_id", type=int)
+    if guild_id:
+        guild = db.session.get(Guild, guild_id)
+        if guild and guild.armory_url:
+            api_base_url = guild.armory_url
+    if not api_base_url:
+        api_base_url = request.args.get("armory_url")
+
+    data = armory_service.fetch_character(realm, name, api_base_url=api_base_url)
     if data is None:
         return jsonify({"error": _t("armory.characterNotFound")}), 404
 
-    return jsonify(armory_service.build_character_dict(data, realm)), 200
+    return jsonify(armory_service.build_character_dict(data, realm, api_base_url=api_base_url)), 200
 
 
 @bp.get("/guild/<realm>/<guild_name>")
@@ -46,15 +61,31 @@ def lookup_character(realm: str, name: str):
 def lookup_guild(realm: str, guild_name: str):
     """Look up a guild roster on the armory.
 
+    Accepts optional ``guild_id`` query parameter to use the guild's
+    configured armory URL.  Falls back to ``armory_url`` query parameter.
+
     Returns guild info and roster with class, level, race, achievement
     points, and professions for each member.
     """
-    data = armory_service.fetch_guild(realm, guild_name)
+    from flask import request
+    from app.models.guild import Guild
+
+    api_base_url = None
+    guild_id = request.args.get("guild_id", type=int)
+    if guild_id:
+        guild = db.session.get(Guild, guild_id)
+        if guild and guild.armory_url:
+            api_base_url = guild.armory_url
+    if not api_base_url:
+        api_base_url = request.args.get("armory_url")
+
+    data = armory_service.fetch_guild(realm, guild_name, api_base_url=api_base_url)
     if data is None:
         return jsonify({"error": _t("armory.guildNotFound")}), 404
 
+    provider = armory_service._get(api_base_url=api_base_url)
     roster = [
-        armory_service.build_character_dict(m, realm)
+        provider.build_character_dict(m, realm)
         for m in data.get("roster", [])
     ]
 
@@ -208,11 +239,19 @@ def sync_character():
     if char.user_id != current_user.id:
         return jsonify({"error": _t("common.errors.forbidden")}), 403
 
-    data = armory_service.fetch_character(char.realm_name, char.name)
+    # Resolve armory URL from the character's guild
+    api_base_url = None
+    if char.guild_id:
+        from app.models.guild import Guild
+        guild = db.session.get(Guild, char.guild_id)
+        if guild and guild.armory_url:
+            api_base_url = guild.armory_url
+
+    data = armory_service.fetch_character(char.realm_name, char.name, api_base_url=api_base_url)
     if data is None or (isinstance(data, dict) and "error" in data):
         return jsonify({"error": _t("armory.fetchFailed")}), 404
 
-    char_data = armory_service.build_character_dict(data, char.realm_name)
+    char_data = armory_service.build_character_dict(data, char.realm_name, api_base_url=api_base_url)
 
     # Update core fields if valid
     updates = {"armory_url": char_data["armory_url"]}
