@@ -610,6 +610,29 @@ class TestAdminCredentials:
             if old is not None:
                 os.environ["ADMIN_PASSWORD"] = old
 
+    def test_seed_creates_tenant_for_existing_admin_without_one(self, ctx):
+        """Re-seeding ensures existing admin gets a tenant if missing."""
+        from app.seeds.admin_user import seed_admin_user
+        from app.models.tenant import Tenant
+        # Create admin first
+        assert seed_admin_user(password="testpass123") is True
+        admin = _db.session.execute(
+            _db.select(User).where(User.username == "admin")
+        ).scalar_one()
+        assert admin.active_tenant_id is not None
+
+        # Simulate admin without tenant (as if created before tenant code)
+        old_tenant_id = admin.active_tenant_id
+        tenant = _db.session.get(Tenant, old_tenant_id)
+        admin.active_tenant_id = None
+        _db.session.delete(tenant)
+        _db.session.commit()
+        assert admin.active_tenant_id is None
+
+        # Re-seed should create tenant
+        assert seed_admin_user(password="testpass123") is False  # user already exists
+        assert admin.active_tenant_id is not None
+
 
 # ---------------------------------------------------------------------------
 # Auth edge cases

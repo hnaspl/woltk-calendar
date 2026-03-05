@@ -368,6 +368,32 @@ def _seed_permissions_if_empty(app: Flask) -> None:
     except Exception as exc:
         app.logger.warning("Failed to seed expansions: %s", exc)
 
+    # Seed platform features if missing
+    try:
+        from app.models.tenant_feature import PlatformFeature
+        pf_count = db.session.execute(
+            sa.select(sa.func.count()).select_from(PlatformFeature)
+        ).scalar()
+        if pf_count == 0:
+            from app.seeds.platform_features import seed_platform_features
+            pf_created = seed_platform_features()
+            app.logger.info("Seeded %d platform feature(s).", pf_created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed platform features: %s", exc)
+
+    # Seed billing plans if missing
+    try:
+        from app.models.plan import Plan
+        plan_count = db.session.execute(
+            sa.select(sa.func.count()).select_from(Plan)
+        ).scalar()
+        if plan_count == 0:
+            from app.seeds.plans import seed_plans
+            plans_created = seed_plans()
+            app.logger.info("Seeded %d plan(s).", plans_created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed plans: %s", exc)
+
 
 def _register_commands(app: Flask) -> None:
     import click

@@ -298,3 +298,53 @@ class TestGenericArmoryProvider:
         provider = GenericArmoryProvider(api_base_url="http://armory.myserver.com/api")
         url = provider.build_armory_url("Realm1", "TestChar")
         assert url == "https://armory.myserver.com/character/TestChar/Realm1/profile"
+
+    def test_provider_fetch_character_tries_multiple_patterns(self):
+        """fetch_character should try multiple URL patterns."""
+        from unittest.mock import patch, MagicMock
+        provider = GenericArmoryProvider(api_base_url="http://armory.test.com")
+
+        # Mock requests.get to return 404 for /summary but 200 for /profile
+        def mock_get(url, **kwargs):
+            resp = MagicMock()
+            if "/summary" in url:
+                resp.status_code = 404
+                return resp
+            if "/profile" in url:
+                resp.status_code = 200
+                resp.headers = {"content-type": "application/json"}
+                resp.json.return_value = {"name": "TestChar", "class": "Warrior", "level": 80}
+                return resp
+            resp.status_code = 404
+            return resp
+
+        with patch("app.plugins.armory.provider.requests.get", side_effect=mock_get):
+            result = provider.fetch_character("TestRealm", "TestChar")
+            assert result is not None
+            assert result["name"] == "TestChar"
+
+    def test_provider_fetch_character_no_url(self):
+        """fetch_character returns None when no URL configured."""
+        provider = GenericArmoryProvider()
+        result = provider.fetch_character("Realm", "Char")
+        assert result is None
+
+    def test_provider_fetch_character_summary_pattern(self):
+        """fetch_character uses /summary as first pattern."""
+        from unittest.mock import patch, MagicMock
+        provider = GenericArmoryProvider(api_base_url="http://armory.test.com")
+
+        def mock_get(url, **kwargs):
+            resp = MagicMock()
+            if "/summary" in url:
+                resp.status_code = 200
+                resp.headers = {"content-type": "application/json"}
+                resp.json.return_value = {"name": "Char1", "class": "Mage"}
+                return resp
+            resp.status_code = 404
+            return resp
+
+        with patch("app.plugins.armory.provider.requests.get", side_effect=mock_get):
+            result = provider.fetch_character("Realm", "Char1")
+            assert result is not None
+            assert result["class"] == "Mage"

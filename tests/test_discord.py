@@ -855,3 +855,52 @@ class TestDiscordEnabledRobust:
                 assert result is not None
                 call_data = mock_post.call_args.kwargs.get("data", {})
                 assert call_data["redirect_uri"] == "http://custom:5000/api/v2/auth/discord/callback"
+
+
+# ---------------------------------------------------------------------------
+# Discord user workspace auto-creation
+# ---------------------------------------------------------------------------
+
+class TestDiscordWorkspaceCreation:
+    """get_or_create_discord_user should auto-create a tenant workspace
+    for new Discord users, just like regular registration does."""
+
+    def test_new_discord_user_gets_workspace(self, app, db):
+        """New Discord user should have a tenant workspace created."""
+        with app.app_context():
+            from app.services.discord_service import get_or_create_discord_user
+            from app.models.tenant import Tenant
+
+            user = get_or_create_discord_user({
+                "id": "111222333",
+                "username": "newdiscorduser",
+                "email": "new@discord.test",
+            })
+            assert user is not None
+            assert user.active_tenant_id is not None
+
+            tenant = db.session.get(Tenant, user.active_tenant_id)
+            assert tenant is not None
+            assert tenant.owner_id == user.id
+
+    def test_returning_discord_user_keeps_workspace(self, app, db):
+        """Returning Discord user keeps their existing workspace."""
+        with app.app_context():
+            from app.services.discord_service import get_or_create_discord_user
+            from app.models.tenant import Tenant
+
+            user1 = get_or_create_discord_user({
+                "id": "444555666",
+                "username": "returning",
+                "email": "ret@discord.test",
+            })
+            tenant_id = user1.active_tenant_id
+            assert tenant_id is not None
+
+            # Log in again
+            user2 = get_or_create_discord_user({
+                "id": "444555666",
+                "username": "returning",
+            })
+            assert user2.id == user1.id
+            assert user2.active_tenant_id == tenant_id
