@@ -193,16 +193,20 @@ const { raidTypes: expansionRaidTypes } = useExpansionData()
 // Guild-specific raidTypes — loaded from guild constants when available
 const guildRaidTypes = ref([])
 
-// Use guild-specific raidTypes if loaded, otherwise fall back to expansion data
-const raidTypes = computed(() =>
-  guildRaidTypes.value.length ? guildRaidTypes.value : (constantsStore.raidTypes.length ? constantsStore.raidTypes : expansionRaidTypes.value)
-)
+// Use guild-specific raidTypes if loaded, otherwise fall back to constants store then expansion data
+const raidTypes = computed(() => {
+  if (guildRaidTypes.value.length) return guildRaidTypes.value
+  if (constantsStore.raidTypes.length) return constantsStore.raidTypes
+  return expansionRaidTypes.value
+})
 
 const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref(null)
 const raidDefs = ref([])
 const guildExpansionSlugs = ref([])
+
+const DEFAULT_RAID_SIZE = 25
 
 // Filter raid definitions by guild's enabled expansions
 const filteredRaidDefs = computed(() => {
@@ -223,11 +227,11 @@ const availableRaidSizes = computed(() => {
   const sizes = new Set()
   const defs = filteredRaidDefs.value.length ? filteredRaidDefs.value : raidDefs.value
   for (const d of defs) {
-    sizes.add(d.default_raid_size ?? d.size ?? 25)
+    sizes.add(d.default_raid_size ?? d.size ?? DEFAULT_RAID_SIZE)
   }
   if (sizes.size === 0) {
     sizes.add(10)
-    sizes.add(25)
+    sizes.add(DEFAULT_RAID_SIZE)
   }
   return [...sizes].sort((a, b) => a - b)
 })
@@ -237,7 +241,7 @@ const eventForm = reactive({
   guild_id: null,
   realm_name: '',
   raid_definition_id: '',
-  raid_size: 25,
+  raid_size: DEFAULT_RAID_SIZE,
   starts_at_utc: '',
   duration_minutes: 180,
   difficulty: 'normal',
@@ -289,7 +293,7 @@ function loadRaidDefsForGuild(guildId) {
 }
 
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', duration_minutes: 180, difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: DEFAULT_RAID_SIZE, starts_at_utc: '', duration_minutes: 180, difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
   if (eventForm.guild_id) loadRaidDefsForGuild(eventForm.guild_id)
@@ -311,7 +315,7 @@ function onRaidDefChange() {
   const rd = raidDefs.value.find(d => d.id === eventForm.raid_definition_id)
   if (rd) {
     eventForm.raid_type = rd.raid_type || rd.code || ''
-    eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    eventForm.raid_size = rd.default_raid_size ?? rd.size ?? DEFAULT_RAID_SIZE
     if (rd.default_duration_minutes) eventForm.duration_minutes = rd.default_duration_minutes
     // Auto-set difficulty based on raid definition
     eventForm.difficulty = rd.supports_heroic ? 'heroic' : 'normal'
