@@ -26,51 +26,63 @@
         <p class="text-xs text-text-muted mt-1">{{ t('guild.matrixNoDataHelp') }}</p>
       </div>
 
-      <div v-else class="space-y-3">
-        <div v-for="className in sortedClasses" :key="className"
-          class="p-3 rounded-lg border transition-colors"
-          :class="isCustomized(className)
-            ? 'bg-accent-gold/5 border-accent-gold/30'
-            : 'bg-bg-tertiary border-border-default'">
-          <div class="flex items-center justify-between gap-2 mb-2">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium text-text-primary">{{ className }}</span>
-              <span v-if="isCustomized(className)" class="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/30">
-                {{ t('guild.matrixCustomized') }}
-              </span>
-              <span v-else class="text-[10px] px-1.5 py-0.5 rounded bg-bg-secondary text-text-muted border border-border-default">
-                {{ t('guild.matrixDefault') }}
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <WowButton v-if="isCustomized(className)" variant="danger" @click="doResetClass(className)" :loading="resettingClass === className" class="text-xs py-1 px-2">
-                {{ t('guild.matrixResetClass') }}
-              </WowButton>
-              <WowButton v-if="hasLocalChanges(className)" @click="doSaveClass(className)" :loading="savingClass === className" class="text-xs py-1 px-2">
-                {{ t('guild.matrixSave') }}
-              </WowButton>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <label v-for="role in allRoles" :key="role"
-              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors text-xs"
-              :class="isRoleEnabled(className, role)
-                ? 'bg-accent-gold/10 border-accent-gold/40 text-accent-gold'
-                : 'bg-bg-secondary border-border-default text-text-muted hover:border-border-gold/50'">
-              <input type="checkbox" :checked="isRoleEnabled(className, role)"
-                @change="toggleRole(className, role)" class="sr-only" />
-              <span class="w-3 h-3 rounded border flex items-center justify-center flex-shrink-0"
-                :class="isRoleEnabled(className, role)
-                  ? 'bg-accent-gold border-accent-gold'
-                  : 'border-border-default'">
-                <svg v-if="isRoleEnabled(className, role)" class="w-2 h-2 text-bg-primary" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-              </span>
-              {{ roleLabels[role] || role }}
-            </label>
-          </div>
-        </div>
+      <!-- Grid matrix -->
+      <div v-else class="overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th class="text-left p-2 text-xs text-text-muted font-medium border-b border-border-default w-44">{{ t('guild.matrixClass') }}</th>
+              <th v-for="role in allRoles" :key="role" class="p-2 text-center text-xs font-medium border-b border-border-default"
+                :class="roleHeaderClass(role)">
+                {{ roleLabels[role] || role }}
+              </th>
+              <th class="p-2 text-center text-xs text-text-muted font-medium border-b border-border-default w-24">{{ t('guild.matrixActions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="className in sortedClasses" :key="className"
+              class="border-b border-border-default/50 hover:bg-bg-tertiary/50 transition-colors"
+              :class="isCustomized(className) ? 'bg-accent-gold/5' : ''">
+              <td class="p-2">
+                <div class="flex items-center gap-2">
+                  <img :src="getClassIcon(className)" :alt="className" class="w-6 h-6 rounded border border-border-default" />
+                  <span class="text-sm font-medium" :style="{ color: getClassColor(className) }">{{ className }}</span>
+                  <span v-if="isCustomized(className)" class="text-[8px] px-1 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/30 whitespace-nowrap">
+                    {{ t('guild.matrixCustomized') }}
+                  </span>
+                </div>
+              </td>
+              <td v-for="role in allRoles" :key="role" class="p-2 text-center">
+                <button
+                  @click="toggleRole(className, role)"
+                  class="w-7 h-7 rounded-md border transition-all flex items-center justify-center mx-auto"
+                  :class="isRoleEnabled(className, role)
+                    ? 'bg-accent-gold/20 border-accent-gold/50 text-accent-gold hover:bg-accent-gold/30'
+                    : 'bg-bg-secondary border-border-default text-text-muted/30 hover:border-border-gold/50 hover:text-text-muted'"
+                >
+                  <svg v-if="isRoleEnabled(className, role)" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  <span v-else class="text-xs">—</span>
+                </button>
+              </td>
+              <td class="p-2 text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <button v-if="hasLocalChanges(className)" @click="doSaveClass(className)"
+                    class="text-[10px] px-2 py-1 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/30 transition-colors"
+                    :disabled="savingClass === className">
+                    {{ savingClass === className ? '…' : t('guild.matrixSave') }}
+                  </button>
+                  <button v-if="isCustomized(className)" @click="doResetClass(className)"
+                    class="text-[10px] px-2 py-1 rounded bg-red-900/20 text-red-400 border border-red-700/30 hover:bg-red-900/30 transition-colors"
+                    :disabled="resettingClass === className">
+                    {{ resettingClass === className ? '…' : t('guild.matrixResetClass') }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </WowCard>
   </div>
@@ -83,13 +95,15 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useUiStore } from '@/stores/ui'
+import { useWowIcons } from '@/composables/useWowIcons'
 import * as guildsApi from '@/api/guilds'
 
-import { ROLE_OPTIONS, ROLE_LABEL_MAP } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_LABEL_CLASS } from '@/constants'
 
 const { t } = useI18n()
 const uiStore = useUiStore()
 const guildStore = useGuildStore()
+const { getClassIcon, getClassColor } = useWowIcons()
 
 const loading = ref(false)
 const matrix = ref(null)
@@ -102,6 +116,10 @@ const savingClass = ref(null)
 
 const allRoles = ROLE_OPTIONS.map(r => r.value)
 const roleLabels = ROLE_LABEL_MAP
+
+function roleHeaderClass(role) {
+  return ROLE_LABEL_CLASS[role] || 'text-text-muted'
+}
 
 // Local edits per class — tracks uncommitted checkbox changes
 const localEdits = reactive({})

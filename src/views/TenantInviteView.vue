@@ -30,6 +30,7 @@
               <option value="member">{{ t('tenant.roleMember') }}</option>
               <option value="admin">{{ t('tenant.roleAdmin') }}</option>
             </select>
+            <p class="text-[10px] text-text-muted mt-1">{{ newInvite.role === 'admin' ? t('tenant.roleAdminHelp') : t('tenant.roleMemberHelp') }}</p>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('tenant.maxUses') }}</label>

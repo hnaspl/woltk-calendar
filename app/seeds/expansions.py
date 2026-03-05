@@ -205,37 +205,37 @@ TWW_SPEC_ROLE_MAP = DF_SPEC_ROLE_MAP
 # ---------------------------------------------------------------------------
 
 CLASSIC_RAIDS: list[dict] = [
-    {"code": "mc",     "name": "Molten Core",             "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "notes": "40-man raid beneath Blackrock Mountain. First tier raid."},
-    {"code": "ony",    "name": "Onyxia's Lair",           "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Single-boss 40-man raid in Dustwallow Marsh."},
-    {"code": "bwl",    "name": "Blackwing Lair",          "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Nefarian's 40-man stronghold atop Blackrock Mountain."},
-    {"code": "zg",     "name": "Zul'Gurub",               "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "notes": "20-man troll raid in Stranglethorn Vale."},
-    {"code": "aq20",   "name": "Ruins of Ahn'Qiraj",     "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "notes": "20-man raid in Silithus."},
-    {"code": "aq40",   "name": "Temple of Ahn'Qiraj",    "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 240, "notes": "40-man raid in Silithus. C'Thun encounter."},
-    {"code": "naxx40", "name": "Naxxramas",               "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 300, "notes": "Original 40-man Naxxramas floating above Eastern Plaguelands."},
+    {"code": "mc",     "name": "Molten Core",             "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "main_tank_slots": 2, "off_tank_slots": 3, "healer_slots": 12, "melee_dps_slots": 10, "range_dps_slots": 13, "notes": "40-man raid beneath Blackrock Mountain. First tier raid."},
+    {"code": "ony",    "name": "Onyxia's Lair",           "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 60,  "main_tank_slots": 2, "off_tank_slots": 2, "healer_slots": 12, "melee_dps_slots": 10, "range_dps_slots": 14, "notes": "Single-boss 40-man raid in Dustwallow Marsh."},
+    {"code": "bwl",    "name": "Blackwing Lair",          "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 180, "main_tank_slots": 2, "off_tank_slots": 4, "healer_slots": 12, "melee_dps_slots": 10, "range_dps_slots": 12, "notes": "Nefarian's 40-man stronghold atop Blackrock Mountain."},
+    {"code": "zg",     "name": "Zul'Gurub",               "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 5, "melee_dps_slots": 5, "range_dps_slots": 7, "notes": "20-man troll raid in Stranglethorn Vale."},
+    {"code": "aq20",   "name": "Ruins of Ahn'Qiraj",     "default_raid_size": 20, "supports_heroic": False, "default_duration_minutes": 120, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 5, "melee_dps_slots": 5, "range_dps_slots": 7, "notes": "20-man raid in Silithus."},
+    {"code": "aq40",   "name": "Temple of Ahn'Qiraj",    "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 4, "healer_slots": 12, "melee_dps_slots": 10, "range_dps_slots": 12, "notes": "40-man raid in Silithus. C'Thun encounter."},
+    {"code": "naxx40", "name": "Naxxramas",               "default_raid_size": 40, "supports_heroic": False, "default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 4, "healer_slots": 12, "melee_dps_slots": 10, "range_dps_slots": 12, "notes": "Original 40-man Naxxramas floating above Eastern Plaguelands."},
 ]
 
 TBC_RAIDS: list[dict] = [
-    {"code": "kara",  "name": "Karazhan",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 180, "notes": "10-man raid in Deadwind Pass. First TBC tier."},
-    {"code": "gruul", "name": "Gruul's Lair",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "25-man raid in Blade's Edge Mountains."},
-    {"code": "mag",   "name": "Magtheridon's Lair",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "25-man raid beneath Hellfire Citadel."},
-    {"code": "ssc",   "name": "Serpentshrine Cavern",  "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid in Coilfang Reservoir. Lady Vashj encounter."},
-    {"code": "tk",    "name": "Tempest Keep",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "25-man raid in Netherstorm. Kael'thas encounter."},
-    {"code": "hyjal", "name": "Hyjal Summit",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "25-man Caverns of Time raid. Archimonde encounter."},
-    {"code": "bt",    "name": "Black Temple",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 300, "notes": "25-man raid in Shadowmoon Valley. Illidan encounter."},
-    {"code": "za",    "name": "Zul'Aman",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 120, "notes": "10-man timed troll raid in Ghostlands."},
-    {"code": "swp",   "name": "Sunwell Plateau",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "notes": "25-man raid on the Isle of Quel'Danas. Kil'jaeden encounter."},
+    {"code": "kara",  "name": "Karazhan",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 1, "healer_slots": 3, "melee_dps_slots": 2, "range_dps_slots": 3, "notes": "10-man raid in Deadwind Pass. First TBC tier."},
+    {"code": "gruul", "name": "Gruul's Lair",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man raid in Blade's Edge Mountains."},
+    {"code": "mag",   "name": "Magtheridon's Lair",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man raid beneath Hellfire Citadel."},
+    {"code": "ssc",   "name": "Serpentshrine Cavern",  "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man raid in Coilfang Reservoir. Lady Vashj encounter."},
+    {"code": "tk",    "name": "Tempest Keep",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man raid in Netherstorm. Kael'thas encounter."},
+    {"code": "hyjal", "name": "Hyjal Summit",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man Caverns of Time raid. Archimonde encounter."},
+    {"code": "bt",    "name": "Black Temple",          "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 300, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man raid in Shadowmoon Valley. Illidan encounter."},
+    {"code": "za",    "name": "Zul'Aman",              "default_raid_size": 10, "supports_heroic": False, "default_duration_minutes": 120, "main_tank_slots": 1, "off_tank_slots": 1, "healer_slots": 3, "melee_dps_slots": 2, "range_dps_slots": 3, "notes": "10-man timed troll raid in Ghostlands."},
+    {"code": "swp",   "name": "Sunwell Plateau",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 240, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 7, "melee_dps_slots": 7, "range_dps_slots": 8, "notes": "25-man raid on the Isle of Quel'Danas. Kil'jaeden encounter."},
 ]
 
 WOTLK_RAIDS: list[dict] = [
-    {"code": "naxx",   "name": "Naxxramas",              "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "notes": "Tier 7 raid in Dragonblight. Supports 10 and 25-man."},
-    {"code": "os",     "name": "The Obsidian Sanctum",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Sartharion encounter with optional drakes (0-3D). 10/25-man."},
-    {"code": "eoe",    "name": "The Eye of Eternity",     "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "notes": "Malygos encounter above the Nexus. 10/25-man."},
-    {"code": "voa",    "name": "Vault of Archavon",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "PvP-gated raid in Wintergrasp; up to 4 bosses. 10/25-man."},
-    {"code": "ulduar", "name": "Ulduar",                  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Titan facility raid with hard-mode encounters. 10/25-man."},
-    {"code": "toc",    "name": "Trial of the Crusader",   "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Argent Tournament arena raid. Normal & heroic. 10/25-man."},
-    {"code": "ony25",  "name": "Onyxia's Lair",           "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "Retuned for level 80. Supports 10 and 25-man."},
-    {"code": "icc",    "name": "Icecrown Citadel",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "notes": "12-boss raid. The Lich King encounter. Normal & heroic. 10/25-man."},
-    {"code": "rs",     "name": "The Ruby Sanctum",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 60,  "notes": "Halion encounter; bridge between WotLK and Cataclysm. 10/25-man."},
+    {"code": "naxx",   "name": "Naxxramas",              "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Tier 7 raid in Dragonblight. Supports 10 and 25-man."},
+    {"code": "os",     "name": "The Obsidian Sanctum",    "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Sartharion encounter with optional drakes (0-3D). 10/25-man."},
+    {"code": "eoe",    "name": "The Eye of Eternity",     "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 60,  "main_tank_slots": 1, "off_tank_slots": 1, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 10, "notes": "Malygos encounter above the Nexus. 10/25-man."},
+    {"code": "voa",    "name": "Vault of Archavon",       "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "PvP-gated raid in Wintergrasp; up to 4 bosses. 10/25-man."},
+    {"code": "ulduar", "name": "Ulduar",                  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Titan facility raid with hard-mode encounters. 10/25-man."},
+    {"code": "toc",    "name": "Trial of the Crusader",   "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Argent Tournament arena raid. Normal & heroic. 10/25-man."},
+    {"code": "ony25",  "name": "Onyxia's Lair",           "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Retuned for level 80. Supports 10 and 25-man."},
+    {"code": "icc",    "name": "Icecrown Citadel",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "12-boss raid. The Lich King encounter. Normal & heroic. 10/25-man."},
+    {"code": "rs",     "name": "The Ruby Sanctum",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 60,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Halion encounter; bridge between WotLK and Cataclysm. 10/25-man."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -243,12 +243,12 @@ WOTLK_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 CATA_RAIDS: list[dict] = [
-    {"code": "bwd",    "name": "Blackwing Descent",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Nefarian's lair reborn. 10/25-man normal & heroic."},
-    {"code": "bot",    "name": "The Bastion of Twilight",  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Cho'gall's fortress. 10/25-man normal & heroic."},
-    {"code": "totfw",  "name": "Throne of the Four Winds", "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Al'Akir encounter. 10/25-man normal & heroic."},
-    {"code": "bh",     "name": "Baradin Hold",             "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "notes": "PvP-gated raid in Tol Barad. 10/25-man."},
-    {"code": "fl",     "name": "Firelands",                "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Ragnaros returns. 10/25-man normal & heroic."},
-    {"code": "ds",     "name": "Dragon Soul",              "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Deathwing encounter. 10/25-man normal & heroic. LFR introduced."},
+    {"code": "bwd",    "name": "Blackwing Descent",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Nefarian's lair reborn. 10/25-man normal & heroic."},
+    {"code": "bot",    "name": "The Bastion of Twilight",  "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Cho'gall's fortress. 10/25-man normal & heroic."},
+    {"code": "totfw",  "name": "Throne of the Four Winds", "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 90,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Al'Akir encounter. 10/25-man normal & heroic."},
+    {"code": "bh",     "name": "Baradin Hold",             "default_raid_size": 25, "supports_heroic": False, "default_duration_minutes": 30,  "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "PvP-gated raid in Tol Barad. 10/25-man."},
+    {"code": "fl",     "name": "Firelands",                "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Ragnaros returns. 10/25-man normal & heroic."},
+    {"code": "ds",     "name": "Dragon Soul",              "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Deathwing encounter. 10/25-man normal & heroic. LFR introduced."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -256,11 +256,11 @@ CATA_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 MOP_RAIDS: list[dict] = [
-    {"code": "msv",    "name": "Mogu'shan Vaults",         "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "First MoP tier. 10/25-man normal, heroic, LFR."},
-    {"code": "hof",    "name": "Heart of Fear",            "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Mantid raid. 10/25-man normal, heroic, LFR."},
-    {"code": "toes",   "name": "Terrace of Endless Spring","default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 120, "notes": "Sha of Fear. 10/25-man normal, heroic, LFR."},
-    {"code": "tot",    "name": "Throne of Thunder",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Lei Shen encounter. 10/25-man normal, heroic, LFR."},
-    {"code": "soo",    "name": "Siege of Orgrimmar",       "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "notes": "Garrosh encounter. 10/25-man. First flex mode. LFR/normal/heroic/mythic."},
+    {"code": "msv",    "name": "Mogu'shan Vaults",         "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "First MoP tier. 10/25-man normal, heroic, LFR."},
+    {"code": "hof",    "name": "Heart of Fear",            "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 180, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Mantid raid. 10/25-man normal, heroic, LFR."},
+    {"code": "toes",   "name": "Terrace of Endless Spring","default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 120, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Sha of Fear. 10/25-man normal, heroic, LFR."},
+    {"code": "tot",    "name": "Throne of Thunder",        "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 300, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Lei Shen encounter. 10/25-man normal, heroic, LFR."},
+    {"code": "soo",    "name": "Siege of Orgrimmar",       "default_raid_size": 25, "supports_heroic": True,  "default_duration_minutes": 360, "main_tank_slots": 1, "off_tank_slots": 2, "healer_slots": 6, "melee_dps_slots": 7, "range_dps_slots": 9, "notes": "Garrosh encounter. 10/25-man. First flex mode. LFR/normal/heroic/mythic."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -268,9 +268,9 @@ MOP_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 WOD_RAIDS: list[dict] = [
-    {"code": "hm",     "name": "Highmaul",                 "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Imperator Mar'gok. Flex normal/heroic, 20-man mythic."},
-    {"code": "brf",    "name": "Blackrock Foundry",        "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Blackhand encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "hfc",    "name": "Hellfire Citadel",         "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Archimonde encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "hm",     "name": "Highmaul",                 "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 180, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 5, "melee_dps_slots": 5, "range_dps_slots": 7, "notes": "Imperator Mar'gok. Flex normal/heroic, 20-man mythic."},
+    {"code": "brf",    "name": "Blackrock Foundry",        "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 5, "melee_dps_slots": 5, "range_dps_slots": 7, "notes": "Blackhand encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "hfc",    "name": "Hellfire Citadel",         "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 5, "melee_dps_slots": 5, "range_dps_slots": 7, "notes": "Archimonde encounter. Flex normal/heroic, 20-man mythic."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -278,11 +278,11 @@ WOD_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 LEGION_RAIDS: list[dict] = [
-    {"code": "en",     "name": "The Emerald Nightmare",    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 180, "notes": "Xavius encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "tov",    "name": "Trial of Valor",           "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 90,  "notes": "Helya encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "nh",     "name": "The Nighthold",            "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Gul'dan encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "tos",    "name": "Tomb of Sargeras",         "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Kil'jaeden encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "abt",    "name": "Antorus, the Burning Throne","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 300, "notes": "Argus encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "en",     "name": "The Emerald Nightmare",    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 180, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Xavius encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "tov",    "name": "Trial of Valor",           "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 90,  "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Helya encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "nh",     "name": "The Nighthold",            "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Gul'dan encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "tos",    "name": "Tomb of Sargeras",         "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Kil'jaeden encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "abt",    "name": "Antorus, the Burning Throne","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Argus encounter. Flex normal/heroic, 20-man mythic."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -290,11 +290,11 @@ LEGION_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 BFA_RAIDS: list[dict] = [
-    {"code": "uldir",  "name": "Uldir",                    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "G'huun encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "bod",    "name": "Battle of Dazar'alor",     "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "notes": "Jaina/Rastakhan encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "cos",    "name": "Crucible of Storms",       "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 60,  "notes": "Uu'nat encounter. 2-boss mini-raid. Flex normal/heroic, 20-man mythic."},
-    {"code": "ep",     "name": "The Eternal Palace",       "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Queen Azshara encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "nya",    "name": "Ny'alotha, the Waking City","default_raid_size": 20, "supports_heroic": True, "default_duration_minutes": 300, "notes": "N'Zoth encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "uldir",  "name": "Uldir",                    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "G'huun encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "bod",    "name": "Battle of Dazar'alor",     "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Jaina/Rastakhan encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "cos",    "name": "Crucible of Storms",       "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 60,  "main_tank_slots": 2, "off_tank_slots": 0, "healer_slots": 4, "melee_dps_slots": 6, "range_dps_slots": 8, "notes": "Uu'nat encounter. 2-boss mini-raid. Flex normal/heroic, 20-man mythic."},
+    {"code": "ep",     "name": "The Eternal Palace",       "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Queen Azshara encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "nya",    "name": "Ny'alotha, the Waking City","default_raid_size": 20, "supports_heroic": True, "default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "N'Zoth encounter. Flex normal/heroic, 20-man mythic."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -302,9 +302,9 @@ BFA_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 SL_RAIDS: list[dict] = [
-    {"code": "cn",     "name": "Castle Nathria",           "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Sire Denathrius encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "sod",    "name": "Sanctum of Domination",    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Sylvanas encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "sofo",   "name": "Sepulcher of the First Ones","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 300, "notes": "The Jailer encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "cn",     "name": "Castle Nathria",           "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Sire Denathrius encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "sod",    "name": "Sanctum of Domination",    "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Sylvanas encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "sofo",   "name": "Sepulcher of the First Ones","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 300, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "The Jailer encounter. Flex normal/heroic, 20-man mythic."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -312,9 +312,9 @@ SL_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 DF_RAIDS: list[dict] = [
-    {"code": "voti",   "name": "Vault of the Incarnates",  "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Raszageth encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "asc",    "name": "Aberrus, the Shadowed Crucible","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 240, "notes": "Scalecommander Sarkareth. Flex normal/heroic, 20-man mythic."},
-    {"code": "adh",    "name": "Amirdrassil, the Dream's Hope","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 240, "notes": "Fyrakk encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "voti",   "name": "Vault of the Incarnates",  "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Raszageth encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "asc",    "name": "Aberrus, the Shadowed Crucible","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Scalecommander Sarkareth. Flex normal/heroic, 20-man mythic."},
+    {"code": "adh",    "name": "Amirdrassil, the Dream's Hope","default_raid_size": 20, "supports_heroic": True,"default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Fyrakk encounter. Flex normal/heroic, 20-man mythic."},
 ]
 
 # ---------------------------------------------------------------------------
@@ -322,8 +322,8 @@ DF_RAIDS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 TWW_RAIDS: list[dict] = [
-    {"code": "nap",    "name": "Nerub-ar Palace",          "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Queen Ansurek encounter. Flex normal/heroic, 20-man mythic."},
-    {"code": "lou",    "name": "Liberation of Undermine",  "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "notes": "Flex normal/heroic, 20-man mythic."},
+    {"code": "nap",    "name": "Nerub-ar Palace",          "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Queen Ansurek encounter. Flex normal/heroic, 20-man mythic."},
+    {"code": "lou",    "name": "Liberation of Undermine",  "default_raid_size": 20, "supports_heroic": True,  "default_duration_minutes": 240, "main_tank_slots": 2, "off_tank_slots": 1, "healer_slots": 4, "melee_dps_slots": 5, "range_dps_slots": 8, "notes": "Flex normal/heroic, 20-man mythic."},
 ]
 
 

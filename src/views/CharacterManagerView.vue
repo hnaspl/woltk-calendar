@@ -251,7 +251,7 @@
             </select>
             <input v-else v-model="form.secondary_spec" :disabled="isArmoryLocked" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
-          <div>
+          <div v-if="!editingChar">
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.armoryUrl') }}</label>
             <input v-model="form.armory_url" :disabled="isArmoryLocked" placeholder="https://armory.example.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>

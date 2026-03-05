@@ -39,8 +39,7 @@
             @change="calStore.setFilter('size', $event.target.value)"
           >
             <option value="">{{ t('calendar.allSizes') }}</option>
-            <option value="10">{{ t('calendar.tenMan') }}</option>
-            <option value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <option v-for="s in availableRaidSizes" :key="s" :value="s">{{ s }}-man</option>
           </select>
         </div>
 
@@ -115,16 +114,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
-            <select v-model.number="eventForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="eventForm.raid_size" disabled class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in availableRaidSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
+            <span class="text-[10px] text-text-muted">{{ t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
-            <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="eventForm.difficulty" :disabled="!selectedRaidDef?.supports_heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
               <option value="normal">{{ t('calendar.normal') }}</option>
-              <option value="heroic">{{ t('calendar.heroic') }}</option>
+              <option v-if="selectedRaidDef?.supports_heroic" value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
         </div>
@@ -173,6 +172,7 @@ import { useUiStore } from '@/stores/ui'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as guildExpansionsApi from '@/api/guild_expansions'
@@ -186,8 +186,17 @@ const router = useRouter()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const tzHelper = useTimezone()
 const { t } = useI18n()
+const constantsStore = useConstantsStore()
 
-const { raidTypes } = useExpansionData()
+const { raidTypes: expansionRaidTypes } = useExpansionData()
+
+// Guild-specific raidTypes — loaded from guild constants when available
+const guildRaidTypes = ref([])
+
+// Use guild-specific raidTypes if loaded, otherwise fall back to expansion data
+const raidTypes = computed(() =>
+  guildRaidTypes.value.length ? guildRaidTypes.value : (constantsStore.raidTypes.length ? constantsStore.raidTypes : expansionRaidTypes.value)
+)
 
 const showCreateModal = ref(false)
 const creating = ref(false)
@@ -203,6 +212,25 @@ const filteredRaidDefs = computed(() => {
 
 const builtinDefs = computed(() => filteredRaidDefs.value.filter(d => d.is_builtin))
 const customDefs = computed(() => filteredRaidDefs.value.filter(d => !d.is_builtin))
+
+// Selected raid definition — for auto-populating size/difficulty
+const selectedRaidDef = computed(() =>
+  raidDefs.value.find(d => d.id === eventForm.raid_definition_id) ?? null
+)
+
+// Dynamic raid sizes — derive from available raid definitions
+const availableRaidSizes = computed(() => {
+  const sizes = new Set()
+  const defs = filteredRaidDefs.value.length ? filteredRaidDefs.value : raidDefs.value
+  for (const d of defs) {
+    sizes.add(d.default_raid_size ?? d.size ?? 25)
+  }
+  if (sizes.size === 0) {
+    sizes.add(10)
+    sizes.add(25)
+  }
+  return [...sizes].sort((a, b) => a - b)
+})
 
 const eventForm = reactive({
   title: '',
@@ -224,6 +252,7 @@ onMounted(async () => {
   if (guildStore.currentGuild) {
     tasks.push(guildStore.fetchMembers(guildStore.currentGuild.id))
     joinGuild(guildStore.currentGuild.id)
+    loadRaidDefsForGuild(guildStore.currentGuild.id)
   }
   await Promise.all(tasks)
   on('events_changed', handleEventsChanged)
@@ -251,6 +280,12 @@ function loadRaidDefsForGuild(guildId) {
     const exps = res?.expansions ?? res ?? []
     guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
   }).catch(() => { guildExpansionSlugs.value = [] })
+  // Load guild-specific constants for raidTypes
+  guildExpansionsApi.getGuildConstants(guildId).then(data => {
+    if (data?.raid_types) {
+      guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
+    }
+  }).catch(() => { /* ignore — fall back to expansion data */ })
 }
 
 function openCreateModal() {

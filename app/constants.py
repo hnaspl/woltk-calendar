@@ -91,5 +91,7 @@ def normalize_spec_name(
 # ---------------------------------------------------------------------------
 ROLE_SLOTS: dict[int, dict[str, int]] = {
     10: {"main_tank": 1, "off_tank": 1, "melee_dps": 0, "healer": 3, "range_dps": 5},
+    20: {"main_tank": 2, "off_tank": 2, "melee_dps": 0, "healer": 5, "range_dps": 11},
     25: {"main_tank": 1, "off_tank": 2, "melee_dps": 0, "healer": 6, "range_dps": 16},
+    40: {"main_tank": 2, "off_tank": 3, "melee_dps": 0, "healer": 12, "range_dps": 23},
 }

@@ -166,17 +166,26 @@ async function loadInvitations() {
   if (!guildId) return
   loading.value = true
   try {
-    invitations.value = await guildsApi.getGuildInvitations(guildId)
-  } catch { /* ignore */ }
-  loading.value = false
+    const result = await guildsApi.getGuildInvitations(guildId)
+    invitations.value = Array.isArray(result) ? result : (result?.invitations ?? [])
+  } catch (err) {
+    console.warn('Failed to load invitations:', err?.response?.status, err?.response?.data)
+    invitations.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadApplications() {
   const guildId = guildStore.currentGuildId
   if (!guildId) return
   try {
-    applications.value = await guildsApi.getGuildApplications(guildId)
-  } catch { /* ignore */ }
+    const result = await guildsApi.getGuildApplications(guildId)
+    applications.value = Array.isArray(result) ? result : (result?.applications ?? [])
+  } catch (err) {
+    console.warn('Failed to load applications:', err?.response?.status, err?.response?.data)
+    applications.value = []
+  }
 }
 
 async function doCreate() {

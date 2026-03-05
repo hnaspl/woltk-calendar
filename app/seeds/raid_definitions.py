@@ -72,6 +72,11 @@ def seed_raid_definitions() -> int:
                 is_active=True,
                 default_duration_minutes=raid_data.get("default_duration_minutes", 180),
                 notes=raid_data.get("notes"),
+                main_tank_slots=raid_data.get("main_tank_slots"),
+                off_tank_slots=raid_data.get("off_tank_slots"),
+                healer_slots=raid_data.get("healer_slots"),
+                melee_dps_slots=raid_data.get("melee_dps_slots"),
+                range_dps_slots=raid_data.get("range_dps_slots"),
             )
             db.session.add(rd)
             inserted += 1
