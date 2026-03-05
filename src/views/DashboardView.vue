@@ -253,6 +253,8 @@ import { useFormatting } from '@/composables/useFormatting'
 import { useSocket } from '@/composables/useSocket'
 import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import { useI18n } from 'vue-i18n'
@@ -262,12 +264,21 @@ const guildStore = useGuildStore()
 const calStore = useCalendarStore()
 const tenantStore = useTenantStore()
 const uiStore = useUiStore()
+const constantsStore = useConstantsStore()
 const { getRaidIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { formatDateTime, formatTimeOnly } = useFormatting()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const { t } = useI18n()
-const { raidTypes } = useExpansionData()
+const { raidTypes: expansionRaidTypes } = useExpansionData()
+const guildRaidTypes = ref([])
+
+// Use guild-specific raidTypes if loaded, otherwise fall back to constants store then expansion data
+const raidTypes = computed(() => {
+  if (guildRaidTypes.value.length) return guildRaidTypes.value
+  if (constantsStore.raidTypes.length) return constantsStore.raidTypes
+  return expansionRaidTypes.value
+})
 
 let isActive = true
 const loading = ref(true)
@@ -315,7 +326,15 @@ onMounted(async () => {
   nowTimer = setInterval(() => { now.value = new Date() }, 60000)
   try {
     await guildStore.fetchGuilds()
-    if (guildStore.currentGuild) joinGuild(guildStore.currentGuild.id)
+    if (guildStore.currentGuild) {
+      joinGuild(guildStore.currentGuild.id)
+      // Load guild-specific raid type labels
+      guildExpansionsApi.getGuildConstants(guildStore.currentGuild.id).then(data => {
+        if (data?.raid_types) {
+          guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
+        }
+      }).catch(() => { /* ignore — fall back to expansion data */ })
+    }
     await refreshDashboard()
   } finally {
     loading.value = false
@@ -344,7 +363,15 @@ watch(
   (newId, oldId) => {
     if (oldId) leaveGuild(oldId)
     if (newId) joinGuild(newId)
-    if (newId && newId !== oldId) refreshDashboard()
+    if (newId && newId !== oldId) {
+      refreshDashboard()
+      // Reload guild-specific raid type labels
+      guildExpansionsApi.getGuildConstants(newId).then(data => {
+        if (data?.raid_types) {
+          guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
+        }
+      }).catch(() => { guildRaidTypes.value = [] })
+    }
   }
 )
 

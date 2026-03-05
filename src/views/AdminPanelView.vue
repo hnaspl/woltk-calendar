@@ -51,7 +51,7 @@
         <!-- Tab content -->
         <KeepAlive>
           <MembersTab v-if="activeTab === 'members'" />
-          <GuildInvitationsTab v-else-if="activeTab === 'invitations'" :permissions="permissions.permissions.value" />
+          <GuildInvitationsTab v-else-if="activeTab === 'invitations'" :permissions="permissions.dynamicPermissions.value" />
           <ClassRoleMatrixTab v-else-if="activeTab === 'matrix'" />
           <RolesTab v-else-if="activeTab === 'roles'" mode="guild" />
           <GuildSettingsTab v-else-if="activeTab === 'guild'" />
