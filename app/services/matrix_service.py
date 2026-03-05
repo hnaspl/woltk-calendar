@@ -56,7 +56,7 @@ def get_expansion_defaults() -> dict[str, list[str]]:
     return matrix
 
 
-def _get_guild_expansion_defaults(guild_id: int) -> dict[str, list[str]]:
+def get_guild_expansion_defaults(guild_id: int) -> dict[str, list[str]]:
     """Return class→roles matrix filtered by the guild's enabled expansions.
 
     Only returns classes from expansions the guild has enabled.
@@ -81,8 +81,6 @@ def _get_guild_expansion_defaults(guild_id: int) -> dict[str, list[str]]:
 
     matrix: dict[str, list[str]] = {}
     for cls in classes:
-        if cls.name in matrix:
-            continue
         specs = db.session.execute(
             sa.select(ExpansionSpec.role).where(ExpansionSpec.class_id == cls.id)
         ).scalars().all()
@@ -145,7 +143,7 @@ def resolve_matrix(guild_id: int | None = None) -> dict[str, list[str]]:
         defaults = get_expansion_defaults()
         return defaults
 
-    defaults = _get_guild_expansion_defaults(guild_id)
+    defaults = get_guild_expansion_defaults(guild_id)
 
     overrides = get_guild_overrides(guild_id)
 

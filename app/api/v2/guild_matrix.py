@@ -33,7 +33,7 @@ def get_matrix(guild_id: int, membership):
     return jsonify({
         "guild_id": guild_id,
         "matrix": matrix,
-        "defaults": matrix_service._get_guild_expansion_defaults(guild_id),
+        "defaults": matrix_service.get_guild_expansion_defaults(guild_id),
         "overrides": overrides,
         "has_overrides": bool(overrides),
     })
