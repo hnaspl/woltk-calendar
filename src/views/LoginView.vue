@@ -66,6 +66,16 @@
             />
           </div>
 
+          <div class="flex items-center gap-2">
+            <input
+              id="remember-me"
+              v-model="rememberMe"
+              type="checkbox"
+              class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold accent-amber-500"
+            />
+            <label for="remember-me" class="text-sm text-text-muted cursor-pointer select-none">{{ t('auth.rememberMe') }}</label>
+          </div>
+
           <WowButton type="submit" :loading="loading" class="w-full mt-2">
             {{ t('auth.signIn') }}
           </WowButton>
@@ -102,6 +112,7 @@ const { login, isLoading, authError } = useAuth()
 
 const email = ref('')
 const password = ref('')
+const rememberMe = ref(true)
 const error = ref(null)
 const loading = ref(false)
 const discordEnabled = ref(false)
@@ -140,7 +151,7 @@ async function handleLogin() {
   error.value = null
   loading.value = true
   try {
-    await login(email.value, password.value)
+    await login(email.value, password.value, rememberMe.value)
   } catch (err) {
     error.value = err?.response?.data?.message ?? authError.value ?? t('auth.loginFailed')
   } finally {

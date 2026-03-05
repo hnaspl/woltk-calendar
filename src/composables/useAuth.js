@@ -11,8 +11,8 @@ export function useAuth() {
   const isLoading = computed(() => authStore.loading)
   const authError = computed(() => authStore.error)
 
-  async function login(email, password) {
-    await authStore.login(email, password)
+  async function login(email, password, remember = true) {
+    await authStore.login(email, password, remember)
     const redirect = router.currentRoute.value.query.redirect || '/dashboard'
     router.push(redirect)
   }

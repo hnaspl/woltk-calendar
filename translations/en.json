@@ -217,6 +217,7 @@
     "register": "Register",
     "registerToAcceptInvite": "Create an account to accept the workspace invitation.",
     "registrationFailed": "Registration failed.",
+    "rememberMe": "Remember me",
     "signIn": "Sign In",
     "signInWithDiscord": "Sign in with Discord",
     "signOut": "Sign Out"

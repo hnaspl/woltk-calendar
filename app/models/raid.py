@@ -114,6 +114,7 @@ class RaidTemplate(db.Model):
     expected_duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     target_roles_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     default_instructions: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    close_registration_minutes: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     created_by: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -154,6 +155,7 @@ class RaidTemplate(db.Model):
             "expected_duration_minutes": self.expected_duration_minutes,
             "target_roles": self.target_roles,
             "default_instructions": self.default_instructions,
+            "close_registration_minutes": self.close_registration_minutes,
             "is_active": self.is_active,
             "created_by": self.created_by,
             "created_at": utc_iso(self.created_at),

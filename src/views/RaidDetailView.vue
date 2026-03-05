@@ -310,16 +310,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
-            <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="editForm.raid_size" disabled class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in editAvailableRaidSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
+            <span class="text-[10px] text-text-muted">{{ t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
-            <select v-model="editForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="editForm.difficulty" :disabled="!editSelectedRaidDef?.supports_heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
               <option value="normal">{{ t('calendar.normal') }}</option>
-              <option value="heroic">{{ t('calendar.heroic') }}</option>
+              <option v-if="editSelectedRaidDef?.supports_heroic" value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
           <div>
@@ -473,6 +473,18 @@ function mySignupProfessions(s) {
 const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))
+const editSelectedRaidDef = computed(() =>
+  editRaidDefs.value.find(d => d.id === editForm.raid_definition_id) ?? null
+)
+const editAvailableRaidSizes = computed(() => {
+  const sizes = new Set()
+  const defs = editRaidDefs.value
+  for (const d of defs) {
+    sizes.add(d.default_raid_size ?? d.size ?? 25)
+  }
+  if (sizes.size === 0) { sizes.add(10); sizes.add(25) }
+  return [...sizes].sort((a, b) => a - b)
+})
 
 // Character replacement requests
 const replacementRequests = ref([])
@@ -769,6 +781,7 @@ function onEditRaidDefChange() {
   if (rd) {
     editForm.raid_type = rd.raid_type || rd.code || ''
     editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    editForm.difficulty = rd.supports_heroic ? 'heroic' : 'normal'
     if (rd.default_duration_minutes) editForm.duration_minutes = rd.default_duration_minutes
   }
 }

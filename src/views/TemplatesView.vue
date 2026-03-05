@@ -82,18 +82,26 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
-            <select v-model.number="form.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="form.raid_size" disabled class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in templateAvailableSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
+            <span class="text-[10px] text-text-muted">{{ t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
-            <select v-model="form.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="form.difficulty" :disabled="!templateSelectedDef?.supports_heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
               <option value="normal">{{ t('calendar.normal') }}</option>
-              <option value="heroic">{{ t('calendar.heroic') }}</option>
+              <option v-if="templateSelectedDef?.supports_heroic" value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('templates.closeRegistration') }}</label>
+          <div class="flex items-center gap-2">
+            <input v-model.number="form.close_registration_minutes" type="number" min="0" max="10080" step="30" class="w-32 bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('templates.minutesPlaceholder')" />
+            <span class="text-xs text-text-muted">{{ t('templates.minutesBefore') }}</span>
+          </div>
+          <span class="text-[10px] text-text-muted">{{ t('templates.closeRegistrationHelp') }}</span>
         </div>
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('calendar.instructions') }}</label>

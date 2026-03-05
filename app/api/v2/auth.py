@@ -63,6 +63,7 @@ def login():
     data = get_json()
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
+    remember = data.get("remember", True)
 
     if not email or not password:
         return jsonify({"error": _t("auth.errors.loginRequired")}), 400
@@ -80,7 +81,7 @@ def login():
     if not user.is_active:
         return jsonify({"error": _t("auth.errors.accountDisabled")}), 403
 
-    login_user(user, remember=True)
+    login_user(user, remember=bool(remember))
     return jsonify(user.to_dict()), 200
 
 

@@ -54,11 +54,11 @@ export const useAuthStore = defineStore('auth', () => {
     return _fetchPromise
   }
 
-  async function login(email, password) {
+  async function login(email, password, remember = true) {
     loading.value = true
     error.value = null
     try {
-      const data = await authApi.login({ email, password })
+      const data = await authApi.login({ email, password, remember })
       user.value = data.user ?? data
       _bootstrapTenant(user.value)
     } catch (err) {

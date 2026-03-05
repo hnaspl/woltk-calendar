@@ -26,6 +26,7 @@ def create_template(guild_id: int, created_by: int, data: dict) -> RaidTemplate:
         difficulty=data.get("difficulty", "normal"),
         expected_duration_minutes=data.get("expected_duration_minutes", 180),
         default_instructions=data.get("default_instructions"),
+        close_registration_minutes=data.get("close_registration_minutes"),
         is_active=data.get("is_active", True),
     )
     if "target_roles" in data:
@@ -42,7 +43,7 @@ def get_template(tmpl_id: int) -> Optional[RaidTemplate]:
 def update_template(tmpl: RaidTemplate, data: dict) -> RaidTemplate:
     allowed = {
         "name", "raid_size", "difficulty", "expected_duration_minutes",
-        "default_instructions", "is_active",
+        "default_instructions", "close_registration_minutes", "is_active",
     }
     for key, value in data.items():
         if key in allowed:

@@ -191,8 +191,9 @@
                     </div>
                     <div class="flex-1 min-w-0">
                       <span
-                        class="text-[12px] font-medium truncate block"
+                        class="text-[12px] font-medium truncate block wowhead-item-name"
                         :class="itemQualityText(item)"
+                        :style="itemQualityStyle(item)"
                       >{{ item.name }}</span>
                       <div class="text-[10px] text-text-muted flex items-center gap-1.5">
                         <span>{{ equipSlotLabel(i) }}</span>
@@ -223,6 +224,7 @@
                       <span
                         class="text-[12px] font-medium truncate block"
                         :class="itemQualityText(item)"
+                        :style="itemQualityStyle(item)"
                       >{{ item.name }}</span>
                       <div class="text-[10px] text-text-muted flex items-center gap-1.5">
                         <span>{{ equipSlotLabel(i) }}</span>
@@ -329,6 +331,22 @@ function slotIconClasses(item) {
 
 function itemQualityText(item) {
   return getItemQualityText(item)
+}
+
+/** Inline style for item name color — uses WoW quality hex colors for accurate rendering. */
+const QUALITY_HEX = {
+  0: '#9d9d9d', // Poor (gray)
+  1: '#ffffff', // Common (white)
+  2: '#1eff00', // Uncommon (green)
+  3: '#0070dd', // Rare (blue)
+  4: '#a335ee', // Epic (purple)
+  5: '#ff8000', // Legendary (orange)
+  6: '#e6cc80', // Artifact (gold)
+}
+function itemQualityStyle(item) {
+  const q = item.quality ?? (item.item ? 3 : 1)
+  const hex = QUALITY_HEX[q]
+  return hex ? { color: hex } : {}
 }
 
 function qualityLabel(q) {
