@@ -228,7 +228,10 @@ class TestBillingServiceAssignment:
         assert "guilds" in usage
         assert "members" in usage
         assert "events" in usage
-        assert usage["guilds"] == 0
+        assert usage["guilds"]["current"] == 0
+        assert usage["guilds"]["max"] is not None
+        assert usage["members"]["current"] == 0
+        assert usage["events"]["current"] == 0
 
     def test_check_limit_guilds(self, ctx):
         user = _make_user("limit-test")

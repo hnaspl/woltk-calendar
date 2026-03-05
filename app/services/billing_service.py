@@ -179,10 +179,18 @@ def get_tenant_usage(tenant_id: int) -> dict:
         )
     ).scalar() or 0
 
+    # Resolve limits from plan or tenant fields
+    tenant = db.session.get(Tenant, tenant_id)
+    plan = tenant.plan_ref if tenant and tenant.plan_id else None
+
+    max_guilds = plan.max_guilds if plan else (tenant.max_guilds if tenant else None)
+    max_members = plan.max_members if plan else (tenant.max_members if tenant else None)
+    max_events = plan.max_events_per_month if plan else None
+
     return {
-        "guilds": guild_count,
-        "members": member_count,
-        "events": event_count,
+        "guilds": {"current": guild_count, "max": max_guilds},
+        "members": {"current": member_count, "max": max_members},
+        "events": {"current": event_count, "max": max_events},
     }
 
 
@@ -205,13 +213,13 @@ def check_limit(
 
     if resource == "guilds":
         max_val = plan.max_guilds if plan else tenant.max_guilds
-        current = usage["guilds"]
+        current = usage["guilds"]["current"]
     elif resource == "members":
         max_val = plan.max_members if plan else tenant.max_members
-        current = usage["members"]
+        current = usage["members"]["current"]
     elif resource == "events":
         max_val = plan.max_events_per_month if plan else None
-        current = usage["events"]
+        current = usage["events"]["current"]
     else:
         return (True, 0, None)
 

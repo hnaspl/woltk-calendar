@@ -22,7 +22,7 @@
       </div>
 
       <!-- Expansion filter -->
-      <div v-if="guildExpansions.length > 1" class="flex flex-wrap gap-2">
+      <div v-if="guildExpansions.length > 0" class="flex flex-wrap gap-2">
         <button
           type="button"
           class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"

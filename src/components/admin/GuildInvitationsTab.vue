@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -152,6 +152,14 @@ const generatedLink = computed(() => {
 onMounted(() => {
   loadInvitations()
   if (canApprove.value) loadApplications()
+})
+
+// Reload when guild becomes available or changes
+watch(() => guildStore.currentGuildId, (newId) => {
+  if (newId) {
+    loadInvitations()
+    if (canApprove.value) loadApplications()
+  }
 })
 
 async function loadInvitations() {

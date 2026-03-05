@@ -60,7 +60,8 @@ import WowButton from '@/components/common/WowButton.vue'
 const { t } = useI18n()
 
 const props = defineProps({
-  invitation: { type: Object, required: true }
+  invitation: { type: Object, required: true },
+  linkBase: { type: String, default: '' }
 })
 
 defineEmits(['revoke'])
@@ -69,6 +70,7 @@ const copied = ref(false)
 
 const inviteUrl = computed(() => {
   if (!props.invitation.invite_token) return ''
+  if (props.linkBase) return `${props.linkBase}${props.invitation.invite_token}`
   return `${window.location.origin}/invite/${props.invitation.invite_token}`
 })
 
