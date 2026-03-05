@@ -123,6 +123,72 @@ def update_guild(guild: Guild, data: dict) -> Guild:
 
 
 def delete_guild(guild: Guild) -> None:
+    """Delete a guild and all related records."""
+    from app.models.signup import Signup, LineupSlot, RaidBan, CharacterReplacement
+    from app.models.attendance import AttendanceRecord
+    from app.models.notification import Notification, JobQueue
+    from app.models.raid import RaidEvent, EventSeries, RaidTemplate, RaidDefinition
+    from app.models.character import Character
+    from app.models.guild_feature import GuildFeature
+    from app.models.guild import (
+        GuildClassRoleOverride, GuildExpansion, GuildRealm,
+    )
+
+    gid = guild.id
+
+    # Delete deepest children first (signup/lineup → events)
+    for model in (CharacterReplacement, RaidBan, LineupSlot, Signup):
+        db.session.execute(sa.delete(model).where(model.guild_id == gid))
+    db.session.execute(
+        sa.delete(AttendanceRecord).where(AttendanceRecord.guild_id == gid)
+    )
+
+    # Notifications and job queue (nullable FK)
+    db.session.execute(
+        sa.delete(Notification).where(Notification.guild_id == gid)
+    )
+    db.session.execute(
+        sa.delete(JobQueue).where(JobQueue.guild_id == gid)
+    )
+
+    # Events, series, templates, definitions
+    db.session.execute(sa.delete(RaidEvent).where(RaidEvent.guild_id == gid))
+    db.session.execute(
+        sa.delete(EventSeries).where(EventSeries.guild_id == gid)
+    )
+    db.session.execute(
+        sa.delete(RaidTemplate).where(RaidTemplate.guild_id == gid)
+    )
+    db.session.execute(
+        sa.delete(RaidDefinition).where(RaidDefinition.guild_id == gid)
+    )
+
+    # Guild-level config
+    db.session.execute(
+        sa.delete(GuildClassRoleOverride).where(
+            GuildClassRoleOverride.guild_id == gid
+        )
+    )
+    db.session.execute(
+        sa.delete(GuildExpansion).where(GuildExpansion.guild_id == gid)
+    )
+    db.session.execute(
+        sa.delete(GuildRealm).where(GuildRealm.guild_id == gid)
+    )
+    db.session.execute(
+        sa.delete(GuildFeature).where(GuildFeature.guild_id == gid)
+    )
+    db.session.execute(sa.delete(Character).where(Character.guild_id == gid))
+
+    # Memberships & invitations
+    db.session.execute(
+        sa.delete(GuildInvitation).where(GuildInvitation.guild_id == gid)
+    )
+    db.session.execute(
+        sa.delete(GuildMembership).where(GuildMembership.guild_id == gid)
+    )
+
+    # Finally delete the guild itself
     db.session.delete(guild)
     db.session.commit()
 

@@ -357,7 +357,8 @@ onMounted(async () => {
   try {
     const guildId = guildStore.currentGuildId
     if (guildId) {
-      guildExpansions.value = await guildExpansionsApi.getGuildExpansions(guildId)
+      const res = await guildExpansionsApi.getGuildExpansions(guildId)
+      guildExpansions.value = (res?.expansions ?? res ?? [])
       guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     }
   } catch {
@@ -371,7 +372,8 @@ watch(() => guildStore.currentGuild?.id, async (newId, oldId) => {
     loadDefinitions()
     selectedExpansion.value = null
     try {
-      guildExpansions.value = await guildExpansionsApi.getGuildExpansions(newId)
+      const res = await guildExpansionsApi.getGuildExpansions(newId)
+      guildExpansions.value = (res?.expansions ?? res ?? [])
       guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     } catch {
       guildExpansions.value = []
