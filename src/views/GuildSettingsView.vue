@@ -275,16 +275,18 @@ async function fetchRoles() {
   }
 }
 
+const allExpansions = computed(() =>
+  constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
+)
+
 const sortedExpansions = computed(() => {
-  const exps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
-  return [...exps].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
+  return [...allExpansions.value].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
 })
 
 const includedExpansions = computed(() => {
   const selected = sortedExpansions.value.find(e => e.id === form.expansion_id)
   if (!selected) return []
-  const allExps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
-  return [...allExps]
+  return [...allExpansions.value]
     .filter(e => (e.sort_order ?? 0) <= (selected.sort_order ?? 0))
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 })
@@ -334,8 +336,7 @@ async function loadGuildData() {
         const expData = await guildExpansionsApi.getGuildExpansions(g.id)
         const enabledExps = (expData.expansions || [])
         if (enabledExps.length > 0) {
-          const allExps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
-          let highestEnabled = null
+          const allExps = allExpansions.value          let highestEnabled = null
           for (const ge of enabledExps) {
             const full = allExps.find(e => e.id === ge.expansion_id)
             if (full && (!highestEnabled || (full.sort_order ?? 0) > (highestEnabled.sort_order ?? 0))) {
@@ -376,24 +377,27 @@ async function onExpansionChange() {
     const selected = sortedExpansions.value.find(e => e.id === form.expansion_id)
     if (!selected) return
 
-    const allExps = constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
     const shouldBeEnabled = new Set(
-      allExps
+      allExpansions.value
         .filter(e => (e.sort_order ?? 0) <= (selected.sort_order ?? 0))
         .map(e => e.id)
     )
 
+    const enablePromises = []
     for (const id of shouldBeEnabled) {
       if (!currentEnabled.has(id)) {
-        await guildExpansionsApi.enableExpansion(guildId, id)
+        enablePromises.push(guildExpansionsApi.enableExpansion(guildId, id))
       }
     }
 
+    const disablePromises = []
     for (const id of currentEnabled) {
       if (!shouldBeEnabled.has(id)) {
-        await guildExpansionsApi.disableExpansion(guildId, id)
+        disablePromises.push(guildExpansionsApi.disableExpansion(guildId, id))
       }
     }
+
+    await Promise.all([...enablePromises, ...disablePromises])
 
     uiStore.showToast(t('guild.expansions.expansionUpdated'), 'success')
   } catch (err) {
