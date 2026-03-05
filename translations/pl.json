@@ -771,7 +771,12 @@
     "realmForSearch": "Nazwa Realmu",
     "realmSearchPlaceholder": "np. Lordaeron, Icecrown",
     "realmSearchHelp": "Wpisz nazwę realmu, aby wyszukać swoją gildię w armory.",
-    "noRealmsToSearch": "Brak dostępnych realmów. Wpisz nazwę realmu lub podaj prawidłowy adres URL armory."
+    "noRealmsToSearch": "Brak dostępnych realmów. Wpisz nazwę realmu lub podaj prawidłowy adres URL armory.",
+    "addMember": "Dodaj członka",
+    "addMemberHelp": "Szukaj członków przestrzeni roboczej po nazwie użytkownika i dodaj ich bezpośrednio do gildii.",
+    "searchUsers": "Szukaj użytkowników...",
+    "noUsersFound": "Nie znaleziono pasujących użytkowników.",
+    "memberAdded": "Członek został dodany!"
   },
   "members": {
     "addMember": "+ Dodaj członka",

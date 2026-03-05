@@ -778,7 +778,12 @@
     "realmHintPlaceholder": "e.g. Lordaeron, Icecrown",
     "realmHintHelp": "If the armory does not list realms automatically, enter the realm name to help find your guild.",
     "armoryUrlRequired": "Please enter the armory URL to search for your guild.",
-    "noRealmsToSearch": "No realms available. Enter a realm name to help find your guild."
+    "noRealmsToSearch": "No realms available. Enter a realm name to help find your guild.",
+    "addMember": "Add Member",
+    "addMemberHelp": "Search for workspace members by username and add them directly to the guild.",
+    "searchUsers": "Search users...",
+    "noUsersFound": "No matching users found.",
+    "memberAdded": "Member added successfully!"
   },
   "members": {
     "addMember": "+ Add Member",
