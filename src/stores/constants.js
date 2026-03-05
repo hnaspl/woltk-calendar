@@ -71,6 +71,16 @@ export const useConstantsStore = defineStore('constants', () => {
     return all
   })
 
+  /** Expansion slug → display name map, derived from API data. */
+  const expansionLabelMap = computed(() =>
+    Object.fromEntries(expansions.value.map(e => [e.slug, e.name]))
+  )
+
+  /** Expansion slugs ordered by sort_order descending (latest first). */
+  const expansionSlugsDesc = computed(() =>
+    [...expansions.value].sort((a, b) => b.sort_order - a.sort_order).map(e => e.slug)
+  )
+
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
@@ -120,6 +130,8 @@ export const useConstantsStore = defineStore('constants', () => {
     // derived
     roleLabelMap,
     allRealms,
+    expansionLabelMap,
+    expansionSlugsDesc,
     // actions
     fetchConstants,
   }

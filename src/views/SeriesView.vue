@@ -125,9 +125,8 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
-            <select v-model.number="form.default_raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="form.default_raid_size" :disabled="seriesSelectedSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in seriesSelectedSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
           </div>
           <div>
@@ -315,6 +314,19 @@ const selectedGuildObj = computed(() =>
 const selectedGuildLabel = computed(() => {
   const g = selectedGuildObj.value
   return g ? `${g.name} (${g.realm_name})` : ''
+})
+
+// Derive available sizes from the selected template's raid definition
+const seriesSelectedSizes = computed(() => {
+  if (!form.template_id) return [10, 20, 25, 40]
+  const tpl = templates.value.find(t => t.id === form.template_id)
+  if (tpl?.raid_definition) {
+    const rd = tpl.raid_definition
+    if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+      return [...rd.supported_sizes].sort((a, b) => a - b)
+    }
+  }
+  return [form.default_raid_size || 25]
 })
 
 const allOtherGuildsSelected = computed(() =>

@@ -298,9 +298,11 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
             <option value="">{{ t('raidDetail.noneUseDefaults') }}</option>
-            <optgroup :label="t('calendar.builtInRaids')">
-              <option v-for="rd in editBuiltinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
-            </optgroup>
+            <template v-for="group in editRaidDefsByExpansion" :key="group.expansion">
+              <optgroup :label="group.label">
+                <option v-for="rd in group.defs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+              </optgroup>
+            </template>
             <optgroup v-if="editCustomDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in editCustomDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
@@ -310,10 +312,10 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
-            <select v-model.number="editForm.raid_size" disabled class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-              <option v-for="s in editAvailableRaidSizes" :key="s" :value="s">{{ s }}-man</option>
+            <select v-model.number="editForm.raid_size" :disabled="editSelectedRaidSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in editSelectedRaidSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
-            <span class="text-[10px] text-text-muted">{{ t('calendar.sizeFromRaid') }}</span>
+            <span class="text-[10px] text-text-muted">{{ editSelectedRaidSizes.length > 1 ? t('calendar.selectSize') : t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
@@ -419,7 +421,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
@@ -476,6 +478,20 @@ const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_built
 const editSelectedRaidDef = computed(() =>
   editRaidDefs.value.find(d => d.id === editForm.raid_definition_id) ?? null
 )
+
+const editRaidDefsByExpansion = computed(() =>
+  groupRaidDefsByExpansion(editBuiltinDefs.value, constantsStore.expansionSlugsDesc, constantsStore.expansionLabelMap)
+)
+
+const editSelectedRaidSizes = computed(() => {
+  const rd = editSelectedRaidDef.value
+  if (!rd) return editAvailableRaidSizes.value
+  if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+    return [...rd.supported_sizes].sort((a, b) => a - b)
+  }
+  return [rd.default_raid_size ?? rd.size ?? 25]
+})
+
 const editAvailableRaidSizes = computed(() => {
   const sizes = new Set()
   const defs = editRaidDefs.value

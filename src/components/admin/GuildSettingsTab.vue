@@ -225,9 +225,15 @@ async function loadGuildData() {
     // Load guild-configured realms from API
     try {
       const data = await guildRealmsApi.getGuildRealms(g.id)
-      guildRealmNames.value = (data.realms || []).map(r => r.name)
+      const realmList = (data.realms || []).map(r => r.name)
+      // Always include the current guild realm in the list
+      if (g.realm_name && !realmList.includes(g.realm_name)) {
+        realmList.unshift(g.realm_name)
+      }
+      guildRealmNames.value = realmList
     } catch {
-      guildRealmNames.value = []
+      // Fallback: at least show the current realm
+      guildRealmNames.value = g.realm_name ? [g.realm_name] : []
     }
   } catch {
     error.value = t('guildSettings.failedToLoad')

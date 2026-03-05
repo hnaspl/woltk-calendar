@@ -174,6 +174,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
+import { groupRaidDefsByExpansion } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as guildExpansionsApi from '@/api/guild_expansions'
@@ -218,27 +219,10 @@ const filteredRaidDefs = computed(() => {
 const builtinDefs = computed(() => filteredRaidDefs.value.filter(d => d.is_builtin))
 const customDefs = computed(() => filteredRaidDefs.value.filter(d => !d.is_builtin))
 
-// Expansion display labels (latest first)
-const EXPANSION_LABELS = {
-  tww: 'The War Within', df: 'Dragonflight', sl: 'Shadowlands',
-  bfa: "Battle for Azeroth", legion: 'Legion', wod: 'Warlords of Draenor',
-  mop: 'Mists of Pandaria', cata: 'Cataclysm', wotlk: 'Wrath of the Lich King',
-  tbc: 'The Burning Crusade', classic: 'Classic',
-}
-const EXPANSION_ORDER = Object.keys(EXPANSION_LABELS)
-
-// Group builtin raids by expansion, sorted latest-first
-const raidDefsByExpansion = computed(() => {
-  const groups = {}
-  for (const rd of builtinDefs.value) {
-    const exp = rd.expansion || 'unknown'
-    if (!groups[exp]) groups[exp] = []
-    groups[exp].push(rd)
-  }
-  return EXPANSION_ORDER
-    .filter(exp => groups[exp]?.length)
-    .map(exp => ({ expansion: exp, label: EXPANSION_LABELS[exp] || exp, defs: groups[exp] }))
-})
+// Group builtin raids by expansion using constants store data (no hardcoded labels)
+const raidDefsByExpansion = computed(() =>
+  groupRaidDefsByExpansion(builtinDefs.value, constantsStore.expansionSlugsDesc, constantsStore.expansionLabelMap)
+)
 
 // Selected raid definition — for auto-populating size/difficulty
 const selectedRaidDef = computed(() =>

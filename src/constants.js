@@ -198,3 +198,27 @@ export function raidTypeLabel(raidType, raidTypes = []) {
   const found = raidTypes.find(r => r.value === raidType)
   return found ? found.label : raidType
 }
+
+/**
+ * Group raid definitions by expansion, sorted by expansion order (latest first).
+ *
+ * @param {Array} defs - Raid definitions to group (only builtin ones are grouped)
+ * @param {Array} expansionSlugsDesc - Expansion slugs ordered latest→oldest
+ * @param {Object} expansionLabelMap - Map of slug → display name
+ * @returns {Array<{expansion: string, label: string, defs: Array}>}
+ */
+export function groupRaidDefsByExpansion(defs, expansionSlugsDesc = [], expansionLabelMap = {}) {
+  const groups = {}
+  for (const rd of defs) {
+    const exp = rd.expansion || 'unknown'
+    if (!groups[exp]) groups[exp] = []
+    groups[exp].push(rd)
+  }
+  // Use API-provided order; fall back to alphabetical for unknown slugs
+  const orderedSlugs = expansionSlugsDesc.length
+    ? expansionSlugsDesc
+    : Object.keys(groups).sort()
+  return orderedSlugs
+    .filter(exp => groups[exp]?.length)
+    .map(exp => ({ expansion: exp, label: expansionLabelMap[exp] || exp, defs: groups[exp] }))
+}

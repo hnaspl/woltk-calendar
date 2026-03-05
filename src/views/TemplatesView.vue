@@ -75,17 +75,21 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onTemplateRaidDefChange">
             <option value="">{{ t('templates.selectRaid') }}</option>
-            <option v-for="d in raidDefinitions" :key="d.id" :value="d.id">{{ d.name }}</option>
+            <template v-for="group in templateRaidDefsByExpansion" :key="group.expansion">
+              <optgroup :label="group.label">
+                <option v-for="d in group.defs" :key="d.id" :value="d.id">{{ d.name }} ({{ d.default_raid_size ?? d.size }}-man)</option>
+              </optgroup>
+            </template>
           </select>
           <p v-if="raidDefinitions.length === 0" class="text-xs text-text-muted mt-1">{{ t('templates.noRaidDefs') }}</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
-            <select v-model.number="form.raid_size" disabled class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-              <option v-for="s in templateAvailableSizes" :key="s" :value="s">{{ s }}-man</option>
+            <select v-model.number="form.raid_size" :disabled="templateSelectedSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in templateSelectedSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
-            <span class="text-[10px] text-text-muted">{{ t('calendar.sizeFromRaid') }}</span>
+            <span class="text-[10px] text-text-muted">{{ templateSelectedSizes.length > 1 ? t('calendar.selectSize') : t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
@@ -223,6 +227,8 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useTimezone } from '@/composables/useTimezone'
 import * as templatesApi from '@/api/templates'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import { useConstantsStore } from '@/stores/constants'
+import { groupRaidDefsByExpansion } from '@/constants'
 import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
@@ -230,6 +236,7 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
+const constantsStore = useConstantsStore()
 const router = useRouter()
 const { t } = useI18n()
 
@@ -272,6 +279,21 @@ const currentGuildLabel = computed(() => {
 const templateSelectedDef = computed(() =>
   raidDefinitions.value.find(d => d.id === form.raid_definition_id) ?? null
 )
+
+const templateRaidDefsByExpansion = computed(() => {
+  const builtins = raidDefinitions.value.filter(d => d.is_builtin)
+  return groupRaidDefsByExpansion(builtins, constantsStore.expansionSlugsDesc, constantsStore.expansionLabelMap)
+})
+
+const templateSelectedSizes = computed(() => {
+  const rd = templateSelectedDef.value
+  if (!rd) return templateAvailableSizes.value
+  if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+    return [...rd.supported_sizes].sort((a, b) => a - b)
+  }
+  return [rd.default_raid_size ?? rd.size ?? 25]
+})
+
 const templateAvailableSizes = computed(() => {
   const sizes = new Set()
   for (const d of raidDefinitions.value) {
