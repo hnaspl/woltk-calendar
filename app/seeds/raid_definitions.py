@@ -57,6 +57,9 @@ def seed_raid_definitions() -> int:
             if existing is not None:
                 continue
 
+            supported = raid_data.get("supported_sizes", "")
+            size_list = [int(s.strip()) for s in supported.split(",") if s.strip().isdigit()] if supported else []
+
             rd = RaidDefinition(
                 guild_id=None,
                 created_by=None,
@@ -65,8 +68,9 @@ def seed_raid_definitions() -> int:
                 expansion=raid_data.get("expansion", expansion_slug),
                 category=raid_data.get("category", "raid"),
                 default_raid_size=raid_data.get("default_raid_size", 25),
-                supports_10=raid_data.get("supports_10", True),
-                supports_25=raid_data.get("supports_25", True),
+                supported_sizes=supported or None,
+                supports_10=10 in size_list if size_list else raid_data.get("supports_10", True),
+                supports_25=25 in size_list if size_list else raid_data.get("supports_25", True),
                 supports_heroic=raid_data.get("supports_heroic", False),
                 is_builtin=True,
                 is_active=True,

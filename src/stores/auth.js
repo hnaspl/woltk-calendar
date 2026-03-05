@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as authApi from '@/api/auth'
+import { useTenantStore } from '@/stores/tenant'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -14,7 +15,6 @@ export const useAuthStore = defineStore('auth', () => {
   /** Helper to bootstrap tenant context after auth. */
   function _bootstrapTenant(userData) {
     try {
-      const { useTenantStore } = require('@/stores/tenant')
       const tenantStore = useTenantStore()
       if (userData?.active_tenant_id) {
         tenantStore.activeTenantId = userData.active_tenant_id
@@ -28,7 +28,6 @@ export const useAuthStore = defineStore('auth', () => {
   /** Helper to clear tenant context on logout. */
   function _resetTenant() {
     try {
-      const { useTenantStore } = require('@/stores/tenant')
       const tenantStore = useTenantStore()
       tenantStore.$reset()
     } catch {

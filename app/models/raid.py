@@ -36,6 +36,7 @@ class RaidDefinition(db.Model):
     supports_10: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     supports_25: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     supports_heroic: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    supported_sizes: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     is_builtin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     default_duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
@@ -64,7 +65,22 @@ class RaidDefinition(db.Model):
     creator = relationship("User", foreign_keys=[created_by], lazy="select")
     expansion_raid = relationship("ExpansionRaid", foreign_keys=[expansion_raid_id], lazy="select")
 
+    def _get_supported_sizes(self) -> list[int]:
+        """Return list of supported sizes for this raid."""
+        if self.supported_sizes:
+            return sorted(int(s.strip()) for s in self.supported_sizes.split(",") if s.strip().isdigit())
+        # Fallback: derive from boolean flags
+        sizes = []
+        if self.supports_10:
+            sizes.append(10)
+        if self.supports_25:
+            sizes.append(25)
+        if not sizes:
+            sizes.append(self.default_raid_size)
+        return sorted(sizes)
+
     def to_dict(self) -> dict:
+        sizes = self._get_supported_sizes()
         return {
             "id": self.id,
             "guild_id": self.guild_id,
@@ -74,8 +90,9 @@ class RaidDefinition(db.Model):
             "category": self.category,
             "default_raid_size": self.default_raid_size,
             "size": self.default_raid_size,
-            "supports_10": self.supports_10,
-            "supports_25": self.supports_25,
+            "supported_sizes": sizes,
+            "supports_10": 10 in sizes,
+            "supports_25": 25 in sizes,
             "supports_heroic": self.supports_heroic,
             "is_builtin": self.is_builtin,
             "is_active": self.is_active,

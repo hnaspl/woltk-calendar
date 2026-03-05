@@ -97,10 +97,11 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="eventForm.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
-            <option value="">{{ t('calendar.selectRaidDef') }}</option>
-            <optgroup :label="t('calendar.builtInRaids')">
-              <option v-for="rd in builtinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
-            </optgroup>
+            <template v-for="group in raidDefsByExpansion" :key="group.expansion">
+              <optgroup :label="group.label">
+                <option v-for="rd in group.defs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+              </optgroup>
+            </template>
             <optgroup v-if="customDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in customDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
@@ -114,10 +115,10 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
-            <select v-model.number="eventForm.raid_size" disabled class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-              <option v-for="s in availableRaidSizes" :key="s" :value="s">{{ s }}-man</option>
+            <select v-model.number="eventForm.raid_size" :disabled="selectedRaidSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in selectedRaidSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
-            <span class="text-[10px] text-text-muted">{{ t('calendar.sizeFromRaid') }}</span>
+            <span class="text-[10px] text-text-muted">{{ selectedRaidSizes.length > 1 ? t('calendar.selectSize') : t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
@@ -217,10 +218,42 @@ const filteredRaidDefs = computed(() => {
 const builtinDefs = computed(() => filteredRaidDefs.value.filter(d => d.is_builtin))
 const customDefs = computed(() => filteredRaidDefs.value.filter(d => !d.is_builtin))
 
+// Expansion display labels (latest first)
+const EXPANSION_LABELS = {
+  tww: 'The War Within', df: 'Dragonflight', sl: 'Shadowlands',
+  bfa: "Battle for Azeroth", legion: 'Legion', wod: 'Warlords of Draenor',
+  mop: 'Mists of Pandaria', cata: 'Cataclysm', wotlk: 'Wrath of the Lich King',
+  tbc: 'The Burning Crusade', classic: 'Classic',
+}
+const EXPANSION_ORDER = Object.keys(EXPANSION_LABELS)
+
+// Group builtin raids by expansion, sorted latest-first
+const raidDefsByExpansion = computed(() => {
+  const groups = {}
+  for (const rd of builtinDefs.value) {
+    const exp = rd.expansion || 'unknown'
+    if (!groups[exp]) groups[exp] = []
+    groups[exp].push(rd)
+  }
+  return EXPANSION_ORDER
+    .filter(exp => groups[exp]?.length)
+    .map(exp => ({ expansion: exp, label: EXPANSION_LABELS[exp] || exp, defs: groups[exp] }))
+})
+
 // Selected raid definition — for auto-populating size/difficulty
 const selectedRaidDef = computed(() =>
   raidDefs.value.find(d => d.id === eventForm.raid_definition_id) ?? null
 )
+
+// Supported sizes for the currently selected raid definition
+const selectedRaidSizes = computed(() => {
+  const rd = selectedRaidDef.value
+  if (!rd) return availableRaidSizes.value
+  if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+    return [...rd.supported_sizes].sort((a, b) => a - b)
+  }
+  return [rd.default_raid_size ?? rd.size ?? DEFAULT_RAID_SIZE]
+})
 
 // Dynamic raid sizes — derive from available raid definitions
 const availableRaidSizes = computed(() => {
@@ -279,7 +312,14 @@ onUnmounted(() => {
 })
 
 function loadRaidDefsForGuild(guildId) {
-  raidDefsApi.getRaidDefinitions(guildId).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+  raidDefsApi.getRaidDefinitions(guildId).then(defs => {
+    raidDefs.value = defs
+    // Auto-select first raid definition if none selected
+    if (!eventForm.raid_definition_id && defs.length) {
+      eventForm.raid_definition_id = defs[0].id
+      onRaidDefChange()
+    }
+  }).catch(err => { console.warn('Failed to load raid definitions', err) })
   guildExpansionsApi.getGuildExpansions(guildId).then(res => {
     const exps = res?.expansions ?? res ?? []
     guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)

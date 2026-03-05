@@ -287,6 +287,7 @@
     "selectGuild": "Select guild…",
     "selectRaidDef": "Select raid definition…",
     "signupExpired": "Signup time expired",
+    "selectSize": "Choose raid size — this raid supports multiple sizes",
     "signups": "Signups",
     "size": "Size",
     "sizeFromRaid": "Size is set by the selected raid definition",
