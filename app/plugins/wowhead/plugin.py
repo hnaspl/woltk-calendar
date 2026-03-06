@@ -258,10 +258,6 @@ _DROPS_RE = re.compile(
 )
 
 
-# Maximum number of loot items to return per boss.  Keeps API responses
-# small and the frontend loot grid readable.
-_MAX_LOOT_ITEMS = 20
-
 
 def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
     """Fetch loot drops for a single NPC from Wowhead. Returns cached result if available.
@@ -326,7 +322,6 @@ def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
             })
 
         loot.sort(key=lambda x: x.get("quality", 0), reverse=True)
-        loot = loot[:_MAX_LOOT_ITEMS]
 
         _npc_loot_cache[cache_key] = loot
         return loot
