@@ -291,7 +291,7 @@ const sysSettingsSaving = ref(false)
 const syncing = ref(false)
 const settingsForm = ref({
   wowhead_tooltips: true,
-  autosync_enabled: false,
+  autosync_enabled: true,
   autosync_interval_minutes: 60,
   // SMTP
   smtp_host: '',
@@ -301,13 +301,13 @@ const settingsForm = ref({
   smtp_password: '',
   smtp_from_email: '',
   smtp_from_name: 'Raid Calendar',
-  email_activation_required: false,
+  email_activation_required: true,
   // Password policy
   password_min_length: 8,
-  password_require_uppercase: false,
-  password_require_lowercase: false,
-  password_require_digit: false,
-  password_require_special: false,
+  password_require_uppercase: true,
+  password_require_lowercase: true,
+  password_require_digit: true,
+  password_require_special: true,
 })
 
 const passwordToggles = computed(() => [

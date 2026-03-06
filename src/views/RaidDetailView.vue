@@ -90,12 +90,6 @@
 
             <!-- Action buttons row -->
             <div class="flex flex-wrap items-center gap-2 border-t border-border-default pt-3">
-              <div v-if="wowheadData?.loot?.length">
-                <WowButton variant="secondary" class="text-xs" @click="scrollToWowhead">
-                  <img :src="getUiIcon('loot')" class="w-4 h-4 rounded-sm inline" alt="" />
-                  {{ t('raidDetail.raidInfo') }}
-                </WowButton>
-              </div>
 
               <template v-if="permissions.can('edit_events')">
                 <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">{{ t('common.buttons.edit') }}</WowButton>
@@ -340,49 +334,6 @@
             />
           </div>
         </div>
-        <!-- Wowhead Raid Info — flat loot list by raid size/difficulty -->
-        <WowCard v-if="wowheadData?.loot?.length" ref="wowheadSection" class="lg:col-span-3">
-          <div class="flex items-center gap-2 mb-4">
-            <img :src="getUiIcon('loot')" class="w-5 h-5 rounded-sm" alt="" />
-            <h2 class="wow-heading text-base">{{ t('raidDetail.raidInfo') }}</h2>
-            <span v-if="wowheadData?.raid_size" class="text-xs px-2 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/40">
-              {{ wowheadData.raid_size }}-man {{ wowheadData.difficulty === 'heroic' ? t('calendar.heroic') : t('calendar.normal') }}
-            </span>
-            <span class="text-xs text-text-muted ml-1">({{ wowheadData.loot.length }} {{ t('raidDetail.drops') }})</span>
-            <a v-if="wowheadData?.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
-               class="ml-auto text-xs text-accent-gold hover:text-accent-gold/80 flex items-center gap-1">
-              {{ t('raidDetail.viewOnWowhead') }}
-            </a>
-          </div>
-
-          <!-- Loot grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-            <a v-for="item in wowheadData.loot" :key="item.id"
-               :href="`${wowheadData.wowhead_base}/item=${item.id}`"
-               :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
-               target="_blank" rel="noopener noreferrer"
-               class="loot-link flex items-center gap-2 px-2 py-1.5 rounded bg-bg-secondary/50 hover:bg-bg-tertiary transition-colors text-xs no-underline border border-border-default">
-              <span class="loot-icon-fallback w-6 h-6 rounded border flex-shrink-0"
-                    :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
-                    :style="{ backgroundColor: ITEM_QUALITY_HEX[item.quality] ? ITEM_QUALITY_HEX[item.quality] + '18' : 'transparent' }">
-              </span>
-              <span class="truncate" :style="{ color: ITEM_QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
-            </a>
-          </div>
-
-          <!-- Currencies & materials -->
-          <div v-if="wowheadData.currencies?.length" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
-            <div class="flex items-center gap-2 text-xs text-text-muted mb-2">
-              <img :src="getUiIcon('coin')" class="w-4 h-4 rounded-sm" alt="" />
-              <span class="font-medium text-text-primary">{{ t('raidDetail.currenciesAndMats') }}</span>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <span v-for="cur in wowheadData.currencies" :key="cur.name" class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-bg-secondary rounded border border-border-default">
-                {{ cur.name }}
-              </span>
-            </div>
-          </div>
-        </WowCard>
 
       </template>
     </div>
@@ -584,7 +535,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ITEM_QUALITY_COLORS, ITEM_QUALITY_HEX, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
@@ -594,7 +545,6 @@ import * as attendanceApi from '@/api/attendance'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
-import { refreshWowheadTooltips, getWowheadDomain } from '@/composables/useWowheadTooltips'
 
 const route = useRoute()
 const router = useRouter()
@@ -716,16 +666,6 @@ const mySignedUpCharacterIds = computed(() =>
 )
 
 const bans = ref([])
-const wowheadData = ref(null)
-const wowheadLoading = ref(false)
-const wowheadSection = ref(null)
-
-function scrollToWowhead() {
-  wowheadSection.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    ?? wowheadSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-const wowheadDomain = computed(() => getWowheadDomain(wowheadData.value?.expansion))
 
 
 const bannedCharacterIds = computed(() =>
@@ -794,8 +734,6 @@ onMounted(async () => {
     }
     // Fetch pending character replacement requests
     await loadReplacementRequests()
-    // Load Wowhead integration data (optional, non-blocking)
-    loadWowheadData()
   } catch (err) {
     error.value = err?.response?.data?.message ?? t('common.errors.failedToLoad')
   } finally {
@@ -1197,22 +1135,6 @@ function onAttendanceSaved() {
   uiStore.showToast(t('raidDetail.toasts.attendanceRecorded'), 'success')
 }
 
-// --- Wowhead integration ---
-async function loadWowheadData() {
-  if (!guildId.value || !event.value?.id) return
-  wowheadLoading.value = true
-  try {
-    wowheadData.value = await eventsApi.getEventWowhead(guildId.value, event.value.id)
-    if (wowheadData.value) {
-      refreshWowheadTooltips(wowheadData.value.expansion)
-    }
-  } catch {
-    // Wowhead data is optional
-  } finally {
-    wowheadLoading.value = false
-  }
-}
-
 // --- Discord webhook ---
 async function sendToDiscord() {
   if (!guildId.value || !event.value?.id) return
@@ -1261,12 +1183,4 @@ async function resolveReplacement(requestId, action) {
 }
 </script>
 
-<style>
-/*
- * Hide fallback loot-icon squares once Wowhead has injected item icons.
- * Wowhead's iconizeLinks adds elements with class 'iconsmall'/'iconmedium'/'iconlarge'.
- */
-.loot-link:has(.iconsmall, .iconmedium, .iconlarge) > .loot-icon-fallback {
-  display: none;
-}
-</style>
+

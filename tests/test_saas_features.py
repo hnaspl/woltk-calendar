@@ -43,6 +43,7 @@ def _make_user(
         is_active=True,
         is_admin=is_admin,
         max_guilds_override=max_guilds_override,
+        email_verified=True,
     )
     db.session.add(u)
     db.session.commit()

@@ -85,7 +85,7 @@ def user(db, ctx):
     """Create a regular user with a proper password hash."""
     pw_hash = bcrypt.generate_password_hash("testpass123").decode("utf-8")
     u = User(username="testuser", email="test@example.com",
-             password_hash=pw_hash, is_active=True)
+             password_hash=pw_hash, is_active=True, email_verified=True)
     db.session.add(u)
     db.session.commit()
     return u
@@ -183,7 +183,7 @@ class TestPasswordPolicy:
         resp = client.post("/api/v2/auth/register", json={
             "email": "eight@test.com",
             "username": "eightpw",
-            "password": "12345678",
+            "password": "Test1234!",
         })
         assert resp.status_code == 201
 
@@ -205,7 +205,7 @@ class TestPasswordPolicy:
         })
         resp = client.post("/api/v2/auth/change-password", json={
             "current_password": "testpass123",
-            "new_password": "newsecurepass123",
+            "new_password": "NewSecure1!",
         })
         assert resp.status_code == 200
 
@@ -836,7 +836,7 @@ class TestEmailValidation:
         resp = client.post("/api/v2/auth/register", json={
             "email": "valid@example.com",
             "username": "validuser",
-            "password": "securepass123",
+            "password": "Secure1!pass",
         })
         assert resp.status_code == 201
 

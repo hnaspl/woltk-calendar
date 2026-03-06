@@ -58,6 +58,7 @@ def admin_user(db):
         password_hash=bcrypt.generate_password_hash("admin123pass").decode("utf-8"),
         is_admin=True,
         auth_provider="local",
+        email_verified=True,
     )
     db.session.add(user)
     db.session.commit()
@@ -73,6 +74,7 @@ def regular_user(db):
         password_hash=bcrypt.generate_password_hash("user1234pass").decode("utf-8"),
         is_admin=False,
         auth_provider="local",
+        email_verified=True,
     )
     db.session.add(user)
     db.session.commit()

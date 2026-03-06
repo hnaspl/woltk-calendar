@@ -72,7 +72,7 @@ export function usePermissions() {
     // Tenant store not yet initialized
   }
 
-  const tenantRole = computed(() => _tenantStore?.activeTenant?.role ?? null)
+  const tenantRole = computed(() => _tenantStore?.activeTenant?.my_role ?? null)
   const isTenantOwner = computed(() => tenantRole.value === 'owner')
   const isTenantAdmin = computed(() => ['owner', 'admin'].includes(tenantRole.value))
 

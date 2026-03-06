@@ -301,6 +301,24 @@ def list_tenants_for_user(user_id: int) -> list[Tenant]:
     return list(rows)
 
 
+def list_tenants_with_role_for_user(user_id: int) -> list[dict]:
+    """Return all tenants the user belongs to, including the user's role in each."""
+    rows = db.session.execute(
+        sa.select(Tenant, TenantMembership.role)
+        .join(TenantMembership, TenantMembership.tenant_id == Tenant.id)
+        .where(
+            TenantMembership.user_id == user_id,
+            TenantMembership.status == MemberStatus.ACTIVE,
+        )
+    ).all()
+    result = []
+    for tenant, role in rows:
+        d = tenant.to_dict()
+        d["my_role"] = role
+        result.append(d)
+    return result
+
+
 def list_all_tenants() -> list[Tenant]:
     """Return all tenants (global admin only)."""
     return list(db.session.execute(

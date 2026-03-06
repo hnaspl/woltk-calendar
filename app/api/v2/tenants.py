@@ -23,9 +23,8 @@ active_tenant_bp = Blueprint("active_tenant_v2", __name__)
 @bp.get("/")
 @login_required
 def list_tenants():
-    """List all tenants the current user belongs to."""
-    tenants = tenant_service.list_tenants_for_user(current_user.id)
-    return jsonify([t.to_dict() for t in tenants]), 200
+    """List all tenants the current user belongs to, including user's role."""
+    return jsonify(tenant_service.list_tenants_with_role_for_user(current_user.id)), 200
 
 
 @bp.get("/<int:tenant_id>")

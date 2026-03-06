@@ -312,7 +312,7 @@ def _seed_system_settings_if_missing() -> int:
     from app.models.system_setting import SystemSetting
     defaults = {
         "wowhead_tooltips": "true",
-        "autosync_enabled": "false",
+        "autosync_enabled": "true",
         "autosync_interval_minutes": "60",
     }
     seeded = 0

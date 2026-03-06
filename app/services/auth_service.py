@@ -23,17 +23,17 @@ def _get_setting(key: str, default: str = "") -> str:
 
 def is_email_activation_required() -> bool:
     """Return True if email activation is enabled in system settings."""
-    return _get_setting("email_activation_required", "false") == "true"
+    return _get_setting("email_activation_required", "true") == "true"
 
 
 def get_password_policy() -> dict:
     """Return password policy from system settings."""
     return {
         "min_length": int(_get_setting("password_min_length", "8")),
-        "require_uppercase": _get_setting("password_require_uppercase", "false") == "true",
-        "require_lowercase": _get_setting("password_require_lowercase", "false") == "true",
-        "require_digit": _get_setting("password_require_digit", "false") == "true",
-        "require_special": _get_setting("password_require_special", "false") == "true",
+        "require_uppercase": _get_setting("password_require_uppercase", "true") == "true",
+        "require_lowercase": _get_setting("password_require_lowercase", "true") == "true",
+        "require_digit": _get_setting("password_require_digit", "true") == "true",
+        "require_special": _get_setting("password_require_special", "true") == "true",
     }
 
 

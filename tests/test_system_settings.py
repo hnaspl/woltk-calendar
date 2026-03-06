@@ -24,7 +24,7 @@ class TestSystemSettingsSeeding:
 
         ae = db.session.get(SystemSetting, "autosync_enabled")
         assert ae is not None
-        assert ae.value == "false"
+        assert ae.value == "true"
 
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai is not None
@@ -41,7 +41,7 @@ class TestSystemSettingsSeeding:
         wh = db.session.get(SystemSetting, "wowhead_tooltips")
         wh.value = "false"
         ae = db.session.get(SystemSetting, "autosync_enabled")
-        ae.value = "true"
+        ae.value = "false"
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         ai.value = "30"
         db.session.commit()
@@ -55,7 +55,7 @@ class TestSystemSettingsSeeding:
         assert wh.value == "false", "Wowhead tooltip setting was overwritten!"
 
         ae = db.session.get(SystemSetting, "autosync_enabled")
-        assert ae.value == "true", "Autosync enabled setting was overwritten!"
+        assert ae.value == "false", "Autosync enabled setting was overwritten!"
 
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai.value == "30", "Autosync interval setting was overwritten!"
@@ -77,7 +77,7 @@ class TestSystemSettingsSeeding:
 
         # The missing ones should be created with defaults
         ae = db.session.get(SystemSetting, "autosync_enabled")
-        assert ae.value == "false"
+        assert ae.value == "true"
 
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai.value == "60"
@@ -95,6 +95,7 @@ class TestSystemSettingsAPI:
             email="admin@test.com",
             password_hash=bcrypt.generate_password_hash("pass").decode(),
             is_admin=True,
+            email_verified=True,
         )
         db.session.add(user)
         db.session.commit()
