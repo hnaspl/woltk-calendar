@@ -168,10 +168,10 @@
                         :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).select"
                         @change="onAttendanceStatusChange(signup, $event)"
                       >
-                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey || opt.label) }}</option>
+                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
                       </select>
                       <span v-else class="text-sm px-3 py-1 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
-                        {{ t(ATTENDANCE_STATUS_I18N_MAP[signup.attendance_status || 'going'] || 'signup.attendanceGoing') }}
+                        {{ t(ATTENDANCE_STATUS_I18N_MAP[signup.attendance_status || 'going']) }}
                       </span>
                     </div>
                     <!-- Late minutes -->

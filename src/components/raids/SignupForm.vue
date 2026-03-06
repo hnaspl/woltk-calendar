@@ -112,7 +112,7 @@
               : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
             @click="form.attendanceStatus = opt.value"
           >
-            {{ t(opt.i18nKey || opt.label) }}
+            {{ t(opt.i18nKey) }}
           </button>
         </div>
         <!-- Late minutes input -->

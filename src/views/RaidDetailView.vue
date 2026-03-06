@@ -223,7 +223,7 @@
                               :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
                               @change="updateMyAttendanceStatus(s, $event.target.value)"
                             >
-                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey || opt.label) }}</option>
+                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
                             </select>
                           </div>
                           <!-- Late minutes -->
@@ -243,7 +243,7 @@
                             <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
                             <span class="text-sm px-3 py-1 rounded-md"
                                   :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
-                              {{ t(ATTENDANCE_STATUS_I18N_MAP[s.attendance_status || 'going'] || 'signup.attendanceGoing') }}
+                              {{ t(ATTENDANCE_STATUS_I18N_MAP[s.attendance_status || 'going']) }}
                             </span>
                           </div>
                           <span v-if="s.attendance_status === 'late' && s.late_minutes" class="block text-xs text-amber-300 text-right mt-1">
