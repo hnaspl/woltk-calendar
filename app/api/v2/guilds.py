@@ -12,7 +12,7 @@ from app.models.guild import Guild, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
-from app.utils.decorators import require_guild_permission
+from app.utils.decorators import require_admin, require_guild_permission
 from app.utils.permissions import get_membership, has_permission, can_grant_role, has_any_guild_permission
 from app.utils.realtime import emit_guild_changed, emit_guilds_changed
 from app.utils import notify
@@ -56,11 +56,9 @@ def list_all_guilds():
 
 @bp.get("/admin/all")
 @login_required
+@require_admin
 def admin_list_all_guilds():
     """List all guilds with member counts (global admin only)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guilds = guild_service.list_all_guilds()
     result = []
     for g in guilds:
@@ -80,11 +78,9 @@ def admin_list_all_guilds():
 
 @bp.get("/admin/<int:guild_id>/members")
 @login_required
+@require_admin
 def admin_list_members(guild_id: int):
     """List guild members (global admin only — no membership required)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
@@ -95,11 +91,9 @@ def admin_list_members(guild_id: int):
 
 @bp.put("/admin/<int:guild_id>/members/<int:user_id>")
 @login_required
+@require_admin
 def admin_update_member(guild_id: int, user_id: int):
     """Update a guild member's role (global admin only — no membership required)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
@@ -125,11 +119,9 @@ def admin_update_member(guild_id: int, user_id: int):
 
 @bp.delete("/admin/<int:guild_id>/members/<int:user_id>")
 @login_required
+@require_admin
 def admin_remove_member(guild_id: int, user_id: int):
     """Remove a member from a guild (global admin only)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
@@ -151,11 +143,9 @@ def admin_remove_member(guild_id: int, user_id: int):
 
 @bp.post("/admin/<int:guild_id>/transfer-ownership")
 @login_required
+@require_admin
 def admin_transfer_ownership(guild_id: int):
     """Transfer guild ownership (global admin only — no membership required)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
@@ -197,11 +187,9 @@ def admin_transfer_ownership(guild_id: int):
 
 @bp.delete("/admin/<int:guild_id>")
 @login_required
+@require_admin
 def admin_delete_guild(guild_id: int):
     """Delete a guild (global admin only — no membership required)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
@@ -212,11 +200,9 @@ def admin_delete_guild(guild_id: int):
 
 @bp.post("/admin/<int:guild_id>/notify/<int:user_id>")
 @login_required
+@require_admin
 def admin_send_notification(guild_id: int, user_id: int):
     """Send a notification to a guild member (global admin only)."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404

@@ -10,6 +10,7 @@ from app.i18n import _t
 from app.services import tenant_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, validate_required
+from app.utils.decorators import require_tenant_role
 
 bp = Blueprint("tenants_v2", __name__)
 invite_bp = Blueprint("invite_v2", __name__)
@@ -29,10 +30,9 @@ def list_tenants():
 
 @bp.get("/<int:tenant_id>")
 @login_required
+@require_tenant_role("member")
 def get_tenant(tenant_id: int):
     """Get tenant details (must be a member)."""
-    if not tenant_service.is_tenant_member(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.notMember")}), 403
     tenant = tenant_service.get_tenant(tenant_id)
     if not tenant:
         return jsonify({"error": _t("api.tenants.notFound")}), 404
@@ -41,10 +41,9 @@ def get_tenant(tenant_id: int):
 
 @bp.put("/<int:tenant_id>")
 @login_required
+@require_tenant_role("admin")
 def update_tenant(tenant_id: int):
     """Update tenant (owner or admin only)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     tenant = tenant_service.get_tenant(tenant_id)
     if not tenant:
         return jsonify({"error": _t("api.tenants.notFound")}), 404
@@ -58,10 +57,9 @@ def update_tenant(tenant_id: int):
 
 @bp.delete("/<int:tenant_id>")
 @login_required
+@require_tenant_role("owner")
 def delete_tenant(tenant_id: int):
     """Delete tenant (owner only)."""
-    if not tenant_service.is_tenant_owner(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.ownerRequired")}), 403
     tenant = tenant_service.get_tenant(tenant_id)
     if not tenant:
         return jsonify({"error": _t("api.tenants.notFound")}), 404
@@ -105,10 +103,9 @@ def resolve_subdomain():
 
 @bp.get("/<int:tenant_id>/usage")
 @login_required
+@require_tenant_role("member")
 def get_tenant_usage(tenant_id: int):
     """Get resource usage stats for the current user's tenant."""
-    if not tenant_service.is_tenant_member(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.notMember")}), 403
     from app.services import billing_service
     usage = billing_service.get_tenant_usage(tenant_id)
     return jsonify(usage), 200
@@ -120,20 +117,18 @@ def get_tenant_usage(tenant_id: int):
 
 @bp.get("/<int:tenant_id>/members")
 @login_required
+@require_tenant_role("member")
 def list_members(tenant_id: int):
     """List tenant members."""
-    if not tenant_service.is_tenant_member(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.notMember")}), 403
     members = tenant_service.list_members(tenant_id)
     return jsonify([m.to_dict() for m in members]), 200
 
 
 @bp.post("/<int:tenant_id>/members")
 @login_required
+@require_tenant_role("admin")
 def add_member(tenant_id: int):
     """Add a member to the tenant (admin only)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     data = get_json()
     err = validate_required(data, "user_id")
     if err:
@@ -148,10 +143,9 @@ def add_member(tenant_id: int):
 
 @bp.put("/<int:tenant_id>/members/<int:user_id>")
 @login_required
+@require_tenant_role("admin")
 def update_member(tenant_id: int, user_id: int):
     """Change a member's role (admin only)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     membership = tenant_service.get_membership(tenant_id, user_id)
     if not membership:
         return jsonify({"error": _t("api.tenants.memberNotFound")}), 404
@@ -168,10 +162,9 @@ def update_member(tenant_id: int, user_id: int):
 
 @bp.delete("/<int:tenant_id>/members/<int:user_id>")
 @login_required
+@require_tenant_role("admin")
 def remove_member(tenant_id: int, user_id: int):
     """Remove a member (admin only, cannot remove owner)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     try:
         tenant_service.remove_member(tenant_id, user_id)
     except ValueError as exc:
@@ -185,20 +178,18 @@ def remove_member(tenant_id: int, user_id: int):
 
 @bp.get("/<int:tenant_id>/invitations")
 @login_required
+@require_tenant_role("admin")
 def list_invitations(tenant_id: int):
     """List tenant invitations (admin only)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     invitations = tenant_service.list_invitations(tenant_id)
     return jsonify([inv.to_dict(include_token=True) for inv in invitations]), 200
 
 
 @bp.post("/<int:tenant_id>/invitations")
 @login_required
+@require_tenant_role("admin")
 def create_invitation(tenant_id: int):
     """Create a tenant invitation (admin only)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     data = get_json()
     try:
         invitation = tenant_service.create_invitation(
@@ -217,10 +208,9 @@ def create_invitation(tenant_id: int):
 
 @bp.delete("/<int:tenant_id>/invitations/<int:invitation_id>")
 @login_required
+@require_tenant_role("admin")
 def revoke_invitation(tenant_id: int, invitation_id: int):
     """Revoke an invitation (admin only)."""
-    if not tenant_service.is_tenant_admin(tenant_id, current_user.id):
-        return jsonify({"error": _t("api.tenants.adminRequired")}), 403
     from app.models.tenant import TenantInvitation  # local to avoid circular import
     invitation = db.session.get(TenantInvitation, invitation_id)
     if not invitation or invitation.tenant_id != tenant_id:

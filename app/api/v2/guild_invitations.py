@@ -15,6 +15,7 @@ from app.services import guild_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, validate_required
 from app.utils.decorators import require_guild_permission
+from app.utils.rate_limit import rate_limit
 
 bp = Blueprint("guild_invitations_v2", __name__)
 guild_invite_accept_bp = Blueprint("guild_invite_accept_v2", __name__)
@@ -35,6 +36,7 @@ def list_invitations(guild_id: int, membership):
 @bp.post("/<int:guild_id>/invitations")
 @login_required
 @require_guild_permission("invite_members")
+@rate_limit(limit=10, window=60)
 def create_invitation(guild_id: int, membership):
     """Create a guild invitation link."""
     data = get_json()

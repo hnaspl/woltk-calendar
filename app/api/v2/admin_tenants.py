@@ -7,19 +7,12 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.i18n import _t
+from app.models.tenant import Tenant
 from app.services import tenant_service, billing_service, export_service
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json, require_system_permission
+from app.utils.api_helpers import get_json, require_system_permission, get_or_404
 
 bp = Blueprint("admin_tenants_v2", __name__)
-
-
-def _get_tenant_or_404(tenant_id: int):
-    """Return (tenant, None) or (None, error_response)."""
-    tenant = tenant_service.get_tenant(tenant_id)
-    if not tenant:
-        return None, (jsonify({"error": _t("api.tenants.notFound")}), 404)
-    return tenant, None
 
 
 @bp.get("/")
@@ -51,7 +44,7 @@ def get_tenant(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     d = tenant.to_dict()
@@ -67,7 +60,7 @@ def update_tenant(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     data = get_json()
@@ -82,7 +75,7 @@ def suspend_tenant(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     tenant = tenant_service.suspend_tenant(tenant)
@@ -96,7 +89,7 @@ def activate_tenant(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     tenant = tenant_service.activate_tenant(tenant)
@@ -110,7 +103,7 @@ def delete_tenant(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     tenant_service.delete_tenant(tenant)
@@ -124,7 +117,7 @@ def update_limits(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     data = get_json()
@@ -147,7 +140,7 @@ def get_tenant_usage(tenant_id: int):
     err = require_system_permission("manage_billing")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     usage = billing_service.get_tenant_usage(tenant_id)
@@ -165,7 +158,7 @@ def export_tenant(tenant_id: int):
     err = require_system_permission("manage_tenants")
     if err:
         return err
-    tenant, t_err = _get_tenant_or_404(tenant_id)
+    tenant, t_err = get_or_404(Tenant, tenant_id, error_key="api.tenants.notFound")
     if t_err:
         return t_err
     data = export_service.export_tenant_data(tenant_id)

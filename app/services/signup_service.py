@@ -10,21 +10,11 @@ from app.extensions import db
 from app.i18n import _t
 from app.models.signup import Signup, RaidBan, CharacterReplacement
 from app.utils.class_roles import validate_class_role
+from app.utils.validators import validate_class_role_for_character
 
 
-def _validate_class_role(character_id: int, chosen_role: str) -> None:
-    """Validate that the character's class is allowed to take the chosen role.
-
-    Uses the per-guild matrix resolver (guild overrides + expansion defaults)
-    when the character has a guild_id.  Raises ValueError if the role is not
-    valid for the character's class.
-    """
-    from app.models.character import Character
-
-    character = db.session.get(Character, character_id)
-    if character is None or not character.class_name:
-        return  # Let other validation handle missing character
-    validate_class_role(character.class_name, chosen_role, guild_id=character.guild_id)
+# Delegate to shared validator (was _validate_class_role in this file)
+_validate_class_role = validate_class_role_for_character
 
 
 def _count_assigned_slots(raid_event_id: int) -> int:

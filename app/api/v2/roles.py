@@ -10,6 +10,7 @@ from flask_login import current_user
 from app.services import role_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
+from app.utils.decorators import require_admin
 from app.utils.permissions import get_membership, has_permission, get_user_permissions
 from app.i18n import _t
 

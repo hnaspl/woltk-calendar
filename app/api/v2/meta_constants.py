@@ -10,7 +10,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 from flask import Blueprint, jsonify
 
-from app.constants import ROLE_LABELS, ROLE_SLOTS
+from app.constants import ROLE_LABELS, ROLE_SLOTS, VALID_ATTENDANCE_STATUSES
 from app.enums import AttendanceOutcome, EventStatus, Role
 from app.extensions import db
 from app.models.expansion import (
@@ -102,6 +102,7 @@ def get_constants():
             ],
             "event_statuses": [s.value for s in EventStatus],
             "attendance_outcomes": [o.value for o in AttendanceOutcome],
+            "attendance_statuses": list(VALID_ATTENDANCE_STATUSES),
             "class_specs": class_specs,
             "class_roles": class_roles,
             "role_slots": {

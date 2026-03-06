@@ -69,3 +69,78 @@ def require_guild_permission(permission_code: str | None = None) -> Callable:
         return decorated
 
     return decorator
+
+
+def require_admin(f: Callable) -> Callable:
+    """Decorator that enforces global admin access.
+
+    Replaces inline ``if not current_user.is_admin`` / 
+    ``if not getattr(current_user, "is_admin", False)`` checks.
+
+    Usage::
+
+        @bp.get("/admin/users")
+        @login_required
+        @require_admin
+        def list_users():
+            ...
+    """
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not getattr(current_user, "is_admin", False):
+            return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+def require_tenant_role(role: str = "member") -> Callable:
+    """Decorator that enforces tenant membership at a specific role level.
+
+    *role* must be one of ``"member"``, ``"admin"``, or ``"owner"``.
+    The ``tenant_id`` route parameter is forwarded to the handler.
+
+    Global admins bypass the check.
+
+    Usage::
+
+        @bp.put("/<int:tenant_id>")
+        @login_required
+        @require_tenant_role("admin")
+        def update_tenant(tenant_id):
+            ...
+    """
+
+    _error_map = {
+        "member": "api.tenants.notMember",
+        "admin": "api.tenants.adminRequired",
+        "owner": "api.tenants.ownerRequired",
+    }
+
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            tenant_id = kwargs.get("tenant_id")
+            if tenant_id is None:
+                return jsonify({"error": "tenant_id is required"}), 400
+
+            # Global admins bypass tenant role checks
+            if getattr(current_user, "is_admin", False):
+                return f(*args, **kwargs)
+
+            from app.services import tenant_service
+            check_fn = {
+                "member": tenant_service.is_tenant_member,
+                "admin": tenant_service.is_tenant_admin,
+                "owner": tenant_service.is_tenant_owner,
+            }.get(role, tenant_service.is_tenant_member)
+
+            if not check_fn(tenant_id, current_user.id):
+                error_key = _error_map.get(role, "api.tenants.notMember")
+                return jsonify({"error": _t(error_key)}), 403
+            return f(*args, **kwargs)
+
+        return decorated
+
+    return decorator

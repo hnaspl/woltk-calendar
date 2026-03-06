@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from flask import jsonify, request
 
+from app.extensions import db
 from app.i18n import _t
 
 
@@ -110,3 +111,25 @@ def build_guild_role_map(guild_id: int, user_ids: list[int]) -> dict:
         }
         for m in memberships
     }
+
+
+def get_or_404(model_class, resource_id, *, error_key="common.errors.notFound"):
+    """Generic 404 helper for any SQLAlchemy model.
+
+    Returns ``(obj, None)`` on success or ``(None, error_response)`` when the
+    resource is not found.
+    """
+    obj = db.session.get(model_class, resource_id)
+    if obj is None:
+        return None, (jsonify({"error": _t(error_key)}), 404)
+    return obj, None
+
+
+def error_response(message, status_code=400):
+    """Build a standard JSON error response.
+
+    Usage::
+
+        return error_response("Something went wrong", 400)
+    """
+    return jsonify({"error": message}), status_code

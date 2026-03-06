@@ -128,6 +128,7 @@ class TestMetaConstants:
             "roles",
             "event_statuses",
             "attendance_outcomes",
+            "attendance_statuses",
             "class_specs",
             "class_roles",
             "role_slots",

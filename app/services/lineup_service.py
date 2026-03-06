@@ -17,6 +17,7 @@ from app.constants import (
 from app.extensions import db
 from app.models.signup import LineupSlot, Signup
 from app.utils.class_roles import validate_class_role
+from app.utils.validators import validate_class_role_for_signup
 
 
 def get_lineup(raid_event_id: int) -> list[LineupSlot]:
@@ -202,14 +203,8 @@ def upsert_slot(
     return slot
 
 
-def _validate_class_role_lineup(signup: Signup, new_role: str) -> None:
-    """Validate class-role constraint for lineup changes.
-
-    Uses the per-guild matrix resolver so guild-level overrides are respected.
-    """
-    if signup.character is None:
-        return
-    validate_class_role(signup.character.class_name, new_role, guild_id=signup.character.guild_id)
+# Delegate to shared validator (was _validate_class_role_lineup in this file)
+_validate_class_role_lineup = validate_class_role_for_signup
 
 
 class LineupConflictError(Exception):

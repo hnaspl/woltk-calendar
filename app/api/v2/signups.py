@@ -13,6 +13,7 @@ from app.utils.api_helpers import get_json, get_event_or_404, validate_required,
 from app.utils.decorators import require_guild_permission
 from app.utils.permissions import has_permission
 from app.utils.realtime import emit_signups_changed, emit_lineup_changed
+from app.utils.rate_limit import rate_limit
 from app.utils import notify
 from app.i18n import _t
 
@@ -34,6 +35,7 @@ def list_signups(guild_id: int, event_id: int, membership):
 @bp.post("")
 @login_required
 @require_guild_permission()
+@rate_limit(limit=30, window=60)
 def create_signup(guild_id: int, event_id: int, membership):
     event, err = get_event_or_404(guild_id, event_id)
     if err:

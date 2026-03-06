@@ -10,21 +10,12 @@ from __future__ import annotations
 from flask import Blueprint, jsonify
 
 from app.i18n import _t
+from app.models.plan import Plan
 from app.services import billing_service
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json, validate_required, require_system_permission
+from app.utils.api_helpers import get_json, validate_required, require_system_permission, get_or_404
 
 bp = Blueprint("admin_plans_v2", __name__)
-
-
-# --------------------------------------------------------------------------- helpers
-
-def _get_plan_or_404(plan_id: int):
-    """Return (plan, None) or (None, error_response)."""
-    plan = billing_service.get_plan(plan_id)
-    if not plan:
-        return None, (jsonify({"error": _t("plan.errors.not_found")}), 404)
-    return plan, None
 
 
 # --------------------------------------------------------------------------- plan CRUD
@@ -77,7 +68,7 @@ def get_plan(plan_id: int):
     err = require_system_permission("manage_plans")
     if err:
         return err
-    plan, p_err = _get_plan_or_404(plan_id)
+    plan, p_err = get_or_404(Plan, plan_id, error_key="plan.errors.not_found")
     if p_err:
         return p_err
     return jsonify(plan.to_dict()), 200
@@ -90,7 +81,7 @@ def update_plan(plan_id: int):
     err = require_system_permission("manage_plans")
     if err:
         return err
-    plan, p_err = _get_plan_or_404(plan_id)
+    plan, p_err = get_or_404(Plan, plan_id, error_key="plan.errors.not_found")
     if p_err:
         return p_err
     data = get_json()

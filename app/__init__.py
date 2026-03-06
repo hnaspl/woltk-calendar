@@ -27,7 +27,6 @@ def create_app(config_override: dict | None = None) -> Flask:
     _insecure_keys = {"dev-secret-key-change-me", "change-me-in-production"}
     if (
         not app.config.get("TESTING")
-        and not app.config.get("DEBUG")
         and app.config.get("SECRET_KEY") in _insecure_keys
     ):
         raise RuntimeError(
@@ -100,6 +99,20 @@ def create_app(config_override: dict | None = None) -> Flask:
     @app.before_request
     def make_session_permanent():
         session.permanent = True
+
+    @app.before_request
+    def validate_tenant_header():
+        """Reject requests where X-Tenant-Id header doesn't match the user's active tenant.
+
+        This prevents cross-tenant data access via header manipulation.
+        """
+        from flask_login import current_user as _cu
+        if not hasattr(_cu, "active_tenant_id") or not _cu.is_authenticated:
+            return  # Not logged in or no tenant context
+        header_tid = request.headers.get("X-Tenant-Id", type=int)
+        if header_tid and getattr(_cu, "active_tenant_id", None):
+            if header_tid != _cu.active_tenant_id:
+                return jsonify({"error": "Tenant mismatch"}), 403
 
     @app.before_request
     def resolve_tenant_from_subdomain():

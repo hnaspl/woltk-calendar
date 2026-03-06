@@ -8,6 +8,7 @@ from flask_login import current_user
 from app.services import character_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, validate_required
+from app.utils.rate_limit import rate_limit
 from app.i18n import _t
 
 bp = Blueprint("characters", __name__, url_prefix="/characters")
@@ -26,6 +27,7 @@ def list_characters():
 
 @bp.post("")
 @login_required
+@rate_limit(limit=20, window=60)
 def create_character():
     data = get_json()
     err = validate_required(data, "guild_id", "realm_name", "name", "class_name")

@@ -9,6 +9,7 @@ from app.services import auth_service
 from app.extensions import db
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, require_system_permission
+from app.utils.decorators import require_admin
 from app.i18n import _t
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -463,6 +464,7 @@ def update_system_settings():
 
 @bp.get("/settings/discord")
 @login_required
+@require_admin
 def get_discord_settings():
     """Return Discord OAuth settings (client_secret is masked). Global admin only.
 
@@ -470,8 +472,6 @@ def get_discord_settings():
     Discord Developer Portal under *Redirects*.  It is auto-generated from
     the current request so the admin cannot mis-type the path.
     """
-    if not current_user.is_admin:
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     from flask import request
     from app.models.system_setting import SystemSetting
     keys = ["discord_client_id", "discord_client_secret"]
@@ -494,10 +494,9 @@ def get_discord_settings():
 
 @bp.put("/settings/discord")
 @login_required
+@require_admin
 def update_discord_settings():
     """Update Discord OAuth settings. Client secret is encrypted before storage. Global admin only."""
-    if not current_user.is_admin:
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     from app.models.system_setting import SystemSetting
     from app.utils.encryption import encrypt_value
 
