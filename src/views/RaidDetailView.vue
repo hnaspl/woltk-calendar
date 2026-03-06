@@ -157,100 +157,110 @@
             />
             <!-- My signups list for switching active character -->
             <WowCard v-if="mySignups.length > 0">
-              <h3 class="wow-heading text-base mb-3">{{ t('raidDetail.mySignupsTitle', { count: mySignups.length }) || `My Signups (${mySignups.length})` }}</h3>
-              <div class="space-y-3">
+              <h3 class="wow-heading text-base mb-4">{{ t('raidDetail.mySignupsTitle', { count: mySignups.length }) || `My Signups (${mySignups.length})` }}</h3>
+              <div class="space-y-4">
                 <div
                   v-for="s in mySignups"
                   :key="s.id"
                   class="space-y-2"
                 >
                   <div
-                    class="rounded border transition-colors overflow-hidden"
+                    class="rounded-lg border transition-colors overflow-hidden"
                     :class="editingSignupId === s.id
                       ? 'border-accent-gold bg-accent-gold/5'
-                      : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                      : 'border-border-default bg-bg-tertiary hover:border-border-gold/40'"
                   >
-                    <!-- Character info row -->
-                    <div class="px-3 py-3 flex items-start gap-3">
-                      <img
-                        :src="getClassIcon(s.character?.class_name)"
-                        :alt="s.character?.class_name ?? ''"
-                        class="w-10 h-10 rounded flex-shrink-0"
-                      />
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <span class="font-medium text-sm" :style="{ color: getClassColor(s.character?.class_name) }">
-                            {{ s.character?.name ?? '?' }}
-                          </span>
-                          <RoleBadge :role="s.chosen_role" />
-                          <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
-                            {{ t('common.labels.bench') }}{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
-                          </span>
-                          <span v-else-if="s.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">{{ t('common.labels.declined') }}</span>
-                          <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">{{ t('common.labels.inLineup') }}</span>
-                        </div>
-                        <!-- Specs -->
-                        <div v-if="s.chosen_spec" class="flex items-center gap-1 mt-1.5 flex-wrap">
-                          <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
-                        </div>
-                        <!-- Professions -->
-                        <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                          <span
-                            v-for="prof in mySignupProfessions(s)"
-                            :key="prof.name"
-                            class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
-                          >
-                            <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
-                            {{ prof.name }} {{ prof.skill || '' }}
-                          </span>
-                        </div>
-                        <p v-if="s.note" class="text-text-muted text-[10px] italic mt-1.5">📝 {{ s.note }}</p>
-                      </div>
-                    </div>
-                    <!-- Actions row (separate from info for cleaner layout) -->
-                    <div v-if="event.status === 'open' || event.status === 'draft'" class="px-3 py-2 border-t border-border-default/50 bg-bg-secondary/30 flex items-center gap-2 flex-wrap">
-                      <!-- Attendance status -->
-                      <select
-                        :value="s.attendance_status || 'going'"
-                        class="text-xs px-2 py-1 rounded border bg-bg-secondary outline-none cursor-pointer"
-                        :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
-                        @change="updateMyAttendanceStatus(s, $event.target.value)"
-                      >
-                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                      </select>
-                      <!-- Late minutes -->
-                      <div v-if="s.attendance_status === 'late'" class="flex items-center gap-1">
-                        <input
-                          type="number" min="1" max="120" step="5"
-                          :value="s.late_minutes || ''"
-                          :placeholder="t('signup.minutesLate')"
-                          class="w-16 text-xs px-1.5 py-1 bg-bg-tertiary border border-amber-500/40 text-amber-300 rounded outline-none"
-                          @change="updateMyLateMinutes(s, $event.target.value)"
+                    <!-- Card body -->
+                    <div class="p-4 sm:p-5">
+                      <div class="flex items-start gap-4">
+                        <img
+                          :src="getClassIcon(s.character?.class_name)"
+                          :alt="s.character?.class_name ?? ''"
+                          class="w-14 h-14 rounded-lg border border-border-default flex-shrink-0"
                         />
+                        <div class="flex-1 min-w-0">
+                          <!-- Name + status -->
+                          <div class="flex items-center gap-2 flex-wrap mb-2">
+                            <span class="text-base sm:text-lg font-bold" :style="{ color: getClassColor(s.character?.class_name) }">
+                              {{ s.character?.name ?? '?' }}
+                            </span>
+                            <RoleBadge :role="s.chosen_role" />
+                            <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-xs font-semibold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded">
+                              {{ t('common.labels.bench') }}{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
+                            </span>
+                            <span v-else-if="s.lineup_status === 'declined'" class="text-xs font-semibold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">{{ t('common.labels.declined') }}</span>
+                            <span v-else class="text-xs font-semibold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">{{ t('common.labels.inLineup') }}</span>
+                          </div>
+
+                          <!-- Specs -->
+                          <div v-if="s.chosen_spec" class="flex items-center gap-2 flex-wrap mb-3">
+                            <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+                          </div>
+
+                          <!-- Professions -->
+                          <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-2 flex-wrap mb-3">
+                            <span
+                              v-for="prof in mySignupProfessions(s)"
+                              :key="prof.name"
+                              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-bg-secondary border border-border-default rounded text-text-muted"
+                            >
+                              <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
+                              {{ prof.name }} {{ prof.skill || '' }}
+                            </span>
+                          </div>
+
+                          <!-- Note -->
+                          <p v-if="s.note" class="text-sm text-text-muted italic mb-2">📝 {{ s.note }}</p>
+                        </div>
+
+                        <!-- Right: Attendance status -->
+                        <div class="flex-shrink-0" v-if="event.status === 'open' || event.status === 'draft'">
+                          <div class="flex items-center gap-2">
+                            <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
+                            <select
+                              :value="s.attendance_status || 'going'"
+                              class="bg-bg-secondary border text-sm rounded-md px-3 py-1.5 outline-none cursor-pointer"
+                              :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
+                              @change="updateMyAttendanceStatus(s, $event.target.value)"
+                            >
+                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                            </select>
+                          </div>
+                          <!-- Late minutes -->
+                          <div v-if="s.attendance_status === 'late'" class="mt-2 flex items-center gap-1.5 justify-end">
+                            <input
+                              type="number" min="1" max="120" step="5"
+                              :value="s.late_minutes || ''"
+                              :placeholder="t('signup.minutesLate')"
+                              class="w-20 bg-bg-secondary border border-amber-500/40 text-amber-300 text-xs rounded px-2 py-1 outline-none focus:border-amber-400"
+                              @change="updateMyLateMinutes(s, $event.target.value)"
+                            />
+                          </div>
+                        </div>
+                        <!-- Read-only attendance when closed -->
+                        <div class="flex-shrink-0" v-else>
+                          <div class="flex items-center gap-2">
+                            <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
+                            <span class="text-sm px-3 py-1 rounded-md"
+                                  :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
+                              {{ ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going'] }}
+                            </span>
+                          </div>
+                          <span v-if="s.attendance_status === 'late' && s.late_minutes" class="block text-xs text-amber-300 text-right mt-1">
+                            ~{{ s.late_minutes }} {{ t('signup.minutesLate') }}
+                          </span>
+                        </div>
                       </div>
-                      <div class="flex-1"></div>
-                      <button
-                        class="text-xs px-3 py-1 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
-                        @click="editingSignupId = editingSignupId === s.id ? null : s.id"
-                      >
-                        {{ editingSignupId === s.id ? t('common.buttons.cancel') : t('common.buttons.edit') }}
-                      </button>
-                      <button
-                        class="text-xs px-3 py-1 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
-                        @click="leaveRaid(s)"
-                      >
-                        {{ t('raidDetail.leaveRaid') }}
-                      </button>
                     </div>
-                    <!-- Read-only status when event is closed -->
-                    <div v-else class="px-3 py-2 border-t border-border-default/50 bg-bg-secondary/30 flex items-center gap-2">
-                      <span class="text-xs px-2 py-0.5 rounded"
-                            :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
-                        {{ ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going'] }}
-                      </span>
-                      <span v-if="s.attendance_status === 'late' && s.late_minutes" class="text-[10px] text-amber-300">
-                        {{ s.late_minutes }} {{ t('signup.minutesLate') }}
-                      </span>
+
+                    <!-- Card footer: Action buttons -->
+                    <div v-if="event.status === 'open' || event.status === 'draft'" class="px-4 sm:px-5 py-3 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
+                      <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click="editingSignupId = editingSignupId === s.id ? null : s.id">
+                        {{ editingSignupId === s.id ? t('common.buttons.cancel') : t('common.buttons.edit') }}
+                      </WowButton>
+                      <WowButton variant="danger" class="text-xs !py-1.5 !px-3" @click="leaveRaid(s)">
+                        {{ t('raidDetail.leaveRaid') }}
+                      </WowButton>
                     </div>
                   </div>
                   <!-- Pending character replacement request -->
@@ -346,7 +356,6 @@
             <img :src="getUiIcon('map')" class="w-6 h-6 rounded-sm" alt="" />
             <div class="flex-1">
               <span class="text-sm text-text-primary font-medium">{{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
-              <span class="text-xs text-text-muted ml-2">{{ wowheadData.expansion }}</span>
             </div>
           </div>
 

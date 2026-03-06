@@ -176,12 +176,16 @@ def duplicate_event(guild_id: int, event_id: int, membership):
 @login_required
 @require_guild_permission()
 def get_event_wowhead(guild_id: int, event_id: int, membership):
-    """Return Wowhead integration data for a raid event."""
+    """Return Wowhead integration data for a raid event.
+
+    Loot data is fetched dynamically from Wowhead based on the event's
+    expansion and raid definition, then cached in memory.
+    """
     event, err = get_event_or_404(guild_id, event_id)
     if err:
         return err
 
-    from app.plugins.wowhead.plugin import WowheadPlugin, RAID_ZONE_IDS, BOSS_NPC_IDS, WOWHEAD_BASES
+    from app.plugins.wowhead.plugin import WowheadPlugin, WOWHEAD_BASES
 
     raid_code = event.raid_type
     expansion = event.raid_definition.expansion if event.raid_definition else "wotlk"
@@ -197,16 +201,17 @@ def get_event_wowhead(guild_id: int, event_id: int, membership):
     if zone_url:
         result["zone_url"] = zone_url
 
-    # Boss loot URLs with inline loot data
+    # Fetch all boss loot in parallel from Wowhead (cached after first call)
     bosses = WowheadPlugin.get_raid_bosses(raid_code, expansion)
     if bosses:
+        all_loot = WowheadPlugin.get_all_boss_loot(raid_code, expansion)
         result["bosses"] = [
             {
                 "name": name,
                 "npc_id": npc_id,
                 "npc_url": WowheadPlugin.get_npc_url(npc_id, expansion),
                 "loot_url": WowheadPlugin.get_boss_loot_url(npc_id, expansion),
-                "loot": WowheadPlugin.get_boss_loot(raid_code, name, expansion),
+                "loot": all_loot.get(name, []),
             }
             for name, npc_id in bosses.items()
         ]

@@ -14,12 +14,20 @@ Features:
 
 from __future__ import annotations
 
+import json
+import logging
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
+
+import requests
 
 from app.plugins.base import BasePlugin
 
 if TYPE_CHECKING:
     from flask import Flask
+
+logger = logging.getLogger(__name__)
 
 
 # Wowhead base URLs per expansion
@@ -231,107 +239,128 @@ BOSS_NPC_IDS: dict[str, dict[str, dict[str, int]]] = {
 WOTLK_BOSS_NPC_IDS = BOSS_NPC_IDS.get("wotlk", {})
 
 # ---------------------------------------------------------------------------
-# Notable boss loot — top drops per boss for inline display.
-# Items include: id, name, quality (1=common..5=legendary), slot.
-# Raids not listed here will show "View on Wowhead" links as fallback.
+# Dynamic loot fetching from Wowhead.
+# Fetches NPC drop tables on-demand and caches results in memory.
+# No hardcoded loot data — everything comes from Wowhead.
 # ---------------------------------------------------------------------------
-BOSS_LOOT: dict[str, dict[str, dict[str, list[dict]]]] = {
-    "wotlk": {
-        "icc": {
-            "Lord Marrowgar": [
-                {"id": 50415, "name": "Bryntroll, the Bone Arbiter", "quality": 4, "slot": "weapon"},
-                {"id": 50416, "name": "Citadel Enforcer's Claymore", "quality": 4, "slot": "weapon"},
-                {"id": 50414, "name": "Frozen Bonespike", "quality": 4, "slot": "weapon"},
-                {"id": 50413, "name": "Marrowgar's Frigid Eye", "quality": 4, "slot": "trinket"},
-                {"id": 50412, "name": "Cord of the Patronizing Practitioner", "quality": 4, "slot": "waist"},
-            ],
-            "Lady Deathwhisper": [
-                {"id": 50421, "name": "Njorndar Bone Bow", "quality": 4, "slot": "ranged"},
-                {"id": 50418, "name": "Scourgelord's Baton", "quality": 4, "slot": "wand"},
-                {"id": 50419, "name": "Boots of the Frozen Seed", "quality": 4, "slot": "feet"},
-                {"id": 50422, "name": "Deathspeaker Zealot's Helm", "quality": 4, "slot": "head"},
-            ],
-            "Deathbringer Saurfang": [
-                {"id": 50432, "name": "Deathbringer's Will", "quality": 4, "slot": "trinket"},
-                {"id": 50427, "name": "Bloodvenom Blade", "quality": 4, "slot": "weapon"},
-                {"id": 50428, "name": "Saurfang's Cold-Forged Band", "quality": 4, "slot": "finger"},
-                {"id": 50429, "name": "Gargoyle Spit Bracers", "quality": 4, "slot": "wrist"},
-            ],
-            "Festergut": [
-                {"id": 50038, "name": "Gutbuster", "quality": 4, "slot": "weapon"},
-                {"id": 50040, "name": "Festergut's Gaseous Gloves", "quality": 4, "slot": "hands"},
-                {"id": 50037, "name": "Cloak of Many Skins", "quality": 4, "slot": "back"},
-                {"id": 50035, "name": "Plague Scientist's Boots", "quality": 4, "slot": "feet"},
-            ],
-            "Rotface": [
-                {"id": 50023, "name": "Shaft of Glacial Ice", "quality": 4, "slot": "weapon"},
-                {"id": 50022, "name": "Ether-Soaked Bracers", "quality": 4, "slot": "wrist"},
-                {"id": 50025, "name": "Seal of Many Mouths", "quality": 4, "slot": "finger"},
-                {"id": 50024, "name": "Flesh-Shaper's Gurney Strap", "quality": 4, "slot": "waist"},
-            ],
-            "Professor Putricide": [
-                {"id": 50014, "name": "Unidentifiable Organ", "quality": 4, "slot": "trinket"},
-                {"id": 50013, "name": "Cauterized Cord", "quality": 4, "slot": "waist"},
-                {"id": 50012, "name": "Amulet of the Silent Eulogy", "quality": 4, "slot": "neck"},
-            ],
-            "Blood Prince Council": [
-                {"id": 50034, "name": "Keleseth's Seducer", "quality": 4, "slot": "weapon"},
-                {"id": 50033, "name": "Taldaram's Soft Slippers", "quality": 4, "slot": "feet"},
-                {"id": 50032, "name": "Valanar's Other Signet Ring", "quality": 4, "slot": "finger"},
-            ],
-            "Blood-Queen Lana'thel": [
-                {"id": 50009, "name": "Bloodfall", "quality": 4, "slot": "weapon"},
-                {"id": 50006, "name": "Lana'thel's Bloody Nail", "quality": 4, "slot": "weapon"},
-                {"id": 50007, "name": "Icecrown Glacial Wall", "quality": 4, "slot": "shield"},
-            ],
-            "Sindragosa": [
-                {"id": 50005, "name": "Sundial of Eternal Dusk", "quality": 4, "slot": "trinket"},
-                {"id": 50003, "name": "Splintered Door of the Citadel", "quality": 4, "slot": "shield"},
-                {"id": 50004, "name": "Memory of Malygos", "quality": 4, "slot": "trinket"},
-            ],
-            "The Lich King": [
-                {"id": 50818, "name": "Invincible's Reins", "quality": 5, "slot": "trinket"},
-                {"id": 49981, "name": "Shadowmourne", "quality": 5, "slot": "weapon"},
-                {"id": 50070, "name": "Glorenzelg, High-Blade of the Silver Hand", "quality": 4, "slot": "weapon"},
-                {"id": 50069, "name": "Royal Scepter of Terenas II", "quality": 4, "slot": "offhand"},
-                {"id": 50067, "name": "Troggbane, Axe of the Unmaker", "quality": 4, "slot": "weapon"},
-            ],
-        },
-        "ulduar": {
-            "Yogg-Saron": [
-                {"id": 46017, "name": "Val'anyr, Hammer of Ancient Kings", "quality": 5, "slot": "weapon"},
-                {"id": 45529, "name": "Soulscribe", "quality": 4, "slot": "weapon"},
-                {"id": 45532, "name": "Mantle of the Wayward Conqueror", "quality": 4, "slot": "shoulder"},
-            ],
-            "Algalon the Observer": [
-                {"id": 45594, "name": "Starshard Edge", "quality": 4, "slot": "weapon"},
-                {"id": 45609, "name": "Comet's Trail", "quality": 4, "slot": "trinket"},
-                {"id": 45587, "name": "Cosmos", "quality": 4, "slot": "offhand"},
-            ],
-        },
-        "toc": {
-            "Anub'arak": [
-                {"id": 47242, "name": "Trophy of the Crusade", "quality": 4, "slot": "trinket"},
-                {"id": 49236, "name": "Reign of the Dead", "quality": 4, "slot": "trinket"},
-            ],
-        },
-    },
-    "classic": {
-        "mc": {
-            "Ragnaros": [
-                {"id": 17063, "name": "Band of Accuria", "quality": 4, "slot": "finger"},
-                {"id": 17082, "name": "Shard of the Flame", "quality": 4, "slot": "trinket"},
-                {"id": 17204, "name": "Eye of Sulfuras", "quality": 5, "slot": "trinket"},
-            ],
-        },
-        "bwl": {
-            "Nefarian": [
-                {"id": 19002, "name": "Head of Nefarian", "quality": 4, "slot": "trinket"},
-                {"id": 19003, "name": "Head of Nefarian", "quality": 4, "slot": "trinket"},
-            ],
-        },
-    },
+_npc_loot_cache: dict[str, list[dict]] = {}
+
+_WOWHEAD_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml",
 }
+
+# Regex to extract the drops Listview data array from a Wowhead NPC page.
+# Wowhead embeds loot as:  template: 'item', id: 'drops', ... data: [{...}]
+_DROPS_RE = re.compile(
+    r"""id:\s*['"]drops['"].*?data:\s*(\[.*?\])\s*\}\)""",
+    re.DOTALL,
+)
+
+
+def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
+    """Fetch loot drops for a single NPC from Wowhead. Returns cached result if available."""
+    cache_key = f"{expansion}:{npc_id}"
+    if cache_key in _npc_loot_cache:
+        return _npc_loot_cache[cache_key]
+
+    base = WOWHEAD_BASES.get(expansion, "https://www.wowhead.com")
+    url = f"{base}/npc={npc_id}"
+
+    try:
+        resp = requests.get(url, timeout=15, headers=_WOWHEAD_HEADERS)
+        if resp.status_code != 200:
+            logger.warning("Wowhead returned %s for NPC %s", resp.status_code, npc_id)
+            _npc_loot_cache[cache_key] = []
+            return []
+
+        match = _DROPS_RE.search(resp.text)
+        if not match:
+            _npc_loot_cache[cache_key] = []
+            return []
+
+        raw = match.group(1)
+
+        # Wowhead uses JS object notation; convert to valid JSON:
+        # - quote unquoted keys
+        # - replace single quotes with double quotes
+        cleaned = re.sub(r"(?<=[{,])\s*([a-zA-Z_]\w*)\s*:", r'"\1":', raw)
+        cleaned = cleaned.replace("'", '"')
+        # Remove trailing commas before } or ]
+        cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+
+        try:
+            items = json.loads(cleaned)
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse Wowhead loot JSON for NPC %s", npc_id)
+            _npc_loot_cache[cache_key] = []
+            return []
+
+        loot: list[dict] = []
+        for item in items:
+            if not isinstance(item, dict) or "id" not in item:
+                continue
+            quality = item.get("quality", 1)
+            # Only include uncommon+ items (quality >= 2)
+            if quality < 2:
+                continue
+            loot.append({
+                "id": item["id"],
+                "name": item.get("name", item.get("name_enus", "Unknown")),
+                "quality": quality,
+            })
+
+        # Sort by quality (legendary first), limit to top 20
+        loot.sort(key=lambda x: x.get("quality", 0), reverse=True)
+        loot = loot[:20]
+
+        _npc_loot_cache[cache_key] = loot
+        return loot
+
+    except requests.RequestException as exc:
+        logger.warning("Failed to fetch Wowhead loot for NPC %s: %s", npc_id, exc)
+        _npc_loot_cache[cache_key] = []
+        return []
+    except Exception as exc:
+        logger.warning("Unexpected error fetching loot for NPC %s: %s", npc_id, exc)
+        _npc_loot_cache[cache_key] = []
+        return []
+
+
+def _fetch_raid_loot_parallel(
+    bosses: dict[str, int], expansion: str
+) -> dict[str, list[dict]]:
+    """Fetch loot for all bosses in a raid in parallel. Returns {boss_name: [items]}."""
+    results: dict[str, list[dict]] = {}
+    uncached = {
+        name: npc_id
+        for name, npc_id in bosses.items()
+        if f"{expansion}:{npc_id}" not in _npc_loot_cache
+    }
+
+    # Return cached results for bosses already fetched
+    for name, npc_id in bosses.items():
+        cache_key = f"{expansion}:{npc_id}"
+        if cache_key in _npc_loot_cache:
+            results[name] = _npc_loot_cache[cache_key]
+
+    if not uncached:
+        return results
+
+    # Fetch uncached bosses in parallel (max 4 threads to be polite)
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(_fetch_npc_loot, npc_id, expansion): name
+            for name, npc_id in uncached.items()
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                results[name] = future.result()
+            except Exception:
+                results[name] = []
+
+    return results
 
 # Expansion currencies earned from raids
 RAID_CURRENCIES: dict[str, list[dict]] = {
@@ -444,9 +473,17 @@ class WowheadPlugin(BasePlugin):
         return BOSS_NPC_IDS.get(expansion, {}).get(raid_code, {})
 
     @classmethod
-    def get_boss_loot(cls, raid_code: str, boss_name: str, expansion: str = "wotlk") -> list[dict]:
-        """Get notable loot items for a specific boss."""
-        return BOSS_LOOT.get(expansion, {}).get(raid_code, {}).get(boss_name, [])
+    def get_boss_loot(cls, npc_id: int, expansion: str = "wotlk") -> list[dict]:
+        """Fetch loot items for a specific boss NPC from Wowhead (cached)."""
+        return _fetch_npc_loot(npc_id, expansion)
+
+    @classmethod
+    def get_all_boss_loot(cls, raid_code: str, expansion: str = "wotlk") -> dict[str, list[dict]]:
+        """Fetch loot for all bosses in a raid in parallel (cached)."""
+        bosses = cls.get_raid_bosses(raid_code, expansion)
+        if not bosses:
+            return {}
+        return _fetch_raid_loot_parallel(bosses, expansion)
 
     @classmethod
     def get_raid_currencies(cls, expansion: str = "wotlk") -> list[dict]:
