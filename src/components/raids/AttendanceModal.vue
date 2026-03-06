@@ -1,5 +1,5 @@
 <template>
-  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('common.labels.recordAttendance')" size="lg">
+  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('common.labels.recordAttendance')" size="xl">
     <div class="space-y-4">
       <p class="text-text-muted text-sm">
         {{ t('attendance.modal.description') }}

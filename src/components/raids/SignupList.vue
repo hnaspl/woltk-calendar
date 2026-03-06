@@ -296,17 +296,15 @@ import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useGuildStore } from '@/stores/guild'
-import { useAuthStore } from '@/stores/auth'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
 const { classRoles } = useExpansionData()
 
 const guildStore = useGuildStore()
-const authStore = useAuthStore()
 const systemSettings = useSystemSettings()
 systemSettings.fetchSettings()
 const wowheadEnabled = computed(() => systemSettings.wowheadEnabled())
@@ -480,51 +478,6 @@ async function submitReplaceRequest() {
     emit('signup-updated', null)
   } catch (err) {
     emit('signup-error', err?.response?.data?.message ?? 'Failed to create replacement request')
-  }
-}
-
-// --- Attendance status (informational, NOT coupled with bench/queue) ---
-const lateMinutesTarget = ref(null)
-const lateMinutesValue = ref(null)
-
-function isOwnSignup(signup) {
-  return authStore.user && signup.user_id === authStore.user.id
-}
-
-async function onAttendanceStatusChange(signup, event) {
-  const newStatus = event.target.value
-  if (!props.guildId || !props.eventId) return
-
-  if (newStatus === 'late') {
-    lateMinutesTarget.value = signup.id
-    lateMinutesValue.value = signup.late_minutes || 15
-  } else {
-    lateMinutesTarget.value = null
-    lateMinutesValue.value = null
-  }
-
-  try {
-    const updated = await signupsApi.updateSignupStatus(props.guildId, props.eventId, signup.id, {
-      attendance_status: newStatus,
-      late_minutes: newStatus === 'late' ? (signup.late_minutes || 15) : undefined,
-    })
-    emit('signup-updated', updated)
-  } catch (err) {
-    emit('signup-error', err?.response?.data?.message ?? 'Failed to update status')
-  }
-}
-
-async function saveLateMinutes(signup) {
-  if (!props.guildId || !props.eventId || !lateMinutesValue.value) return
-  try {
-    const updated = await signupsApi.updateSignupStatus(props.guildId, props.eventId, signup.id, {
-      attendance_status: 'late',
-      late_minutes: lateMinutesValue.value,
-    })
-    lateMinutesTarget.value = null
-    emit('signup-updated', updated)
-  } catch (err) {
-    emit('signup-error', err?.response?.data?.message ?? 'Failed to save late minutes')
   }
 }
 </script>
