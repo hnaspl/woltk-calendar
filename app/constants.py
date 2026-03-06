@@ -97,6 +97,40 @@ ROLE_SLOTS: dict[int, dict[str, int]] = {
 }
 
 # ---------------------------------------------------------------------------
+# Bench / Queue display constants
+# ---------------------------------------------------------------------------
+# Default max bench entries shown in Discord webhook embeds.
+# Configurable per guild via guild settings ``bench_display_limit``.
+DEFAULT_BENCH_DISPLAY_LIMIT: int = 8
+MAX_BENCH_DISPLAY_LIMIT: int = 100
+
+
+def get_bench_display_limit(guild_id: int | None = None) -> int:
+    """Return the bench display limit for a guild, or the default.
+
+    Each guild can configure its own limit via ``settings.bench_display_limit``
+    (stored in ``settings_json``).  The value is clamped to 1–100.
+
+    Args:
+        guild_id: Guild to look up.  Falls back to *DEFAULT_BENCH_DISPLAY_LIMIT*
+                  when ``None`` or when the guild has no custom setting.
+    """
+    if guild_id is not None:
+        try:
+            from app.extensions import db
+            from app.models.guild import Guild
+
+            guild = db.session.get(Guild, guild_id)
+            if guild:
+                val = guild.settings.get("bench_display_limit")
+                if val is not None:
+                    return max(1, min(int(val), MAX_BENCH_DISPLAY_LIMIT))
+        except Exception:
+            pass
+    return DEFAULT_BENCH_DISPLAY_LIMIT
+
+
+# ---------------------------------------------------------------------------
 # Signup attendance statuses (informational — NOT coupled with bench/queue).
 # Keep in sync with ATTENDANCE_STATUS_OPTIONS in src/constants.js.
 # ---------------------------------------------------------------------------

@@ -132,6 +132,7 @@ class TestMetaConstants:
             "class_specs",
             "class_roles",
             "role_slots",
+            "bench_display_limit",
             "expansions",
         }
         assert set(data.keys()) == expected_keys

@@ -754,7 +754,11 @@
       "discordIntegration": "Integracja Discord",
       "webhookUrl": "URL Webhooka",
       "webhookHelp": "Utwórz webhooka w swoim serwerze Discord: Ustawienia serwera → Integracje → Webhooki. Szczegóły rajdów mogą być wysyłane na ten kanał z widoku wydarzenia rajdowego.",
-      "webhookSaved": "Webhook Discord zapisany!"
+      "webhookSaved": "Webhook Discord zapisany!",
+      "benchSettings": "Ustawienia ławki / kolejki",
+      "benchSettingsHelp": "Konfiguruj wyświetlanie kolejki ławki rezerwowej w webhookach Discord i innych miejscach.",
+      "benchDisplayLimit": "Limit wyświetlania ławki",
+      "benchDisplayLimitHelp": "Maksymalna liczba graczy z ławki wyświetlanych z imienia w webhookach Discord (1–100). Dodatkowi gracze są podsumowani jako '+X więcej na ławce'."
     },
     "toasts": {
       "failedToJoin": "Nie udało się dołączyć do gildii",

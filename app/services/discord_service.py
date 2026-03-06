@@ -20,6 +20,7 @@ import requests
 import sqlalchemy as sa
 
 from app.constants import ROLE_LABELS
+from app.utils.bench_formatter import format_bench_entries
 from app.extensions import db
 from app.models.user import User
 from app.models.system_setting import SystemSetting
@@ -374,16 +375,10 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
         })
 
     if bench:
-        bench_entries = []
-        for s in bench[:8]:
-            char_name = s.get("character", {}).get("name", "?")
-            role = s.get("chosen_role", "")
-            role_label = ROLE_LABELS.get(role, role.replace("_", " ").title())
-            bench_entries.append(f"{role_label}: {char_name}")
-        bench_text = "\n".join(bench_entries)
-        if len(bench) > 8:
-            bench_text += f"\n*+{len(bench) - 8} more on bench*"
-        fields.append({"name": f"Bench ({len(bench)})", "value": bench_text, "inline": False})
+        guild_id = event_data.get("guild_id")
+        bench_result = format_bench_entries(bench, guild_id=guild_id)
+        if bench_result:
+            fields.append({"name": f"Bench ({bench_result['count']})", "value": bench_result["text"], "inline": False})
 
     title = event_data.get("title", "Raid Event")
     raid_def_name = event_data.get("raid_definition_name", "")

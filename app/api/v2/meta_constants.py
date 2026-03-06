@@ -10,7 +10,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 from flask import Blueprint, jsonify
 
-from app.constants import ROLE_LABELS, ROLE_SLOTS, VALID_ATTENDANCE_STATUSES
+from app.constants import ROLE_LABELS, ROLE_SLOTS, VALID_ATTENDANCE_STATUSES, DEFAULT_BENCH_DISPLAY_LIMIT, MAX_BENCH_DISPLAY_LIMIT
 from app.enums import AttendanceOutcome, EventStatus, Role
 from app.extensions import db
 from app.models.expansion import (
@@ -107,6 +107,10 @@ def get_constants():
             "class_roles": class_roles,
             "role_slots": {
                 str(size): slots for size, slots in ROLE_SLOTS.items()
+            },
+            "bench_display_limit": {
+                "default": DEFAULT_BENCH_DISPLAY_LIMIT,
+                "max": MAX_BENCH_DISPLAY_LIMIT,
             },
             "expansions": [
                 {"id": e.id, "name": e.name, "slug": e.slug, "sort_order": e.sort_order}

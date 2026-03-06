@@ -67,6 +67,27 @@
       </form>
     </WowCard>
 
+    <!-- Bench / Queue Settings -->
+    <WowCard>
+      <h2 class="wow-heading text-base mb-2">{{ t('guild.settings.benchSettings') }}</h2>
+      <p class="text-text-muted text-xs mb-4">{{ t('guild.settings.benchSettingsHelp') }}</p>
+
+      <form @submit.prevent="saveBenchSettings" class="space-y-4 max-w-lg">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.benchDisplayLimit') }}</label>
+          <input
+            v-model.number="benchDisplayLimit"
+            type="number"
+            min="1"
+            max="100"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+          <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.benchDisplayLimitHelp') }}</p>
+        </div>
+        <WowButton type="submit" :loading="benchSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+      </form>
+    </WowCard>
+
     <!-- Armory Guild Info (only for armory-sourced guilds) -->
     <WowCard v-if="isArmorySource">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -212,6 +233,10 @@ const discordSaving = ref(false)
 const discordSaveError = ref(null)
 const discordSaveSuccess = ref(false)
 
+// Bench settings
+const benchDisplayLimit = ref(8)
+const benchSaving = ref(false)
+
 const timezoneOptions = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
   'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam', 'Europe/Brussels',
@@ -255,6 +280,7 @@ async function loadGuildData() {
     Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
     isArmorySource.value = !!g.armory_source
     discordWebhookUrl.value = (g.settings || {}).discord_webhook_url || ''
+    benchDisplayLimit.value = parseInt((g.settings || {}).bench_display_limit) || 8
     // Load guild-configured realms from API
     try {
       const data = await guildRealmsApi.getGuildRealms(g.id)
@@ -334,6 +360,24 @@ async function saveDiscordWebhook() {
     discordSaveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
     discordSaving.value = false
+  }
+}
+
+async function saveBenchSettings() {
+  benchSaving.value = true
+  try {
+    const g = guildStore.currentGuild
+    const currentSettings = g.settings || {}
+    const limit = Math.max(1, Math.min(100, benchDisplayLimit.value || 8))
+    const newSettings = { ...currentSettings, bench_display_limit: limit }
+    await guildsApi.updateGuild(g.id, { settings_json: JSON.stringify(newSettings) })
+    g.settings = newSettings
+    benchDisplayLimit.value = limit
+    toast.success(t('guildSettings.toasts.settingsSaved'))
+  } catch (err) {
+    toast.error(err?.response?.data?.error ?? 'Failed to save')
+  } finally {
+    benchSaving.value = false
   }
 }
 

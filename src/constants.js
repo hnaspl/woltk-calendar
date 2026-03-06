@@ -1,6 +1,22 @@
 /**
  * Non-expansion shared constants for the WotLK Calendar frontend.
  *
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │ FRONTEND-ONLY CONSTANTS                                        │
+ * │                                                                 │
+ * │ This file contains constants used for performance-critical      │
+ * │ rendering: CSS class maps, Tailwind style objects, and UI       │
+ * │ display configurations that are consumed directly by Vue        │
+ * │ templates and do NOT need server roundtrips.                    │
+ * │                                                                 │
+ * │ For runtime/shared constants (roles, attendance statuses,       │
+ * │ event statuses, etc.), prefer the API:                          │
+ * │   GET /api/v2/meta/constants                                   │
+ * │                                                                 │
+ * │ Backend Python equivalent: app/constants.py                     │
+ * │ JSDoc types for bench data: src/types/bench.js                  │
+ * └─────────────────────────────────────────────────────────────────┘
+ *
  * Expansion-specific data (classes, specs, roles, raids) is provided
  * by the expansion store / useExpansionData composable.
  *

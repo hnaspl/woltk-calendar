@@ -17,13 +17,6 @@ from app.i18n import _t
 bp = Blueprint("roles", __name__, url_prefix="/roles")
 
 
-def _require_global_admin():
-    """Return an error tuple if the current user is not a global admin."""
-    if not getattr(current_user, "is_admin", False):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    return None
-
-
 def _require_manage_roles(guild_id: int | None = None):
     """Check that the current user can manage roles.
 

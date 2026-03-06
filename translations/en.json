@@ -757,7 +757,11 @@
       "discordIntegration": "Discord Integration",
       "webhookUrl": "Webhook URL",
       "webhookHelp": "Create a webhook in your Discord server: Server Settings → Integrations → Webhooks. Raid details can be sent to this channel from each raid event view.",
-      "webhookSaved": "Discord webhook saved!"
+      "webhookSaved": "Discord webhook saved!",
+      "benchSettings": "Bench / Queue Settings",
+      "benchSettingsHelp": "Configure how the bench queue is displayed in Discord webhooks and other outputs.",
+      "benchDisplayLimit": "Bench display limit",
+      "benchDisplayLimitHelp": "Maximum number of bench players shown by name in Discord webhooks (1–100). Additional players are summarized as '+X more on bench'."
     },
     "toasts": {
       "failedToJoin": "Failed to join guild",
