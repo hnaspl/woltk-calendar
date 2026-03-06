@@ -87,7 +87,7 @@
 
             <div v-if="wowheadData?.zone_url || wowheadData?.bosses?.length" class="flex-shrink-0">
               <WowButton variant="secondary" class="text-xs" @click="scrollToWowhead">
-                🔗 {{ t('raidDetail.wowheadResources') }}
+                📖 {{ t('raidDetail.raidInfo') }}
               </WowButton>
             </div>
 
@@ -290,65 +290,52 @@
             />
           </div>
         </div>
-        <!-- Wowhead Resources -->
+        <!-- Wowhead Raid Info -->
         <WowCard v-if="wowheadData?.zone_url || wowheadData?.bosses?.length" ref="wowheadSection" class="lg:col-span-3">
           <div class="flex items-center gap-2 mb-4">
-            <span class="text-accent-gold text-lg">🔗</span>
-            <h2 class="wow-heading text-base">{{ t('raidDetail.wowheadResources') }}</h2>
+            <span class="text-accent-gold text-lg">📖</span>
+            <h2 class="wow-heading text-base">{{ t('raidDetail.raidInfo') }}</h2>
             <a v-if="wowheadData.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
                class="ml-auto text-xs text-accent-gold hover:text-accent-gold/80 flex items-center gap-1">
               {{ t('raidDetail.viewOnWowhead') }} ↗
             </a>
           </div>
 
-          <!-- Wowhead tabs -->
-          <div class="border-b border-border-default mb-4">
-            <nav class="flex gap-1 -mb-px">
-              <button
-                v-for="tab in wowheadTabs"
-                :key="tab.id"
-                type="button"
-                class="px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors border-b-2"
-                :class="activeWowheadTab === tab.id
-                  ? 'text-accent-gold border-accent-gold'
-                  : 'text-text-muted border-transparent hover:text-text-primary hover:border-border-default'"
-                @click="activeWowheadTab = tab.id"
-              >{{ tab.label }}</button>
-            </nav>
+          <!-- Zone info bar -->
+          <div v-if="wowheadData.zone_url" class="flex items-center gap-3 p-3 rounded-lg bg-bg-tertiary border border-border-default mb-4">
+            <span class="text-accent-gold">🗺️</span>
+            <div class="flex-1">
+              <span class="text-sm text-text-primary font-medium">{{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
+              <span class="text-xs text-text-muted ml-2">{{ wowheadData.expansion }}</span>
+            </div>
+            <span v-if="event.raid_size" class="text-xs text-text-muted">{{ event.raid_size }}-man</span>
           </div>
 
-          <!-- Tab: Bosses & Loot -->
-          <div v-if="activeWowheadTab === 'bosses' && wowheadData.bosses?.length" class="space-y-1">
-            <div v-for="boss in wowheadData.bosses" :key="boss.npc_id"
-                 class="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-tertiary border border-border-default hover:border-border-gold transition-colors">
-              <span class="text-sm text-text-primary font-medium flex-1">{{ boss.name }}</span>
-              <a :href="boss.npc_url" target="_blank" rel="noopener noreferrer"
-                 class="text-xs text-accent-gold hover:text-accent-gold/80">{{ t('raidDetail.bossNpc') }} ↗</a>
-              <a :href="boss.loot_url" target="_blank" rel="noopener noreferrer"
-                 class="text-xs text-accent-gold hover:text-accent-gold/80">{{ t('raidDetail.bossLoot') }} ↗</a>
+          <!-- Boss loot table -->
+          <div v-if="wowheadData.bosses?.length">
+            <h3 class="text-xs text-text-muted uppercase tracking-wider mb-3">{{ t('raidDetail.bossesAndDrops') }} ({{ wowheadData.bosses.length }})</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <a v-for="boss in wowheadData.bosses" :key="boss.npc_id"
+                 :href="boss.loot_url" target="_blank" rel="noopener noreferrer"
+                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-gold/50 hover:bg-bg-tertiary transition-colors group">
+                <div class="w-8 h-8 rounded bg-bg-tertiary border border-border-default flex items-center justify-center text-sm flex-shrink-0 group-hover:border-accent-gold/30">
+                  💀
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm text-text-primary font-medium truncate group-hover:text-accent-gold transition-colors">{{ boss.name }}</div>
+                  <div class="text-[10px] text-text-muted">{{ t('raidDetail.clickForDrops') }}</div>
+                </div>
+                <span class="text-xs text-accent-gold/60 group-hover:text-accent-gold flex-shrink-0">↗</span>
+              </a>
             </div>
           </div>
 
-          <!-- Tab: Zone Info -->
-          <div v-if="activeWowheadTab === 'zone'" class="space-y-3">
-            <div v-if="wowheadData.zone_url" class="flex items-center gap-3 p-3 rounded-lg bg-bg-tertiary border border-border-default">
-              <span class="text-accent-gold">🗺️</span>
-              <div class="flex-1">
-                <span class="text-sm text-text-primary font-medium">{{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
-                <p class="text-xs text-text-muted mt-0.5">{{ wowheadData.expansion }} · {{ t('raidDetail.wowheadZone') }}</p>
-              </div>
-              <a :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
-                 class="text-xs text-accent-gold hover:text-accent-gold/80">{{ t('raidDetail.viewZone') }} ↗</a>
-            </div>
-          </div>
-
-          <!-- Tab: Tooltips -->
-          <div v-if="activeWowheadTab === 'tooltips'" class="space-y-3">
-            <div class="p-3 rounded-lg bg-bg-tertiary border border-border-default">
-              <p class="text-sm text-text-muted">{{ t('raidDetail.tooltipInfo') }}</p>
-              <p v-if="wowheadData.wowhead_base" class="text-xs text-text-muted mt-2">
-                {{ t('raidDetail.wowheadBase') }}: <a :href="wowheadData.wowhead_base" target="_blank" class="text-accent-gold">{{ wowheadData.wowhead_base }}</a>
-              </p>
+          <!-- Currencies & skinning note -->
+          <div v-if="wowheadData.zone_url" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
+            <div class="flex items-center gap-2 text-xs text-text-muted">
+              <span>💰</span>
+              <span>{{ t('raidDetail.currenciesAndMats') }}</span>
+              <a :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:text-accent-gold/80 ml-auto">{{ t('raidDetail.viewZoneDetails') }} ↗</a>
             </div>
           </div>
         </WowCard>
@@ -605,24 +592,12 @@ const mySignedUpCharacterIds = computed(() =>
 const bans = ref([])
 const wowheadData = ref(null)
 const wowheadSection = ref(null)
-const activeWowheadTab = ref('bosses')
 
 function scrollToWowhead() {
   wowheadSection.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     ?? wowheadSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const wowheadTabs = computed(() => {
-  const tabs = []
-  if (wowheadData.value?.bosses?.length) {
-    tabs.push({ id: 'bosses', label: t('raidDetail.bossesAndLoot') })
-  }
-  if (wowheadData.value?.zone_url) {
-    tabs.push({ id: 'zone', label: t('raidDetail.zoneInfo') })
-  }
-  tabs.push({ id: 'tooltips', label: t('raidDetail.tooltips') })
-  return tabs
-})
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)
 )
