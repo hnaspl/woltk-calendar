@@ -258,8 +258,26 @@ _DROPS_RE = re.compile(
 )
 
 
+# Maximum number of loot items to return per boss.  Keeps API responses
+# small and the frontend loot grid readable.
+_MAX_LOOT_ITEMS = 20
+
+
 def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
-    """Fetch loot drops for a single NPC from Wowhead. Returns cached result if available."""
+    """Fetch loot drops for a single NPC from Wowhead. Returns cached result if available.
+
+    The function scrapes the NPC page on Wowhead, extracts the ``Listview``
+    JavaScript block tagged ``id: 'drops'``, and parses the embedded JSON
+    array of item objects.
+
+    Known limitations of the JS→JSON conversion:
+    - Wowhead uses unquoted JS object keys (``{id: 123}`` instead of
+      ``{"id": 123}``).  We fix this with a regex that quotes bare keys.
+    - Single-quoted strings are replaced with double quotes.
+    - Trailing commas before ``}`` / ``]`` are stripped.
+    - If Wowhead changes their page structure, the regex may fail; in that
+      case the function returns ``[]`` and logs a warning.
+    """
     cache_key = f"{expansion}:{npc_id}"
     if cache_key in _npc_loot_cache:
         return _npc_loot_cache[cache_key]
@@ -269,10 +287,7 @@ def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
 
     try:
         resp = requests.get(url, timeout=15, headers=_WOWHEAD_HEADERS)
-        if resp.status_code != 200:
-            logger.warning("Wowhead returned %s for NPC %s", resp.status_code, npc_id)
-            _npc_loot_cache[cache_key] = []
-            return []
+        resp.raise_for_status()
 
         match = _DROPS_RE.search(resp.text)
         if not match:
@@ -281,12 +296,12 @@ def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
 
         raw = match.group(1)
 
-        # Wowhead uses JS object notation; convert to valid JSON:
-        # - quote unquoted keys
-        # - replace single quotes with double quotes
+        # Convert JS object notation to valid JSON:
+        # 1. Quote unquoted object keys  ({id: 1} → {"id": 1})
+        # 2. Replace single quotes with double quotes
+        # 3. Strip trailing commas  ([1,2,] → [1,2])
         cleaned = re.sub(r"(?<=[{,])\s*([a-zA-Z_]\w*)\s*:", r'"\1":', raw)
         cleaned = cleaned.replace("'", '"')
-        # Remove trailing commas before } or ]
         cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
 
         try:
@@ -310,17 +325,22 @@ def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
                 "quality": quality,
             })
 
-        # Sort by quality (legendary first), cap at 20 items to keep
-        # the response size reasonable for the frontend loot grid.
-        _MAX_LOOT_ITEMS = 20
         loot.sort(key=lambda x: x.get("quality", 0), reverse=True)
         loot = loot[:_MAX_LOOT_ITEMS]
 
         _npc_loot_cache[cache_key] = loot
         return loot
 
+    except requests.Timeout:
+        logger.warning("Wowhead request timed out for NPC %s (%s)", npc_id, expansion)
+        _npc_loot_cache[cache_key] = []
+        return []
+    except requests.ConnectionError:
+        logger.warning("Could not connect to Wowhead for NPC %s (%s)", npc_id, expansion)
+        _npc_loot_cache[cache_key] = []
+        return []
     except requests.RequestException as exc:
-        logger.warning("Failed to fetch Wowhead loot for NPC %s: %s", npc_id, exc)
+        logger.warning("Wowhead request failed for NPC %s: %s", npc_id, exc)
         _npc_loot_cache[cache_key] = []
         return []
     except Exception as exc:

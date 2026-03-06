@@ -5,7 +5,9 @@ from __future__ import annotations
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from app.services import event_service, signup_service
+from app.constants import VALID_ATTENDANCE_STATUSES
+from app.extensions import db
+from app.services import event_service, lineup_service, signup_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, get_event_or_404, validate_required, build_guild_role_map
 from app.utils.decorators import require_guild_permission
@@ -75,13 +77,11 @@ def create_signup(guild_id: int, event_id: int, membership):
         return jsonify({"error": str(exc)}), 400
 
     # Set initial attendance status if provided (purely informational, not coupled with bench/queue)
-    from app.constants import VALID_ATTENDANCE_STATUSES
     initial_status = data.get("attendance_status")
     if initial_status and initial_status in VALID_ATTENDANCE_STATUSES:
         signup.attendance_status = initial_status
         if initial_status == "late":
             signup.late_minutes = data.get("late_minutes")
-        from app.extensions import db
         db.session.commit()
 
     emit_signups_changed(event_id)
@@ -90,7 +90,6 @@ def create_signup(guild_id: int, event_id: int, membership):
     # Notify the signing-up player
     char_name = signup.character.name if signup.character else "Unknown"
     # Determine if the signup went to bench by checking LineupSlots
-    from app.services import lineup_service
     if lineup_service.has_role_slot(signup.id):
         notify.notify_signup_confirmed(signup, event)
     else:
