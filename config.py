@@ -19,6 +19,10 @@ class Config:
     DEBUG: bool = False
     TESTING: bool = False
 
+    # --------------------------------------------------------------- Logging
+    LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+    LOG_DIR: str = os.environ.get("LOG_DIR", "")
+
     # -------------------------------------------------------------- Database
     SQLALCHEMY_DATABASE_URI: str = os.environ.get(
         "DATABASE_URL",

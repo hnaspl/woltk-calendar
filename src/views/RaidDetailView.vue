@@ -1051,11 +1051,11 @@ async function updateMyAttendanceStatus(signup, newStatus) {
 
 async function updateMyLateMinutes(signup, minutes) {
   try {
-    const payload = { attendance_status: 'late', late_minutes: parseInt(minutes) || null }
+    const payload = { attendance_status: 'late', late_minutes: parseInt(minutes, 10) || null }
     await signupsApi.updateSignupStatus(guildId.value, event.value.id, signup.id, payload)
     const idx = signups.value.findIndex(s => s.id === signup.id)
     if (idx >= 0) {
-      signups.value[idx] = { ...signups.value[idx], late_minutes: parseInt(minutes) || null }
+      signups.value[idx] = { ...signups.value[idx], late_minutes: parseInt(minutes, 10) || null }
     }
   } catch (err) {
     toast.error(err?.response?.data?.error ?? 'Failed to update late minutes')

@@ -35,7 +35,8 @@ def create_app(config_override: dict | None = None) -> Flask:
         )
 
     # -------------------------------------------------------------- Logging
-    logging.basicConfig(level=app.config.get("LOG_LEVEL", "INFO"))
+    from app.logging_config import setup_logging
+    setup_logging(app)
 
     # -------------------------------------------------------------- i18n
     from app.i18n import init_i18n

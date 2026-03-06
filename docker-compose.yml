@@ -16,10 +16,15 @@ services:
       # OPTIONAL: set APP_DOMAIN to enable tenant subdomain routing
       # e.g. APP_DOMAIN=mydomain.tld  →  <slug>.mydomain.tld resolves tenant
       APP_DOMAIN: "${APP_DOMAIN:-}"
+      # Logging: INFO (default), DEBUG, WARNING, ERROR
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      LOG_DIR: "/app/logs"
     ports:
       - "5000:5000"
     volumes:
       - sqlite_data:/app/instance
+      - log_data:/app/logs
 
 volumes:
   sqlite_data:
+  log_data:

@@ -280,7 +280,7 @@ async function loadGuildData() {
     Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
     isArmorySource.value = !!g.armory_source
     discordWebhookUrl.value = (g.settings || {}).discord_webhook_url || ''
-    benchDisplayLimit.value = parseInt((g.settings || {}).bench_display_limit) || 8
+    benchDisplayLimit.value = parseInt((g.settings || {}).bench_display_limit, 10) || 8
     // Load guild-configured realms from API
     try {
       const data = await guildRealmsApi.getGuildRealms(g.id)
@@ -431,7 +431,7 @@ async function loadAutoRefreshInterval() {
   try {
     const settings = await adminApi.getSystemSettings()
     const enabled = settings.autosync_enabled === 'true'
-    const intervalMin = parseInt(settings.autosync_interval_minutes) || 60
+    const intervalMin = parseInt(settings.autosync_interval_minutes, 10) || 60
     if (enabled && intervalMin > 0) {
       autoRefreshTimer = setInterval(() => {
         if (isArmorySource.value) fetchArmoryRoster()

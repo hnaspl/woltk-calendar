@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -18,6 +19,8 @@ from app.extensions import db
 from app.models.signup import LineupSlot, Signup
 from app.utils.class_roles import validate_class_role
 from app.utils.validators import validate_class_role_for_signup
+
+logger = logging.getLogger(__name__)
 
 
 def get_lineup(raid_event_id: int) -> list[LineupSlot]:
@@ -97,6 +100,10 @@ def auto_assign_slot(signup: Signup) -> None:
     )
     db.session.add(slot)
     db.session.commit()
+    logger.debug(
+        "Auto-assigned slot: signup=%d char=%d → group=%s index=%d (event=%d)",
+        signup.id, signup.character_id, role, idx, signup.raid_event_id,
+    )
 
 
 def remove_slot_for_signup(signup_id: int) -> None:
@@ -523,6 +530,11 @@ def reorder_bench_queue(
     for slot in bench_slots:
         db.session.expire(slot)
 
+    logger.info(
+        "Bench queue reordered: event=%d, %d entries",
+        raid_event_id, len(final_order),
+    )
+
     # Calculate new per-role positions and detect changes
     new_role_counters: dict[str, int] = {}
     position_changes: list[tuple] = []
@@ -547,11 +559,17 @@ def confirm_lineup(raid_event_id: int, confirmed_by: int) -> list[LineupSlot]:
     """Mark all existing lineup slots as confirmed."""
     now = datetime.now(timezone.utc)
     slots = get_lineup(raid_event_id)
+    confirmed_count = 0
     for slot in slots:
         if slot.signup_id is not None and slot.confirmed_at is None:
             slot.confirmed_by = confirmed_by
             slot.confirmed_at = now
+            confirmed_count += 1
     db.session.commit()
+    logger.info(
+        "Lineup confirmed: event=%d, %d slots confirmed by user=%d",
+        raid_event_id, confirmed_count, confirmed_by,
+    )
     return slots
 
 
@@ -567,3 +585,7 @@ def add_to_bench_queue(signup: Signup) -> None:
     )
     db.session.add(slot)
     db.session.commit()
+    logger.info(
+        "Added to bench queue: signup=%d char=%d position=%d (event=%d)",
+        signup.id, signup.character_id, idx, signup.raid_event_id,
+    )

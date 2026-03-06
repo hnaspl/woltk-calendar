@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 import sqlalchemy as sa
@@ -11,6 +12,8 @@ from app.i18n import _t
 from app.models.signup import Signup, RaidBan, CharacterReplacement
 from app.utils.class_roles import validate_class_role
 from app.utils.validators import validate_class_role_for_character
+
+logger = logging.getLogger(__name__)
 
 
 # Delegate to shared validator (was _validate_class_role in this file)
@@ -140,6 +143,10 @@ def _auto_promote_bench(
         _notify_bench_promotion(benched)
         emit_signups_changed(raid_event_id)
         emit_lineup_changed(raid_event_id)
+        logger.info(
+            "Bench promotion: signup=%d char=%d promoted to %s slot (event=%d, from queue)",
+            benched.id, benched.character_id, role, raid_event_id,
+        )
         return
 
     # Fallback: no bench queue slots, use created_at ordering
@@ -175,6 +182,10 @@ def _auto_promote_bench(
             _notify_bench_promotion(candidate)
             emit_signups_changed(raid_event_id)
             emit_lineup_changed(raid_event_id)
+            logger.info(
+                "Bench promotion: signup=%d char=%d promoted to %s slot (event=%d, fallback)",
+                candidate.id, candidate.character_id, role, raid_event_id,
+            )
             return
 
 
@@ -253,8 +264,16 @@ def create_signup(
     # Auto-assign to lineup board if going, or add to bench queue if benched
     if not should_bench:
         lineup_service.auto_assign_slot(signup)
+        logger.info(
+            "Signup created: id=%d event=%d user=%d char=%d role=%s → lineup",
+            signup.id, raid_event_id, user_id, character_id, chosen_role,
+        )
     else:
         lineup_service.add_to_bench_queue(signup)
+        logger.info(
+            "Signup created: id=%d event=%d user=%d char=%d role=%s → bench (force=%s)",
+            signup.id, raid_event_id, user_id, character_id, chosen_role, force_bench,
+        )
 
     return signup
 
@@ -288,6 +307,10 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     if old_role and new_role and old_role != new_role:
         lineup_service.remove_slot_for_signup(signup.id)
         lineup_service.add_to_bench_queue(signup)
+        logger.info(
+            "Signup updated: id=%d role changed %s→%s, moved to bench",
+            signup.id, old_role, new_role,
+        )
 
     return signup
 
@@ -298,14 +321,16 @@ def delete_signup(signup: Signup) -> None:
 
     role = signup.chosen_role
     raid_event_id = signup.raid_event_id
+    signup_id = signup.id
     # Check if the player had a role lineup slot (not bench queue)
-    had_role_slot = lineup_service.has_role_slot(signup.id)
+    had_role_slot = lineup_service.has_role_slot(signup_id)
 
     # Remove lineup slot first (before deleting signup)
-    lineup_service.remove_slot_for_signup(signup.id)
+    lineup_service.remove_slot_for_signup(signup_id)
 
     db.session.delete(signup)
     db.session.commit()
+    logger.info("Signup deleted: id=%d event=%d role=%s had_slot=%s", signup_id, raid_event_id, role, had_role_slot)
 
     if had_role_slot:
         _auto_promote_bench(raid_event_id, role)
@@ -328,6 +353,7 @@ def decline_signup(signup: Signup) -> Signup:
     if had_role_slot:
         _auto_promote_bench(raid_event_id, role, exclude_signup_ids={signup.id})
 
+    logger.info("Signup declined: id=%d event=%d role=%s", signup.id, raid_event_id, role)
     return signup
 
 
@@ -405,6 +431,7 @@ def create_ban(
     )
     db.session.add(ban)
     db.session.commit()
+    logger.info("Ban created: event=%d char=%d by=%d", raid_event_id, character_id, banned_by)
     return ban
 
 
