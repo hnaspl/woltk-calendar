@@ -107,7 +107,9 @@
       "optionalNote": "Opcjonalna notatka…",
       "recordAttendance": "Zapisz frekwencję",
       "saved": "Zapisano!",
-      "copied": "Skopiowano!"
+      "copied": "Skopiowano!",
+      "disabled": "Wyłączone",
+      "enabled": "Włączone"
     },
     "status": {
       "open": "Otwarty",
@@ -333,6 +335,7 @@
     "scheduleRaid": "Zaplanuj rajd",
     "selectGuild": "Wybierz gildię…",
     "selectRaidDef": "Wybierz definicję rajdu…",
+    "selectSize": "Wybierz rozmiar rajdu — ten rajd obsługuje wiele rozmiarów",
     "signupExpired": "Czas zapisów minął",
     "raidEnded": "Rajd zakończony",
     "attendanceRecorded": "Frekwencja zapisana",
@@ -792,6 +795,10 @@
     "matrixCustomized": "Zmienione",
     "matrixDefault": "Domyślne",
     "matrixSelectAtLeastOne": "Wybierz co najmniej jedną rolę",
+    "armoryUrlRequired": "Wprowadź adres URL armory, aby wyszukać swoją gildię.",
+    "realmHint": "Nazwa realmu (opcjonalnie)",
+    "realmHintHelp": "Jeśli armory nie wyświetla realmów automatycznie, wprowadź nazwę realmu, aby pomóc znaleźć gildię.",
+    "realmHintPlaceholder": "np. Lordaeron, Icecrown",
     "expansions": {
       "title": "Rozszerzenia gildii",
       "description": "Włącz lub wyłącz pakiety rozszerzeń dla swojej gildii. Rozszerzenia są kumulatywne — włączenie późniejszego automatycznie włącza wszystkie wcześniejsze.",
@@ -1190,6 +1197,45 @@
       "guildLimitUpdated": "Limit gildii zaktualizowany"
     },
     "yourRole": "Twoja rola: ",
+    "functions": {
+      "title": "Funkcje",
+      "description": "Zarządzaj funkcjami platformy — włączaj/wyłączaj globalnie i kontroluj dostęp płatny. Poszczególni najemcy i gildie mogą włączać lub wyłączać funkcje z ich paneli administracyjnych.",
+      "feature": "Funkcja",
+      "globallyEnabled": "Status globalny",
+      "requiresPlan": "Dostęp",
+      "paid": "Tylko płatne",
+      "free": "Darmowe",
+      "empty": "Brak skonfigurowanych funkcji platformy. Uruchom seedy bazy danych, aby wypełnić domyślne."
+    },
+    "translations": {
+      "tabTitle": "Tłumaczenia",
+      "totalKeys": "Łączna liczba kluczy",
+      "overrides": "Niestandardowe nadpisania",
+      "missingKeys": "Brakujące klucze",
+      "allSections": "Wszystkie sekcje",
+      "searchPlaceholder": "Szukaj po kluczu lub wartości...",
+      "viewAll": "Wszystkie",
+      "viewMissing": "Brakujące",
+      "viewOverrides": "Nadpisane",
+      "showing": "Wyświetlanie",
+      "keys": "kluczy",
+      "keysMissing": "brakujących kluczy",
+      "noMissing": "Wszystkie tłumaczenia są zsynchronizowane!",
+      "allSynced": "Oba języki mają wszystkie wymagane klucze tłumaczeń.",
+      "addTranslation": "Dodaj tłumaczenie",
+      "noOverrides": "Brak niestandardowych nadpisań tłumaczeń. Edytuj dowolne tłumaczenie, aby utworzyć nadpisanie.",
+      "noResults": "Brak tłumaczeń pasujących do wyszukiwania.",
+      "locale": "Język",
+      "key": "Klucz",
+      "value": "Wartość",
+      "actions": "Akcje",
+      "revert": "Przywróć",
+      "saved": "Tłumaczenie zapisane",
+      "reverted": "Tłumaczenie przywrócone do domyślnego",
+      "confirmRevert": "Przywrócić to tłumaczenie do wartości domyślnej? Niestandardowe nadpisanie zostanie usunięte.",
+      "referenceValue": "Referencja (inny język)",
+      "enterTranslation": "Wprowadź wartość tłumaczenia..."
+    },
     "plans": {
       "tabTitle": "Plany",
       "title": "Plany subskrypcyjne",
@@ -1774,7 +1820,8 @@
     "characterNotFound": "Postaci nie znaleziono na armory armory",
     "characterNotFoundGeneric": "Postaci nie znaleziono",
     "fetchFailed": "Nie udało się pobrać danych z armory. Postać może nie istnieć lub API może być niedostępne.",
-    "guildNotFound": "Gildii nie znaleziono na armory armory"
+    "guildNotFound": "Gildii nie znaleziono na armory armory",
+    "guildNameRequired": "Nazwa gildii jest wymagana"
   },
   "tenant": {
     "acceptInvite": "Przyjmij zaproszenie",

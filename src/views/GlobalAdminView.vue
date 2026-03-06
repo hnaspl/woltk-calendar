@@ -50,6 +50,7 @@
           <ExpansionsTab v-else-if="activeTab === 'expansions'" />
           <PluginsTab v-else-if="activeTab === 'plugins'" />
           <PlansTab v-else-if="activeTab === 'plans'" />
+          <TranslationsTab v-else-if="activeTab === 'translations'" />
           <SettingsTab v-else-if="activeTab === 'settings'" />
         </KeepAlive>
       </template>
@@ -68,6 +69,7 @@ import TenantsTab from '@/components/admin/TenantsTab.vue'
 import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitionsTab.vue'
 import ExpansionsTab from '@/components/admin/ExpansionsTab.vue'
 import SettingsTab from '@/components/admin/SettingsTab.vue'
+import TranslationsTab from '@/components/admin/TranslationsTab.vue'
 import PluginsTab from '@/components/admin/PluginsTab.vue'
 import PlansTab from '@/components/admin/PlansTab.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -107,6 +109,9 @@ const icons = {
   ]),
   plans: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' })
+  ]),
+  translations: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129' })
   ])
 }
 
@@ -120,6 +125,7 @@ const tabs = [
   { id: 'expansions', label: t('admin.expansions.title'), icon: icons.expansions },
   { id: 'plugins', label: t('plugin.title'), icon: icons.plugins },
   { id: 'plans', label: t('admin.plans.tabTitle'), icon: icons.plans },
+  { id: 'translations', label: t('admin.translations.tabTitle'), icon: icons.translations },
   { id: 'settings', label: t('admin.system.title'), icon: icons.settings },
 ]
 

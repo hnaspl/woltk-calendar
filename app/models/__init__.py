@@ -15,6 +15,7 @@ from app.models.password_reset import PasswordResetToken
 from app.models.armory_config import ArmoryConfig
 from app.models.guild_feature import GuildFeature
 from app.models.tenant_feature import TenantFeature, PlatformFeature
+from app.models.translation_override import TranslationOverride
 from app.models.expansion import (
     Expansion, ExpansionClass, ExpansionSpec, ExpansionRole, ExpansionRaid,
 )
@@ -51,6 +52,7 @@ __all__ = [
     "GuildFeature",
     "TenantFeature",
     "PlatformFeature",
+    "TranslationOverride",
     "Expansion",
     "ExpansionClass",
     "ExpansionSpec",

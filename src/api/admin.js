@@ -39,3 +39,22 @@ export const updateTenantLimits = (id, data) => api.put(`/admin/tenants/${id}/li
 // ── Tenant feature management ──
 export const getTenantFeatures = (tenantId) => api.get(`/admin/tenants/${tenantId}/features`)
 export const updateTenantFeatures = (tenantId, features) => api.put(`/admin/tenants/${tenantId}/features`, features)
+
+// ── Translation management ──
+export const getTranslationStats = () => api.get('/admin/translations/')
+export const getTranslations = (locale, section) => {
+  const params = section ? `?section=${encodeURIComponent(section)}` : ''
+  return api.get(`/admin/translations/${locale}${params}`)
+}
+export const getTranslationSections = (locale) => api.get(`/admin/translations/${locale}/sections`)
+export const getMissingTranslations = () => api.get('/admin/translations/missing')
+export const getTranslationOverrides = (locale) => {
+  const params = locale ? `?locale=${encodeURIComponent(locale)}` : ''
+  return api.get(`/admin/translations/overrides${params}`)
+}
+export const updateTranslation = (locale, key, value) =>
+  api.put(`/admin/translations/${locale}`, { key, value })
+export const updateTranslationsBulk = (locale, translations) =>
+  api.put(`/admin/translations/${locale}/bulk`, { translations })
+export const deleteTranslationOverride = (locale, key) =>
+  api.delete(`/admin/translations/${locale}/${key}`)
