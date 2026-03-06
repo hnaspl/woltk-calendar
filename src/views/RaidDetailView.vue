@@ -31,28 +31,28 @@
 
               <!-- Completed/cancelled event locked banner -->
               <div v-if="event.status === 'completed' && hasAttendance" class="mt-2 px-3 py-2 rounded bg-green-900/20 border border-green-700/40 text-green-300 text-xs">
-                🔒 {{ t('raidDetail.completedLocked') }}
+                {{ t('raidDetail.completedLocked') }}
               </div>
               <div v-else-if="event.status === 'cancelled'" class="mt-2 px-3 py-2 rounded bg-red-900/20 border border-red-700/40 text-red-300 text-xs">
-                🔒 {{ t('raidDetail.cancelledLocked') }}
+                {{ t('raidDetail.cancelledLocked') }}
               </div>
 
               <!-- Informative details grid -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-6 gap-y-1.5 text-sm mt-2">
                 <div class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">📅</span>
+                  <span class="w-4 h-4 rounded-sm bg-accent-gold/20 border border-accent-gold/40 flex items-center justify-center text-[10px] text-accent-gold flex-shrink-0">S</span>
                   <span><strong class="text-text-primary">{{ t('raidDetail.starts') }}</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
                 </div>
                 <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">⏱️</span>
+                  <span class="w-4 h-4 rounded-sm bg-accent-gold/20 border border-accent-gold/40 flex items-center justify-center text-[10px] text-accent-gold flex-shrink-0">D</span>
                   <span><strong class="text-text-primary">{{ t('raidDetail.duration') }}</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
                 </div>
                 <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">⚔️</span>
+                  <img :src="getRaidIcon(event.raid_type)" class="w-4 h-4 rounded-sm flex-shrink-0" alt="" />
                   <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">📝</span>
+                  <span class="w-4 h-4 rounded-sm bg-accent-gold/20 border border-accent-gold/40 flex items-center justify-center text-[10px] text-accent-gold flex-shrink-0">#</span>
                   <span>
                     <strong class="text-text-primary">{{ t('raidDetail.signups') }}</strong>{{ ' ' }}
                     <template v-if="event.status === 'locked' || event.is_locked">
@@ -71,11 +71,11 @@
                   </span>
                 </div>
                 <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">🔒</span>
+                  <span class="w-4 h-4 rounded-sm bg-red-500/20 border border-red-500/40 flex items-center justify-center text-[10px] text-red-400 flex-shrink-0">L</span>
                   <span><strong class="text-text-primary">{{ t('raidDetail.signupsClose') }}</strong> {{ formatDateTime(event.close_signups_at) }}</span>
                 </div>
                 <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">🌐</span>
+                  <span class="w-4 h-4 rounded-sm bg-accent-gold/20 border border-accent-gold/40 flex items-center justify-center text-[10px] text-accent-gold flex-shrink-0">R</span>
                   <span><strong class="text-text-primary">{{ t('common.labels.realmColon') }}</strong> {{ event.realm_name ?? event.realm }}</span>
                 </div>
               </div>
@@ -245,7 +245,7 @@
                         </button>
                       </div>
                     </div>
-                    <p v-if="s.note" class="text-text-muted text-[10px] italic mt-1.5 ml-10">📝 {{ s.note }}</p>
+                    <p v-if="s.note" class="text-text-muted text-[10px] italic mt-1.5 ml-10">{{ s.note }}</p>
                   </div>
                   <!-- Pending character replacement request -->
                   <div

@@ -173,7 +173,7 @@
                     <StatusBadge :status="tr.event.status ?? 'open'" />
                   </div>
                   <div class="text-xs text-text-muted mt-0.5">
-                    🕐 {{ formatTimeOnly(tr.event.starts_at_utc ?? tr.event.start_time ?? tr.event.date) }}
+                    {{ formatTimeOnly(tr.event.starts_at_utc ?? tr.event.start_time ?? tr.event.date) }}
                   </div>
                   <div v-if="tr.signup" class="flex items-center gap-1 mt-0.5">
                     <ClassBadge v-if="tr.signup.character?.class_name" :class-name="tr.signup.character.class_name" />
@@ -233,13 +233,13 @@
                     <StatusBadge :status="ev.status ?? 'open'" />
                   </div>
                   <div class="text-sm text-text-muted mt-1 flex items-center gap-2 flex-wrap">
-                    <span>📅 {{ formatDateTime(ev.starts_at_utc ?? ev.start_time ?? ev.date) }}</span>
-                    <span v-if="ev.duration_minutes" class="text-text-muted">· ⏱️ ~{{ formatDuration(ev.duration_minutes) }}</span>
+                    <span>{{ formatDateTime(ev.starts_at_utc ?? ev.start_time ?? ev.date) }}</span>
+                    <span v-if="ev.duration_minutes" class="text-text-muted">· ~{{ formatDuration(ev.duration_minutes) }}</span>
                   </div>
                   <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span v-if="raidTypeLabel(ev.raid_type, raidTypes)" class="text-[10px] text-amber-300">⚔️ {{ raidTypeLabel(ev.raid_type, raidTypes) }}</span>
+                    <span v-if="raidTypeLabel(ev.raid_type, raidTypes)" class="text-[10px] text-amber-300">{{ raidTypeLabel(ev.raid_type, raidTypes) }}</span>
                     <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" />
-                    <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 {{ t('dashboard.signupsClose', { time: formatDateTime(ev.close_signups_at) }) }}</span>
+                    <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">{{ t('dashboard.signupsClose', { time: formatDateTime(ev.close_signups_at) }) }}</span>
                   </div>
                 </div>
                 <svg class="w-5 h-5 text-text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
