@@ -32,18 +32,26 @@ def dashboard_stats():
         return err
 
     import os
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
     import sqlalchemy as sa
     from app.models.user import User
-    from app.models.guild import Guild
+    from app.models.guild import Guild, GuildMembership
     from app.models.raid import RaidEvent
     from app.models.character import Character
-    from app.models.signup import Signup
+    from app.models.signup import Signup, LineupSlot
     from app.models.notification import JobQueue
+    from app.models.tenant import Tenant, TenantMembership
     from app.enums import JobStatus
 
     now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    week_end = today_start + timedelta(days=7)
+    next_week_end = today_start + timedelta(days=14)
 
+    # ── Core counts ──────────────────────────────────────────────
     total_users = db.session.scalar(sa.select(sa.func.count()).select_from(User))
     active_users = db.session.scalar(
         sa.select(sa.func.count()).select_from(User).where(User.is_active.is_(True))
@@ -61,6 +69,66 @@ def dashboard_stats():
     )
     total_characters = db.session.scalar(sa.select(sa.func.count()).select_from(Character))
     total_signups = db.session.scalar(sa.select(sa.func.count()).select_from(Signup))
+
+    # ── Growth metrics (7-day / 30-day) ──────────────────────────
+    new_users_7d = db.session.scalar(
+        sa.select(sa.func.count()).select_from(User).where(User.created_at >= week_ago)
+    )
+    new_users_30d = db.session.scalar(
+        sa.select(sa.func.count()).select_from(User).where(User.created_at >= month_ago)
+    )
+    new_guilds_7d = db.session.scalar(
+        sa.select(sa.func.count()).select_from(Guild).where(Guild.created_at >= week_ago)
+    )
+    new_events_7d = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(RaidEvent.created_at >= week_ago)
+    )
+
+    # ── Event pipeline ───────────────────────────────────────────
+    events_today = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(
+            RaidEvent.starts_at_utc >= today_start,
+            RaidEvent.starts_at_utc < today_end,
+            RaidEvent.status != "cancelled",
+        )
+    )
+    events_this_week = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(
+            RaidEvent.starts_at_utc >= today_start,
+            RaidEvent.starts_at_utc < week_end,
+            RaidEvent.status != "cancelled",
+        )
+    )
+    events_next_week = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(
+            RaidEvent.starts_at_utc >= week_end,
+            RaidEvent.starts_at_utc < next_week_end,
+            RaidEvent.status != "cancelled",
+        )
+    )
+    completed_events = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(
+            RaidEvent.status == "completed",
+        )
+    )
+    cancelled_events = db.session.scalar(
+        sa.select(sa.func.count()).select_from(RaidEvent).where(
+            RaidEvent.status == "cancelled",
+        )
+    )
+
+    # ── Signup statistics ────────────────────────────────────────
+    avg_signups_per_event = None
+    if total_raids and total_raids > 0:
+        avg_signups_per_event = round(total_signups / total_raids, 1) if total_signups else 0
+
+    bench_slots = db.session.scalar(
+        sa.select(sa.func.count()).select_from(LineupSlot).where(
+            LineupSlot.slot_group == "bench"
+        )
+    ) or 0
+
+    # ── Job queue ────────────────────────────────────────────────
     pending_jobs = db.session.scalar(
         sa.select(sa.func.count()).select_from(JobQueue).where(
             JobQueue.status == JobStatus.QUEUED.value
@@ -81,12 +149,11 @@ def dashboard_stats():
             JobQueue.status == JobStatus.DONE.value
         )
     )
-
-    # Recent queue items (last 10, newest first)
     recent_queue = db.session.execute(
         sa.select(JobQueue).order_by(JobQueue.created_at.desc()).limit(10)
     ).scalars().all()
 
+    # ── Database size ────────────────────────────────────────────
     from flask import current_app
     db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
     db_path = db_uri.replace("sqlite:///", "") if db_uri.startswith("sqlite:///") else None
@@ -95,8 +162,7 @@ def dashboard_stats():
     except OSError:
         database_size_kb = None
 
-    # Tenant statistics
-    from app.models.tenant import Tenant
+    # ── Tenant statistics ────────────────────────────────────────
     total_tenants = db.session.scalar(sa.select(sa.func.count()).select_from(Tenant))
     active_tenants = db.session.scalar(
         sa.select(sa.func.count()).select_from(Tenant).where(Tenant.is_active.is_(True))
@@ -105,7 +171,72 @@ def dashboard_stats():
         sa.select(sa.func.count()).select_from(Tenant).where(Tenant.is_active.is_(False))
     )
 
+    # Per-tenant breakdown (name, guilds count, members count, events count)
+    tenants = db.session.execute(sa.select(Tenant).order_by(Tenant.created_at.desc())).scalars().all()
+    tenant_breakdown = []
+    for t in tenants:
+        guild_count = db.session.scalar(
+            sa.select(sa.func.count()).select_from(Guild).where(Guild.tenant_id == t.id)
+        )
+        member_count = db.session.scalar(
+            sa.select(sa.func.count()).select_from(TenantMembership).where(
+                TenantMembership.tenant_id == t.id
+            )
+        )
+        # Count events across all guilds in this tenant
+        tenant_guild_ids = db.session.execute(
+            sa.select(Guild.id).where(Guild.tenant_id == t.id)
+        ).scalars().all()
+        event_count = 0
+        if tenant_guild_ids:
+            event_count = db.session.scalar(
+                sa.select(sa.func.count()).select_from(RaidEvent).where(
+                    RaidEvent.guild_id.in_(tenant_guild_ids)
+                )
+            ) or 0
+        tenant_breakdown.append({
+            "id": t.id,
+            "name": t.name,
+            "plan": t.plan or "free",
+            "is_active": t.is_active,
+            "guilds": guild_count or 0,
+            "members": member_count or 0,
+            "events": event_count,
+        })
+
+    # ── Recent registrations (last 10 users) ─────────────────────
+    recent_users = db.session.execute(
+        sa.select(User).order_by(User.created_at.desc()).limit(10)
+    ).scalars().all()
+    recent_registrations = [
+        {"id": u.id, "username": u.username, "created_at": u.created_at.isoformat() + "Z" if u.created_at else None, "is_admin": u.is_admin}
+        for u in recent_users
+    ]
+
+    # ── Recent events (next 10 upcoming) ─────────────────────────
+    next_events = db.session.execute(
+        sa.select(RaidEvent).where(
+            RaidEvent.starts_at_utc >= now,
+            RaidEvent.status != "cancelled",
+        ).order_by(RaidEvent.starts_at_utc.asc()).limit(10)
+    ).scalars().all()
+    upcoming_event_list = []
+    for ev in next_events:
+        guild = db.session.get(Guild, ev.guild_id)
+        signup_count = db.session.scalar(
+            sa.select(sa.func.count()).select_from(Signup).where(Signup.raid_event_id == ev.id)
+        )
+        upcoming_event_list.append({
+            "id": ev.id,
+            "title": ev.title,
+            "guild_name": guild.name if guild else "—",
+            "starts_at": ev.starts_at_utc.isoformat() + "Z" if ev.starts_at_utc else None,
+            "raid_size": ev.raid_size,
+            "signups": signup_count or 0,
+        })
+
     return jsonify({
+        # Core counts
         "total_users": total_users,
         "active_users": active_users,
         "admin_users": admin_users,
@@ -114,15 +245,36 @@ def dashboard_stats():
         "upcoming_raids": upcoming_raids,
         "total_characters": total_characters,
         "total_signups": total_signups,
+        # Growth
+        "new_users_7d": new_users_7d,
+        "new_users_30d": new_users_30d,
+        "new_guilds_7d": new_guilds_7d,
+        "new_events_7d": new_events_7d,
+        # Event pipeline
+        "events_today": events_today,
+        "events_this_week": events_this_week,
+        "events_next_week": events_next_week,
+        "completed_events": completed_events,
+        "cancelled_events": cancelled_events,
+        # Signups
+        "avg_signups_per_event": avg_signups_per_event,
+        "bench_slots": bench_slots,
+        # Jobs
         "pending_jobs": pending_jobs,
         "running_jobs": running_jobs,
         "failed_jobs": failed_jobs,
         "done_jobs": done_jobs,
         "recent_queue": [j.to_dict() for j in recent_queue],
+        # System
         "database_size_kb": database_size_kb,
+        # Tenants
         "total_tenants": total_tenants,
         "active_tenants": active_tenants,
         "suspended_tenants": suspended_tenants,
+        "tenant_breakdown": tenant_breakdown,
+        # Activity
+        "recent_registrations": recent_registrations,
+        "upcoming_event_list": upcoming_event_list,
     }), 200
 
 

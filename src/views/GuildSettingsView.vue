@@ -336,7 +336,8 @@ async function loadGuildData() {
         const expData = await guildExpansionsApi.getGuildExpansions(g.id)
         const enabledExps = (expData.expansions || [])
         if (enabledExps.length > 0) {
-          const allExps = allExpansions.value          let highestEnabled = null
+          const allExps = allExpansions.value
+          let highestEnabled = null
           for (const ge of enabledExps) {
             const full = allExps.find(e => e.id === ge.expansion_id)
             if (full && (!highestEnabled || (full.sort_order ?? 0) > (highestEnabled.sort_order ?? 0))) {
