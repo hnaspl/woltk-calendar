@@ -336,7 +336,6 @@ import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
-import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
 import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useConstantsStore } from '@/stores/constants'
@@ -358,8 +357,8 @@ const { getClassIcon, getProfessionIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { t } = useI18n()
 
-/** Map display char to CharacterTooltip format */
-function charToTooltip(char) {
+/** Map display char to CharacterDetailModal format */
+function prepareCharacterData(char) {
   return {
     name: char.name,
     class_name: char.class,
@@ -373,7 +372,7 @@ function charToTooltip(char) {
 }
 
 function openCharDetail(char) {
-  charDetailTarget.value = charToTooltip(char)
+  charDetailTarget.value = prepareCharacterData(char)
   showCharDetailModal.value = true
 }
 

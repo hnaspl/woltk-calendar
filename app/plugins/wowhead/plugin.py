@@ -648,7 +648,8 @@ class WowheadPlugin(BasePlugin):
         if target_mode is None:
             return all_items
 
-        # Filter items that drop in the requested mode
+        # Filter items that drop in the requested mode.
+        # Items with no modes data (empty list) are considered available in all modes.
         filtered = [
             item for item in all_items
             if not item.get("modes") or target_mode in item["modes"]
