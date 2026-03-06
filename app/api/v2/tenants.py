@@ -9,7 +9,7 @@ from app.extensions import db
 from app.i18n import _t
 from app.services import tenant_service
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json, validate_required
+from app.utils.api_helpers import get_json, get_or_404, validate_required
 from app.utils.decorators import require_tenant_role
 
 bp = Blueprint("tenants_v2", __name__)
@@ -212,9 +212,11 @@ def create_invitation(tenant_id: int):
 def revoke_invitation(tenant_id: int, invitation_id: int):
     """Revoke an invitation (admin only)."""
     from app.models.tenant import TenantInvitation  # local to avoid circular import
-    invitation = db.session.get(TenantInvitation, invitation_id)
-    if not invitation or invitation.tenant_id != tenant_id:
-        return jsonify({"error": _t("api.tenants.invitationNotFound")}), 404
+    invitation, err = get_or_404(TenantInvitation, invitation_id,
+                                 error_key="api.tenants.invitationNotFound",
+                                 validate=lambda inv: inv.tenant_id == tenant_id)
+    if err:
+        return err
     tenant_service.revoke_invitation(invitation)
     return jsonify({"message": _t("api.tenants.invitationRevoked")}), 200
 

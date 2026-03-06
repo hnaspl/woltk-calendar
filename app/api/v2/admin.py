@@ -8,7 +8,7 @@ from flask_login import current_user
 from app.services import auth_service
 from app.extensions import db
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json, require_system_permission
+from app.utils.api_helpers import get_json, get_or_404, require_system_permission
 from app.utils.decorators import require_admin
 from app.i18n import _t
 
@@ -539,9 +539,9 @@ def set_user_guild_limit(user_id: int):
     if err:
         return err
     from app.models.user import User
-    user = db.session.get(User, user_id)
-    if user is None:
-        return jsonify({"error": _t("api.admin.userNotFound")}), 404
+    user, err = get_or_404(User, user_id, error_key="api.admin.userNotFound")
+    if err:
+        return err
     data = get_json()
     value = data.get("max_guilds")
     if value is not None:

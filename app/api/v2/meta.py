@@ -14,7 +14,7 @@ from app.models.expansion import (
     ExpansionSpec,
 )
 from app.models.system_setting import SystemSetting
-from app.utils.api_helpers import get_json, validate_required, require_system_permission
+from app.utils.api_helpers import get_json, get_or_404, validate_required, require_system_permission
 from app.utils.auth import login_required
 
 bp = Blueprint("meta_v2", __name__)
@@ -179,9 +179,9 @@ def update_expansion(expansion_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    expansion = db.session.get(Expansion, expansion_id)
-    if not expansion:
-        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    expansion, err = get_or_404(Expansion, expansion_id, error_key="api.meta.expansionNotFound")
+    if err:
+        return err
     data = get_json()
     for field in ("name", "slug", "sort_order", "is_active", "metadata_json"):
         if field in data:
@@ -196,9 +196,9 @@ def delete_expansion(expansion_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    expansion = db.session.get(Expansion, expansion_id)
-    if not expansion:
-        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    expansion, err = get_or_404(Expansion, expansion_id, error_key="api.meta.expansionNotFound")
+    if err:
+        return err
     db.session.delete(expansion)
     db.session.commit()
     return jsonify({"ok": True}), 200
@@ -210,9 +210,9 @@ def add_raid(expansion_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    expansion = db.session.get(Expansion, expansion_id)
-    if not expansion:
-        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    expansion, err = get_or_404(Expansion, expansion_id, error_key="api.meta.expansionNotFound")
+    if err:
+        return err
     data = get_json()
     missing = validate_required(data, "name", "slug")
     if missing:
@@ -241,9 +241,9 @@ def update_raid(raid_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    raid = db.session.get(ExpansionRaid, raid_id)
-    if not raid:
-        return jsonify({"error": _t("api.meta.raidNotFound")}), 404
+    raid, err = get_or_404(ExpansionRaid, raid_id, error_key="api.meta.raidNotFound")
+    if err:
+        return err
     data = get_json()
     for field in (
         "name", "slug", "code", "default_raid_size",
@@ -262,9 +262,9 @@ def delete_raid(raid_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    raid = db.session.get(ExpansionRaid, raid_id)
-    if not raid:
-        return jsonify({"error": _t("api.meta.raidNotFound")}), 404
+    raid, err = get_or_404(ExpansionRaid, raid_id, error_key="api.meta.raidNotFound")
+    if err:
+        return err
     db.session.delete(raid)
     db.session.commit()
     return jsonify({"ok": True}), 200
@@ -298,9 +298,9 @@ def add_class(expansion_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    expansion = db.session.get(Expansion, expansion_id)
-    if not expansion:
-        return jsonify({"error": _t("api.meta.expansionNotFound")}), 404
+    expansion, err = get_or_404(Expansion, expansion_id, error_key="api.meta.expansionNotFound")
+    if err:
+        return err
     data = get_json()
     missing = validate_required(data, "name")
     if missing:
@@ -323,9 +323,9 @@ def update_class(class_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    cls = db.session.get(ExpansionClass, class_id)
-    if not cls:
-        return jsonify({"error": _t("api.meta.classNotFound")}), 404
+    cls, err = get_or_404(ExpansionClass, class_id, error_key="api.meta.classNotFound")
+    if err:
+        return err
     data = get_json()
     for field in ("name", "icon", "sort_order"):
         if field in data:
@@ -341,9 +341,9 @@ def delete_class(class_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    cls = db.session.get(ExpansionClass, class_id)
-    if not cls:
-        return jsonify({"error": _t("api.meta.classNotFound")}), 404
+    cls, err = get_or_404(ExpansionClass, class_id, error_key="api.meta.classNotFound")
+    if err:
+        return err
     db.session.delete(cls)
     db.session.commit()
     return jsonify({"ok": True}), 200
@@ -358,9 +358,9 @@ def add_spec(class_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    cls = db.session.get(ExpansionClass, class_id)
-    if not cls:
-        return jsonify({"error": _t("api.meta.classNotFound")}), 404
+    cls, err = get_or_404(ExpansionClass, class_id, error_key="api.meta.classNotFound")
+    if err:
+        return err
     data = get_json()
     missing = validate_required(data, "name")
     if missing:
@@ -384,9 +384,9 @@ def update_spec(spec_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    spec = db.session.get(ExpansionSpec, spec_id)
-    if not spec:
-        return jsonify({"error": _t("api.meta.specNotFound")}), 404
+    spec, err = get_or_404(ExpansionSpec, spec_id, error_key="api.meta.specNotFound")
+    if err:
+        return err
     data = get_json()
     for field in ("name", "role", "icon", "sort_order"):
         if field in data:
@@ -402,9 +402,9 @@ def delete_spec(spec_id: int):
     err = require_system_permission("manage_expansions")
     if err:
         return err
-    spec = db.session.get(ExpansionSpec, spec_id)
-    if not spec:
-        return jsonify({"error": _t("api.meta.specNotFound")}), 404
+    spec, err = get_or_404(ExpansionSpec, spec_id, error_key="api.meta.specNotFound")
+    if err:
+        return err
     db.session.delete(spec)
     db.session.commit()
     return jsonify({"ok": True}), 200

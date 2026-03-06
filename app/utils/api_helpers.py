@@ -125,14 +125,25 @@ def build_guild_role_map(guild_id: int, user_ids: list[int]) -> dict:
     }
 
 
-def get_or_404(model_class, resource_id, *, error_key="common.errors.notFound"):
+def get_or_404(model_class, resource_id, *, error_key="common.errors.notFound", validate=None):
     """Generic 404 helper for any SQLAlchemy model.
 
     Returns ``(obj, None)`` on success or ``(None, error_response)`` when the
-    resource is not found.
+    resource is not found or fails *validate*.
+
+    Args:
+        model_class: SQLAlchemy model class.
+        resource_id: Primary key value.
+        error_key: i18n key for the error message.
+        validate: Optional callable ``(obj) -> bool``.  When provided the
+                  object must pass this check or a 404 is returned.  Use this
+                  for ownership / scope checks (e.g. ``validate=lambda o:
+                  o.guild_id == guild_id``).
     """
     obj = db.session.get(model_class, resource_id)
     if obj is None:
+        return None, (jsonify({"error": _t(error_key)}), 404)
+    if validate is not None and not validate(obj):
         return None, (jsonify({"error": _t(error_key)}), 404)
     return obj, None
 

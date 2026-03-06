@@ -11,7 +11,7 @@ from app.extensions import db
 from app.models.armory_config import ArmoryConfig
 from app.services.armory.registry import list_providers
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json
+from app.utils.api_helpers import get_json, get_or_404
 from app.utils.armory_validation import validate_armory_url
 from app.i18n import _t
 
@@ -86,9 +86,9 @@ def create_config():
 @login_required
 def update_config(config_id: int):
     """Update an armory config owned by the current user."""
-    config = db.session.get(ArmoryConfig, config_id)
-    if config is None or config.user_id != current_user.id:
-        return jsonify({"error": _t("common.errors.notFound")}), 404
+    config, err = get_or_404(ArmoryConfig, config_id, validate=lambda c: c.user_id == current_user.id)
+    if err:
+        return err
     data = get_json()
 
     # Build merged data for validation
@@ -112,9 +112,9 @@ def update_config(config_id: int):
 @login_required
 def delete_config(config_id: int):
     """Delete an armory config owned by the current user."""
-    config = db.session.get(ArmoryConfig, config_id)
-    if config is None or config.user_id != current_user.id:
-        return jsonify({"error": _t("common.errors.notFound")}), 404
+    config, err = get_or_404(ArmoryConfig, config_id, validate=lambda c: c.user_id == current_user.id)
+    if err:
+        return err
     db.session.delete(config)
     db.session.commit()
     return jsonify({"message": "Deleted"}), 200
@@ -124,9 +124,9 @@ def delete_config(config_id: int):
 @login_required
 def set_default_config(config_id: int):
     """Set an armory config as the default for the current user."""
-    config = db.session.get(ArmoryConfig, config_id)
-    if config is None or config.user_id != current_user.id:
-        return jsonify({"error": _t("common.errors.notFound")}), 404
+    config, err = get_or_404(ArmoryConfig, config_id, validate=lambda c: c.user_id == current_user.id)
+    if err:
+        return err
     # Clear existing defaults for this user
     db.session.execute(
         sa.update(ArmoryConfig)

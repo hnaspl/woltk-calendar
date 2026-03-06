@@ -13,7 +13,7 @@ from app.i18n import _t
 from app.models.guild import Guild, GuildInvitation, GuildMembership
 from app.services import guild_service
 from app.utils.auth import login_required
-from app.utils.api_helpers import get_json, validate_required
+from app.utils.api_helpers import get_json, get_or_404, validate_required
 from app.utils.decorators import require_guild_permission
 from app.utils.rate_limit import rate_limit
 
@@ -59,9 +59,11 @@ def create_invitation(guild_id: int, membership):
 @require_guild_permission("invite_members")
 def revoke_invitation(guild_id: int, invitation_id: int, membership):
     """Revoke a guild invitation."""
-    invitation = db.session.get(GuildInvitation, invitation_id)
-    if not invitation or invitation.guild_id != guild_id:
-        return jsonify({"error": _t("api.guilds.invitationNotFound")}), 404
+    invitation, err = get_or_404(GuildInvitation, invitation_id,
+                                 error_key="api.guilds.invitationNotFound",
+                                 validate=lambda inv: inv.guild_id == guild_id)
+    if err:
+        return err
     guild_service.revoke_guild_invitation(invitation)
     return jsonify({"message": _t("api.guilds.invitationRevoked")}), 200
 
