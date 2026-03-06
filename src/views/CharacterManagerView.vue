@@ -54,22 +54,23 @@
               class="absolute top-3 right-3 text-[10px] font-bold text-accent-gold bg-accent-gold/10 border border-accent-gold/30 px-1.5 py-0.5 rounded"
             >{{ t('characters.main') }}</span>
 
-            <CharacterTooltip :character="charToTooltip(char)" position="right">
-              <div class="flex items-center gap-3 mb-3 cursor-pointer">
+              <div class="flex items-center gap-3 mb-3">
                 <img
                   :src="getClassIcon(char.class)"
                   :alt="char.class"
                   class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default"
                 />
-                <div>
+                <div class="flex-1 min-w-0">
                   <div class="font-bold text-text-primary">{{ char.name }}</div>
                   <div class="text-xs text-text-muted">{{ char.realm }}</div>
                   <div v-if="char.metadata?.level" class="text-xs text-text-muted">
                     Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
                   </div>
                 </div>
+                <WowButton variant="secondary" class="text-xs py-1 px-2 flex-shrink-0" @click="openCharDetail(char)">
+                  {{ t('signupList.viewDetails') }}
+                </WowButton>
               </div>
-            </CharacterTooltip>
 
             <div class="flex-1">
               <div class="flex flex-wrap gap-1.5 mb-2">
@@ -318,6 +319,11 @@
         </div>
       </template>
     </WowModal>
+
+    <CharacterDetailModal
+      v-model="showCharDetailModal"
+      :character="charDetailTarget"
+    />
   </AppShell>
 </template>
 
@@ -331,6 +337,7 @@ import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
 import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
+import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useConstantsStore } from '@/stores/constants'
 import { useUiStore } from '@/stores/ui'
@@ -365,6 +372,11 @@ function charToTooltip(char) {
   }
 }
 
+function openCharDetail(char) {
+  charDetailTarget.value = charToTooltip(char)
+  showCharDetailModal.value = true
+}
+
 const characters = ref([])
 const archivedCharacters = ref([])
 const activeTab = ref('active')
@@ -385,6 +397,8 @@ const deleteTarget = ref(null)
 const manualEntry = ref(false)
 const showAddAnother = ref(false)
 const lastAddedName = ref('')
+const showCharDetailModal = ref(false)
+const charDetailTarget = ref(null)
 
 const { wowClasses: systemClasses, classSpecs: systemSpecs, classRoles: systemRoles } = useExpansionData()
 

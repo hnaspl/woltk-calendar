@@ -357,6 +357,7 @@
     "bossesAndLoot": "Bosses & Loot",
     "bossesAndDrops": "Bosses & Drops",
     "drops": "drops",
+    "noLootData": "No loot data available for this raid size and difficulty.",
     "viewDropsOnWowhead": "View drops on Wowhead",
     "clickForDrops": "Click for loot table",
     "currenciesAndMats": "Currencies, skinning & materials — see zone details for full list",

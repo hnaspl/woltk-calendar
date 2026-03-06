@@ -181,6 +181,36 @@
           <label class="block text-xs text-text-muted mb-1">{{ t('calendar.instructions') }}</label>
           <textarea v-model="form.default_instructions" rows="2" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
         </div>
+        <!-- Scheduling options — day-of-week, time, recurrence -->
+        <div class="p-3 rounded bg-bg-tertiary border border-border-default space-y-3">
+          <label class="block text-xs text-text-muted font-semibold uppercase tracking-wider">{{ t('series.selectDays') }}</label>
+          <div class="flex flex-wrap gap-2">
+            <label v-for="(dayName, dayKey) in dayLabels" :key="dayKey"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded border cursor-pointer transition-colors text-sm"
+              :class="form.days_of_week.includes(dayKey) ? 'bg-accent-gold/20 border-accent-gold text-accent-gold' : 'bg-bg-secondary border-border-default text-text-muted hover:border-border-gold'"
+            >
+              <input type="checkbox" :value="dayKey" v-model="form.days_of_week" class="sr-only" />
+              {{ dayName }}
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('series.startTime') }}</label>
+              <input v-model="form.start_time" type="time" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('series.durationMin') }}</label>
+              <input v-model.number="form.duration_minutes" type="number" min="30" max="600" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('series.recurrence') }}</label>
+              <select v-model="form.recurrence_rule" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option value="weekly">{{ t('series.weekly') }}</option>
+                <option value="biweekly">{{ t('series.biweekly') }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
         <!-- Multi-guild creation -->
         <div v-if="!editing && otherGuilds.length > 0" class="p-3 rounded bg-bg-tertiary border border-border-default">
@@ -437,7 +467,7 @@ const deleteTarget = ref(null)
 const copySource = ref(null)
 const applyDate = ref('')
 
-const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
+const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null, days_of_week: [], start_time: '19:00', duration_minutes: 180, recurrence_rule: 'weekly' })
 const seriesForm = reactive({
   title: '',
   raid_definition_id: null,
@@ -539,6 +569,15 @@ async function loadData() {
   }
 }
 
+async function loadSeries() {
+  if (!guildStore.currentGuild) return
+  try {
+    seriesList.value = await seriesApi.getSeries(guildStore.currentGuild.id)
+  } catch {
+    // Series reload is optional
+  }
+}
+
 onMounted(async () => {
   if (!guildStore.currentGuild) await guildStore.fetchGuilds()
   if (!guildStore.currentGuild) {
@@ -558,7 +597,7 @@ function openAddModal() {
   editing.value = null
   const firstDef = raidDefinitions.value[0]
   const firstId = firstDef?.id ?? ''
-  Object.assign(form, { name: '', raid_definition_id: firstId, raid_size: firstDef?.default_raid_size ?? 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
+  Object.assign(form, { name: '', raid_definition_id: firstId, raid_size: firstDef?.default_raid_size ?? 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null, days_of_week: [], start_time: '19:00', duration_minutes: 180, recurrence_rule: 'weekly' })
   if (firstId) onTemplateRaidDefChange()
   applyToOtherGuilds.value = false
   selectedGuildIds.value = []
@@ -567,7 +606,7 @@ function openAddModal() {
 
 function openEditModal(tpl) {
   editing.value = tpl
-  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', default_instructions: tpl.default_instructions ?? '', close_registration_minutes: tpl.close_registration_minutes ?? null })
+  Object.assign(form, { name: tpl.name, raid_definition_id: tpl.raid_definition_id ?? '', raid_size: tpl.raid_size ?? 25, difficulty: tpl.difficulty ?? 'normal', default_instructions: tpl.default_instructions ?? '', close_registration_minutes: tpl.close_registration_minutes ?? null, days_of_week: [], start_time: '19:00', duration_minutes: 180, recurrence_rule: 'weekly' })
   formError.value = null; showModal.value = true
 }
 
@@ -638,13 +677,34 @@ async function doSave() {
         }
         if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
       }
+      // Auto-create recurring series when days-of-week are selected
+      if (form.days_of_week.length > 0) {
+        try {
+          const seriesPayload = {
+            title: form.name,
+            raid_definition_id: form.raid_definition_id,
+            default_raid_size: form.raid_size,
+            default_difficulty: form.difficulty,
+            recurrence_rule: form.recurrence_rule,
+            days_of_week: form.days_of_week,
+            start_time_local: form.start_time,
+            duration_minutes: form.duration_minutes,
+            template_id: created.id,
+            active: true,
+          }
+          await seriesApi.createSeries(guildStore.currentGuild.id, seriesPayload)
+          await loadSeries()
+        } catch {
+          // Series creation is optional — template still created
+        }
+      }
     }
     showModal.value = false
     const isNew = !editing.value
     const guildLabel = currentGuildLabel.value
     uiStore.showToast(editing.value ? t('templates.toasts.templateUpdated') : t('templates.toasts.templateCreated', { guild: guildLabel }), 'success')
-    // Prompt to create recurring raid after new template creation
-    if (isNew) {
+    // Only show recurring prompt if no days were selected (series not auto-created)
+    if (isNew && form.days_of_week.length === 0) {
       showRecurringPrompt.value = true
     }
   } catch (err) {

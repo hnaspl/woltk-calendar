@@ -178,14 +178,15 @@ def duplicate_event(guild_id: int, event_id: int, membership):
 def get_event_wowhead(guild_id: int, event_id: int, membership):
     """Return Wowhead integration data for a raid event.
 
-    Loot data is fetched dynamically from Wowhead based on the event's
-    expansion and raid definition, then cached in memory.
+    Loot data is fetched from the zone page on Wowhead (not per-boss NPC
+    pages) and filtered by the event's raid size and difficulty.  This returns
+    ALL drops for the selected difficulty in a single request.
     """
     event, err = get_event_or_404(guild_id, event_id)
     if err:
         return err
 
-    from app.plugins.wowhead.plugin import WowheadPlugin, WOWHEAD_BASES
+    from app.plugins.wowhead.plugin import WowheadPlugin, WOWHEAD_BASES, WOWHEAD_MODE_LABELS
 
     # Use raid_definition.code for Wowhead lookups — raid_type on events is often
     # null, while .code matches keys in BOSS_NPC_IDS / RAID_ZONE_IDS.
@@ -207,20 +208,18 @@ def get_event_wowhead(guild_id: int, event_id: int, membership):
     if zone_url:
         result["zone_url"] = zone_url
 
-    # Fetch all boss loot in parallel from Wowhead (cached after first call)
-    bosses = WowheadPlugin.get_raid_bosses(raid_code, expansion)
-    if bosses:
-        all_loot = WowheadPlugin.get_all_boss_loot(raid_code, expansion)
-        result["bosses"] = [
-            {
-                "name": name,
-                "npc_id": npc_id,
-                "npc_url": WowheadPlugin.get_npc_url(npc_id, expansion),
-                "loot_url": WowheadPlugin.get_boss_loot_url(npc_id, expansion),
-                "loot": all_loot.get(name, []),
-            }
-            for name, npc_id in bosses.items()
-        ]
+    # Fetch zone-level loot filtered by event's raid size and difficulty
+    raid_size = event.raid_size
+    difficulty = getattr(event, "difficulty", "normal") or "normal"
+    zone_loot = WowheadPlugin.get_zone_loot(
+        raid_code, expansion, raid_size=raid_size, difficulty=difficulty,
+    )
+    result["loot"] = zone_loot
+    result["raid_size"] = raid_size
+    result["difficulty"] = difficulty
+
+    # Available mode labels so frontend can show what filter was applied
+    result["mode_labels"] = WOWHEAD_MODE_LABELS
 
     # Currencies for this expansion
     result["currencies"] = WowheadPlugin.get_raid_currencies(expansion)

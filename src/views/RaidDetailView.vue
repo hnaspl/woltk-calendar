@@ -90,7 +90,7 @@
 
             <!-- Action buttons row -->
             <div class="flex flex-wrap items-center gap-2 border-t border-border-default pt-3">
-              <div v-if="wowheadData?.zone_url || wowheadData?.bosses?.length">
+              <div v-if="wowheadData?.zone_url || wowheadData?.loot?.length">
                 <WowButton variant="secondary" class="text-xs" @click="scrollToWowhead">
                   <img :src="getUiIcon('loot')" class="w-4 h-4 rounded-sm inline" alt="" />
                   {{ t('raidDetail.raidInfo') }}
@@ -339,86 +339,52 @@
             />
           </div>
         </div>
-        <!-- Wowhead Raid Info -->
-        <WowCard v-if="wowheadData?.zone_url || wowheadData?.bosses?.length" ref="wowheadSection" class="lg:col-span-3">
+        <!-- Wowhead Raid Info — flat loot list by raid size/difficulty -->
+        <WowCard v-if="wowheadData?.zone_url || wowheadData?.loot?.length" ref="wowheadSection" class="lg:col-span-3">
           <div class="flex items-center gap-2 mb-4">
             <img :src="getUiIcon('loot')" class="w-5 h-5 rounded-sm" alt="" />
             <h2 class="wow-heading text-base">{{ t('raidDetail.raidInfo') }}</h2>
-            <span v-if="event.raid_size" class="text-xs text-text-muted ml-1">{{ event.raid_size }}-man</span>
+            <span v-if="wowheadData.raid_size" class="text-xs px-2 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/40">
+              {{ wowheadData.raid_size }}-man {{ wowheadData.difficulty === 'heroic' ? 'Heroic' : 'Normal' }}
+            </span>
+            <span class="text-xs text-text-muted ml-1">({{ wowheadData.loot?.length ?? 0 }} {{ t('raidDetail.drops') }})</span>
             <a v-if="wowheadData.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
                class="ml-auto text-xs text-accent-gold hover:text-accent-gold/80 flex items-center gap-1">
               {{ t('raidDetail.viewOnWowhead') }}
             </a>
           </div>
 
-          <!-- Zone info bar -->
-          <div v-if="wowheadData.zone_url" class="flex items-center gap-3 p-3 rounded-lg bg-bg-tertiary border border-border-default mb-4">
-            <img :src="getUiIcon('map')" class="w-6 h-6 rounded-sm" alt="" />
-            <div class="flex-1">
-              <span class="text-sm text-text-primary font-medium">{{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
-            </div>
+          <!-- Loot grid -->
+          <div v-if="wowheadData.loot?.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+            <a v-for="item in wowheadData.loot" :key="item.id"
+               :href="`${wowheadData.wowhead_base}/item=${item.id}`"
+               :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
+               target="_blank" rel="noopener noreferrer"
+               class="loot-link flex items-center gap-2 px-2 py-1.5 rounded bg-bg-secondary/50 hover:bg-bg-tertiary transition-colors text-xs no-underline border border-border-default">
+              <span class="loot-icon-fallback w-6 h-6 rounded border flex-shrink-0"
+                    :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
+                    :style="{ backgroundColor: ITEM_QUALITY_HEX[item.quality] ? ITEM_QUALITY_HEX[item.quality] + '18' : 'transparent' }">
+              </span>
+              <span class="truncate" :style="{ color: ITEM_QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
+            </a>
           </div>
-
-          <!-- Boss drops (inline, no external links needed) -->
-          <div v-if="wowheadData.bosses?.length">
-            <h3 class="text-xs text-text-muted uppercase tracking-wider mb-3">{{ t('raidDetail.bossesAndDrops') }} ({{ wowheadData.bosses.length }})</h3>
-            <div class="space-y-2">
-              <div v-for="boss in wowheadData.bosses" :key="boss.npc_id"
-                   class="rounded-lg bg-bg-secondary border border-border-default overflow-hidden">
-                <button
-                  class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-bg-tertiary transition-colors text-left"
-                  @click="toggleBossExpand(boss.npc_id)"
-                >
-                  <img :src="getUiIcon('boss')" class="w-8 h-8 rounded border border-border-default flex-shrink-0" alt="" />
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm text-text-primary font-medium truncate">{{ boss.name }}</div>
-                    <div class="text-[10px] text-text-muted">
-                      {{ boss.loot?.length ?? 0 }} {{ t('raidDetail.drops') }}
-                    </div>
-                  </div>
-                  <span class="text-xs text-text-muted transition-transform" :class="expandedBosses.has(boss.npc_id) ? 'rotate-180' : ''">&#9660;</span>
-                </button>
-                <!-- Expanded loot list -->
-                <div v-if="expandedBosses.has(boss.npc_id)" class="px-3 pb-3 border-t border-border-default">
-                  <div v-if="boss.loot?.length" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
-                    <a v-for="item in boss.loot" :key="item.id"
-                       :href="`${wowheadData.wowhead_base}/item=${item.id}`"
-                       :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
-                       target="_blank" rel="noopener noreferrer"
-                       class="loot-link flex items-center gap-2 px-2 py-1.5 rounded bg-bg-tertiary/50 hover:bg-bg-tertiary transition-colors text-xs no-underline">
-                      <!-- Fallback quality-colored border square — hidden when Wowhead injects item icon -->
-                      <span class="loot-icon-fallback w-5 h-5 rounded border flex-shrink-0"
-                            :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
-                            :style="{ backgroundColor: ITEM_QUALITY_HEX[item.quality] ? ITEM_QUALITY_HEX[item.quality] + '18' : 'transparent' }">
-                      </span>
-                      <span class="truncate" :style="{ color: ITEM_QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
-                    </a>
-                  </div>
-                  <div v-else class="text-xs text-text-muted py-2 text-center">
-                    <a :href="boss.loot_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:underline">
-                      {{ t('raidDetail.viewDropsOnWowhead') }}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div v-else-if="wowheadData.zone_url" class="text-center py-6 text-text-muted text-sm">
+            <p>{{ t('raidDetail.noLootData') }}</p>
+            <a :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:underline mt-2 inline-block">
+              {{ t('raidDetail.viewOnWowhead') }}
+            </a>
           </div>
 
           <!-- Currencies & materials -->
-          <div v-if="wowheadData.currencies?.length || wowheadData.zone_url" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
+          <div v-if="wowheadData.currencies?.length" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
             <div class="flex items-center gap-2 text-xs text-text-muted mb-2">
               <img :src="getUiIcon('coin')" class="w-4 h-4 rounded-sm" alt="" />
               <span class="font-medium text-text-primary">{{ t('raidDetail.currenciesAndMats') }}</span>
             </div>
-            <div v-if="wowheadData.currencies?.length" class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
               <span v-for="cur in wowheadData.currencies" :key="cur.name" class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-bg-secondary rounded border border-border-default">
                 {{ cur.name }}
               </span>
-            </div>
-            <div v-else class="text-xs text-text-muted">
-              <a v-if="wowheadData.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:underline">
-                {{ t('raidDetail.viewZoneDetails') }}
-              </a>
             </div>
           </div>
         </WowCard>
@@ -711,22 +677,10 @@ const mySignedUpCharacterIds = computed(() =>
 const bans = ref([])
 const wowheadData = ref(null)
 const wowheadSection = ref(null)
-const expandedBosses = ref(new Set())
 
 function scrollToWowhead() {
   wowheadSection.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     ?? wowheadSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function toggleBossExpand(npcId) {
-  const s = new Set(expandedBosses.value)
-  if (s.has(npcId)) s.delete(npcId)
-  else s.add(npcId)
-  expandedBosses.value = s
-  // Refresh Wowhead tooltips so newly-revealed item links get icons + tooltips
-  if (s.has(npcId) && wowheadData.value?.expansion) {
-    refreshWowheadTooltips(wowheadData.value.expansion)
-  }
 }
 
 const wowheadDomain = computed(() => getWowheadDomain(wowheadData.value?.expansion))
