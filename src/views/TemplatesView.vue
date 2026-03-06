@@ -597,9 +597,9 @@ function openAddModal() {
   editing.value = null
   // Select first raid from the latest expansion group (grouped descending by addon)
   const groups = templateRaidDefsByExpansion.value
-  const firstDef = groups.length > 0 && groups[0].defs.length > 0
+  const firstDef = (groups.length > 0 && groups[0].defs.length > 0)
     ? groups[0].defs[0]
-    : raidDefinitions.value[0] ?? null
+    : raidDefinitions.value[0]
   const firstId = firstDef?.id ?? ''
   Object.assign(form, { name: '', raid_definition_id: firstId, raid_size: firstDef?.default_raid_size ?? 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null, days_of_week: [], start_time: '19:00', duration_minutes: 180, recurrence_rule: 'weekly' })
   if (firstId) onTemplateRaidDefChange()

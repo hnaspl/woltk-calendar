@@ -231,7 +231,7 @@
                             <input
                               type="number" min="1" max="120" step="5"
                               :value="s.late_minutes || ''"
-                              :placeholder="t('signup.minutesLate')"
+                              placeholder="15"
                               class="w-24 bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-3 py-1.5 outline-none focus:border-border-gold"
                               @change="updateMyLateMinutes(s, $event.target.value)"
                             />
