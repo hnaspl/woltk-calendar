@@ -223,7 +223,7 @@
                               :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
                               @change="updateMyAttendanceStatus(s, $event.target.value)"
                             >
-                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey || opt.label) }}</option>
                             </select>
                           </div>
                           <!-- Late minutes -->
@@ -243,7 +243,7 @@
                             <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
                             <span class="text-sm px-3 py-1 rounded-md"
                                   :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
-                              {{ ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going'] }}
+                              {{ t(ATTENDANCE_STATUS_I18N_MAP[s.attendance_status || 'going'] || 'signup.attendanceGoing') }}
                             </span>
                           </div>
                           <span v-if="s.attendance_status === 'late' && s.late_minutes" class="block text-xs text-amber-300 text-right mt-1">
@@ -385,11 +385,13 @@
                        :href="`${wowheadData.wowhead_base}/item=${item.id}`"
                        :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
                        target="_blank" rel="noopener noreferrer"
-                       class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-tertiary/50 hover:bg-bg-tertiary transition-colors text-xs group">
-                      <span class="w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 text-[10px]"
-                            :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'">
+                       class="loot-link flex items-center gap-2 px-2 py-1.5 rounded bg-bg-tertiary/50 hover:bg-bg-tertiary transition-colors text-xs no-underline">
+                      <!-- Fallback quality-colored border square — hidden when Wowhead injects item icon -->
+                      <span class="loot-icon-fallback w-5 h-5 rounded border flex-shrink-0"
+                            :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
+                            :style="{ backgroundColor: QUALITY_HEX[item.quality] ? QUALITY_HEX[item.quality] + '18' : 'transparent' }">
                       </span>
-                      <span class="truncate" :class="(ITEM_QUALITY_COLORS[item.quality] || {}).text || 'text-text-primary'">{{ item.name }}</span>
+                      <span class="truncate" :style="{ color: QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
                     </a>
                   </div>
                   <div v-else class="text-xs text-text-muted py-2 text-center">
@@ -582,7 +584,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ITEM_QUALITY_COLORS, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE, ATTENDANCE_STATUS_LABEL_MAP } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ITEM_QUALITY_COLORS, ITEM_QUALITY_HEX, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
@@ -721,9 +723,16 @@ function toggleBossExpand(npcId) {
   if (s.has(npcId)) s.delete(npcId)
   else s.add(npcId)
   expandedBosses.value = s
+  // Refresh Wowhead tooltips so newly-revealed item links get icons + tooltips
+  if (s.has(npcId) && wowheadData.value?.expansion) {
+    refreshWowheadTooltips(wowheadData.value.expansion)
+  }
 }
 
 const wowheadDomain = computed(() => getWowheadDomain(wowheadData.value?.expansion))
+
+/** Alias for template usage — imported from centralized constants. */
+const QUALITY_HEX = ITEM_QUALITY_HEX
 
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)
@@ -1200,3 +1209,13 @@ async function resolveReplacement(requestId, action) {
   }
 }
 </script>
+
+<style>
+/*
+ * Hide fallback loot-icon squares once Wowhead has injected item icons.
+ * Wowhead's iconizeLinks adds elements with class 'iconsmall'/'iconmedium'/'iconlarge'.
+ */
+.loot-link:has(.iconsmall, .iconmedium, .iconlarge) > .loot-icon-fallback {
+  display: none;
+}
+</style>

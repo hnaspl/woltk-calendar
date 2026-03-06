@@ -335,59 +335,102 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
     going = [s for s in signups if s.get("lineup_status") == "going"]
     bench = [s for s in signups if s.get("lineup_status") == "bench"]
 
+    # Role display names and emojis for Discord
+    ROLE_EMOJI = {
+        "main_tank": "🛡️",
+        "off_tank": "🔰",
+        "healer": "💚",
+        "melee_dps": "⚔️",
+        "range_dps": "🏹",
+    }
+
     # Group going by role
-    role_groups = {}
+    role_groups: dict[str, list[str]] = {}
     for s in going:
         role = s.get("chosen_role", "unknown")
         char_name = s.get("character", {}).get("name", "Unknown")
         class_name = s.get("character", {}).get("class_name", "")
+        level = s.get("character", {}).get("level", "")
+        entry = f"**{char_name}** — {class_name}"
+        if level:
+            entry = f"**{char_name}** (Lv{level}) — {class_name}"
         if role not in role_groups:
             role_groups[role] = []
-        role_groups[role].append(f"{char_name} ({class_name})")
+        role_groups[role].append(entry)
 
     def _role_display(role_key: str) -> str:
-        """Reuse notify.py pattern: replace underscores, title-case."""
-        return role_key.replace("_", " ").title()
+        emoji = ROLE_EMOJI.get(role_key, "📋")
+        label = role_key.replace("_", " ").title()
+        return f"{emoji} {label}"
 
     fields = []
     for role, players in role_groups.items():
         label = _role_display(role)
         value = "\n".join(players[:10])
         if len(players) > 10:
-            value += f"\n... and {len(players) - 10} more"
-        fields.append({"name": f"{label} ({len(players)})", "value": value or "-", "inline": True})
+            value += f"\n*... and {len(players) - 10} more*"
+        fields.append({"name": f"{label} ({len(players)})", "value": value or "—", "inline": True})
+
+    # Composition summary as a field
+    comp_parts = []
+    for role in ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]:
+        if role in role_groups:
+            emoji = ROLE_EMOJI.get(role, "")
+            count = len(role_groups[role])
+            comp_parts.append(f"{emoji} {count}")
+    if comp_parts:
+        fields.insert(0, {
+            "name": "📊 Composition",
+            "value": " | ".join(comp_parts) + f" — **{len(going)}** total",
+            "inline": False,
+        })
 
     if bench:
-        bench_names = [s.get("character", {}).get("name", "?") for s in bench[:5]]
-        bench_text = ", ".join(bench_names)
-        if len(bench) > 5:
-            bench_text += f" +{len(bench) - 5} more"
+        bench_entries = []
+        for s in bench[:8]:
+            char_name = s.get("character", {}).get("name", "?")
+            role = s.get("chosen_role", "")
+            emoji = ROLE_EMOJI.get(role, "")
+            bench_entries.append(f"{emoji} {char_name}")
+        bench_text = "\n".join(bench_entries)
+        if len(bench) > 8:
+            bench_text += f"\n*+{len(bench) - 8} more on bench*"
         fields.append({"name": f"⏳ Bench ({len(bench)})", "value": bench_text, "inline": False})
 
     title = event_data.get("title", "Raid Event")
+    raid_type = event_data.get("raid_type", "")
     raid_size = event_data.get("raid_size", "")
     starts = event_data.get("starts_at_utc", "")
 
-    description_parts = []
+    description_lines = []
     if starts:
-        description_parts.append(f"📅 **Starts:** {starts}")
+        description_lines.append(f"🗓️ **Start:** {starts}")
+    info_parts = []
     if raid_size:
-        description_parts.append(f"👥 **Size:** {raid_size}-man")
-    description_parts.append(f"📝 **Signups:** {len(going)} going, {len(bench)} bench, {len(signups)} total")
+        info_parts.append(f"**{raid_size}-man**")
+    if raid_type:
+        info_parts.append(raid_type.upper())
+    if info_parts:
+        description_lines.append(f"⚙️ {' · '.join(info_parts)}")
+    description_lines.append(f"📝 **{len(going)}** in lineup · **{len(bench)}** on bench · **{len(signups)}** signed up")
 
     if event_data.get("instructions"):
-        description_parts.append(f"\n📋 {event_data['instructions']}")
+        description_lines.append(f"\n📋 *{event_data['instructions']}*")
 
     embed = {
         "title": f"⚔️ {title}",
-        "description": "\n".join(description_parts),
+        "description": "\n".join(description_lines),
         "color": 0xFFD100,  # Gold color matching the site theme
         "fields": fields,
-        "footer": {"text": "Raid Calendar"},
+        "footer": {"text": "Raid Calendar", "icon_url": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_book_07.jpg"},
+        "timestamp": starts if starts else None,
     }
 
     if site_url and event_data.get("id") and event_data.get("guild_id"):
         embed["url"] = f"{site_url}/raids/{event_data['id']}"
+
+    # Remove None values from embed
+    embed = {k: v for k, v in embed.items() if v is not None}
 
     payload = {
         "embeds": [embed],

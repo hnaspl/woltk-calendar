@@ -248,7 +248,7 @@
 import { computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLabel } from '@/constants'
+import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLabel, ITEM_QUALITY_HEX } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { refreshWowheadTooltips, getWowheadDomain, getWowheadBase } from '@/composables/useWowheadTooltips'
 import { useFormatting } from '@/composables/useFormatting'
@@ -349,15 +349,7 @@ function itemQualityText(item) {
 }
 
 /** Inline style for item name color — uses WoW quality hex colors for accurate rendering. */
-const QUALITY_HEX = {
-  0: '#9d9d9d', // Poor (gray)
-  1: '#ffffff', // Common (white)
-  2: '#1eff00', // Uncommon (green)
-  3: '#0070dd', // Rare (blue)
-  4: '#a335ee', // Epic (purple)
-  5: '#ff8000', // Legendary (orange)
-  6: '#e6cc80', // Artifact (gold)
-}
+const QUALITY_HEX = ITEM_QUALITY_HEX
 function itemQualityStyle(item) {
   const q = item.quality
   if (q == null) return {}

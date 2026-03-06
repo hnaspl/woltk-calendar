@@ -292,20 +292,27 @@ def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
 
         raw = match.group(1)
 
-        # Convert JS object notation to valid JSON:
-        # 1. Quote unquoted object keys  ({id: 1} → {"id": 1})
-        # 2. Replace single quotes with double quotes
-        # 3. Strip trailing commas  ([1,2,] → [1,2])
-        cleaned = re.sub(r"(?<=[{,])\s*([a-zA-Z_]\w*)\s*:", r'"\1":', raw)
-        cleaned = cleaned.replace("'", '"')
-        cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+        # Convert JS object notation to valid JSON.
+        # Modern Wowhead uses double-quoted keys/values that are already
+        # valid JSON — we only need to strip trailing commas.  If that
+        # fails we fall back to quoting bare JS keys (older format).
+        # NOTE: we intentionally do NOT blanket-replace single quotes
+        # with double quotes because item names may contain apostrophes
+        # (e.g. "Retcher's Shoulderpads") which would break the JSON.
+        cleaned = re.sub(r",\s*([}\]])", r"\1", raw)
 
         try:
             items = json.loads(cleaned)
         except json.JSONDecodeError:
-            logger.warning("Failed to parse Wowhead loot JSON for NPC %s", npc_id)
-            _npc_loot_cache[cache_key] = []
-            return []
+            # Fallback: quote unquoted object keys ({id: 1} → {"id": 1})
+            cleaned = re.sub(r"(?<=[{,])\s*([a-zA-Z_]\w*)\s*:", r'"\1":', raw)
+            cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+            try:
+                items = json.loads(cleaned)
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse Wowhead loot JSON for NPC %s", npc_id)
+                _npc_loot_cache[cache_key] = []
+                return []
 
         loot: list[dict] = []
         for item in items:

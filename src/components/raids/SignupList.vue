@@ -168,10 +168,10 @@
                         :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).select"
                         @change="onAttendanceStatusChange(signup, $event)"
                       >
-                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey || opt.label) }}</option>
                       </select>
                       <span v-else class="text-sm px-3 py-1 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
-                        {{ ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going'] }}
+                        {{ t(ATTENDANCE_STATUS_I18N_MAP[signup.attendance_status || 'going'] || 'signup.attendanceGoing') }}
                       </span>
                     </div>
                     <!-- Late minutes -->
@@ -318,7 +318,7 @@ import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()

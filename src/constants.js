@@ -124,19 +124,42 @@ export const EVENT_STATUSES = ['draft', 'open', 'locked', 'completed', 'cancelle
 export const ATTENDANCE_OUTCOMES = ['attended', 'late', 'no_show', 'benched', 'backup']
 
 /**
+ * WoW item quality → hex color.
+ * Used for inline `style.color` on item names so colours match the actual game.
+ * Keep in sync with Wowhead's quality definitions.
+ */
+export const ITEM_QUALITY_HEX = {
+  0: '#9d9d9d', // Poor (gray)
+  1: '#ffffff', // Common (white)
+  2: '#1eff00', // Uncommon (green)
+  3: '#0070dd', // Rare (blue)
+  4: '#a335ee', // Epic (purple)
+  5: '#ff8000', // Legendary (orange)
+  6: '#e6cc80', // Artifact (gold)
+}
+
+/**
  * Signup attendance status options (informational — NOT coupled with bench/queue).
  * Keep in sync with app/api/v2/signups.py valid_statuses set.
+ *
+ * `label` is the English fallback; components should use the `i18nKey` with
+ * the Vue i18n `t()` function so translations display correctly.
  */
 export const ATTENDANCE_STATUS_OPTIONS = [
-  { value: 'going',        label: 'Going' },
-  { value: 'tentative',    label: 'Tentative' },
-  { value: 'late',         label: 'Late' },
-  { value: 'not_going',    label: 'Not Going' },
-  { value: 'alt',          label: 'Alt' },
-  { value: 'did_not_show', label: 'Did Not Show' },
+  { value: 'going',        label: 'Going',        i18nKey: 'signup.attendanceGoing' },
+  { value: 'tentative',    label: 'Tentative',    i18nKey: 'signup.attendanceTentative' },
+  { value: 'late',         label: 'Late',         i18nKey: 'signup.attendanceLate' },
+  { value: 'not_going',    label: 'Not Going',    i18nKey: 'signup.attendanceNotGoing' },
+  { value: 'alt',          label: 'Alt',          i18nKey: 'signup.attendanceAlt' },
+  { value: 'did_not_show', label: 'Did Not Show', i18nKey: 'signup.attendanceDidNotShow' },
 ]
 
-/** Attendance status value → display label. Derived from ATTENDANCE_STATUS_OPTIONS. */
+/** Attendance status value → i18n key for translation lookup. */
+export const ATTENDANCE_STATUS_I18N_MAP = Object.fromEntries(
+  ATTENDANCE_STATUS_OPTIONS.map(s => [s.value, s.i18nKey])
+)
+
+/** Attendance status value → display label (English fallback). Derived from ATTENDANCE_STATUS_OPTIONS. */
 export const ATTENDANCE_STATUS_LABEL_MAP = Object.fromEntries(
   ATTENDANCE_STATUS_OPTIONS.map(s => [s.value, s.label])
 )
