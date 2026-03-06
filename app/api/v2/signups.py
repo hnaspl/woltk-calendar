@@ -231,10 +231,10 @@ def update_signup_status(guild_id: int, event_id: int, signup_id: int, membershi
         return jsonify({"error": _t("common.errors.forbidden")}), 403
 
     data = get_json()
-    valid_statuses = {"going", "tentative", "late", "did_not_show", "not_going", "alt"}
+    from app.constants import VALID_ATTENDANCE_STATUSES
     new_status = data.get("attendance_status")
-    if new_status not in valid_statuses:
-        return jsonify({"error": f"Invalid status. Must be one of: {', '.join(sorted(valid_statuses))}"}), 400
+    if new_status not in VALID_ATTENDANCE_STATUSES:
+        return jsonify({"error": f"Invalid status. Must be one of: {', '.join(sorted(VALID_ATTENDANCE_STATUSES))}"}), 400
 
     # Update only attendance_status and late_minutes — does NOT touch lineup/bench
     signup.attendance_status = new_status

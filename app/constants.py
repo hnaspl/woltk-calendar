@@ -95,3 +95,9 @@ ROLE_SLOTS: dict[int, dict[str, int]] = {
     25: {"main_tank": 1, "off_tank": 2, "melee_dps": 0, "healer": 6, "range_dps": 16},
     40: {"main_tank": 2, "off_tank": 3, "melee_dps": 0, "healer": 12, "range_dps": 23},
 }
+
+# ---------------------------------------------------------------------------
+# Signup attendance statuses (informational — NOT coupled with bench/queue).
+# Keep in sync with ATTENDANCE_STATUS_OPTIONS in src/constants.js.
+# ---------------------------------------------------------------------------
+VALID_ATTENDANCE_STATUSES = {"going", "tentative", "late", "did_not_show", "not_going", "alt"}

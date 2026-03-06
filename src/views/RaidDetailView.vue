@@ -549,6 +549,7 @@ import * as attendanceApi from '@/api/attendance'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
+import { refreshWowheadTooltips, getWowheadDomain } from '@/composables/useWowheadTooltips'
 
 const route = useRoute()
 const router = useRouter()
@@ -679,11 +680,7 @@ function toggleBossExpand(npcId) {
   expandedBosses.value = s
 }
 
-const wowheadDomain = computed(() => {
-  const exp = wowheadData.value?.expansion
-  const domainMap = { classic: 'classic', tbc: 'tbc', wotlk: 'wotlk', cata: 'cata' }
-  return domainMap[exp] || ''
-})
+const wowheadDomain = computed(() => getWowheadDomain(wowheadData.value?.expansion))
 
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)
@@ -1078,30 +1075,12 @@ async function loadWowheadData() {
   if (!guildId.value || !event.value?.id) return
   try {
     wowheadData.value = await eventsApi.getEventWowhead(guildId.value, event.value.id)
-    // Inject Wowhead tooltip script for item hover previews
-    if (wowheadData.value?.tooltip_script) {
-      injectWowheadTooltips(wowheadData.value.expansion)
+    if (wowheadData.value) {
+      refreshWowheadTooltips(wowheadData.value.expansion)
     }
   } catch {
     // Wowhead data is optional
   }
-}
-
-function injectWowheadTooltips(expansion) {
-  // Prevent duplicate injection
-  if (document.getElementById('wowhead-tooltip-config')) return
-  const domainMap = { classic: 'classic', tbc: 'tbc', wotlk: 'wotlk', cata: 'cata' }
-  const domain = domainMap[expansion] || 'wow'
-  // Config script
-  const config = document.createElement('script')
-  config.id = 'wowhead-tooltip-config'
-  config.textContent = 'const whTooltips = {colorLinks: true, iconizeLinks: true, renameLinks: true};'
-  document.head.appendChild(config)
-  // Main script
-  const main = document.createElement('script')
-  main.src = `https://wow.zamimg.com/js/${domain}.js`
-  main.async = true
-  document.head.appendChild(main)
 }
 
 // --- Discord webhook ---

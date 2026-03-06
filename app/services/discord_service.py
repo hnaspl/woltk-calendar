@@ -345,17 +345,13 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
             role_groups[role] = []
         role_groups[role].append(f"{char_name} ({class_name})")
 
-    role_labels = {
-        "main_tank": "🛡️ Main Tank",
-        "off_tank": "🛡️ Off Tank",
-        "healer": "💚 Healer",
-        "melee_dps": "⚔️ Melee DPS",
-        "range_dps": "🏹 Range DPS",
-    }
+    def _role_display(role_key: str) -> str:
+        """Reuse notify.py pattern: replace underscores, title-case."""
+        return role_key.replace("_", " ").title()
 
     fields = []
     for role, players in role_groups.items():
-        label = role_labels.get(role, role)
+        label = _role_display(role)
         value = "\n".join(players[:10])
         if len(players) > 10:
             value += f"\n... and {len(players) - 10} more"
