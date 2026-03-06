@@ -108,7 +108,7 @@ watch(
         let outcome = 'attended'
         const status = s.attendance_status
         if (status === 'late') outcome = 'late'
-        else if (status === 'not_going' || status === 'did_not_show') outcome = 'no_show'
+        else if (status === 'did_not_show') outcome = 'no_show'
         return {
           signup: s,
           outcome,

@@ -193,6 +193,9 @@ def get_event_wowhead(guild_id: int, event_id: int, membership):
     raid_code = rd.code if rd else event.raid_type
     expansion = rd.expansion if rd else "wotlk"
 
+    if not raid_code:
+        return jsonify({"expansion": expansion, "wowhead_base": WOWHEAD_BASES.get(expansion, "https://www.wowhead.com")}), 200
+
     result = {
         "expansion": expansion,
         "raid_code": raid_code,

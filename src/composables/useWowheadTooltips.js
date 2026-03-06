@@ -1,8 +1,10 @@
 /**
  * Wowhead tooltip integration.
  *
- * Loads the Wowhead tooltip script once and exposes a refresh function that
- * re-scans the DOM for new item links after Vue updates.
+ * Always loads the universal tooltips.js script (NOT expansion-specific ones
+ * like wotlk.js) because only tooltips.js supports iconizeLinks which injects
+ * actual item icons into links.  The expansion is specified per-link via the
+ * ``domain`` parameter in ``data-wowhead`` attributes (e.g. ``domain=wotlk``).
  *
  * Graceful degradation: if the script fails to load (e.g. Wowhead is down),
  * items still display their names — the tooltip is a progressive enhancement.
@@ -11,7 +13,6 @@ import { nextTick } from 'vue'
 
 let loaded = false
 let loading = false
-let loadedDomain = null
 
 const EXPANSION_DOMAIN_MAP = {
   classic: 'classic',
@@ -20,13 +21,8 @@ const EXPANSION_DOMAIN_MAP = {
   cata: 'cata',
 }
 
-function ensureLoaded(expansion) {
-  const domain = EXPANSION_DOMAIN_MAP[expansion] || null
-  const scriptName = domain || 'tooltips'
-
-  // Already loaded for this domain
-  if (loaded && loadedDomain === scriptName) return
-  if (loading) return
+function ensureLoaded() {
+  if (loaded || loading) return
   loading = true
 
   // Configure Wowhead tooltip behavior before loading the script
@@ -38,9 +34,9 @@ function ensureLoaded(expansion) {
   }
 
   const script = document.createElement('script')
-  script.src = `https://wow.zamimg.com/js/${domain ? domain + '.js' : 'tooltips.js'}`
+  script.src = 'https://wow.zamimg.com/js/tooltips.js'
   script.async = true
-  script.onload = () => { loaded = true; loading = false; loadedDomain = scriptName }
+  script.onload = () => { loaded = true; loading = false }
   script.onerror = () => { loading = false }  // graceful degradation
   document.head.appendChild(script)
 }
@@ -66,10 +62,10 @@ export function getWowheadBase(expansion) {
  * Refresh Wowhead tooltips after Vue has rendered new item links.
  * Call this in onMounted / onUpdated / watch callbacks.
  *
- * @param {string} [expansion] - Optional expansion slug for domain-specific tooltips.
+ * @param {string} [expansion] - Optional expansion slug (kept for API compat, not used for script loading).
  */
 export function refreshWowheadTooltips(expansion) {
-  ensureLoaded(expansion)
+  ensureLoaded()
   nextTick(() => {
     if (window.$WowheadPower?.refreshLinks) {
       window.$WowheadPower.refreshLinks()
