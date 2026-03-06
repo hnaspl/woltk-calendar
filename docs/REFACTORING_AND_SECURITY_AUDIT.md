@@ -417,4 +417,89 @@ Centralized logging configuration in `app/logging_config.py`:
 | 15 | Bench data type definitions | ✅ DONE | `src/types/bench.js` (JSDoc) |
 | 16 | Frontend constants documented | ✅ DONE | `src/constants.js` header clarifies frontend-only vs API-served |
 
-**All items complete. 875 backend tests pass. Frontend builds clean. 0 security vulnerabilities.**
+---
+
+## 5. Input Sanitization — ✅ COMPLETED
+
+### 5.1 Shared Sanitizer — `app/utils/sanitizer.py`
+
+Centralized input sanitization utility reused across the entire backend. Blocks:
+
+- **HTML/XSS injection**: `<script>`, `<iframe>`, `<object>`, `<embed>`, `<link>`, `<style>`, event handlers (`onerror`, `onclick`, etc.), `javascript:`, `data:text/html`, `vbscript:`
+- **Shell command injection**: `$(cmd)`, backtick execution, `${var}` shell expansion, pipe to shell (`| bash`), redirect to filesystem (`> /path`), chained commands with dangerous executables (`; rm`, `; wget`, `; curl`, `; exec`, `; eval`)
+- **Encoding-based obfuscation**: hex escapes (`\x3c`), unicode escapes (`\u003c`), HTML numeric entities (`&#60;`), HTML hex entities (`&#x3C;`)
+- **Translation placeholder abuse**: Only whitelisted `{variable}` names allowed (40+ variables: `name`, `count`, `limit`, `guild`, `event`, `character`, etc.)
+
+### 5.2 Services Hardened
+
+| Service | Fields Sanitized | Max Length |
+|---|---|---|
+| `event_service.py` | `instructions`, `title` (create + update) | 5,000 |
+| `signup_service.py` | `note`, `gear_score_note` (create + update) | 1,000 |
+| `guild_service.py` | `name`, `realm_name`, string values in `settings_json` | 500 |
+| `tenant_service.py` | `description` in `update_tenant` + `admin_update_tenant` | 2,000 |
+| `raid_service.py` | `notes`, `name` (create + update) | 2,000 |
+| `discord_service.py` | `instructions` before embedding in Discord webhook | N/A (checked, not stored) |
+| `translation_service.py` | All translation override values + key format validation | 10,000 |
+
+### 5.3 Test Coverage
+
+- `tests/test_sanitizer.py` — **132 tests**: XSS payloads (22), shell injection (18), encoding obfuscation (6), safe content (14), length limits (6), placeholder validation (16), key validation (10), service field patterns (10), integration (30+)
+
+---
+
+## 6. Translation Management System — ✅ COMPLETED
+
+### 6.1 Architecture
+
+- **DB model**: `TranslationOverride` stores per-key overrides. Static JSON files on disk are **never modified**.
+- **Service**: `app/services/translation_service.py` — CRUD, missing detection, bulk operations, statistics
+- **API**: `app/api/v2/admin_translations.py` — admin-only write endpoints, any-user merged read endpoint
+- **Frontend**: `TranslationsTab.vue` in Global Admin — browse by section, search, edit, detect missing, manage overrides
+- **Variables endpoint**: `GET /api/v2/admin/translations/variables` — documents all 40+ allowed placeholder variables with examples
+
+### 6.2 Security
+
+- All values pass through `sanitize_translation()` from `app/utils/sanitizer.py`
+- Key format validated: `^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$`
+- Max value length: 10,000 characters
+- Only admin-authenticated users can write; all mutations audit-logged with user ID
+- Persistence: DB-backed (`translation_overrides` table), survives container restarts
+
+### 6.3 Test Coverage
+
+- `tests/test_translations.py` — **43 tests**: CRUD (9), security blocking (8), bulk operations (6), missing detection (2), file persistence (1), API access control (11), variables endpoint (1), edge cases (5)
+
+---
+
+## 7. Guild Ownership Transfer Limits — ✅ COMPLETED
+
+### 7.1 Implementation
+
+- **`POST /guilds/<id>/transfer-ownership`** (non-admin): Counts guilds owned by target user in the guild's tenant. Blocks transfer if target user has reached `max_guilds` (respects `max_guilds_override` per-user). Returns descriptive error with username and limit.
+- **`POST /guilds/admin/<id>/transfer-ownership`** (global admin): No limit check — global admins bypass all guild limits.
+- **Regular endpoint used by global admin**: Also bypasses limits (checks `is_global_admin` flag).
+- **Guilds without tenant**: No limit check applied (no tenant = no limit).
+
+### 7.2 Test Coverage
+
+- `tests/test_guild_transfer.py` — **17 tests**: successful transfer (1), limit blocking (1), below-limit allowed (1), per-user override (1), admin bypass — admin endpoint (1), admin bypass — regular endpoint (1), non-member rejected (1), self-transfer rejected (1), non-owner rejected (1), missing user_id (1), nonexistent guild (1), role changes — new owner (1), role changes — old owner demoted (1), created_by updated (1), no-tenant guild (1), exact boundary (1), error message content (1)
+
+---
+
+## Summary of All Actions
+
+| # | Action | Status | Tests |
+|---|---|---|---|
+| 1–16 | Refactoring items (see table above) | ✅ ALL DONE | 875 existing |
+| 17 | Shared sanitizer (`app/utils/sanitizer.py`) | ✅ DONE | 132 tests |
+| 18 | Event instructions sanitization | ✅ DONE | Covered by sanitizer + existing |
+| 19 | Signup notes sanitization | ✅ DONE | Covered by sanitizer + existing |
+| 20 | Guild settings sanitization | ✅ DONE | Covered by sanitizer + existing |
+| 21 | Tenant description sanitization | ✅ DONE | Covered by sanitizer + existing |
+| 22 | Raid definition notes sanitization | ✅ DONE | Covered by sanitizer + existing |
+| 23 | Discord embed sanitization | ✅ DONE | Covered by sanitizer |
+| 24 | Translation management system | ✅ DONE | 43 tests |
+| 25 | Guild ownership transfer limits | ✅ DONE | 17 tests |
+
+**All items complete. 1,067 backend tests pass. Frontend builds clean. 0 security vulnerabilities.**
