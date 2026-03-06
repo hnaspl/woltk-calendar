@@ -276,7 +276,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showRecurringPrompt = false">{{ t('templates.skipRecurring') }}</WowButton>
-          <WowButton @click="goToRecurring">{{ t('templates.createRecurringRaid') }}</WowButton>
+          <WowButton @click="openRecurringFromPrompt">{{ t('templates.createRecurringRaid') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -659,7 +659,7 @@ async function doApply() {
   } finally { saving.value = false }
 }
 
-function goToRecurring(templateId) {
+function openRecurringFromPrompt(templateId) {
   showRecurringPrompt.value = false
   const id = templateId || createdTemplateId.value
   if (id) {
