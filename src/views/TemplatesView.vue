@@ -136,7 +136,7 @@
     </div>
 
     <!-- Add/Edit template modal -->
-    <WowModal v-model="showModal" :title="editing ? t('templates.editTemplate') : t('templates.newTemplateTitle')" size="lg">
+    <WowModal v-model="showModal" :title="editing ? t('templates.editTemplate') : t('templates.newTemplateTitle')" size="xl">
       <form @submit.prevent="saveTemplate" class="space-y-4">
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('templates.templateName') }}</label>

@@ -157,36 +157,17 @@
                     </div>
                   </div>
 
-                  <!-- Right: Attendance status (top-right corner) -->
+                  <!-- Right: Attendance status badge (read-only) -->
                   <div class="flex-shrink-0">
                     <div class="flex items-center gap-2">
                       <img :src="getAttendanceStatusIcon(signup.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going']" />
-                      <select
-                        v-if="canManage || isOwnSignup(signup)"
-                        :value="signup.attendance_status || 'going'"
-                        class="bg-bg-secondary border text-sm rounded-md px-3 py-1.5 outline-none transition-colors cursor-pointer"
-                        :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).select"
-                        @change="onAttendanceStatusChange(signup, $event)"
-                      >
-                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
-                      </select>
-                      <span v-else class="text-sm px-3 py-1 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
+                      <span class="text-sm px-3 py-1 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
                         {{ t(ATTENDANCE_STATUS_I18N_MAP[signup.attendance_status || 'going']) }}
                       </span>
                     </div>
-                    <!-- Late minutes -->
-                    <div v-if="signup.attendance_status === 'late'" class="mt-2 flex items-center gap-2 justify-end">
-                      <input
-                        v-if="(canManage || isOwnSignup(signup)) && lateMinutesTarget === signup.id"
-                        v-model.number="lateMinutesValue"
-                        type="number" min="1" max="999"
-                        :placeholder="t('signup.minutesLate')"
-                        class="w-24 bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-3 py-1.5 outline-none focus:border-border-gold"
-                        @blur="saveLateMinutes(signup)"
-                        @keyup.enter="saveLateMinutes(signup)"
-                      />
-                      <span v-else-if="signup.late_minutes" class="text-xs text-amber-300">~{{ signup.late_minutes }} {{ t('signup.minutesLate') }}</span>
-                    </div>
+                    <span v-if="signup.attendance_status === 'late' && signup.late_minutes" class="block text-xs text-amber-300 text-right mt-1">
+                      ~{{ signup.late_minutes }} {{ t('signup.minutesLate') }}
+                    </span>
                   </div>
                 </div>
               </div>

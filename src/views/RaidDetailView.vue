@@ -90,7 +90,7 @@
 
             <!-- Action buttons row -->
             <div class="flex flex-wrap items-center gap-2 border-t border-border-default pt-3">
-              <div v-if="wowheadData?.zone_url || wowheadData?.loot?.length">
+              <div v-if="wowheadData?.loot?.length">
                 <WowButton variant="secondary" class="text-xs" @click="scrollToWowhead">
                   <img :src="getUiIcon('loot')" class="w-4 h-4 rounded-sm inline" alt="" />
                   {{ t('raidDetail.raidInfo') }}
@@ -223,7 +223,7 @@
                               :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
                               @change="updateMyAttendanceStatus(s, $event.target.value)"
                             >
-                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
+                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS.filter(o => o.value !== 'did_not_show')" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
                             </select>
                           </div>
                           <!-- Late minutes -->
@@ -341,61 +341,47 @@
           </div>
         </div>
         <!-- Wowhead Raid Info — flat loot list by raid size/difficulty -->
-        <WowCard v-if="wowheadLoading || wowheadData?.zone_url || wowheadData?.loot?.length" ref="wowheadSection" class="lg:col-span-3">
+        <WowCard v-if="wowheadData?.loot?.length" ref="wowheadSection" class="lg:col-span-3">
           <div class="flex items-center gap-2 mb-4">
             <img :src="getUiIcon('loot')" class="w-5 h-5 rounded-sm" alt="" />
             <h2 class="wow-heading text-base">{{ t('raidDetail.raidInfo') }}</h2>
             <span v-if="wowheadData?.raid_size" class="text-xs px-2 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/40">
               {{ wowheadData.raid_size }}-man {{ wowheadData.difficulty === 'heroic' ? 'Heroic' : 'Normal' }}
             </span>
-            <span v-if="wowheadData?.loot?.length" class="text-xs text-text-muted ml-1">({{ wowheadData.loot.length }} {{ t('raidDetail.drops') }})</span>
-            <div v-if="wowheadLoading" class="ml-2 w-4 h-4 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+            <span class="text-xs text-text-muted ml-1">({{ wowheadData.loot.length }} {{ t('raidDetail.drops') }})</span>
             <a v-if="wowheadData?.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
                class="ml-auto text-xs text-accent-gold hover:text-accent-gold/80 flex items-center gap-1">
               {{ t('raidDetail.viewOnWowhead') }}
             </a>
           </div>
 
-          <!-- Loading -->
-          <div v-if="wowheadLoading" class="py-8 text-center text-text-muted text-sm">
-            {{ t('common.labels.loading') }}
+          <!-- Loot grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+            <a v-for="item in wowheadData.loot" :key="item.id"
+               :href="`${wowheadData.wowhead_base}/item=${item.id}`"
+               :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
+               target="_blank" rel="noopener noreferrer"
+               class="loot-link flex items-center gap-2 px-2 py-1.5 rounded bg-bg-secondary/50 hover:bg-bg-tertiary transition-colors text-xs no-underline border border-border-default">
+              <span class="loot-icon-fallback w-6 h-6 rounded border flex-shrink-0"
+                    :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
+                    :style="{ backgroundColor: ITEM_QUALITY_HEX[item.quality] ? ITEM_QUALITY_HEX[item.quality] + '18' : 'transparent' }">
+              </span>
+              <span class="truncate" :style="{ color: ITEM_QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
+            </a>
           </div>
 
-          <!-- Loot grid -->
-          <template v-else-if="wowheadData">
-            <div v-if="wowheadData.loot?.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-              <a v-for="item in wowheadData.loot" :key="item.id"
-                 :href="`${wowheadData.wowhead_base}/item=${item.id}`"
-                 :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
-                 target="_blank" rel="noopener noreferrer"
-                 class="loot-link flex items-center gap-2 px-2 py-1.5 rounded bg-bg-secondary/50 hover:bg-bg-tertiary transition-colors text-xs no-underline border border-border-default">
-                <span class="loot-icon-fallback w-6 h-6 rounded border flex-shrink-0"
-                      :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
-                      :style="{ backgroundColor: ITEM_QUALITY_HEX[item.quality] ? ITEM_QUALITY_HEX[item.quality] + '18' : 'transparent' }">
-                </span>
-                <span class="truncate" :style="{ color: ITEM_QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
-              </a>
+          <!-- Currencies & materials -->
+          <div v-if="wowheadData.currencies?.length" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
+            <div class="flex items-center gap-2 text-xs text-text-muted mb-2">
+              <img :src="getUiIcon('coin')" class="w-4 h-4 rounded-sm" alt="" />
+              <span class="font-medium text-text-primary">{{ t('raidDetail.currenciesAndMats') }}</span>
             </div>
-            <div v-else-if="wowheadData.zone_url" class="text-center py-6 text-text-muted text-sm">
-              <p>{{ t('raidDetail.noLootData') }}</p>
-              <a :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:underline mt-2 inline-block">
-                {{ t('raidDetail.viewOnWowhead') }}
-              </a>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="cur in wowheadData.currencies" :key="cur.name" class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-bg-secondary rounded border border-border-default">
+                {{ cur.name }}
+              </span>
             </div>
-
-            <!-- Currencies & materials -->
-            <div v-if="wowheadData.currencies?.length" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
-              <div class="flex items-center gap-2 text-xs text-text-muted mb-2">
-                <img :src="getUiIcon('coin')" class="w-4 h-4 rounded-sm" alt="" />
-                <span class="font-medium text-text-primary">{{ t('raidDetail.currenciesAndMats') }}</span>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="cur in wowheadData.currencies" :key="cur.name" class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-bg-secondary rounded border border-border-default">
-                  {{ cur.name }}
-                </span>
-              </div>
-            </div>
-          </template>
+          </div>
         </WowCard>
 
       </template>
