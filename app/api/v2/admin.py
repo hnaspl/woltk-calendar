@@ -65,6 +65,7 @@ def dashboard_stats():
         sa.select(sa.func.count()).select_from(User).where(
             User.email_verified.is_(False),
             User.activation_token.isnot(None),
+            User.auth_provider == "local",
         )
     )
     total_guilds = db.session.scalar(sa.select(sa.func.count()).select_from(Guild))

@@ -93,11 +93,8 @@ def send_email(
         server.quit()
         logger.info("Email sent to %s: %s", to_email, subject)
         return True
-    except smtplib.SMTPException:
-        logger.exception("SMTP error sending email to %s", to_email)
-        return False
-    except (OSError, TimeoutError):
-        logger.exception("Network error sending email to %s", to_email)
+    except (smtplib.SMTPException, OSError, TimeoutError):
+        logger.exception("Failed to send email to %s", to_email)
         return False
 
 

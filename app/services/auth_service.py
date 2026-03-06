@@ -56,7 +56,7 @@ def validate_password_policy(password: str) -> Optional[str]:
     if policy["require_digit"] and not any(c.isdigit() for c in password):
         return "auth.errors.passwordNeedsDigit"
 
-    if policy["require_special"] and not any(not c.isalnum() for c in password):
+    if policy["require_special"] and not any(c in "!@#$%^&*()_+-=[]{}|;':\",./<>?`~" for c in password):
         return "auth.errors.passwordNeedsSpecial"
 
     return None
