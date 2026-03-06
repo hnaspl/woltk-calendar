@@ -267,6 +267,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useTenantStore } from '@/stores/tenant'
 import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useConstantsStore } from '@/stores/constants'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -286,6 +287,7 @@ const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const tenantStore = useTenantStore()
 const uiStore = useUiStore()
+const toast = useToast()
 const constantsStore = useConstantsStore()
 const router = useRouter()
 const route = useRoute()
@@ -362,9 +364,9 @@ async function handleUpgradeToTenant() {
     }
     // Re-fetch user to get updated active_tenant_id
     await authStore.fetchMe()
-    uiStore.showToast(t('tenant.upgradeSuccess'), 'success')
+    toast.success(t('tenant.upgradeSuccess'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('tenant.upgradeFailed'), 'error')
+    toast.error(err?.response?.data?.error || t('tenant.upgradeFailed'))
   } finally {
     upgradingToTenant.value = false
   }
@@ -708,7 +710,7 @@ async function doCreateGuild() {
     guildManualMode.value = false
     guildLookupError.value = null
     guildLookupNotFound.value = false
-    uiStore.showToast(t('guild.guildCreated'), 'success')
+    toast.success(t('guild.guildCreated'))
   } catch (err) {
     createGuildError.value = err?.response?.data?.message ?? t('guild.toasts.failedToCreate')
   } finally {

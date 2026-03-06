@@ -177,7 +177,7 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useConstantsStore } from '@/stores/constants'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useExpansionData } from '@/composables/useExpansionData'
@@ -185,7 +185,7 @@ import * as rdApi from '@/api/raidDefinitions'
 import { DEFAULT_ROLE_SLOT_COUNTS, ROLE_VALUES } from '@/constants'
 
 const { t } = useI18n()
-const uiStore = useUiStore()
+const toast = useToast()
 const constantsStore = useConstantsStore()
 const { getRaidIcon } = useWowIcons()
 const { raidTypes } = useExpansionData()
@@ -289,15 +289,15 @@ async function saveDefinition() {
   try {
     if (editingDef.value) {
       await rdApi.adminUpdateDefaultDefinition(editingDef.value.id, form.value)
-      uiStore.showToast(t('admin.raidDefinitions.updated'))
+      toast.info(t('admin.raidDefinitions.updated'))
     } else {
       await rdApi.adminCreateDefaultDefinition(form.value)
-      uiStore.showToast(t('admin.raidDefinitions.created'))
+      toast.info(t('admin.raidDefinitions.created'))
     }
     showEditModal.value = false
     await loadDefinitions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'))
   } finally {
     saving.value = false
   }
@@ -313,10 +313,10 @@ async function doDelete() {
   try {
     await rdApi.adminDeleteDefaultDefinition(deleteTarget.value.id)
     showDeleteModal.value = false
-    uiStore.showToast(t('admin.raidDefinitions.deleted'))
+    toast.info(t('admin.raidDefinitions.deleted'))
     await loadDefinitions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'))
   } finally {
     saving.value = false
   }

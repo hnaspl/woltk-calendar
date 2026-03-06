@@ -278,12 +278,12 @@ import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as adminApi from '@/api/admin'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 
 // System settings state (unified)
 const sysSettingsLoading = ref(true)
@@ -399,9 +399,9 @@ async function saveAllSettings() {
       password_require_digit: updated.password_require_digit === 'true',
       password_require_special: updated.password_require_special === 'true',
     }
-    uiStore.showToast(t('admin.system.toasts.settingsSaved'), 'success')
+    toast.success(t('admin.system.toasts.settingsSaved'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToSaveSettings'), 'error')
+    toast.error(t('admin.system.toasts.failedToSaveSettings'))
   } finally {
     sysSettingsSaving.value = false
   }
@@ -411,9 +411,9 @@ async function triggerManualSync() {
   syncing.value = true
   try {
     await adminApi.triggerSync()
-    uiStore.showToast(t('admin.system.toasts.syncCompleted'), 'success')
+    toast.success(t('admin.system.toasts.syncCompleted'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.syncFailed'), 'error')
+    toast.error(t('admin.system.toasts.syncFailed'))
   } finally {
     syncing.value = false
   }
@@ -423,9 +423,9 @@ async function saveDiscordSettings() {
   discordSaving.value = true
   try {
     await adminApi.updateDiscordSettings(discordForm.value)
-    uiStore.showToast(t('admin.system.toasts.discordSettingsSaved'), 'success')
+    toast.success(t('admin.system.toasts.discordSettingsSaved'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToSaveDiscord'), 'error')
+    toast.error(t('admin.system.toasts.failedToSaveDiscord'))
   } finally {
     discordSaving.value = false
   }
@@ -434,7 +434,7 @@ async function saveDiscordSettings() {
 async function copyCallbackUrl() {
   try {
     await navigator.clipboard.writeText(discordCallbackUrl.value)
-    uiStore.showToast(t('admin.system.discord.callbackUrlCopied'), 'success')
+    toast.success(t('admin.system.discord.callbackUrlCopied'))
   } catch {
     // clipboard API may be blocked in non-HTTPS contexts; ignore silently
   }

@@ -332,7 +332,7 @@ import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -343,7 +343,7 @@ import api from '@/api'
 
 const { t } = useI18n()
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const authStore = useAuthStore()
 const permissions = usePermissions()
 const { getClassIcon, getClassColor, getSpecIcon } = useWowIcons()
@@ -451,9 +451,9 @@ async function updateRole(member, role) {
   try {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
-    uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
+    toast.success(t('common.toasts.roleUpdated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'))
   }
 }
 
@@ -468,9 +468,9 @@ async function doKick() {
     await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
     members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
-    uiStore.showToast(t('common.toasts.memberRemoved'), 'success')
+    toast.success(t('common.toasts.memberRemoved'))
   } catch {
-    uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
+    toast.error(t('common.toasts.failedToRemoveMember'))
   } finally {
     saving.value = false
   }
@@ -487,9 +487,9 @@ async function doNotify() {
   try {
     await guildsApi.sendGuildNotification(guildStore.currentGuild.id, notifyTarget.value.user_id, notifyMessage.value)
     showNotifyModal.value = false
-    uiStore.showToast(t('members.toasts.notificationSent'), 'success')
+    toast.success(t('members.toasts.notificationSent'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.notificationFailed'), 'error')
+    toast.error(err?.response?.data?.error ?? t('members.toasts.notificationFailed'))
   } finally {
     notifying.value = false
   }
@@ -500,9 +500,9 @@ async function doNotifyAll() {
   try {
     await guildsApi.sendGuildNotificationAll(guildStore.currentGuild.id, notifyAllMessage.value)
     showNotifyAllModal.value = false
-    uiStore.showToast(t('members.toasts.allNotified'), 'success')
+    toast.success(t('members.toasts.allNotified'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.notificationFailed'), 'error')
+    toast.error(err?.response?.data?.error ?? t('members.toasts.notificationFailed'))
   } finally {
     notifyingAll.value = false
   }
@@ -520,9 +520,9 @@ async function doBan() {
     const idx = members.value.findIndex(m => m.user_id === banTarget.value.user_id)
     if (idx !== -1) members.value[idx].status = 'banned'
     showBanConfirm.value = false
-    uiStore.showToast(t('members.toasts.memberBanned'), 'success')
+    toast.success(t('members.toasts.memberBanned'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.banFailed'), 'error')
+    toast.error(err?.response?.data?.error ?? t('members.toasts.banFailed'))
   } finally {
     banning.value = false
   }
@@ -533,9 +533,9 @@ async function doUnban(member) {
     await guildsApi.unbanGuildMember(guildStore.currentGuild.id, member.user_id)
     const idx = members.value.findIndex(m => m.user_id === member.user_id)
     if (idx !== -1) members.value[idx].status = 'active'
-    uiStore.showToast(t('members.toasts.memberUnbanned'), 'success')
+    toast.success(t('members.toasts.memberUnbanned'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.unbanFailed'), 'error')
+    toast.error(err?.response?.data?.error ?? t('members.toasts.unbanFailed'))
   }
 }
 
@@ -563,7 +563,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'))
   } finally {
     loadingMemberChars.value = false
   }
@@ -591,7 +591,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToSearch'), 'error')
+      toast.error(err?.response?.data?.message ?? t('common.toasts.failedToSearch'))
     } finally {
       searchingUsers.value = false
     }
@@ -606,9 +606,9 @@ async function doAddMember(user) {
     showAddMember.value = false
     addMemberQuery.value = ''
     availableUsers.value = []
-    uiStore.showToast(`${user.username} added to guild`, 'success')
+    toast.success(`${user.username} added to guild`)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.failedToAdd'))
   }
 }
 
@@ -686,9 +686,9 @@ async function doTransferOwnership() {
     onTransferModalClose(false)
     await guildStore.fetchGuild(guildStore.currentGuild.id)
     await loadMembers()
-    uiStore.showToast(t('members.toasts.ownershipTransferred'), 'success')
+    toast.success(t('members.toasts.ownershipTransferred'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('members.toasts.failedToTransfer'), 'error')
+    toast.error(err?.response?.data?.error ?? t('members.toasts.failedToTransfer'))
   } finally {
     transferring.value = false
   }

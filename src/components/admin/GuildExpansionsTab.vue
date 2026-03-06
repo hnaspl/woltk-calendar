@@ -75,12 +75,12 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useExpansionStore } from '@/stores/expansion'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 
 const guildStore = useGuildStore()
 const expansionStore = useExpansionStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const { t } = useI18n()
 
 const loading = ref(false)
@@ -115,7 +115,7 @@ async function loadData() {
     const data = await guildExpansionsApi.getGuildExpansions(guildId)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
   } catch {
-    uiStore.showToast(t('guild.expansions.failedToLoad'), 'error')
+    toast.error(t('guild.expansions.failedToLoad'))
   }
   loading.value = false
 }
@@ -127,9 +127,9 @@ async function doEnable(exp) {
   try {
     const data = await guildExpansionsApi.enableExpansion(guildId, exp.id)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
-    uiStore.showToast(t('guild.expansions.enabledToast', { name: exp.name }), 'success')
+    toast.success(t('guild.expansions.enabledToast', { name: exp.name }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToEnable'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.expansions.failedToEnable'))
   }
   togglingId.value = null
 }
@@ -141,9 +141,9 @@ async function doDisable(exp) {
   try {
     const data = await guildExpansionsApi.disableExpansion(guildId, exp.id)
     enabledIds.value = new Set((data.expansions || []).map(e => e.expansion_id))
-    uiStore.showToast(t('guild.expansions.disabledToast', { name: exp.name }), 'success')
+    toast.success(t('guild.expansions.disabledToast', { name: exp.name }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToDisable'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.expansions.failedToDisable'))
   }
   togglingId.value = null
 }

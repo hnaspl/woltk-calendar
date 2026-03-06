@@ -220,13 +220,13 @@ import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as guildsApi from '@/api/guilds'
 import * as rolesApi from '@/api/roles'
 import * as adminApi from '@/api/admin'
 
 const { t } = useI18n()
-const uiStore = useUiStore()
+const toast = useToast()
 
 const guilds = ref([])
 const loading = ref(true)
@@ -374,9 +374,9 @@ async function changeMemberRole(member, newRole) {
   try {
     await guildsApi.adminUpdateMemberRole(selectedGuild.value.id, member.user_id, newRole)
     member.role = newRole
-    uiStore.showToast(t('admin.guilds.roleUpdated'))
+    toast.info(t('admin.guilds.roleUpdated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
 }
 
@@ -393,11 +393,11 @@ async function doTransferOwnership() {
   try {
     await guildsApi.adminTransferOwnership(selectedGuild.value.id, transferTarget.value.user_id)
     showTransferModal.value = false
-    uiStore.showToast(t('admin.guilds.ownershipTransferred'))
+    toast.info(t('admin.guilds.ownershipTransferred'))
     await loadGuilds()
     await viewMembers(selectedGuild.value)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
 }
 
@@ -411,9 +411,9 @@ async function doSendNotification() {
   try {
     await guildsApi.adminSendNotification(selectedGuild.value.id, notifyTarget.value.user_id, notifyMessage.value)
     showNotifyModal.value = false
-    uiStore.showToast(t('admin.guilds.notificationSent'))
+    toast.info(t('admin.guilds.notificationSent'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
 }
 
@@ -426,10 +426,10 @@ async function doDeleteGuild() {
   try {
     await guildsApi.adminDeleteGuild(deleteGuildTarget.value.id)
     showDeleteGuildModal.value = false
-    uiStore.showToast(t('admin.guilds.guildDeleted'))
+    toast.info(t('admin.guilds.guildDeleted'))
     await loadGuilds()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
 }
 
@@ -443,10 +443,10 @@ async function doRemoveMember() {
     await guildsApi.adminRemoveMember(selectedGuild.value.id, removeMemberTarget.value.user_id)
     showRemoveMemberModal.value = false
     guildMembers.value = guildMembers.value.filter(m => m.user_id !== removeMemberTarget.value.user_id)
-    uiStore.showToast(t('admin.guilds.memberRemovedSuccess'))
+    toast.info(t('admin.guilds.memberRemovedSuccess'))
     await loadGuilds()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
 }
 
@@ -475,9 +475,9 @@ async function saveFeatures() {
   try {
     await adminApi.updateGuildFeatures(featuresGuild.value.id, { ...featuresForm.value })
     showFeaturesModal.value = false
-    uiStore.showToast(t('admin.guilds.featuresUpdated'), 'success')
+    toast.success(t('admin.guilds.featuresUpdated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.guilds.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   } finally {
     featuresSaving.value = false
   }

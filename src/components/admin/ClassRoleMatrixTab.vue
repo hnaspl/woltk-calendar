@@ -94,14 +94,14 @@ import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import * as guildsApi from '@/api/guilds'
 
 import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_LABEL_CLASS } from '@/constants'
 
 const { t } = useI18n()
-const uiStore = useUiStore()
+const toast = useToast()
 const guildStore = useGuildStore()
 const { getClassIcon, getClassColor } = useWowIcons()
 
@@ -181,16 +181,16 @@ async function doSaveClass(className) {
   if (!guildId) return
   const roles = localEdits[className]
   if (!roles || roles.length === 0) {
-    uiStore.showToast(t('guild.matrixSelectAtLeastOne'), 'error')
+    toast.error(t('guild.matrixSelectAtLeastOne'))
     return
   }
   savingClass.value = className
   try {
     await guildsApi.setClassRoleOverrides(guildId, className, roles)
-    uiStore.showToast(t('guild.matrixSaved'), 'success')
+    toast.success(t('guild.matrixSaved'))
     await loadMatrix()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
   savingClass.value = null
 }
@@ -201,10 +201,10 @@ async function doResetClass(className) {
   resettingClass.value = className
   try {
     await guildsApi.resetClassRoleOverrides(guildId, className)
-    uiStore.showToast(t('guild.matrixReset'), 'success')
+    toast.success(t('guild.matrixReset'))
     await loadMatrix()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
   resettingClass.value = null
 }
@@ -216,10 +216,10 @@ async function doResetAll() {
   resettingAll.value = true
   try {
     await guildsApi.resetClassRoleMatrix(guildId)
-    uiStore.showToast(t('guild.matrixAllReset'), 'success')
+    toast.success(t('guild.matrixAllReset'))
     await loadMatrix()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
   resettingAll.value = false
 }

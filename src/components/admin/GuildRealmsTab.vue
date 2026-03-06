@@ -97,11 +97,11 @@ import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as guildRealmsApi from '@/api/guild_realms'
 
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const { t } = useI18n()
 
 const loading = ref(false)
@@ -127,7 +127,7 @@ async function loadRealms() {
     const data = await guildRealmsApi.getGuildRealms(guildId)
     realms.value = data.realms || []
   } catch {
-    uiStore.showToast(t('guild.realms.failedToLoad'), 'error')
+    toast.error(t('guild.realms.failedToLoad'))
   }
   loading.value = false
 }
@@ -141,12 +141,12 @@ async function doAdd() {
       name: newName.value.trim(),
       is_default: newIsDefault.value,
     })
-    uiStore.showToast(t('guild.realms.added'), 'success')
+    toast.success(t('guild.realms.added'))
     newName.value = ''
     newIsDefault.value = false
     await loadRealms()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.realms.failedToAdd'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.realms.failedToAdd'))
   }
   adding.value = false
 }
@@ -167,12 +167,12 @@ async function doSaveEdit(realm) {
   saving.value = true
   try {
     await guildRealmsApi.updateGuildRealm(guildId, realm.id, { name: editName.value.trim() })
-    uiStore.showToast(t('guild.realms.updated'), 'success')
+    toast.success(t('guild.realms.updated'))
     editingId.value = null
     editName.value = ''
     await loadRealms()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.realms.failedToUpdate'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.realms.failedToUpdate'))
   }
   saving.value = false
 }
@@ -183,10 +183,10 @@ async function doSetDefault(realm) {
   settingDefaultId.value = realm.id
   try {
     await guildRealmsApi.updateGuildRealm(guildId, realm.id, { is_default: true })
-    uiStore.showToast(t('guild.realms.setDefaultSuccess', { name: realm.name }), 'success')
+    toast.success(t('guild.realms.setDefaultSuccess', { name: realm.name }))
     await loadRealms()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.realms.failedToSetDefault'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.realms.failedToSetDefault'))
   }
   settingDefaultId.value = null
 }
@@ -197,10 +197,10 @@ async function doRemove(realm) {
   removingId.value = realm.id
   try {
     await guildRealmsApi.removeGuildRealm(guildId, realm.id)
-    uiStore.showToast(t('guild.realms.removed'), 'success')
+    toast.success(t('guild.realms.removed'))
     await loadRealms()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.realms.failedToRemove'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.realms.failedToRemove'))
   }
   removingId.value = null
 }

@@ -180,7 +180,7 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { usePermissions } from '@/composables/usePermissions'
 import * as guildsApi from '@/api/guilds'
@@ -192,7 +192,7 @@ import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 const { t } = useI18n()
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const { getClassIcon, getClassColor, getFactionIcon, getGuildIcon } = useWowIcons()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
@@ -309,7 +309,7 @@ async function saveGuild() {
       timezone: form.timezone,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
+    toast.success(t('guildSettings.toasts.settingsSaved'))
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {

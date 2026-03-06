@@ -83,7 +83,7 @@ import { useI18n } from 'vue-i18n'
 import WowModal from '@/components/common/WowModal.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as attendanceApi from '@/api/attendance'
 import { ROLE_LABEL_MAP } from '@/constants'
 
@@ -98,7 +98,7 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 
 const { t } = useI18n()
 const { getClassColor } = useWowIcons()
-const uiStore = useUiStore()
+const toast = useToast()
 
 function roleLabel(role) { return ROLE_LABEL_MAP[role] || role }
 
@@ -158,7 +158,7 @@ async function saveAttendance() {
       saved++
       saveProgress.value = `${saved} / ${total} saved…`
     }
-    uiStore.showToast(t('attendance.modal.recorded'), 'success')
+    toast.success(t('attendance.modal.recorded'))
     emit('saved')
     emit('update:modelValue', false)
   } catch (err) {

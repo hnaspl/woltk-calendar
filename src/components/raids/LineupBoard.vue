@@ -171,7 +171,7 @@ import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { ROLE_LABEL_MAP, ROLE_VALUES, LINEUP_COLUMNS, ROLE_TO_GROUP, LINEUP_GROUP_KEYS, DEFAULT_ROLE, DEFAULT_ROLE_SLOT_COUNTS, ROLE_TO_SLOT_PROP } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
@@ -197,7 +197,7 @@ const {
   draggedId, dragSourceKey, dragSourceIndex, dragOverTarget,
   isDragging, startDrag, endDrag, handleDragOver, handleDragLeave,
 } = useDragDrop()
-const uiStore = useUiStore()
+const toast = useToast()
 const saving = ref(false)
 const dirty = ref(false)
 const lineupVersion = ref(null)
@@ -288,7 +288,7 @@ function onDropColumn(e, targetKey) {
     // Block if class cannot take the target role
     if (!isClassAllowedForRole(found.signup, col.role)) {
       const className = found.signup?.character?.class_name ?? 'This class'
-      uiStore.showToast(`${className} cannot be assigned to ${col.label}.`, 'error')
+      toast.error(`${className} cannot be assigned to ${col.label}.`)
       return
     }
     roleChangePending.value = { signup: found.signup, sourceKey: found.key, sourceIdx: found.idx, targetKey, targetCol: col }
@@ -301,7 +301,7 @@ function onDropColumn(e, targetKey) {
     const currentCount = lineup.value[targetKey].length
     const alreadyInTarget = lineup.value[targetKey].find(s => Number(s.id) === id)
     if (!alreadyInTarget && currentCount >= col.slots) {
-      uiStore.showToast(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first.`, 'error')
+      toast.error(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first.`)
       return
     }
   }
@@ -352,7 +352,7 @@ function confirmRoleChange() {
   // Overflow check
   const currentCount = lineup.value[targetKey].length
   if (currentCount >= targetCol.slots) {
-    uiStore.showToast(`${targetCol.label} slots are full (${currentCount}/${targetCol.slots}). Remove someone first.`, 'error')
+    toast.error(`${targetCol.label} slots are full (${currentCount}/${targetCol.slots}). Remove someone first.`)
     showRoleChangeModal.value = false
     roleChangePending.value = null
     return
@@ -679,12 +679,12 @@ async function saveLineup(auto = false) {
       benchQueue.value        = fresh.bench_queue ?? []
       lineupVersion.value     = fresh.version ?? null
       dirty.value = false
-      uiStore.showToast(t('lineup.toasts.updatedByOfficer'), 'warning')
+      toast.warning(t('lineup.toasts.updatedByOfficer'))
       emit('saved', { auto: true })
     } else {
       console.error('Failed to save lineup', err)
       if (!auto) {
-        uiStore.showToast(err?.response?.data?.message ?? t('lineup.toasts.failedToSave'), 'error')
+        toast.error(err?.response?.data?.message ?? t('lineup.toasts.failedToSave'))
       }
     }
   } finally {

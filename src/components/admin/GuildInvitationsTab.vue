@@ -180,12 +180,12 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import InviteLinkCard from '@/components/common/InviteLinkCard.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as guildsApi from '@/api/guilds'
 import api from '@/api'
 
 const { t } = useI18n()
-const uiStore = useUiStore()
+const toast = useToast()
 const guildStore = useGuildStore()
 
 const props = defineProps({
@@ -258,12 +258,12 @@ async function doAddMember() {
   addingMember.value = true
   try {
     await guildsApi.addMember(guildId, selectedUser.value.id, addMemberRole.value)
-    uiStore.showToast(t('guild.memberAdded'), 'success')
+    toast.success(t('guild.memberAdded'))
     selectedUser.value = null
     userSearch.value = ''
     userResults.value = []
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || err?.response?.data?.message || t('guild.addMember'), 'error')
+    toast.error(err?.response?.data?.error || err?.response?.data?.message || t('guild.addMember'))
   } finally {
     addingMember.value = false
   }
@@ -327,9 +327,9 @@ async function doCreate() {
     const result = await guildsApi.createGuildInvitation(guildId, payload)
     generatedToken.value = result.invite_token
     await loadInvitations()
-    uiStore.showToast(t('guild.linkGenerated'), 'success')
+    toast.success(t('guild.linkGenerated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
   creating.value = false
 }
@@ -340,9 +340,9 @@ async function doRevoke(inv) {
   try {
     await guildsApi.revokeGuildInvitation(guildId, inv.id)
     await loadInvitations()
-    uiStore.showToast(t('guild.inviteRevoked'), 'success')
+    toast.success(t('guild.inviteRevoked'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
 }
 
@@ -357,7 +357,7 @@ function doCopyLink() {
 
 function doCopyText(text) {
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).then(() => uiStore.showToast(t('guild.copyLink'), 'success'))
+    navigator.clipboard.writeText(text).then(() => toast.success(t('guild.copyLink')))
   } else {
     const ta = document.createElement('textarea')
     ta.value = text
@@ -367,7 +367,7 @@ function doCopyText(text) {
     ta.select()
     document.execCommand('copy')
     document.body.removeChild(ta)
-    uiStore.showToast(t('guild.copyLink'), 'success')
+    toast.success(t('guild.copyLink'))
   }
 }
 
@@ -377,9 +377,9 @@ async function doApprove(app) {
   try {
     await guildsApi.approveApplication(guildId, app.user_id)
     await loadApplications()
-    uiStore.showToast(t('guild.applicationApproved'), 'success')
+    toast.success(t('guild.applicationApproved'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
 }
 
@@ -389,9 +389,9 @@ async function doDecline(app) {
   try {
     await guildsApi.declineApplication(guildId, app.user_id)
     await loadApplications()
-    uiStore.showToast(t('guild.applicationDeclined'), 'success')
+    toast.success(t('guild.applicationDeclined'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || 'Error', 'error')
+    toast.error(err?.response?.data?.error || 'Error')
   }
 }
 </script>
