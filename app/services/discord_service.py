@@ -321,6 +321,7 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
         Discord webhook URL (https://discord.com/api/webhooks/...).
     event_data : dict
         Raid event data (title, starts_at_utc, raid_type, raid_size, etc.)
+        May include raid_definition_name, expansion, guild_name from the API.
     signups : list[dict]
         List of signup dicts with character info and lineup_status.
     site_url : str
@@ -350,19 +351,15 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
             role_groups[role] = []
         role_groups[role].append(entry)
 
-    def _role_display(role_key: str) -> str:
-        label = ROLE_LABELS.get(role_key, role_key.replace("_", " ").title())
-        return label
-
     fields = []
     for role, players in role_groups.items():
-        label = _role_display(role)
+        label = ROLE_LABELS.get(role, role.replace("_", " ").title())
         value = "\n".join(players[:10])
         if len(players) > 10:
             value += f"\n*... and {len(players) - 10} more*"
         fields.append({"name": f"{label} ({len(players)})", "value": value or "—", "inline": True})
 
-    # Composition summary as a field
+    # Composition summary
     comp_parts = []
     for role in ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]:
         if role in role_groups:
@@ -371,7 +368,7 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
             comp_parts.append(f"{label}: {count}")
     if comp_parts:
         fields.insert(0, {
-            "name": "📊 Composition",
+            "name": "Composition",
             "value": " | ".join(comp_parts) + f" — **{len(going)}** total",
             "inline": False,
         })
@@ -386,34 +383,37 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
         bench_text = "\n".join(bench_entries)
         if len(bench) > 8:
             bench_text += f"\n*+{len(bench) - 8} more on bench*"
-        fields.append({"name": f"⏳ Bench ({len(bench)})", "value": bench_text, "inline": False})
+        fields.append({"name": f"Bench ({len(bench)})", "value": bench_text, "inline": False})
 
     title = event_data.get("title", "Raid Event")
-    raid_type = event_data.get("raid_type", "")
+    raid_def_name = event_data.get("raid_definition_name", "")
     raid_size = event_data.get("raid_size", "")
     starts = event_data.get("starts_at_utc", "")
+    guild_name = event_data.get("guild_name", "")
 
     description_lines = []
     if starts:
-        description_lines.append(f"🗓️ **Start:** {starts}")
+        description_lines.append(f"**Start:** {starts}")
     info_parts = []
+    if raid_def_name:
+        info_parts.append(raid_def_name)
     if raid_size:
         info_parts.append(f"**{raid_size}-man**")
-    if raid_type:
-        info_parts.append(raid_type.upper())
     if info_parts:
-        description_lines.append(f"⚙️ {' · '.join(info_parts)}")
-    description_lines.append(f"📝 **{len(going)}** in lineup · **{len(bench)}** on bench · **{len(signups)}** signed up")
+        description_lines.append(" · ".join(info_parts))
+    description_lines.append(f"**{len(going)}** in lineup · **{len(bench)}** on bench · **{len(signups)}** signed up")
 
     if event_data.get("instructions"):
-        description_lines.append(f"\n📋 *{event_data['instructions']}*")
+        description_lines.append(f"\n*{event_data['instructions']}*")
+
+    footer_text = guild_name if guild_name else "Raid Calendar"
 
     embed = {
-        "title": f"⚔️ {title}",
+        "title": title,
         "description": "\n".join(description_lines),
-        "color": 0xFFD100,  # Gold color matching the site theme
+        "color": 0xFFD100,
         "fields": fields,
-        "footer": {"text": "Raid Calendar", "icon_url": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_book_07.jpg"},
+        "footer": {"text": footer_text},
         "timestamp": starts if starts else None,
     }
 

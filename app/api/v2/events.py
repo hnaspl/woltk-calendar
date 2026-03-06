@@ -187,8 +187,11 @@ def get_event_wowhead(guild_id: int, event_id: int, membership):
 
     from app.plugins.wowhead.plugin import WowheadPlugin, WOWHEAD_BASES
 
-    raid_code = event.raid_type
-    expansion = event.raid_definition.expansion if event.raid_definition else "wotlk"
+    # Use raid_definition.code for Wowhead lookups — raid_type on events is often
+    # null, while .code matches keys in BOSS_NPC_IDS / RAID_ZONE_IDS.
+    rd = event.raid_definition
+    raid_code = rd.code if rd else event.raid_type
+    expansion = rd.expansion if rd else "wotlk"
 
     result = {
         "expansion": expansion,
@@ -254,6 +257,16 @@ def send_event_to_discord(guild_id: int, event_id: int, membership):
     site_url = request.host_url.rstrip("/") if request.host_url else ""
     event_dict = event.to_dict()
     event_dict["guild_id"] = guild_id
+
+    # Include raid definition name so Discord embed uses the full raid name
+    rd = event.raid_definition
+    if rd:
+        event_dict["raid_definition_name"] = rd.name
+        event_dict["raid_definition_code"] = rd.code
+        event_dict["expansion"] = rd.expansion
+
+    # Include guild name for the footer
+    event_dict["guild_name"] = guild.name if guild else ""
 
     success = discord_service.send_raid_to_discord(
         webhook_url=webhook_url,
