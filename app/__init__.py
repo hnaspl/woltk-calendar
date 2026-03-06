@@ -125,7 +125,9 @@ def create_app(config_override: dict | None = None) -> Flask:
         if not host_without_port.endswith(f".{base_without_port}"):
             return  # Not a subdomain request
 
-        subdomain = host_without_port[: -(len(base_without_port) + 1)]
+        # Extract the subdomain: "my-guild.example.com" → "my-guild"
+        # by removing the trailing ".example.com" (base_domain length + 1 for the dot)
+        subdomain = host_without_port.removesuffix(f".{base_without_port}")
         if not subdomain or "." in subdomain:
             return  # Empty or multi-level subdomain
 

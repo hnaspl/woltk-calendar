@@ -1874,8 +1874,8 @@
       "notActiveMember": "You are not an active member of this tenant",
       "tenantNotActive": "Tenant is not active",
       "invitationExpired": "This invitation is no longer valid",
-      "reservedSlug": "This name is reserved and cannot be used",
-      "nameTaken": "This name is already taken by another panel"
+      "reservedSlug": "This name is reserved and cannot be used.",
+      "nameTaken": "This name is already taken by another panel."
     },
     "upgradeToTenant": "Create guild management panel",
     "upgradeSuccess": "Guild panel created! You can now create your own guilds and plan raids.",
