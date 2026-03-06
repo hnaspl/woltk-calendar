@@ -32,7 +32,7 @@ def get_smtp_config() -> dict:
             from app.utils.encryption import decrypt_value
             password = decrypt_value(password)
         except Exception:
-            pass  # Use as-is if decryption fails
+            logger.debug("SMTP password decryption skipped (may be stored in plain text)")
     return {
         "host": _get_setting("smtp_host"),
         "port": int(_get_setting("smtp_port", "587")),
@@ -93,8 +93,11 @@ def send_email(
         server.quit()
         logger.info("Email sent to %s: %s", to_email, subject)
         return True
-    except Exception:
-        logger.exception("Failed to send email to %s", to_email)
+    except smtplib.SMTPException:
+        logger.exception("SMTP error sending email to %s", to_email)
+        return False
+    except (OSError, TimeoutError):
+        logger.exception("Network error sending email to %s", to_email)
         return False
 
 

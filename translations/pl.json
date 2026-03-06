@@ -861,7 +861,9 @@
     "addMemberHelp": "Szukaj członków przestrzeni roboczej po nazwie użytkownika i dodaj ich bezpośrednio do gildii.",
     "searchUsers": "Szukaj użytkowników...",
     "noUsersFound": "Nie znaleziono pasujących użytkowników.",
-    "memberAdded": "Członek został dodany!"
+    "memberAdded": "Członek został dodany!",
+    "myCreatedGuilds": "Moje gildie",
+    "joinedGuilds": "Gildie, do których dołączyłem"
   },
   "members": {
     "addMember": "+ Dodaj członka",
@@ -1451,7 +1453,8 @@
       "roleRequired": "role jest wymagane",
       "exportSuccess": "Dane workspace'u wyeksportowane pomyślnie",
       "importSuccess": "Dane workspace'u zaimportowane pomyślnie",
-      "importFailed": "Nie udało się zaimportować danych workspace'u"
+      "importFailed": "Nie udało się zaimportować danych workspace'u",
+      "alreadyOwner": "Już posiadasz przestrzeń roboczą."
     },
     "matrix": {
       "rolesRequired": "Wymagana jest co najmniej jedna rola",
@@ -1849,7 +1852,10 @@
       "notActiveMember": "Nie jesteś aktywnym członkiem tej przestrzeni roboczej",
       "tenantNotActive": "Przestrzeń robocza nie jest aktywna",
       "invitationExpired": "To zaproszenie nie jest już ważne"
-    }
+    },
+    "upgradeToTenant": "Utwórz przestrzeń roboczą",
+    "upgradeSuccess": "Przestrzeń robocza utworzona! Możesz teraz tworzyć własne gildie.",
+    "upgradeFailed": "Nie udało się utworzyć przestrzeni roboczej. Spróbuj ponownie."
   },
   "invite": {
     "accept": "Akceptuj zaproszenie",

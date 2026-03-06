@@ -70,6 +70,24 @@ def delete_tenant(tenant_id: int):
     return jsonify({"message": _t("api.tenants.deleted")}), 200
 
 
+@bp.post("/upgrade")
+@login_required
+def upgrade_to_tenant():
+    """Create a tenant for users who registered without one.
+
+    This preserves existing guild memberships and creates a fresh
+    tenant workspace so the user can create their own guilds.
+    """
+    # Check if user already has a tenant they own
+    existing_tenants = tenant_service.list_tenants_for_user(current_user.id)
+    for t in existing_tenants:
+        if tenant_service.is_tenant_owner(t.id, current_user.id):
+            return jsonify({"error": _t("api.tenants.alreadyOwner")}), 400
+
+    tenant = tenant_service.create_tenant(owner=current_user)
+    return jsonify(tenant.to_dict()), 201
+
+
 @bp.get("/<int:tenant_id>/usage")
 @login_required
 def get_tenant_usage(tenant_id: int):

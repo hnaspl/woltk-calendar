@@ -108,6 +108,9 @@ def register_user(
         # Auto-create tenant workspace for the new user
         from app.services import tenant_service
         tenant_service.create_tenant(owner=user)
+    else:
+        # No tenant — just commit the user
+        db.session.commit()
 
     return user
 

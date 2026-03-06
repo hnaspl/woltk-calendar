@@ -13,6 +13,8 @@ from app.i18n import _t
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
+MASKED_SECRET = "••••••••"
+
 
 @bp.get("/users")
 @login_required
@@ -362,7 +364,7 @@ def _system_settings_response():
     settings = {r.key: r.value for r in rows}
     # Mask sensitive values
     if settings.get("smtp_password"):
-        settings["smtp_password"] = "••••••••"
+        settings["smtp_password"] = MASKED_SECRET
     return jsonify(settings), 200
 
 
@@ -436,7 +438,7 @@ def update_system_settings():
     # SMTP password (sensitive — encrypt before storing)
     if "smtp_password" in data:
         raw = str(data["smtp_password"]).strip()
-        if raw and raw != "••••••••":
+        if raw and raw != MASKED_SECRET:
             from app.utils.encryption import encrypt_value
             encrypted = encrypt_value(raw)
             existing = db.session.get(SystemSetting, "smtp_password")
@@ -480,7 +482,7 @@ def get_discord_settings():
     # Mask the client secret for display
     secret = settings.get("discord_client_secret", "")
     if secret:
-        settings["discord_client_secret"] = "••••••••"
+        settings["discord_client_secret"] = MASKED_SECRET
 
     # Auto-generated callback URL – this is what goes into Discord "Redirects"
     from app.services.discord_service import DISCORD_CALLBACK_PATH
@@ -513,7 +515,7 @@ def update_discord_settings():
     if "discord_client_secret" in data:
         raw_secret = str(data["discord_client_secret"]).strip()
         # Skip if placeholder (masked value from frontend)
-        if raw_secret and raw_secret != "••••••••":
+        if raw_secret and raw_secret != MASKED_SECRET:
             encrypted = encrypt_value(raw_secret)
             existing = db.session.get(SystemSetting, "discord_client_secret")
             if existing:

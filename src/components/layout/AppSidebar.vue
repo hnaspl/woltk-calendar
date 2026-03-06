@@ -16,8 +16,8 @@
     <!-- Tenant Switcher -->
     <TenantSwitcher />
 
-    <!-- Guild Switcher (only visible when tenant is active) -->
-    <div v-if="hasTenant" class="px-4 py-3 border-b border-[#2a3450]">
+    <!-- Guild Switcher -->
+    <div class="px-4 py-3 border-b border-[#2a3450]">
       <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('common.labels.guild') }}</label>
       <select
         :value="guildStore.currentGuild?.id ?? ''"
@@ -25,11 +25,30 @@
         @change="onGuildChange"
       >
         <option v-if="!visibleGuilds.length" value="">{{ t('guild.noGuilds') }}</option>
-        <option
-          v-for="g in visibleGuilds"
-          :key="g.id"
-          :value="g.id"
-        >{{ g.name }} ({{ g.realm_name }})</option>
+        <!-- My created guilds -->
+        <optgroup v-if="myCreatedGuilds.length" :label="t('guild.myCreatedGuilds')">
+          <option
+            v-for="g in myCreatedGuilds"
+            :key="g.id"
+            :value="g.id"
+          >{{ g.name }} ({{ g.realm_name }})</option>
+        </optgroup>
+        <!-- Guilds I joined -->
+        <optgroup v-if="joinedGuilds.length" :label="t('guild.joinedGuilds')">
+          <option
+            v-for="g in joinedGuilds"
+            :key="g.id"
+            :value="g.id"
+          >{{ g.name }} ({{ g.realm_name }})</option>
+        </optgroup>
+        <!-- Flat list fallback (no role info available) -->
+        <template v-if="!myCreatedGuilds.length && !joinedGuilds.length && visibleGuilds.length">
+          <option
+            v-for="g in visibleGuilds"
+            :key="g.id"
+            :value="g.id"
+          >{{ g.name }} ({{ g.realm_name }})</option>
+        </template>
       </select>
 
       <button
@@ -53,6 +72,20 @@
         </svg>
         {{ t('guild.guildLimitReached') }}
       </RouterLink>
+
+      <!-- Upgrade to tenant (for users without a tenant) -->
+      <button
+        v-if="!hasTenant"
+        type="button"
+        class="mt-2 w-full flex items-center justify-center gap-1.5 text-xs text-accent-gold hover:text-yellow-300 bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/30 rounded py-1.5 transition-colors"
+        :disabled="upgradingToTenant"
+        @click="handleUpgradeToTenant"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+        {{ upgradingToTenant ? t('common.labels.loading') : t('tenant.upgradeToTenant') }}
+      </button>
     </div>
 
     <!-- Navigation links -->
@@ -240,6 +273,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import * as guildsApi from '@/api/guilds'
 import * as armoryLookupApi from '@/api/armory_lookup'
+import * as tenantsApi from '@/api/tenants'
 import TenantSwitcher from '@/components/layout/TenantSwitcher.vue'
 
 const { t } = useI18n()
@@ -273,6 +307,25 @@ const visibleGuilds = computed(() => {
   return guildStore.guilds.filter(g => g.visibility !== 'hidden')
 })
 
+// Separate guilds into "My created" vs "Joined"
+const myCreatedGuilds = computed(() => {
+  const userId = authStore.user?.id
+  if (!userId) return []
+  return visibleGuilds.value.filter(g =>
+    g.created_by === userId || g.my_role === 'owner'
+  )
+})
+
+const joinedGuilds = computed(() => {
+  const userId = authStore.user?.id
+  if (!userId) return []
+  return visibleGuilds.value.filter(g =>
+    g.created_by !== userId && g.my_role !== 'owner'
+  )
+})
+
+const upgradingToTenant = ref(false)
+
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
 // Load guilds on mount and listen for real-time updates
@@ -292,6 +345,29 @@ function handleGuildsChanged() {
 
 function handleGuildChanged() {
   guildStore.fetchGuilds()
+}
+
+async function handleUpgradeToTenant() {
+  upgradingToTenant.value = true
+  try {
+    await tenantsApi.upgradeToTenant()
+    // Refresh tenants and user data
+    await tenantStore.fetchTenants()
+    // Set the new tenant as active
+    if (tenantStore.tenants.length > 0) {
+      const ownedTenant = tenantStore.tenants.find(t => t.owner_id === authStore.user?.id)
+      if (ownedTenant) {
+        await tenantStore.switchTenant(ownedTenant.id)
+      }
+    }
+    // Re-fetch user to get updated active_tenant_id
+    await authStore.fetchMe()
+    uiStore.showToast(t('tenant.upgradeSuccess'), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error || t('tenant.upgradeFailed'), 'error')
+  } finally {
+    upgradingToTenant.value = false
+  }
 }
 
 // Simple SVG icon components using render functions

@@ -225,6 +225,17 @@ def get_user_guild_ids(user_id: int) -> list[int]:
     return list(rows)
 
 
+def get_user_memberships(user_id: int) -> list[GuildMembership]:
+    """Return all active guild memberships for a user."""
+    rows = db.session.execute(
+        sa.select(GuildMembership).where(
+            GuildMembership.user_id == user_id,
+            GuildMembership.status == MemberStatus.ACTIVE.value,
+        )
+    ).scalars().all()
+    return list(rows)
+
+
 def list_members(guild_id: int) -> list[GuildMembership]:
     rows = db.session.execute(
         sa.select(GuildMembership)

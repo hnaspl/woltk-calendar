@@ -33,6 +33,9 @@ export const getActiveTenant = () => api.get('/auth/active-tenant')
 export const setActiveTenant = (tenantId) =>
   api.put('/auth/active-tenant', { tenant_id: tenantId })
 
+// --- Upgrade (create tenant for users who registered without one) ---
+export const upgradeToTenant = () => api.post('/tenants/upgrade')
+
 // --- Admin ---
 export const adminListTenants = () => api.get('/admin/tenants/')
 export const adminGetTenant = (id) => api.get(`/admin/tenants/${id}`)

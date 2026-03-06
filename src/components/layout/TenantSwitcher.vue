@@ -1,12 +1,11 @@
 <template>
-  <div class="px-4 py-3 border-b border-[#2a3450]">
+  <div v-if="tenantStore.tenants.length > 0" class="px-4 py-3 border-b border-[#2a3450]">
     <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('tenant.workspace') }}</label>
     <select
       :value="tenantStore.activeTenantId ?? ''"
       class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
       @change="onTenantChange"
     >
-      <option v-if="!tenantStore.tenants.length" value="">{{ t('tenant.noWorkspaces') }}</option>
       <option
         v-for="t in tenantStore.tenants"
         :key="t.id"

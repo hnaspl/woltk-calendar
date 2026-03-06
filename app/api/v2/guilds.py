@@ -29,7 +29,14 @@ bp = Blueprint("guilds", __name__, url_prefix="/guilds")
 @login_required
 def list_guilds():
     guilds = guild_service.list_guilds_for_user(current_user.id)
-    return jsonify([g.to_dict() for g in guilds]), 200
+    memberships = guild_service.get_user_memberships(current_user.id)
+    membership_map = {m.guild_id: m.role for m in memberships}
+    result = []
+    for g in guilds:
+        d = g.to_dict()
+        d["my_role"] = membership_map.get(g.id)
+        result.append(d)
+    return jsonify(result), 200
 
 
 @bp.get("/all")
