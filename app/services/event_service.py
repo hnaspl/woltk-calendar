@@ -10,6 +10,17 @@ import sqlalchemy as sa
 from app.extensions import db
 from app.models.guild import Guild
 from app.models.raid import EventSeries, RaidEvent, RaidTemplate
+from app.utils.sanitizer import sanitize_text
+
+
+def _sanitize_field(value: str | None, field_name: str) -> str | None:
+    """Sanitize an optional text field, raising ValueError on dangerous content."""
+    if value is None:
+        return None
+    clean, error = sanitize_text(str(value), field_name=field_name)
+    if error:
+        raise ValueError(error)
+    return clean
 
 
 # ---------------------------------------------------------------------------
@@ -329,7 +340,7 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         difficulty=data.get("difficulty", "normal"),
         status=data.get("status", "open"),
         raid_type=data.get("raid_type"),
-        instructions=data.get("instructions"),
+        instructions=_sanitize_field(data.get("instructions"), "instructions"),
     )
     close_at = data.get("close_signups_at")
     if close_at:
@@ -352,10 +363,14 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
         "difficulty", "status", "instructions", "raid_type", "close_signups_at",
         "raid_definition_id", "duration_minutes",
     }
+    # Sanitize text fields before applying
+    text_fields = {"instructions", "title"}
     for key, value in data.items():
         if key in allowed:
             if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
                 value = _ensure_utc(value)
+            elif key in text_fields and isinstance(value, str):
+                value = _sanitize_field(value, key)
             setattr(event, key, value)
     # Recompute ends_at_utc from duration if duration was provided
     if "duration_minutes" in data and event.starts_at_utc:

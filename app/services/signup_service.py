@@ -11,9 +11,20 @@ from app.extensions import db
 from app.i18n import _t
 from app.models.signup import Signup, RaidBan, CharacterReplacement
 from app.utils.class_roles import validate_class_role
+from app.utils.sanitizer import sanitize_text
 from app.utils.validators import validate_class_role_for_character
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_field(value: str | None, field_name: str) -> str | None:
+    """Sanitize an optional text field, raising ValueError on dangerous content."""
+    if value is None:
+        return None
+    clean, error = sanitize_text(str(value), max_length=1000, field_name=field_name)
+    if error:
+        raise ValueError(error)
+    return clean
 
 
 # Delegate to shared validator (was _validate_class_role in this file)
@@ -256,7 +267,7 @@ def create_signup(
         character_id=character_id,
         chosen_role=chosen_role,
         chosen_spec=chosen_spec,
-        note=note,
+        note=_sanitize_field(note, "note"),
     )
     db.session.add(signup)
     db.session.commit()
@@ -296,8 +307,11 @@ def update_signup(signup: Signup, data: dict) -> Signup:
 
     allowed = {"chosen_spec", "chosen_role", "note", "gear_score_note",
                "attendance_status", "late_minutes"}
+    text_fields = {"note", "gear_score_note"}
     for key, value in data.items():
         if key in allowed:
+            if key in text_fields and isinstance(value, str):
+                value = _sanitize_field(value, key)
             setattr(signup, key, value)
     db.session.commit()
 

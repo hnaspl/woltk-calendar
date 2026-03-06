@@ -13,6 +13,7 @@ from app.extensions import db
 from app.enums import MemberStatus
 from app.i18n import _t
 from app.models.tenant import Tenant, TenantMembership, TenantInvitation
+from app.utils.sanitizer import sanitize_text
 from app.models.user import User
 from app.models.guild import Guild, GuildMembership, GuildInvitation, GuildExpansion, GuildRealm, GuildClassRoleOverride
 from app.models.character import Character
@@ -181,6 +182,11 @@ def update_tenant(tenant: Tenant, data: dict) -> Tenant:
     allowed = {"description", "settings_json"}
     for key, value in data.items():
         if key in allowed and value is not None:
+            if key == "description" and isinstance(value, str):
+                clean, err = sanitize_text(value, max_length=2000, field_name="description")
+                if err:
+                    raise ValueError(err)
+                value = clean
             setattr(tenant, key, value)
     # Handle name separately (must be unique)
     if "name" in data and data["name"] and data["name"] != tenant.name:
@@ -388,6 +394,11 @@ def admin_update_tenant(tenant: Tenant, data: dict) -> Tenant:
     admin_allowed = {"description", "plan", "max_guilds", "max_members", "is_active"}
     for key, value in data.items():
         if key in admin_allowed and value is not None:
+            if key == "description" and isinstance(value, str):
+                clean, err = sanitize_text(value, max_length=2000, field_name="description")
+                if err:
+                    raise ValueError(err)
+                value = clean
             setattr(tenant, key, value)
     # Handle name separately (must be unique)
     if "name" in data and data["name"] and data["name"] != tenant.name:

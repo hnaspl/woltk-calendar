@@ -9,6 +9,17 @@ import sqlalchemy as sa
 from app.extensions import db
 from app.models.raid import RaidDefinition
 from app.models.expansion import Expansion
+from app.utils.sanitizer import sanitize_text
+
+
+def _sanitize_field(value: str | None, field_name: str) -> str | None:
+    """Sanitize an optional text field, raising ValueError on dangerous content."""
+    if value is None:
+        return None
+    clean, error = sanitize_text(str(value), max_length=2000, field_name=field_name)
+    if error:
+        raise ValueError(error)
+    return clean
 
 
 def create_raid_definition(guild_id: int | None, created_by: int, data: dict) -> RaidDefinition:
@@ -38,7 +49,7 @@ def create_raid_definition(guild_id: int | None, created_by: int, data: dict) ->
         off_tank_slots=data.get("off_tank_slots"),
         healer_slots=data.get("healer_slots"),
         range_dps_slots=data.get("range_dps_slots"),
-        notes=data.get("notes"),
+        notes=_sanitize_field(data.get("notes"), "notes"),
     )
     db.session.add(rd)
     db.session.commit()
@@ -56,8 +67,11 @@ def update_raid_definition(rd: RaidDefinition, data: dict) -> RaidDefinition:
         "default_duration_minutes", "raid_type", "realm",
         "melee_dps_slots", "main_tank_slots", "off_tank_slots", "healer_slots", "range_dps_slots", "notes",
     }
+    text_fields = {"notes", "name"}
     for key, value in data.items():
         if key in allowed:
+            if key in text_fields and isinstance(value, str):
+                value = _sanitize_field(value, key)
             setattr(rd, key, value)
     # Map frontend 'size' field to default_raid_size
     if "size" in data and "default_raid_size" not in data:

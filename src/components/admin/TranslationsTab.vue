@@ -101,6 +101,41 @@
       </div>
     </div>
 
+    <!-- Variables Reference (collapsible) -->
+    <div class="wow-card overflow-hidden">
+      <button
+        type="button"
+        class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-bg-tertiary transition-colors"
+        @click="showVariablesHelp = !showVariablesHelp"
+      >
+        <span class="text-sm font-medium text-text-primary flex items-center gap-2">
+          <svg class="w-4 h-4 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {{ t('admin.translations.variablesTitle') }}
+        </span>
+        <svg class="w-4 h-4 text-text-muted transition-transform" :class="{ 'rotate-180': showVariablesHelp }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div v-if="showVariablesHelp" class="px-4 py-3 border-t border-border-default space-y-3">
+        <p class="text-sm text-text-muted">{{ t('admin.translations.variablesHelp') }}</p>
+        <div class="bg-bg-tertiary rounded-lg p-3">
+          <p class="text-xs text-text-muted font-medium mb-2">{{ t('admin.translations.variablesExamples') }}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs font-mono">
+            <div v-for="(desc, name) in variableExamples" :key="name" class="flex gap-2">
+              <span class="text-accent-gold whitespace-nowrap">{<span>{{ name }}</span>}</span>
+              <span class="text-text-muted">— {{ desc }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-red-900/20 rounded-lg p-3 border border-red-800/30">
+          <p class="text-xs text-red-400 font-medium mb-1">{{ t('admin.translations.securityNote') }}</p>
+          <p class="text-xs text-text-muted">{{ t('admin.translations.securityDetail') }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="text-center py-8">
       <div class="animate-spin w-6 h-6 border-2 border-accent-gold border-t-transparent rounded-full mx-auto"></div>

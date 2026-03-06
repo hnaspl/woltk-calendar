@@ -11,6 +11,7 @@ from app.enums import GuildVisibility, MemberStatus
 from app.extensions import db
 from app.i18n import _t
 from app.models.guild import Guild, GuildInvitation, GuildMembership
+from app.utils.sanitizer import sanitize_text, check_dangerous_content
 
 
 def create_guild(
@@ -117,6 +118,19 @@ def update_guild(guild: Guild, data: dict) -> Guild:
             # Prevent changing name or realm on armory-sourced guilds
             if key in ("realm_name", "name") and guild.armory_source:
                 continue
+            # Sanitize string values in settings_json dict
+            if key == "settings_json" and isinstance(value, dict):
+                for sk, sv in value.items():
+                    if isinstance(sv, str):
+                        err = check_dangerous_content(sv)
+                        if err:
+                            raise ValueError(err)
+            # Sanitize direct string fields
+            elif key in ("name", "realm_name") and isinstance(value, str):
+                clean, err = sanitize_text(value, max_length=500, field_name=key)
+                if err:
+                    raise ValueError(err)
+                value = clean
             setattr(guild, key, value)
     db.session.commit()
     return guild

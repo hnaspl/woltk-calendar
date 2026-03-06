@@ -399,7 +399,11 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
     description_lines.append(f"**{len(going)}** in lineup · **{len(bench)}** on bench · **{len(signups)}** signed up")
 
     if event_data.get("instructions"):
-        description_lines.append(f"\n*{event_data['instructions']}*")
+        # Sanitize instructions before embedding in Discord message
+        from app.utils.sanitizer import check_dangerous_content
+        instructions = str(event_data["instructions"])
+        if check_dangerous_content(instructions) is None:
+            description_lines.append(f"\n*{instructions}*")
 
     footer_text = guild_name if guild_name else "Raid Calendar"
 

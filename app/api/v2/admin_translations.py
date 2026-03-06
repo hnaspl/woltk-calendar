@@ -3,6 +3,13 @@
 Provides endpoints for global admins to browse, edit, and manage translations
 from the admin panel.  All changes are stored in the database as overrides —
 the static JSON files on disk are never modified.
+
+Security:
+    - All write endpoints require global admin (``@require_admin``)
+    - Values are sanitized at the service layer: no HTML, no scripts, no
+      shell commands, no unknown placeholder variables
+    - Keys must match ``^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$``
+    - Maximum value length: 10,000 characters
 """
 
 from __future__ import annotations
@@ -36,6 +43,32 @@ def get_translation_stats():
 def get_locales():
     """Return list of supported locale codes."""
     return jsonify({"locales": translation_service.get_supported_locales()}), 200
+
+
+@bp.get("/variables")
+@login_required
+@require_admin
+def get_allowed_variables():
+    """Return documentation on allowed placeholder variables.
+
+    These are the only ``{variable}`` names permitted in translation values.
+    Using any other placeholder will be rejected by the security filter.
+    """
+    from app.utils.sanitizer import TRANSLATION_VARIABLE_EXAMPLES
+    variables = translation_service.get_allowed_variables()
+    return jsonify({
+        "allowed_variables": variables,
+        "examples": TRANSLATION_VARIABLE_EXAMPLES,
+        "usage": (
+            "Use {variable_name} syntax in translation values. "
+            "Only the listed variables are allowed. "
+            "HTML tags, script injection, shell commands, and escape "
+            "sequences are blocked. Emoji characters (🏰, ⚔️, etc.) "
+            "are safe to use."
+        ),
+        "max_value_length": translation_service.MAX_VALUE_LENGTH,
+        "key_format": "Dot-separated alphanumeric segments: admin.translations.saved",
+    }), 200
 
 
 @bp.get("/<locale>")
@@ -90,7 +123,13 @@ def get_overrides():
 @login_required
 @require_admin
 def update_translation(locale: str):
-    """Update a single translation key."""
+    """Update a single translation key.
+
+    Request body: ``{"key": "admin.title", "value": "Admin Panel"}``
+
+    Security: The value is validated against the security filter (no HTML,
+    no scripts, no shell commands, only whitelisted placeholder variables).
+    """
     data = request.get_json(silent=True) or {}
     key = data.get("key", "").strip()
     value = data.get("value", "")
@@ -120,7 +159,12 @@ def update_translation(locale: str):
 @login_required
 @require_admin
 def update_translations_bulk(locale: str):
-    """Bulk update translations for a locale."""
+    """Bulk update translations for a locale.
+
+    Request body: ``{"translations": {"key1": "val1", "key2": "val2"}}``
+
+    Entries with invalid keys or dangerous values are silently skipped.
+    """
     data = request.get_json(silent=True) or {}
     translations = data.get("translations", {})
 

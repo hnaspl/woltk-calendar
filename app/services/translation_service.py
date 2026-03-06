@@ -4,6 +4,14 @@ Provides CRUD operations for translation overrides and tools for detecting
 missing translations between locales.  All overrides are stored in the
 database (TranslationOverride model) and merged on top of the static JSON
 files at read time — the JSON files on disk are never modified.
+
+Security:
+    - Only global admins can create/update/delete overrides (enforced at API layer)
+    - Values are sanitized via the shared ``app.utils.sanitizer`` module: no HTML
+      tags, no script injection, no shell commands, no unknown placeholders
+    - Key format is validated to prevent path traversal or injection
+    - Maximum value length is enforced (10,000 characters)
+    - All mutations are audit-logged with the admin user ID
 """
 
 from __future__ import annotations
@@ -17,6 +25,13 @@ import sqlalchemy as sa
 
 from app.extensions import db
 from app.models.translation_override import TranslationOverride
+from app.utils.sanitizer import (
+    sanitize_translation,
+    validate_translation_key,
+    get_allowed_translation_variables,
+    MAX_TRANSLATION_LENGTH,
+    TRANSLATION_VARIABLE_EXAMPLES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +40,9 @@ _TRANSLATIONS_DIR = os.path.join(
     "translations",
 )
 _SUPPORTED_LOCALES = ("en", "pl")
+
+# Re-export for API layer
+MAX_VALUE_LENGTH = MAX_TRANSLATION_LENGTH
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -77,6 +95,11 @@ def _get_top_level_sections(flat_keys: set[str]) -> list[str]:
 # ── Public API ───────────────────────────────────────────────────────────
 
 
+def get_allowed_variables() -> list[str]:
+    """Return sorted list of allowed placeholder variables for documentation."""
+    return get_allowed_translation_variables()
+
+
 def get_supported_locales() -> list[str]:
     """Return list of supported locale codes."""
     return list(_SUPPORTED_LOCALES)
@@ -118,10 +141,7 @@ def get_section_translations(locale: str, section: str) -> dict[str, str]:
 
 
 def get_missing_translations() -> dict[str, list[str]]:
-    """Detect keys that exist in one locale but not in another.
-
-    Returns a dict mapping ``"missing_in_{locale}"`` → list of dotted keys.
-    """
+    """Detect keys that exist in one locale but not in another."""
     all_flat: dict[str, set[str]] = {}
     for locale in _SUPPORTED_LOCALES:
         flat = get_translations_flat(locale)
@@ -151,28 +171,30 @@ def get_overrides(locale: str | None = None) -> list[dict]:
 
 
 def set_override(locale: str, key: str, value: str, user_id: int | None = None) -> TranslationOverride:
-    """Create or update a translation override."""
+    """Create or update a translation override.
+
+    Raises :class:`ValueError` if the key format is invalid, the value
+    contains dangerous content, or an unknown placeholder is used.
+    """
     if locale not in _SUPPORTED_LOCALES:
         raise ValueError(f"Unsupported locale: {locale}")
-    if not key or not key.strip():
-        raise ValueError("Translation key cannot be empty")
 
-    # Sanitize value — strip leading/trailing whitespace, disallow script injection
-    value = value.strip()
-    if "<script" in value.lower():
-        raise ValueError("Script tags are not allowed in translations")
+    key_error = validate_translation_key(key)
+    if key_error:
+        raise ValueError(key_error)
+
+    sanitized, value_error = sanitize_translation(value)
+    if value_error:
+        raise ValueError(value_error)
 
     override = TranslationOverride.query.filter_by(locale=locale, key=key).first()
     if override:
-        override.value = value
+        override.value = sanitized
         override.updated_by = user_id
         logger.info("Translation override updated: %s:%s by user %s", locale, key, user_id)
     else:
         override = TranslationOverride(
-            locale=locale,
-            key=key,
-            value=value,
-            updated_by=user_id,
+            locale=locale, key=key, value=sanitized, updated_by=user_id,
         )
         db.session.add(override)
         logger.info("Translation override created: %s:%s by user %s", locale, key, user_id)
@@ -182,27 +204,30 @@ def set_override(locale: str, key: str, value: str, user_id: int | None = None) 
 
 
 def set_overrides_bulk(locale: str, translations: dict[str, str], user_id: int | None = None) -> int:
-    """Bulk create/update translation overrides. Returns count of changes."""
+    """Bulk create/update translation overrides. Returns count of changes.
+
+    Silently skips entries with invalid keys or dangerous values.
+    """
     if locale not in _SUPPORTED_LOCALES:
         raise ValueError(f"Unsupported locale: {locale}")
 
     count = 0
     for key, value in translations.items():
-        if not key or not key.strip():
+        if validate_translation_key(key) is not None:
             continue
-        value = str(value).strip()
-        if "<script" in value.lower():
+        sanitized, err = sanitize_translation(str(value))
+        if err is not None:
             continue
 
         override = TranslationOverride.query.filter_by(locale=locale, key=key).first()
         if override:
-            if override.value != value:
-                override.value = value
+            if override.value != sanitized:
+                override.value = sanitized
                 override.updated_by = user_id
                 count += 1
         else:
             override = TranslationOverride(
-                locale=locale, key=key, value=value, updated_by=user_id
+                locale=locale, key=key, value=sanitized, updated_by=user_id
             )
             db.session.add(override)
             count += 1
@@ -240,7 +265,6 @@ def get_stats() -> dict[str, Any]:
             "sections": _get_top_level_sections(set(flat.keys())),
         }
 
-    # Missing keys detection
     missing = get_missing_translations()
     stats["missing"] = missing
     stats["total_missing"] = sum(len(v) for v in missing.values())
