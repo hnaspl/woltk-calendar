@@ -460,7 +460,13 @@ def update_member(guild_id: int, user_id: int, membership):
 @bp.post("/<int:guild_id>/transfer-ownership")
 @login_required
 def transfer_ownership(guild_id: int):
-    """Transfer guild ownership to another member."""
+    """Transfer guild ownership to another member.
+
+    Enforces guild ownership limits for the target user's tenant:
+    - Counts guilds already owned by the target user in the guild's tenant
+    - Blocks transfer if target user has reached tenant guild limit
+    - Global admins bypass the limit check
+    """
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
@@ -487,6 +493,34 @@ def transfer_ownership(guild_id: int):
     ).scalar_one_or_none()
     if target_membership is None:
         return jsonify({"error": _t("api.guilds.targetNotActive")}), 404
+
+    # Enforce guild ownership limit for the target user (non-admin transfers only)
+    if not is_global_admin and guild.tenant_id is not None:
+        from app.models.tenant import Tenant
+        from app.models.user import User
+
+        tenant = db.session.get(Tenant, guild.tenant_id)
+        target_user = db.session.get(User, target_user_id)
+        if tenant and target_user:
+            # Count guilds already owned by the target user in this tenant
+            owned_count = db.session.execute(
+                sa.select(sa.func.count()).select_from(Guild).where(
+                    Guild.tenant_id == guild.tenant_id,
+                    Guild.created_by == target_user_id,
+                )
+            ).scalar() or 0
+
+            # Check per-user override first, then tenant limit
+            user_limit = target_user.max_guilds_override
+            if user_limit is None:
+                user_limit = tenant.max_guilds
+
+            if owned_count >= user_limit:
+                return jsonify({
+                    "error": _t("api.guilds.transferLimitReached",
+                                name=target_user.username,
+                                limit=user_limit),
+                }), 403
 
     old_owner_id = guild.created_by
 

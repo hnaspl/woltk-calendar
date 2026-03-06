@@ -1429,6 +1429,7 @@
       "selfJoinDisabled": "Ta gildia wymaga, aby członkowie byli dodawani ręcznie przez oficera",
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
       "tenantRequired": "Panel gildii jest wymagany do utworzenia gildii",
+      "transferLimitReached": "{name} osiągnął limit własności gildii ({limit}). Nie może otrzymać dodatkowej własności gildii.",
       "userIdRequired": "user_id jest wymagane",
       "invalidVisibility": "Nieprawidłowe ustawienie widoczności",
       "notArmorySource": "Ta gildia nie jest z armory"

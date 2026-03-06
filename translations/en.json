@@ -1429,6 +1429,7 @@
       "selfJoinDisabled": "This guild requires members to be added manually by an officer",
       "targetNotActive": "Target user is not an active member of this guild",
       "tenantRequired": "A guild management panel is required to create a guild",
+      "transferLimitReached": "{name} has reached their guild ownership limit ({limit}). They cannot receive additional guild ownership.",
       "userIdRequired": "user_id is required",
       "invalidVisibility": "Invalid visibility setting",
       "notArmorySource": "This guild is not sourced from armory"
