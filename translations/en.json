@@ -259,7 +259,7 @@
       "uppercase": "At least one uppercase letter (A-Z)",
       "lowercase": "At least one lowercase letter (a-z)",
       "digit": "At least one digit (0-9)",
-      "special": "At least one special character (!@#$...)"
+      "special": "At least one special character (!{'@'}#$...)"
     }
   },
   "profile": {
@@ -1233,7 +1233,7 @@
       "port": "Port",
       "useTls": "Use TLS (STARTTLS)",
       "username": "Username",
-      "usernamePlaceholder": "your@email.com",
+      "usernamePlaceholder": "your{'@'}email.com",
       "password": "Password",
       "passwordPlaceholder": "SMTP password or app password",
       "fromEmail": "From Email",
@@ -1248,7 +1248,7 @@
       "requireUppercase": "Require uppercase letter (A-Z)",
       "requireLowercase": "Require lowercase letter (a-z)",
       "requireDigit": "Require digit (0-9)",
-      "requireSpecial": "Require special character (!@#$...)"
+      "requireSpecial": "Require special character (!{'@'}#$...)"
     }
   },
   "signup": {

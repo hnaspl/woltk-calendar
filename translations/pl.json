@@ -257,7 +257,7 @@
       "uppercase": "Co najmniej jedna wielka litera (A-Z)",
       "lowercase": "Co najmniej jedna mała litera (a-z)",
       "digit": "Co najmniej jedna cyfra (0-9)",
-      "special": "Co najmniej jeden znak specjalny (!@#$...)"
+      "special": "Co najmniej jeden znak specjalny (!{'@'}#$...)"
     }
   },
   "profile": {
@@ -1216,7 +1216,7 @@
       "port": "Port",
       "useTls": "Użyj TLS (STARTTLS)",
       "username": "Nazwa użytkownika",
-      "usernamePlaceholder": "twoj@email.com",
+      "usernamePlaceholder": "twoj{'@'}email.com",
       "password": "Hasło",
       "passwordPlaceholder": "Hasło SMTP lub hasło aplikacji",
       "fromEmail": "Email nadawcy",
@@ -1231,7 +1231,7 @@
       "requireUppercase": "Wymagaj wielkiej litery (A-Z)",
       "requireLowercase": "Wymagaj małej litery (a-z)",
       "requireDigit": "Wymagaj cyfry (0-9)",
-      "requireSpecial": "Wymagaj znaku specjalnego (!@#$...)"
+      "requireSpecial": "Wymagaj znaku specjalnego (!{'@'}#$...)"
     }
   },
   "signup": {
