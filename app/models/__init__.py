@@ -11,6 +11,7 @@ from app.models.attendance import AttendanceRecord
 from app.models.notification import Notification, JobQueue
 from app.models.permission import SystemRole, Permission, RolePermission, RoleGrantRule
 from app.models.system_setting import SystemSetting
+from app.models.password_reset import PasswordResetToken
 from app.models.armory_config import ArmoryConfig
 from app.models.guild_feature import GuildFeature
 from app.models.tenant_feature import TenantFeature, PlatformFeature
@@ -45,6 +46,7 @@ __all__ = [
     "RolePermission",
     "RoleGrantRule",
     "SystemSetting",
+    "PasswordResetToken",
     "ArmoryConfig",
     "GuildFeature",
     "TenantFeature",

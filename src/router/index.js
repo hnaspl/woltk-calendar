@@ -18,6 +18,24 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/activate',
+    name: 'activate',
+    component: () => import('@/views/ActivateView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/views/ForgotPasswordView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/views/ResetPasswordView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: () => import('@/views/DashboardView.vue'),

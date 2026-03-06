@@ -59,6 +59,12 @@ def dashboard_stats():
     admin_users = db.session.scalar(
         sa.select(sa.func.count()).select_from(User).where(User.is_admin.is_(True))
     )
+    unverified_users = db.session.scalar(
+        sa.select(sa.func.count()).select_from(User).where(
+            User.email_verified.is_(False),
+            User.activation_token.isnot(None),
+        )
+    )
     total_guilds = db.session.scalar(sa.select(sa.func.count()).select_from(Guild))
     total_raids = db.session.scalar(sa.select(sa.func.count()).select_from(RaidEvent))
     upcoming_raids = db.session.scalar(
@@ -240,6 +246,7 @@ def dashboard_stats():
         "total_users": total_users,
         "active_users": active_users,
         "admin_users": admin_users,
+        "unverified_users": unverified_users,
         "total_guilds": total_guilds,
         "total_raids": total_raids,
         "upcoming_raids": upcoming_raids,
@@ -353,6 +360,9 @@ def _system_settings_response():
     from app.models.system_setting import SystemSetting
     rows = db.session.execute(db.select(SystemSetting)).scalars().all()
     settings = {r.key: r.value for r in rows}
+    # Mask sensitive values
+    if settings.get("smtp_password"):
+        settings["smtp_password"] = "••••••••"
     return jsonify(settings), 200
 
 
@@ -366,7 +376,12 @@ def update_system_settings():
     from app.models.system_setting import SystemSetting
     data = get_json()
     # Boolean settings — validate and store as "true"/"false"
-    bool_keys = {"wowhead_tooltips", "autosync_enabled"}
+    bool_keys = {
+        "wowhead_tooltips", "autosync_enabled",
+        "email_activation_required",
+        "password_require_uppercase", "password_require_lowercase",
+        "password_require_digit", "password_require_special",
+    }
     for key in bool_keys:
         if key in data:
             val = "true" if data[key] in (True, "true", "1", 1) else "false"
@@ -376,7 +391,7 @@ def update_system_settings():
             else:
                 db.session.add(SystemSetting(key=key, value=val))
     # Integer settings
-    int_keys = {"autosync_interval_minutes": 5}
+    int_keys = {"autosync_interval_minutes": 5, "password_min_length": 4}
     for key, min_val in int_keys.items():
         if key in data:
             try:
@@ -388,6 +403,47 @@ def update_system_settings():
                 existing.value = val
             else:
                 db.session.add(SystemSetting(key=key, value=val))
+    # String settings (SMTP config)
+    str_keys = {"smtp_host", "smtp_username", "smtp_from_email", "smtp_from_name"}
+    for key in str_keys:
+        if key in data:
+            val = str(data[key]).strip()
+            existing = db.session.get(SystemSetting, key)
+            if existing:
+                existing.value = val
+            else:
+                db.session.add(SystemSetting(key=key, value=val))
+    # SMTP port (integer with specific range)
+    if "smtp_port" in data:
+        try:
+            port = max(1, min(65535, int(data["smtp_port"])))
+            val = str(port)
+        except (ValueError, TypeError):
+            return jsonify({"error": _t("api.admin.invalidInteger", key="smtp_port")}), 400
+        existing = db.session.get(SystemSetting, "smtp_port")
+        if existing:
+            existing.value = val
+        else:
+            db.session.add(SystemSetting(key="smtp_port", value=val))
+    # SMTP TLS boolean
+    if "smtp_tls" in data:
+        val = "true" if data["smtp_tls"] in (True, "true", "1", 1) else "false"
+        existing = db.session.get(SystemSetting, "smtp_tls")
+        if existing:
+            existing.value = val
+        else:
+            db.session.add(SystemSetting(key="smtp_tls", value=val))
+    # SMTP password (sensitive — encrypt before storing)
+    if "smtp_password" in data:
+        raw = str(data["smtp_password"]).strip()
+        if raw and raw != "••••••••":
+            from app.utils.encryption import encrypt_value
+            encrypted = encrypt_value(raw)
+            existing = db.session.get(SystemSetting, "smtp_password")
+            if existing:
+                existing.value = encrypted
+            else:
+                db.session.add(SystemSetting(key="smtp_password", value=encrypted))
     db.session.commit()
 
     # Reschedule auto-sync if autosync settings were changed

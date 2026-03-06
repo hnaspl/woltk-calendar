@@ -11,7 +11,7 @@
       <WowCard>
         <h2 class="wow-heading text-base mb-4">{{ t('admin.dashboard.platformOverview') }}</h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <StatCard icon="👥" :label="t('admin.dashboard.totalUsers')" :value="data.total_users" :sub="`${data.active_users} ${t('admin.dashboard.active')} · ${data.admin_users} ${t('admin.dashboard.admins')}`" />
+          <StatCard icon="👥" :label="t('admin.dashboard.totalUsers')" :value="data.total_users" :sub="`${data.active_users} ${t('admin.dashboard.active')} · ${data.admin_users} ${t('admin.dashboard.admins')}${data.unverified_users ? ` · ${data.unverified_users} ${t('admin.dashboard.unverified')}` : ''}`" />
           <StatCard icon="🏠" :label="t('admin.dashboard.totalTenants')" :value="data.total_tenants ?? 0" :sub="`${data.active_tenants ?? 0} ${t('admin.dashboard.active')}${data.suspended_tenants ? ` · ${data.suspended_tenants} ${t('admin.dashboard.suspended')}` : ''}`" />
           <StatCard icon="🏰" :label="t('admin.dashboard.totalGuilds')" :value="data.total_guilds" />
           <StatCard icon="⚔️" :label="t('admin.dashboard.totalRaids')" :value="data.total_raids" :sub="`${data.upcoming_raids} ${t('admin.dashboard.upcoming')}`" />

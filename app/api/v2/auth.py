@@ -1,10 +1,10 @@
-"""Auth API: register, login, logout, me, profile, change-password, Discord OAuth."""
+"""Auth API: register, login, logout, me, profile, change-password, activation, password reset, Discord OAuth."""
 
 from __future__ import annotations
 
 import secrets
 
-from flask import Blueprint, current_app, jsonify, redirect, session
+from flask import Blueprint, current_app, jsonify, redirect, request, session
 from flask_login import current_user, login_user, logout_user
 
 from app.services import auth_service
@@ -26,6 +26,7 @@ def register():
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
     display_name = data.get("display_name")
+    create_tenant = data.get("create_tenant", True)
 
     if not email or not username or not password:
         return jsonify({"error": _t("auth.errors.emailRequired")}), 400
@@ -45,16 +46,106 @@ def register():
     if display_name is not None and len(display_name) > 100:
         return jsonify({"error": _t("auth.errors.displayNameTooLong")}), 400
 
-    if len(password) < 8:
-        return jsonify({"error": _t("auth.errors.passwordTooShort")}), 400
+    # Validate against password policy
+    pw_err = auth_service.validate_password_policy(password)
+    if pw_err:
+        return jsonify({"error": _t(pw_err)}), 400
 
     try:
-        user = auth_service.register_user(email, username, password, display_name)
+        user = auth_service.register_user(
+            email, username, password, display_name,
+            create_tenant=bool(create_tenant),
+        )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    # If email activation is required, send activation email and don't log in
+    if auth_service.is_email_activation_required() and not user.email_verified:
+        from app.services import email_service
+        base_url = f"{request.scheme}://{request.host}"
+        email_service.send_activation_email(
+            user.email, user.username, user.activation_token, base_url
+        )
+        return jsonify({
+            "message": _t("auth.messages.activationEmailSent"),
+            "activation_required": True,
+        }), 201
+
     login_user(user, remember=True)
     return jsonify(user.to_dict()), 201
+
+
+@bp.post("/activate")
+@rate_limit(limit=10, window=60)
+def activate():
+    """Activate a user account via token."""
+    data = get_json()
+    token = (data.get("token") or "").strip()
+
+    if not token:
+        return jsonify({"error": _t("auth.errors.invalidActivationToken")}), 400
+
+    user = auth_service.activate_user(token)
+    if not user:
+        return jsonify({"error": _t("auth.errors.invalidActivationToken")}), 400
+
+    login_user(user, remember=True)
+    return jsonify(user.to_dict()), 200
+
+
+@bp.post("/forgot-password")
+@rate_limit(limit=3, window=60)
+def forgot_password():
+    """Send a password reset email."""
+    data = get_json()
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"error": _t("auth.errors.emailRequired")}), 400
+
+    user = auth_service.get_user_by_email(email)
+
+    # Always return success to prevent email enumeration
+    if not user or user.auth_provider != "local":
+        return jsonify({"message": _t("auth.messages.resetEmailSent")}), 200
+
+    from app.services import email_service
+    if not email_service.is_smtp_configured():
+        return jsonify({"error": _t("auth.errors.emailNotConfigured")}), 503
+
+    token = auth_service.create_password_reset_token(user)
+    base_url = f"{request.scheme}://{request.host}"
+    email_service.send_password_reset_email(user.email, user.username, token, base_url)
+
+    return jsonify({"message": _t("auth.messages.resetEmailSent")}), 200
+
+
+@bp.post("/reset-password")
+@rate_limit(limit=5, window=60)
+def reset_password():
+    """Reset password using a valid token."""
+    data = get_json()
+    token = (data.get("token") or "").strip()
+    new_password = data.get("new_password") or ""
+
+    if not token or not new_password:
+        return jsonify({"error": _t("auth.errors.passwordRequired")}), 400
+
+    pw_err = auth_service.validate_password_policy(new_password)
+    if pw_err:
+        return jsonify({"error": _t(pw_err)}), 400
+
+    user = auth_service.reset_password_with_token(token, new_password)
+    if not user:
+        return jsonify({"error": _t("auth.errors.invalidResetToken")}), 400
+
+    return jsonify({"message": _t("auth.messages.passwordReset")}), 200
+
+
+@bp.get("/password-policy")
+def password_policy():
+    """Return the current password policy (public, for frontend validation)."""
+    return jsonify(auth_service.get_password_policy()), 200
 
 
 @bp.post("/login")
@@ -80,6 +171,10 @@ def login():
 
     if not user.is_active:
         return jsonify({"error": _t("auth.errors.accountDisabled")}), 403
+
+    # Check email verification when activation is required
+    if auth_service.is_email_activation_required() and not user.email_verified:
+        return jsonify({"error": _t("auth.errors.emailNotVerified")}), 403
 
     login_user(user, remember=bool(remember))
     return jsonify(user.to_dict()), 200
@@ -120,8 +215,9 @@ def change_password():
     if not current_password or not new_password:
         return jsonify({"error": _t("auth.errors.passwordRequired")}), 400
 
-    if len(new_password) < 8:
-        return jsonify({"error": _t("auth.errors.passwordTooShort")}), 400
+    pw_err = auth_service.validate_password_policy(new_password)
+    if pw_err:
+        return jsonify({"error": _t(pw_err)}), 400
 
     if not auth_service.verify_password(current_user, current_password):
         return jsonify({"error": _t("auth.errors.currentPasswordWrong")}), 400

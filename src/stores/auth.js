@@ -68,13 +68,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(username, email, password) {
+  async function register(username, email, password, createTenant = true) {
     loading.value = true
     error.value = null
     try {
-      const data = await authApi.register({ username, email, password })
+      const data = await authApi.register({ username, email, password, create_tenant: createTenant })
+      // If activation is required, don't set user (they need to verify email first)
+      if (data.activation_required) {
+        return data
+      }
       user.value = data.user ?? data
       _bootstrapTenant(user.value)
+      return data
     } catch (err) {
       error.value = err?.response?.data?.message || 'Registration failed'
       throw err

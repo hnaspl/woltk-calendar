@@ -13,3 +13,11 @@ export const changePassword = (payload) => api.post('/auth/change-password', pay
 export const updateProfile = (payload) => api.put('/auth/profile', payload)
 
 export const getDiscordEnabled = () => api.get('/auth/discord/enabled')
+
+export const activateAccount = (token) => api.post('/auth/activate', { token })
+
+export const forgotPassword = (email) => api.post('/auth/forgot-password', { email })
+
+export const resetPassword = (payload) => api.post('/auth/reset-password', payload)
+
+export const getPasswordPolicy = () => api.get('/auth/password-policy')

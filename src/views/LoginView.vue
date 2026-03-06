@@ -66,14 +66,19 @@
             />
           </div>
 
-          <div class="flex items-center gap-2">
-            <input
-              id="remember-me"
-              v-model="rememberMe"
-              type="checkbox"
-              class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold accent-amber-500"
-            />
-            <label for="remember-me" class="text-sm text-text-muted cursor-pointer select-none">{{ t('auth.rememberMe') }}</label>
+          <div class="flex items-center justify-between gap-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                id="remember-me"
+                v-model="rememberMe"
+                type="checkbox"
+                class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold accent-amber-500"
+              />
+              <span class="text-sm text-text-muted select-none">{{ t('auth.rememberMe') }}</span>
+            </label>
+            <RouterLink to="/forgot-password" class="text-xs text-accent-gold hover:text-yellow-400 transition-colors">
+              {{ t('auth.forgotPassword') }}
+            </RouterLink>
           </div>
 
           <WowButton type="submit" :loading="loading" class="w-full mt-2">

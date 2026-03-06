@@ -17,10 +17,15 @@ export function useAuth() {
     router.push(redirect)
   }
 
-  async function register(username, email, password) {
-    await authStore.register(username, email, password)
+  async function register(username, email, password, createTenant = true) {
+    const result = await authStore.register(username, email, password, createTenant)
+    // If activation is required, return the result so the component can show the message
+    if (result?.activation_required) {
+      return result
+    }
     const redirect = router.currentRoute.value.query.redirect || '/dashboard'
     router.push(redirect)
+    return result
   }
 
   async function logout() {

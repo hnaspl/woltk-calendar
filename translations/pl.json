@@ -191,14 +191,26 @@
       "displayNameTooLong": "Nazwa wyświetlana może mieć maksymalnie 100 znaków",
       "useDiscordLogin": "To konto używa logowania przez Discord. Zaloguj się przez Discord.",
       "discordNotConfigured": "Logowanie przez Discord nie jest skonfigurowane. Skontaktuj się z administratorem.",
-      "discordLoginFailed": "Logowanie przez Discord nie powiodło się. Spróbuj ponownie."
+      "discordLoginFailed": "Logowanie przez Discord nie powiodło się. Spróbuj ponownie.",
+      "passwordNeedsUppercase": "Hasło musi zawierać co najmniej jedną wielką literę",
+      "passwordNeedsLowercase": "Hasło musi zawierać co najmniej jedną małą literę",
+      "passwordNeedsDigit": "Hasło musi zawierać co najmniej jedną cyfrę",
+      "passwordNeedsSpecial": "Hasło musi zawierać co najmniej jeden znak specjalny",
+      "invalidActivationToken": "Nieprawidłowy lub wygasły token aktywacyjny",
+      "invalidResetToken": "Nieprawidłowy lub wygasły token resetowania",
+      "emailNotVerified": "Proszę zweryfikować adres email przed zalogowaniem. Sprawdź skrzynkę odbiorczą.",
+      "emailNotConfigured": "Usługa email nie jest skonfigurowana. Skontaktuj się z administratorem.",
+      "resetFailed": "Resetowanie hasła nie powiodło się. Spróbuj ponownie."
     },
     "hasAccount": "Masz już konto?",
     "loginFailed": "Logowanie nie powiodło się. Sprawdź dane logowania.",
     "loginToAcceptInvite": "Zaloguj się lub zarejestruj, aby zaakceptować zaproszenie do przestrzeni roboczej.",
     "messages": {
       "loggedOut": "Wylogowano",
-      "passwordChanged": "Hasło zostało zmienione"
+      "passwordChanged": "Hasło zostało zmienione",
+      "activationEmailSent": "Email aktywacyjny został wysłany. Sprawdź skrzynkę odbiorczą.",
+      "resetEmailSent": "Jeśli konto z tym adresem email istnieje, link do resetowania został wysłany.",
+      "passwordReset": "Hasło zostało pomyślnie zresetowane."
     },
     "newPassword": "Nowe hasło",
     "newPasswordsDoNotMatch": "Nowe hasła nie są identyczne",
@@ -219,7 +231,34 @@
     "rememberMe": "Zapamiętaj mnie",
     "signIn": "Zaloguj się",
     "signInWithDiscord": "Zaloguj się przez Discord",
-    "signOut": "Wyloguj się"
+    "signOut": "Wyloguj się",
+    "forgotPassword": "Zapomniałeś hasła?",
+    "forgotPasswordDesc": "Podaj swój adres email, a wyślemy Ci link do resetowania hasła.",
+    "sendResetLink": "Wyślij link resetujący",
+    "backToLogin": "Powrót do logowania",
+    "resetEmailSentTitle": "Sprawdź swoją pocztę",
+    "resetEmailSentDesc": "Jeśli konto z tym adresem istnieje, wysłaliśmy link do resetowania hasła. Sprawdź skrzynkę odbiorczą i spam.",
+    "resetPassword": "Resetuj hasło",
+    "resetPasswordDesc": "Podaj nowe hasło poniżej.",
+    "passwordResetSuccess": "Hasło zresetowane!",
+    "passwordResetSuccessDesc": "Twoje hasło zostało zaktualizowane. Możesz teraz zalogować się nowym hasłem.",
+    "activatingAccount": "Aktywowanie konta...",
+    "accountActivated": "Konto aktywowane!",
+    "accountActivatedDesc": "Twój email został zweryfikowany, a konto jest teraz aktywne.",
+    "activationFailed": "Aktywacja nie powiodła się",
+    "activationFailedDesc": "Link aktywacyjny jest nieprawidłowy lub wygasł. Zarejestruj się ponownie.",
+    "goToDashboard": "Przejdź do panelu",
+    "activationEmailSentTitle": "Sprawdź swoją pocztę",
+    "activationEmailSentDesc": "Wysłaliśmy link aktywacyjny na Twój email. Kliknij link, aby aktywować konto. Jeśli nie aktywujesz w ciągu 3 dni, konto zostanie automatycznie usunięte.",
+    "createOwnWorkspace": "Utwórz własną przestrzeń roboczą",
+    "createWorkspaceHelp": "Odznacz, jeśli chcesz tylko dołączyć do istniejącej przestrzeni poprzez zaproszenie.",
+    "policy": {
+      "minLength": "Co najmniej {n} znaków",
+      "uppercase": "Co najmniej jedna wielka litera (A-Z)",
+      "lowercase": "Co najmniej jedna mała litera (a-z)",
+      "digit": "Co najmniej jedna cyfra (0-9)",
+      "special": "Co najmniej jeden znak specjalny (!@#$...)"
+    }
   },
   "profile": {
     "changePassword": "Zmień hasło",
@@ -938,7 +977,8 @@
       "noRecentRegistrations": "Brak ostatnich rejestracji.",
       "upcomingEventList": "Nadchodzące wydarzenia",
       "noUpcomingEvents": "Brak nadchodzących wydarzeń.",
-      "signups": "zapisy"
+      "signups": "zapisy",
+      "unverified": "niezweryfikowanych"
     },
     "expansions": {
       "title": "Rozszerzenia",
@@ -1162,6 +1202,30 @@
       "confirmDelete": "Usunąć plan \"{name}\"?",
       "limitReached": "Limit osiągnięty",
       "upgradePrompt": "Ulepsz swój plan, aby odblokować tę funkcję."
+    },
+    "smtp": {
+      "title": "Ustawienia Email / SMTP",
+      "help": "Skonfiguruj ustawienia SMTP do wysyłania emaili (aktywacja, resetowanie hasła). Wszystkie ustawienia są wymagane.",
+      "host": "Serwer SMTP",
+      "port": "Port",
+      "useTls": "Użyj TLS (STARTTLS)",
+      "username": "Nazwa użytkownika",
+      "usernamePlaceholder": "twoj@email.com",
+      "password": "Hasło",
+      "passwordPlaceholder": "Hasło SMTP lub hasło aplikacji",
+      "fromEmail": "Email nadawcy",
+      "fromName": "Nazwa nadawcy",
+      "requireActivation": "Wymagaj aktywacji email",
+      "requireActivationHelp": "Nowi użytkownicy muszą zweryfikować email przed zalogowaniem. Nieaktywowane konta są automatycznie usuwane po 3 dniach."
+    },
+    "passwordPolicy": {
+      "title": "Polityka haseł",
+      "help": "Skonfiguruj wymagania dotyczące haseł dla nowych rejestracji i zmian hasła.",
+      "minLength": "Minimalna długość hasła",
+      "requireUppercase": "Wymagaj wielkiej litery (A-Z)",
+      "requireLowercase": "Wymagaj małej litery (a-z)",
+      "requireDigit": "Wymagaj cyfry (0-9)",
+      "requireSpecial": "Wymagaj znaku specjalnego (!@#$...)"
     }
   },
   "signup": {

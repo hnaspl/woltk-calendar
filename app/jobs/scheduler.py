@@ -69,6 +69,16 @@ def _apply_autosync_schedule(config: dict) -> None:
         )
 
 
+def _run_cleanup_unactivated(app) -> None:
+    """Entry point for cleaning up unactivated accounts."""
+    with app.app_context():
+        from app.services import auth_service
+        count = auth_service.cleanup_unactivated_accounts()
+        if count:
+            import logging
+            logging.getLogger(__name__).info("Cleaned up %d unactivated accounts", count)
+
+
 def init_scheduler(app) -> None:
     """Register jobs and start the scheduler (only when enabled in config)."""
     global _app_ref
@@ -98,6 +108,16 @@ def init_scheduler(app) -> None:
         trigger="interval",
         minutes=5,
         id="auto_lock_upcoming_events",
+        replace_existing=True,
+    )
+
+    # Clean up unactivated accounts every 6 hours
+    scheduler.add_job(
+        func=_run_cleanup_unactivated,
+        args=[app],
+        trigger="interval",
+        hours=6,
+        id="cleanup_unactivated_accounts",
         replace_existing=True,
     )
 

@@ -258,7 +258,7 @@ const route = useRoute()
 const permissions = usePermissions()
 
 const canManageGuild = computed(() => permissions.can('create_events'))
-const canCreateGuild = computed(() => permissions.can('create_guild'))
+const canCreateGuild = computed(() => permissions.canTenant('create_guild'))
 const hasTenant = computed(() => !!tenantStore.activeTenantId)
 
 // Check if tenant guild limit is reached
