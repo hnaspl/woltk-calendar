@@ -497,7 +497,7 @@
     "subtitle": "Zapisz powtarzalne harmonogramy rajdów jako szablony",
     "templateDeleted": "Szablon usunięty",
     "templateName": "Nazwa szablonu *",
-    "title": "Szablony rajdów",
+    "title": "Planowanie Rajdów",
     "toasts": {
       "templateUpdated": "Szablon zaktualizowany",
       "templateCreated": "Szablon utworzony w {guild}",

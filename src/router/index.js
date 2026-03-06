@@ -116,6 +116,10 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/guild/recurring-raids',
+    redirect: '/guild/templates'
+  },
+  {
     path: '/',
     redirect: '/dashboard'
   },

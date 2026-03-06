@@ -50,7 +50,7 @@
               <WowButton v-if="hasMultipleGuilds" variant="secondary" class="text-xs py-1.5" @click="openCopyModal(tpl)">
                 📋 {{ t('common.buttons.copy') }}
               </WowButton>
-              <WowButton variant="secondary" class="text-xs py-1.5" @click="goToRecurring(tpl.id)">
+              <WowButton variant="secondary" class="text-xs py-1.5" @click="openSeriesModal(tpl)">
                 🔁 {{ t('templates.createRecurringRaid') }}
               </WowButton>
               <WowButton variant="secondary" class="text-xs py-1.5" @click="openApply(tpl)">
@@ -62,8 +62,76 @@
               <WowButton variant="danger" class="text-xs py-1.5 px-2" @click="confirmDelete(tpl)">✕</WowButton>
             </div>
           </div>
+          <!-- Inline series for this template -->
+          <div v-if="seriesForTemplate(tpl.id).length" class="mt-3 pt-3 border-t border-border-default space-y-2">
+            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">🔁 Recurring Schedules</div>
+            <div v-for="s in seriesForTemplate(tpl.id)" :key="s.id" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-2 rounded bg-bg-tertiary/50 border border-border-default">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-medium text-text-primary">{{ s.title }}</span>
+                  <span class="text-xs px-1.5 py-0.5 rounded border" :class="s.active ? 'bg-green-500/20 text-green-300 border-green-600' : 'bg-red-500/20 text-red-300 border-red-600'">
+                    {{ s.active ? t('common.status.active') : t('common.status.inactive') }}
+                  </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
+                  <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
+                  <span v-if="s.days_of_week?.length">{{ formatSeriesDays(s.days_of_week) }}</span>
+                  <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
+                  <span v-if="s.duration_minutes">⏱ {{ s.duration_minutes }}min</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <WowButton variant="primary" class="text-xs py-1 px-2" @click="openGenerate(s)">
+                  {{ t('series.generateEvents') }}
+                </WowButton>
+                <WowButton variant="secondary" class="text-xs py-1 px-2" @click="openEditSeriesModal(s)">
+                  {{ t('common.buttons.edit') }}
+                </WowButton>
+                <WowButton variant="danger" class="text-xs py-1 px-1.5" @click="confirmDeleteSeries(s)">✕</WowButton>
+              </div>
+            </div>
+          </div>
         </WowCard>
       </div>
+
+      <!-- Orphan Recurring Raids section -->
+      <div v-if="!loading && orphanSeries.length" class="mt-6">
+        <h2 class="wow-heading text-lg mb-3">🔁 {{ t('series.title') }}</h2>
+        <p class="text-text-muted text-xs mb-3">Recurring schedules not linked to any template</p>
+        <div class="space-y-2">
+          <WowCard v-for="s in orphanSeries" :key="s.id">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+              <div class="w-10 h-10 rounded border border-border-default bg-bg-tertiary flex items-center justify-center text-lg flex-shrink-0">🔁</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-text-primary">{{ s.title }}</span>
+                  <RaidSizeBadge v-if="s.default_raid_size" :size="s.default_raid_size" />
+                  <span v-if="s.default_difficulty === 'heroic'" class="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-600">Heroic</span>
+                  <span class="text-xs px-1.5 py-0.5 rounded border" :class="s.active ? 'bg-green-500/20 text-green-300 border-green-600' : 'bg-red-500/20 text-red-300 border-red-600'">
+                    {{ s.active ? t('common.status.active') : t('common.status.inactive') }}
+                  </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
+                  <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
+                  <span v-if="s.days_of_week?.length">{{ formatSeriesDays(s.days_of_week) }}</span>
+                  <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
+                  <span v-if="s.duration_minutes">⏱ {{ s.duration_minutes }}min</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <WowButton variant="primary" class="text-xs py-1.5" @click="openGenerate(s)">
+                  {{ t('series.generateEvents') }}
+                </WowButton>
+                <WowButton variant="secondary" class="text-xs py-1.5" @click="openEditSeriesModal(s)">
+                  {{ t('common.buttons.edit') }}
+                </WowButton>
+                <WowButton variant="danger" class="text-xs py-1.5 px-2" @click="confirmDeleteSeries(s)">✕</WowButton>
+              </div>
+            </div>
+          </WowCard>
+        </div>
+      </div>
+
       </template>
     </div>
 
@@ -212,12 +280,102 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Series Add/Edit modal -->
+    <WowModal v-model="showSeriesModal" :title="editingSeries ? t('series.editRecurringRaid') : t('series.newRecurringRaid')" size="md">
+      <form @submit.prevent="saveSeries" class="space-y-4">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.titleRequired') }}</label>
+          <input v-model="seriesForm.title" required :placeholder="t('series.titlePlaceholder')" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.recurrence') }}</label>
+            <select v-model="seriesForm.recurrence_rule" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="weekly">{{ t('series.weekly') }}</option>
+              <option value="biweekly">{{ t('series.biweekly') }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.startTime') }}</label>
+            <input v-model="seriesForm.start_time_local" type="time" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('series.selectDays') }}</label>
+          <div class="flex flex-wrap gap-2">
+            <label v-for="(dayName, dayKey) in dayLabels" :key="dayKey"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded border cursor-pointer transition-colors text-sm"
+              :class="seriesForm.days_of_week.includes(dayKey) ? 'bg-accent-gold/20 border-accent-gold text-accent-gold' : 'bg-bg-tertiary border-border-default text-text-muted hover:border-border-gold'"
+            >
+              <input type="checkbox" :value="dayKey" v-model="seriesForm.days_of_week" class="sr-only" />
+              {{ dayName }}
+            </label>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('series.durationMin') }}</label>
+            <input v-model.number="seriesForm.duration_minutes" type="number" min="30" max="600" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('common.status.active') }}</label>
+            <label class="flex items-center gap-2 mt-1 cursor-pointer">
+              <input v-model="seriesForm.active" type="checkbox" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <span class="text-sm text-text-primary">{{ seriesForm.active ? t('common.status.active') : t('common.status.inactive') }}</span>
+            </label>
+          </div>
+        </div>
+        <div v-if="seriesFormError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ seriesFormError }}</div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showSeriesModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="seriesSaving" @click="saveSeries">{{ editingSeries ? t('common.buttons.save') : t('common.buttons.create') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Generate events modal -->
+    <WowModal v-model="showGenerateModal" :title="t('series.generateEventsTitle')" size="sm">
+      <div class="space-y-4">
+        <p class="text-text-muted text-sm">{{ t('series.generateFromSeries', { name: generateTarget?.title }) }}</p>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('series.howManyEvents') }}</label>
+          <select v-model.number="generateCount" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <option :value="1">{{ t('series.oneEvent') }}</option>
+            <option :value="2">{{ t('series.twoEvents') }}</option>
+            <option :value="4">{{ t('series.fourEvents') }}</option>
+            <option :value="8">{{ t('series.eightEvents') }}</option>
+          </select>
+        </div>
+        <div v-if="generateResult" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">
+          ✅ {{ t('series.created') }} {{ generateResult }} {{ t('series.eventsCreated') }}
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showGenerateModal = false">{{ t('common.buttons.close') }}</WowButton>
+          <WowButton :loading="seriesSaving" @click="doGenerate">{{ t('common.buttons.generate') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Delete series confirmation -->
+    <WowModal v-model="showSeriesDeleteConfirm" :title="t('series.deleteSeries')" size="sm">
+      <p class="text-text-muted">{{ t('series.deleteRecurring') }} <strong class="text-text-primary">{{ seriesDeleteTarget?.title }}</strong>? {{ t('series.existingNotAffected') }}</p>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showSeriesDeleteConfirm = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton variant="danger" :loading="seriesSaving" @click="doDeleteSeries">{{ t('common.buttons.delete') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -230,6 +388,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useTimezone } from '@/composables/useTimezone'
 import * as templatesApi from '@/api/templates'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as seriesApi from '@/api/series'
 import { useConstantsStore } from '@/stores/constants'
 import { groupRaidDefsByExpansion } from '@/constants'
 import { useI18n } from 'vue-i18n'
@@ -240,7 +399,6 @@ const uiStore = useUiStore()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
 const constantsStore = useConstantsStore()
-const router = useRouter()
 const { t } = useI18n()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_templates'))
@@ -248,6 +406,7 @@ const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
 
 const templates = ref([])
 const raidDefinitions = ref([])
+const seriesList = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
@@ -259,7 +418,17 @@ const showDeleteConfirm = ref(false)
 const showCopyModal = ref(false)
 const showNoGuildConfirm = ref(false)
 const showRecurringPrompt = ref(false)
+const showSeriesModal = ref(false)
+const showSeriesDeleteConfirm = ref(false)
+const showGenerateModal = ref(false)
 const createdTemplateId = ref(null)
+const editingSeries = ref(null)
+const seriesDeleteTarget = ref(null)
+const generateTarget = ref(null)
+const generateCount = ref(4)
+const generateResult = ref(null)
+const seriesFormError = ref(null)
+const seriesSaving = ref(false)
 const editing = ref(null)
 const applyTarget = ref(null)
 const deleteTarget = ref(null)
@@ -267,6 +436,22 @@ const copySource = ref(null)
 const applyDate = ref('')
 
 const form = reactive({ name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
+const seriesForm = reactive({
+  title: '',
+  raid_definition_id: null,
+  default_raid_size: 25,
+  default_difficulty: 'normal',
+  recurrence_rule: 'weekly',
+  days_of_week: [],
+  start_time_local: '19:00',
+  duration_minutes: 180,
+  template_id: null,
+  active: true
+})
+const dayLabels = {
+  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu',
+  friday: 'Fri', saturday: 'Sat', sunday: 'Sun'
+}
 const applyToOtherGuilds = ref(false)
 const selectedGuildIds = ref([])
 const copyGuildIds = ref([])
@@ -335,13 +520,15 @@ async function loadData() {
   error.value = null
   noGuild.value = false
   try {
-    const [tpls, defs] = await Promise.all([
+    const [tpls, defs, seriesData] = await Promise.all([
       templatesApi.getTemplates(guildStore.currentGuild.id),
-      raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id)
+      raidDefsApi.getRaidDefinitions(guildStore.currentGuild.id),
+      seriesApi.getSeries(guildStore.currentGuild.id)
     ])
     if (version === loadVersion && isActive) {
       templates.value = tpls
       raidDefinitions.value = defs
+      seriesList.value = seriesData
     }
   } catch {
     if (version === loadVersion && isActive) error.value = t('templates.failedToLoad')
@@ -475,7 +662,12 @@ async function doApply() {
 function goToRecurring(templateId) {
   showRecurringPrompt.value = false
   const id = templateId || createdTemplateId.value
-  router.push(id ? `/guild/recurring-raids?template_id=${id}` : '/guild/recurring-raids')
+  if (id) {
+    const tpl = templates.value.find(t => t.id === id)
+    openSeriesModal(tpl || null)
+  } else {
+    openSeriesModal(null)
+  }
 }
 
 async function doDelete() {
@@ -506,5 +698,120 @@ async function doCopy() {
     uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
   }
   saving.value = false
+}
+
+function seriesForTemplate(tplId) {
+  return seriesList.value.filter(s => s.template_id === tplId)
+}
+
+const orphanSeries = computed(() => {
+  const templateIds = new Set(templates.value.map(t => t.id))
+  return seriesList.value.filter(s => !s.template_id || !templateIds.has(s.template_id))
+})
+
+function formatRecurrence(rule) {
+  if (!rule) return ''
+  if (rule.toLowerCase().includes('biweekly')) return t('series.everyTwoWeeks')
+  if (rule.toLowerCase().includes('weekly')) return t('series.everyWeek')
+  return rule
+}
+
+function formatSeriesDays(days) {
+  if (!Array.isArray(days) || !days.length) return ''
+  return days.map(d => dayLabels[d] || d).join(', ')
+}
+
+function openSeriesModal(tpl) {
+  editingSeries.value = null
+  seriesFormError.value = null
+  Object.assign(seriesForm, {
+    title: tpl?.name || '',
+    raid_definition_id: tpl?.raid_definition_id || null,
+    default_raid_size: tpl?.raid_size || 25,
+    default_difficulty: tpl?.difficulty || 'normal',
+    recurrence_rule: 'weekly',
+    days_of_week: [],
+    start_time_local: '19:00',
+    duration_minutes: 180,
+    template_id: tpl?.id || null,
+    active: true
+  })
+  showSeriesModal.value = true
+}
+
+function openEditSeriesModal(s) {
+  editingSeries.value = s
+  seriesFormError.value = null
+  Object.assign(seriesForm, {
+    title: s.title || '',
+    raid_definition_id: s.raid_definition_id || null,
+    default_raid_size: s.default_raid_size || 25,
+    default_difficulty: s.default_difficulty || 'normal',
+    recurrence_rule: s.recurrence_rule || 'weekly',
+    days_of_week: Array.isArray(s.days_of_week) ? [...s.days_of_week] : [],
+    start_time_local: s.start_time_local || '19:00',
+    duration_minutes: s.duration_minutes || 180,
+    template_id: s.template_id || null,
+    active: s.active !== false
+  })
+  showSeriesModal.value = true
+}
+
+async function saveSeries() {
+  seriesFormError.value = null
+  if (!seriesForm.title) { seriesFormError.value = t('series.toasts.titleRequired'); return }
+  seriesSaving.value = true
+  const payload = { ...seriesForm }
+  try {
+    if (editingSeries.value) {
+      const updated = await seriesApi.updateSeries(guildStore.currentGuild.id, editingSeries.value.id, payload)
+      const idx = seriesList.value.findIndex(s => s.id === editingSeries.value.id)
+      if (idx !== -1) seriesList.value[idx] = updated
+      uiStore.showToast(t('series.toasts.seriesUpdated'), 'success')
+    } else {
+      const created = await seriesApi.createSeries(guildStore.currentGuild.id, payload)
+      seriesList.value.push(created)
+      uiStore.showToast(t('series.toasts.seriesCreated', { guild: currentGuildLabel.value }), 'success')
+    }
+    showSeriesModal.value = false
+  } catch (err) {
+    seriesFormError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('common.toasts.failedToSave')
+  } finally { seriesSaving.value = false }
+}
+
+function confirmDeleteSeries(s) {
+  seriesDeleteTarget.value = s
+  showSeriesDeleteConfirm.value = true
+}
+
+async function doDeleteSeries() {
+  seriesSaving.value = true
+  try {
+    await seriesApi.deleteSeries(guildStore.currentGuild.id, seriesDeleteTarget.value.id)
+    seriesList.value = seriesList.value.filter(s => s.id !== seriesDeleteTarget.value.id)
+    showSeriesDeleteConfirm.value = false
+    uiStore.showToast(t('series.seriesDeleted'), 'success')
+  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+  finally { seriesSaving.value = false }
+}
+
+function openGenerate(s) {
+  generateTarget.value = s
+  generateCount.value = 4
+  generateResult.value = null
+  showGenerateModal.value = true
+}
+
+async function doGenerate() {
+  if (!generateTarget.value) return
+  seriesSaving.value = true
+  generateResult.value = null
+  try {
+    const events = await seriesApi.generateEvents(guildStore.currentGuild.id, generateTarget.value.id, { count: generateCount.value })
+    generateResult.value = Array.isArray(events) ? events.length : generateCount.value
+    uiStore.showToast(t('series.toasts.eventsGenerated', { count: generateResult.value }), 'success')
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'), 'error')
+  } finally { seriesSaving.value = false }
 }
 </script>

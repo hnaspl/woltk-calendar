@@ -500,7 +500,7 @@
     "subtitle": "Save recurring raid schedules as templates",
     "templateDeleted": "Template deleted",
     "templateName": "Template Name *",
-    "title": "Raid Templates",
+    "title": "Raid Planning",
     "toasts": {
       "templateUpdated": "Template updated",
       "templateCreated": "Template created in {guild}",
