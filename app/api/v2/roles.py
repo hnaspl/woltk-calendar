@@ -63,6 +63,15 @@ def my_permissions_global():
 @login_required
 def my_permissions_guild(guild_id: int):
     """Return the current user's permissions for a specific guild."""
+    # Tenant isolation: verify guild belongs to user's active tenant
+    active_tid = getattr(current_user, "active_tenant_id", None)
+    if active_tid is not None and not getattr(current_user, "is_admin", False):
+        from app.extensions import db
+        from app.models.guild import Guild
+        guild = db.session.get(Guild, guild_id)
+        if guild is not None and getattr(guild, "tenant_id", None) is not None:
+            if guild.tenant_id != active_tid:
+                return jsonify({"role": None, "permissions": []}), 200
     membership = get_membership(guild_id, current_user.id)
     perms = get_user_permissions(membership)
     role_name = membership.role if membership else None

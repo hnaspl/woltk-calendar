@@ -11,7 +11,6 @@ from app.services import attendance_service, lineup_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, get_event_or_404, validate_required
 from app.utils.decorators import require_guild_permission
-from app.utils.permissions import get_membership
 from app.utils import notify
 from app.enums import SlotGroup
 from app.i18n import _t
@@ -21,10 +20,10 @@ bp = Blueprint("attendance", __name__)
 
 @bp.get("/guilds/<int:guild_id>/events/<int:event_id>/attendance")
 @login_required
-def list_event_attendance(guild_id: int, event_id: int):
-    if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
-    event, err = get_event_or_404(guild_id, event_id)
+@require_guild_permission()
+def list_event_attendance(guild_id: int, event_id: int, membership=None):
+    event, err = get_event_or_404(guild_id, event_id,
+                                   active_tenant_id=getattr(current_user, "active_tenant_id", None))
     if err:
         return err
     records = attendance_service.list_attendance_for_event(event_id)
@@ -33,12 +32,10 @@ def list_event_attendance(guild_id: int, event_id: int):
 
 @bp.post("/guilds/<int:guild_id>/events/<int:event_id>/attendance")
 @login_required
-def record_attendance(guild_id: int, event_id: int):
-    membership = get_membership(guild_id, current_user.id)
-    from app.utils.permissions import has_permission
-    if not has_permission(membership, "record_attendance"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-    event, err = get_event_or_404(guild_id, event_id)
+@require_guild_permission("record_attendance")
+def record_attendance(guild_id: int, event_id: int, membership=None):
+    event, err = get_event_or_404(guild_id, event_id,
+                                   active_tenant_id=getattr(current_user, "active_tenant_id", None))
     if err:
         return err
     data = get_json()
@@ -71,9 +68,8 @@ def record_attendance(guild_id: int, event_id: int):
 
 @bp.get("/guilds/<int:guild_id>/attendance")
 @login_required
-def list_guild_attendance(guild_id: int):
-    if get_membership(guild_id, current_user.id) is None:
-        return jsonify({"error": _t("common.errors.forbidden")}), 403
+@require_guild_permission()
+def list_guild_attendance(guild_id: int, membership=None):
     days = request.args.get("days", type=int)
     since = None
     if days:

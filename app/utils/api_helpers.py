@@ -60,15 +60,27 @@ def get_event_or_404(guild_id: int, event_id: int, *, active_tenant_id: int | No
 
     Returns ``(event, None)`` on success or ``(None, error_response)`` when the
     event does not exist or does not belong to the guild (or tenant).
+
+    When *active_tenant_id* is not provided, the current user's
+    ``active_tenant_id`` is used automatically (if available).
     """
     from app.services import event_service
 
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return None, (jsonify({"error": _t("api.events.notFound")}), 404)
-    # Tenant isolation check
-    if active_tenant_id is not None and getattr(event, "tenant_id", None) is not None:
-        if event.tenant_id != active_tenant_id:
+
+    # Tenant isolation — auto-detect from current_user when not explicit
+    tid = active_tenant_id
+    if tid is None:
+        try:
+            from flask_login import current_user
+            tid = getattr(current_user, "active_tenant_id", None)
+        except RuntimeError:
+            pass  # Outside request context
+
+    if tid is not None and getattr(event, "tenant_id", None) is not None:
+        if event.tenant_id != tid:
             return None, (jsonify({"error": _t("api.events.notFound")}), 404)
     return event, None
 
