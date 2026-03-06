@@ -76,7 +76,6 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(meta.bp, url_prefix=f"{prefix}/meta/expansions")
     app.register_blueprint(guild_invitations.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(guild_invitations.guild_invite_accept_bp, url_prefix=f"{prefix}/guild-invite")
-    app.register_blueprint(guild_invitations.guild_discovery_bp, url_prefix=f"{prefix}/discover-guilds")
     app.register_blueprint(guild_matrix.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(guild_expansions.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(guild_realms.bp, url_prefix=f"{prefix}/guilds")

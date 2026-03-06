@@ -87,9 +87,6 @@ export const acceptGuildInvite = (token) =>
 // Guild applications
 // ---------------------------------------------------------------------------
 
-export const applyToGuild = (guildId) =>
-  api.post(`/guilds/${guildId}/apply`)
-
 export const getGuildApplications = (guildId) =>
   api.get(`/guilds/${guildId}/applications`)
 
@@ -105,13 +102,6 @@ export const declineApplication = (guildId, userId) =>
 
 export const updateGuildVisibility = (guildId, visibility) =>
   api.put(`/guilds/${guildId}/visibility`, { visibility })
-
-// ---------------------------------------------------------------------------
-// Guild discovery
-// ---------------------------------------------------------------------------
-
-export const discoverGuilds = () =>
-  api.get(`/discover-guilds/`)
 
 // ---------------------------------------------------------------------------
 // Class-role matrix

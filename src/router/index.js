@@ -94,12 +94,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/guilds/discover',
-    name: 'guild-discovery',
-    component: () => import('@/views/GuildDiscoveryView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/guild/settings',
     redirect: '/admin'
   },

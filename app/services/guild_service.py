@@ -264,23 +264,6 @@ def update_member(membership: GuildMembership, data: dict) -> GuildMembership:
 
 
 # ---------------------------------------------------------------------------
-# Guild visibility helpers
-# ---------------------------------------------------------------------------
-
-def list_visible_guilds_in_tenant(tenant_id: int) -> list[Guild]:
-    """Return all open guilds within a tenant (for guild discovery)."""
-    stmt = (
-        sa.select(Guild)
-        .where(
-            Guild.tenant_id == tenant_id,
-            Guild.visibility == GuildVisibility.OPEN.value,
-        )
-        .order_by(Guild.name.asc())
-    )
-    return list(db.session.execute(stmt).scalars().all())
-
-
-# ---------------------------------------------------------------------------
 # Guild invitations
 # ---------------------------------------------------------------------------
 

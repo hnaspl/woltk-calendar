@@ -18,8 +18,6 @@ from app.utils.decorators import require_guild_permission
 
 bp = Blueprint("guild_invitations_v2", __name__)
 guild_invite_accept_bp = Blueprint("guild_invite_accept_v2", __name__)
-guild_discovery_bp = Blueprint("guild_discovery_v2", __name__)
-
 
 # ---------------------------------------------------------------------------
 # Guild invitations (within guild admin panel)
@@ -166,33 +164,3 @@ def update_visibility(guild_id: int, membership):
     guild_service.update_guild(guild, {"visibility": vis})
     return jsonify(guild.to_dict()), 200
 
-
-# ---------------------------------------------------------------------------
-# Guild discovery (open guilds within tenant)
-# ---------------------------------------------------------------------------
-
-@guild_discovery_bp.get("/")
-@login_required
-def discover_guilds():
-    """List open guilds in the current user's active tenant."""
-    tenant_id = current_user.active_tenant_id
-    if not tenant_id:
-        return jsonify([]), 200
-    guilds = guild_service.list_visible_guilds_in_tenant(tenant_id)
-    # Annotate with is_member for the current user
-    user_guild_ids = set(guild_service.get_user_guild_ids(current_user.id))
-    result = []
-    for g in guilds:
-        d = g.to_dict()
-        d["is_member"] = g.id in user_guild_ids
-        # Check if user has a pending application
-        app_status = db.session.execute(
-            sa.select(GuildMembership.status).where(
-                GuildMembership.guild_id == g.id,
-                GuildMembership.user_id == current_user.id,
-                GuildMembership.status == MemberStatus.APPLIED.value,
-            )
-        ).scalar_one_or_none()
-        d["has_pending_application"] = app_status is not None
-        result.append(d)
-    return jsonify(result), 200

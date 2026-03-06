@@ -351,8 +351,7 @@ const navGroups = computed(() => {
         { label: t('common.labels.dashboard'), to: '/dashboard', icon: icons.dashboard },
         { label: t('common.labels.calendar'), to: '/calendar', icon: icons.calendar },
         { label: t('common.labels.characters'), to: '/characters', icon: icons.chars },
-        { label: t('common.labels.attendance'), to: '/attendance', icon: icons.attendance },
-        { label: t('guild.discoverTitle'), to: '/guilds/discover', icon: icons.search }
+        { label: t('common.labels.attendance'), to: '/attendance', icon: icons.attendance }
       ]
     }
   ]

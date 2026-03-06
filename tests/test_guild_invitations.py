@@ -248,20 +248,6 @@ class TestGuildInvitationService:
         assert not inv.is_usable
 
 
-class TestGuildVisibilityService:
-    def test_list_visible_guilds_in_tenant(self, db, guild, owner, tenant):
-        hidden = Guild(
-            name="Hidden Guild", realm_name="Icecrown", tenant_id=tenant.id,
-            created_by=owner.id, visibility=GuildVisibility.HIDDEN.value,
-        )
-        db.session.add(hidden)
-        db.session.commit()
-        guilds = guild_service.list_visible_guilds_in_tenant(tenant.id)
-        guild_names = [g.name for g in guilds]
-        assert "Test Guild" in guild_names
-        assert "Hidden Guild" not in guild_names
-
-
 class TestApplicationService:
     def test_apply_to_guild(self, db, guild, member_user):
         membership = guild_service.apply_to_guild(guild.id, member_user.id)
@@ -405,37 +391,6 @@ class TestGuildApplicationAPI:
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["status"] == "declined"
-
-
-class TestGuildDiscoveryAPI:
-    def test_discover_guilds(self, client, guild, member_user, tenant, db):
-        tm = TenantMembership(tenant_id=tenant.id, user_id=member_user.id, role="member")
-        db.session.add(tm)
-        member_user.active_tenant_id = tenant.id
-        db.session.flush()
-        _login(client, member_user)
-        resp = client.get("/api/v2/discover-guilds/")
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert len(data) >= 1
-        assert any(g["name"] == "Test Guild" for g in data)
-
-    def test_discover_guilds_hides_hidden(self, client, guild, owner, member_user, tenant, db):
-        hidden = Guild(
-            name="Secret Guild", realm_name="Icecrown", tenant_id=tenant.id,
-            created_by=owner.id, visibility=GuildVisibility.HIDDEN.value,
-        )
-        db.session.add(hidden)
-        tm = TenantMembership(tenant_id=tenant.id, user_id=member_user.id, role="member")
-        db.session.add(tm)
-        member_user.active_tenant_id = tenant.id
-        db.session.flush()
-        _login(client, member_user)
-        resp = client.get("/api/v2/discover-guilds/")
-        data = resp.get_json()
-        names = [g["name"] for g in data]
-        assert "Test Guild" in names
-        assert "Secret Guild" not in names
 
 
 class TestGuildVisibilityAPI:
