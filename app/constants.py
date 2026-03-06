@@ -124,7 +124,10 @@ def get_bench_display_limit(guild_id: int | None = None) -> int:
             if guild:
                 val = guild.settings.get("bench_display_limit")
                 if val is not None:
-                    return max(1, min(int(val), MAX_BENCH_DISPLAY_LIMIT))
+                    try:
+                        return max(1, min(int(val), MAX_BENCH_DISPLAY_LIMIT))
+                    except (ValueError, TypeError):
+                        pass
         except Exception:
             pass
     return DEFAULT_BENCH_DISPLAY_LIMIT

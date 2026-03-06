@@ -146,7 +146,7 @@ def _register_request_logging(app) -> None:
             return response
 
         access_logger.info(
-            "%s %s %s %dms",
+            "%s %s %s %.2fms",
             request.method,
             path,
             response.status_code,
