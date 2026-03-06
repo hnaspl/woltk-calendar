@@ -1378,7 +1378,7 @@
       "rosterFetchFailed": "Nie udało się pobrać rostera z armory",
       "selfJoinDisabled": "Ta gildia wymaga, aby członkowie byli dodawani ręcznie przez oficera",
       "targetNotActive": "Docelowy użytkownik nie jest aktywnym członkiem tej gildii",
-      "tenantRequired": "Workspace jest wymagany do utworzenia gildii",
+      "tenantRequired": "Panel gildii jest wymagany do utworzenia gildii",
       "userIdRequired": "user_id jest wymagane",
       "invalidVisibility": "Nieprawidłowe ustawienie widoczności",
       "notArmorySource": "Ta gildia nie jest z armory"
@@ -1448,7 +1448,7 @@
       "ownerRequired": "Tylko właściciel Panelu Gildii może wykonać tę akcję",
       "memberNotFound": "Nie znaleziono członka",
       "memberRemoved": "Członek usunięty",
-      "deleted": "Workspace usunięty",
+      "deleted": "Panel gildii usunięty",
       "invitationNotFound": "Nie znaleziono zaproszenia",
       "invitationRevoked": "Zaproszenie anulowane",
       "invalidToken": "Nieprawidłowy token zaproszenia",

@@ -238,7 +238,7 @@ class TestGuildInvitationService:
 
     def test_accept_invitation_not_tenant_member(self, db, guild, owner, member_user):
         inv = guild_service.create_guild_invitation(guild_id=guild.id, inviter_id=owner.id)
-        with pytest.raises(ValueError, match="workspace"):
+        with pytest.raises(ValueError, match="guild panel"):
             guild_service.accept_guild_invitation(inv, member_user)
 
     def test_revoke_guild_invitation(self, db, guild, owner):
