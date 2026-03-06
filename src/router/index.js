@@ -111,9 +111,7 @@ const routes = [
   },
   {
     path: '/guild/series',
-    name: 'series',
-    component: () => import('@/views/SeriesView.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/guild/templates'
   },
   {
     path: '/guild/recurring-raids',

@@ -41,3 +41,6 @@ export const duplicateEvent = (guildId, eventId, payload = {}) =>
 
 export const getEventWowhead = (guildId, eventId) =>
   api.get(`/guilds/${guildId}/events/${eventId}/wowhead`)
+
+export const sendEventToDiscord = (guildId, eventId) =>
+  api.post(`/guilds/${guildId}/events/${eventId}/discord`)

@@ -197,7 +197,7 @@ def get_event_wowhead(guild_id: int, event_id: int, membership):
     if zone_url:
         result["zone_url"] = zone_url
 
-    # Boss loot URLs
+    # Boss loot URLs with inline loot data
     bosses = WowheadPlugin.get_raid_bosses(raid_code, expansion)
     if bosses:
         result["bosses"] = [
@@ -206,14 +206,61 @@ def get_event_wowhead(guild_id: int, event_id: int, membership):
                 "npc_id": npc_id,
                 "npc_url": WowheadPlugin.get_npc_url(npc_id, expansion),
                 "loot_url": WowheadPlugin.get_boss_loot_url(npc_id, expansion),
+                "loot": WowheadPlugin.get_boss_loot(raid_code, name, expansion),
             }
             for name, npc_id in bosses.items()
         ]
+
+    # Currencies for this expansion
+    result["currencies"] = WowheadPlugin.get_raid_currencies(expansion)
 
     # Tooltip script
     result["tooltip_script"] = WowheadPlugin.get_tooltip_script_tag(expansion)
 
     return jsonify(result), 200
+
+
+@bp.post("/<int:event_id>/discord")
+@login_required
+@require_guild_permission("edit_events")
+def send_event_to_discord(guild_id: int, event_id: int, membership):
+    """Send raid event details to a Discord channel via webhook.
+
+    Uses the guild's configured discord_webhook_url from guild settings.
+    """
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+
+    from app.services import signup_service, discord_service, guild_service
+
+    guild = guild_service.get_guild(guild_id)
+    if guild is None:
+        return jsonify({"error": "Guild not found"}), 404
+
+    # Read webhook URL from guild settings
+    webhook_url = (guild.settings or {}).get("discord_webhook_url", "").strip()
+    if not webhook_url:
+        return jsonify({"error": "Discord webhook URL is not configured. Set it in Guild Settings."}), 400
+
+    signups = signup_service.list_signups(event_id)
+    signup_dicts = [s.to_dict() for s in signups]
+
+    site_url = request.host_url.rstrip("/") if request.host_url else ""
+    event_dict = event.to_dict()
+    event_dict["guild_id"] = guild_id
+
+    success = discord_service.send_raid_to_discord(
+        webhook_url=webhook_url,
+        event_data=event_dict,
+        signups=signup_dicts,
+        site_url=site_url,
+    )
+
+    if success:
+        return jsonify({"message": "Raid details sent to Discord!"}), 200
+    else:
+        return jsonify({"error": "Failed to send to Discord. Check the webhook URL in Guild Settings."}), 400
 
 
 # ---------------------------------------------------------------------------

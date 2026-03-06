@@ -362,8 +362,7 @@ const navGroups = computed(() => {
     if (canManageGuild.value) {
       guildItems.push(
         { label: t('nav.raidDefinitions'), to: '/guild/raid-definitions', icon: icons.raids },
-        { label: t('nav.templates'), to: '/guild/templates', icon: icons.templates },
-        { label: t('nav.recurringRaids'), to: '/guild/series', icon: icons.series }
+        { label: t('nav.raidPlanning'), to: '/guild/templates', icon: icons.templates }
       )
     }
     if (hasGuildAdminAccess.value) {

@@ -38,7 +38,7 @@
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
       <WowCard v-for="d in filteredDefinitions" :key="d.id">
         <div class="flex items-start gap-3 mb-3">
-          <img :src="getRaidIcon(d.raid_type)" :alt="d.raid_type" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
+          <img :src="getRaidIcon(d.code || d.raid_type)" :alt="d.name" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               <span class="font-bold text-text-primary truncate">{{ d.name }}</span>

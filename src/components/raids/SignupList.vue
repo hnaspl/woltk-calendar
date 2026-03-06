@@ -149,8 +149,40 @@
                 <!-- Bench queue position -->
                 <div v-if="signup.bench_info" class="text-xs text-yellow-400 mt-2 flex items-center gap-1">
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
-                    ⏳ Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
+                    <img :src="getRoleIcon(signup.bench_info.waiting_for)" class="w-3.5 h-3.5 rounded-sm" alt="" />
+                    Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
                   </span>
+                </div>
+                <!-- Attendance status (informational — NOT coupled with bench/queue) -->
+                <div class="flex items-center gap-2 mt-2">
+                  <img :src="getAttendanceStatusIcon(signup.attendance_status || 'going')" class="w-4 h-4 rounded-sm flex-shrink-0" :alt="ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going']" />
+                  <select
+                    v-if="canManage || isOwnSignup(signup)"
+                    :value="signup.attendance_status || 'going'"
+                    class="bg-bg-secondary border text-xs rounded px-2 py-1 outline-none transition-colors"
+                    :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).select"
+                    @change="onAttendanceStatusChange(signup, $event)"
+                  >
+                    <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                  <span v-else class="text-xs px-2 py-0.5 rounded" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
+                    {{ ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going'] }}
+                  </span>
+                  <span v-if="(signup.attendance_status === 'late') && signup.late_minutes" class="text-[10px] text-amber-300">
+                    ~{{ signup.late_minutes }} min
+                  </span>
+                  <!-- Late minutes input (shown only when changing to late) -->
+                  <input
+                    v-if="(canManage || isOwnSignup(signup)) && (signup.attendance_status === 'late') && lateMinutesTarget === signup.id"
+                    v-model.number="lateMinutesValue"
+                    type="number"
+                    min="1"
+                    max="999"
+                    placeholder="min"
+                    class="w-16 bg-bg-secondary border border-amber-500/40 text-amber-300 text-xs rounded px-2 py-1 outline-none focus:border-amber-400"
+                    @blur="saveLateMinutes(signup)"
+                    @keyup.enter="saveLateMinutes(signup)"
+                  />
                 </div>
                 <!-- Action row: View Details button + Officer actions -->
                 <div class="flex items-center gap-1 sm:gap-2 mt-3 flex-wrap">
@@ -282,15 +314,17 @@ import WowTooltip from '@/components/common/WowTooltip.vue'
 import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useGuildStore } from '@/stores/guild'
+import { useAuthStore } from '@/stores/auth'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import * as signupsApi from '@/api/signups'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
 const { classRoles } = useExpansionData()
 
 const guildStore = useGuildStore()
+const authStore = useAuthStore()
 const systemSettings = useSystemSettings()
 systemSettings.fetchSettings()
 const wowheadEnabled = computed(() => systemSettings.wowheadEnabled())
@@ -305,7 +339,7 @@ const props = defineProps({
 
 const emit = defineEmits(['signup-updated', 'signup-removed', 'signup-error'])
 
-const { getClassIcon, getProfessionIcon } = useWowIcons()
+const { getClassIcon, getProfessionIcon, getRoleIcon, getAttendanceStatusIcon } = useWowIcons()
 
 // --- Character detail modal ---
 const showCharacterModal = ref(false)
@@ -464,6 +498,51 @@ async function submitReplaceRequest() {
     emit('signup-updated', null)
   } catch (err) {
     emit('signup-error', err?.response?.data?.message ?? 'Failed to create replacement request')
+  }
+}
+
+// --- Attendance status (informational, NOT coupled with bench/queue) ---
+const lateMinutesTarget = ref(null)
+const lateMinutesValue = ref(null)
+
+function isOwnSignup(signup) {
+  return authStore.user && signup.user_id === authStore.user.id
+}
+
+async function onAttendanceStatusChange(signup, event) {
+  const newStatus = event.target.value
+  if (!props.guildId || !props.eventId) return
+
+  if (newStatus === 'late') {
+    lateMinutesTarget.value = signup.id
+    lateMinutesValue.value = signup.late_minutes || 15
+  } else {
+    lateMinutesTarget.value = null
+    lateMinutesValue.value = null
+  }
+
+  try {
+    const updated = await signupsApi.updateSignupStatus(props.guildId, props.eventId, signup.id, {
+      attendance_status: newStatus,
+      late_minutes: newStatus === 'late' ? (signup.late_minutes || 15) : undefined,
+    })
+    emit('signup-updated', updated)
+  } catch (err) {
+    emit('signup-error', err?.response?.data?.message ?? 'Failed to update status')
+  }
+}
+
+async function saveLateMinutes(signup) {
+  if (!props.guildId || !props.eventId || !lateMinutesValue.value) return
+  try {
+    const updated = await signupsApi.updateSignupStatus(props.guildId, props.eventId, signup.id, {
+      attendance_status: 'late',
+      late_minutes: lateMinutesValue.value,
+    })
+    lateMinutesTarget.value = null
+    emit('signup-updated', updated)
+  } catch (err) {
+    emit('signup-error', err?.response?.data?.message ?? 'Failed to save late minutes')
   }
 }
 </script>

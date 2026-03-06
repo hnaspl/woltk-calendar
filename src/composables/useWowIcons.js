@@ -17,6 +17,20 @@ import icon_tank from '@/assets/icons/wow/ability_warrior_defensivestance.jpg'
 import icon_healer from '@/assets/icons/wow/spell_holy_flashheal.jpg'
 import icon_dps from '@/assets/icons/wow/ability_dualwield.jpg'
 
+// Attendance status icons (WoW UI icons from Wowhead CDN)
+import icon_status_going from '@/assets/icons/wow/achievement_guildperk_honorablemention_rank2.jpg'
+import icon_status_tentative from '@/assets/icons/wow/inv_misc_questionmark.jpg'
+import icon_status_late from '@/assets/icons/wow/spell_nature_timestop.jpg'
+import icon_status_not_going from '@/assets/icons/wow/achievement_bg_killingblow_berserker.jpg'
+import icon_status_did_not_show from '@/assets/icons/wow/ability_creature_cursed_02.jpg'
+import icon_status_alt from '@/assets/icons/wow/inv_helmet_44.jpg'
+
+// Misc UI icons
+import icon_boss from '@/assets/icons/wow/inv_misc_rune_01.jpg'
+import icon_coin from '@/assets/icons/wow/inv_misc_coin_01.jpg'
+import icon_map from '@/assets/icons/wow/inv_misc_map_01.jpg'
+import icon_loot from '@/assets/icons/wow/spell_holy_borrowedtime.jpg'
+
 import raid_naxx from '@/assets/icons/wow/spell_shadow_shadesofdarkness.jpg'
 import raid_os from '@/assets/icons/wow/inv_misc_head_dragon_black.jpg'
 import raid_eoe from '@/assets/icons/wow/inv_misc_head_dragon_blue.jpg'
@@ -278,6 +292,24 @@ const PROFESSION_ICONS = {
   fishing:        prof_fishing,
 }
 
+// Attendance status icons (from WoW UI)
+const ATTENDANCE_STATUS_ICONS = {
+  going:        icon_status_going,
+  tentative:    icon_status_tentative,
+  late:         icon_status_late,
+  not_going:    icon_status_not_going,
+  did_not_show: icon_status_did_not_show,
+  alt:          icon_status_alt,
+}
+
+// Misc UI icons
+const UI_ICONS = {
+  boss: icon_boss,
+  coin: icon_coin,
+  map:  icon_map,
+  loot: icon_loot,
+}
+
 // WoW class hex colors
 const CLASS_COLORS = {
   warrior:       '#C69B6D',
@@ -391,5 +423,13 @@ export function useWowIcons() {
     return GUILD_ICON
   }
 
-  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, getProfessionIcon, getFactionIcon, getGuildIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS, PROFESSION_ICONS, FACTION_ICONS }
+  function getAttendanceStatusIcon(status) {
+    return ATTENDANCE_STATUS_ICONS[status] ?? icon_fallback
+  }
+
+  function getUiIcon(key) {
+    return UI_ICONS[key] ?? icon_fallback
+  }
+
+  return { getClassIcon, getRoleIcon, getRaidIcon, getClassColor, getSpecIcon, getProfessionIcon, getFactionIcon, getGuildIcon, getAttendanceStatusIcon, getUiIcon, CLASS_COLORS, RAID_ICONS, ROLE_ICONS, PROFESSION_ICONS, FACTION_ICONS, ATTENDANCE_STATUS_ICONS, UI_ICONS }
 }

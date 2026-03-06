@@ -210,6 +210,46 @@ def decline_signup(guild_id: int, event_id: int, signup_id: int, membership):
     return jsonify(signup.to_dict()), 200
 
 
+@bp.put("/<int:signup_id>/status")
+@login_required
+@require_guild_permission()
+def update_signup_status(guild_id: int, event_id: int, signup_id: int, membership):
+    """Update attendance status for a signup (informational only, does NOT affect bench/queue).
+
+    Players can update their own signup status; officers with manage_signups
+    can update any signup status.
+    """
+    event, err = get_event_or_404(guild_id, event_id)
+    if err:
+        return err
+
+    signup = signup_service.get_signup(signup_id)
+    if signup is None or signup.raid_event_id != event_id:
+        return jsonify({"error": _t("api.signups.signupNotFound")}), 404
+
+    if signup.user_id != current_user.id and not has_permission(membership, "manage_signups"):
+        return jsonify({"error": _t("common.errors.forbidden")}), 403
+
+    data = get_json()
+    valid_statuses = {"going", "tentative", "late", "did_not_show", "not_going", "alt"}
+    new_status = data.get("attendance_status")
+    if new_status not in valid_statuses:
+        return jsonify({"error": f"Invalid status. Must be one of: {', '.join(sorted(valid_statuses))}"}), 400
+
+    # Update only attendance_status and late_minutes — does NOT touch lineup/bench
+    signup.attendance_status = new_status
+    if new_status == "late":
+        signup.late_minutes = data.get("late_minutes")
+    else:
+        signup.late_minutes = None
+
+    from app.extensions import db
+    db.session.commit()
+
+    emit_signups_changed(event_id)
+    return jsonify(signup.to_dict()), 200
+
+
 # ---------------------------------------------------------------------------
 # Raid bans
 # ---------------------------------------------------------------------------

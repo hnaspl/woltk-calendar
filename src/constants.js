@@ -124,6 +124,34 @@ export const EVENT_STATUSES = ['draft', 'open', 'locked', 'completed', 'cancelle
 export const ATTENDANCE_OUTCOMES = ['attended', 'late', 'no_show', 'benched', 'backup']
 
 /**
+ * Signup attendance status options (informational — NOT coupled with bench/queue).
+ * Keep in sync with app/api/v2/signups.py valid_statuses set.
+ */
+export const ATTENDANCE_STATUS_OPTIONS = [
+  { value: 'going',        label: 'Going' },
+  { value: 'tentative',    label: 'Tentative' },
+  { value: 'late',         label: 'Late' },
+  { value: 'not_going',    label: 'Not Going' },
+  { value: 'alt',          label: 'Alt' },
+  { value: 'did_not_show', label: 'Did Not Show' },
+]
+
+/** Attendance status value → display label. Derived from ATTENDANCE_STATUS_OPTIONS. */
+export const ATTENDANCE_STATUS_LABEL_MAP = Object.fromEntries(
+  ATTENDANCE_STATUS_OPTIONS.map(s => [s.value, s.label])
+)
+
+/** Attendance status → Tailwind CSS classes for selects and badges. */
+export const ATTENDANCE_STATUS_STYLE = {
+  going:        { select: 'border-green-500/40 text-green-300 focus:border-green-400',  badge: 'bg-green-500/10 text-green-300 border border-green-500/30' },
+  tentative:    { select: 'border-blue-500/40 text-blue-300 focus:border-blue-400',     badge: 'bg-blue-500/10 text-blue-300 border border-blue-500/30' },
+  late:         { select: 'border-amber-500/40 text-amber-300 focus:border-amber-400',  badge: 'bg-amber-500/10 text-amber-300 border border-amber-500/30' },
+  did_not_show: { select: 'border-red-500/40 text-red-300 focus:border-red-400',        badge: 'bg-red-500/10 text-red-300 border border-red-500/30' },
+  not_going:    { select: 'border-red-500/40 text-red-300 focus:border-red-400',        badge: 'bg-red-500/10 text-red-300 border border-red-500/30' },
+  alt:          { select: 'border-purple-500/40 text-purple-300 focus:border-purple-400', badge: 'bg-purple-500/10 text-purple-300 border border-purple-500/30' },
+}
+
+/**
  * Map an armory talent-tree name to the canonical spec name.
  * Handles quirks like "Feral" → "Feral Combat".
  *

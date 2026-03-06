@@ -163,6 +163,7 @@
     "overview": "Overview",
     "profile": "Profile",
     "raidDefinitions": "Raid Definitions",
+    "raidPlanning": "Raid Planning",
     "recurringRaids": "Recurring Raids",
     "templates": "Templates"
   },
@@ -355,6 +356,8 @@
     "bossLoot": "Loot",
     "bossesAndLoot": "Bosses & Loot",
     "bossesAndDrops": "Bosses & Drops",
+    "drops": "drops",
+    "viewDropsOnWowhead": "View drops on Wowhead",
     "clickForDrops": "Click for loot table",
     "currenciesAndMats": "Currencies, skinning & materials — see zone details for full list",
     "viewZoneDetails": "Zone Details",

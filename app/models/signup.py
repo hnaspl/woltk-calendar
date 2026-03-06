@@ -41,6 +41,13 @@ class Signup(db.Model):
     )
     note: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     gear_score_note: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
+    # Informational attendance status — NOT coupled with bench/queue system
+    # Values: going, tentative, late, did_not_show, not_going, alt
+    attendance_status: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, default="going", server_default="going"
+    )
+    # Minutes late (only relevant when attendance_status == 'late')
+    late_minutes: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
@@ -82,6 +89,8 @@ class Signup(db.Model):
             "bench_info": bench_info,
             "note": self.note,
             "gear_score_note": self.gear_score_note,
+            "attendance_status": self.attendance_status or "going",
+            "late_minutes": self.late_minutes,
             "created_at": utc_iso(self.created_at),
             "updated_at": utc_iso(self.updated_at),
         }

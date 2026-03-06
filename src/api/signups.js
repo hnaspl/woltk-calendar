@@ -33,3 +33,6 @@ export const getMyReplacementRequests = (guildId, eventId) =>
 
 export const resolveReplaceRequest = (guildId, eventId, requestId, payload) =>
   api.put(`/guilds/${guildId}/events/${eventId}/signups/replace-request/${requestId}`, payload)
+
+export const updateSignupStatus = (guildId, eventId, signupId, payload) =>
+  api.put(`/guilds/${guildId}/events/${eventId}/signups/${signupId}/status`, payload)

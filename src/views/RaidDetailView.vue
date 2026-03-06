@@ -87,7 +87,8 @@
 
             <div v-if="wowheadData?.zone_url || wowheadData?.bosses?.length" class="flex-shrink-0">
               <WowButton variant="secondary" class="text-xs" @click="scrollToWowhead">
-                📖 {{ t('raidDetail.raidInfo') }}
+                <img :src="getUiIcon('loot')" class="w-4 h-4 rounded-sm inline" alt="" />
+                {{ t('raidDetail.raidInfo') }}
               </WowButton>
             </div>
 
@@ -98,6 +99,10 @@
                 {{ (event.status === 'locked' || event.is_locked) ? t('raidDetail.unlock') : t('raidDetail.lock') }}
               </WowButton>
               <WowButton variant="secondary" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
+              <WowButton variant="secondary" @click="showDiscordModal = true" title="Send to Discord">
+                <img :src="discordIcon" class="w-4 h-4 inline" alt="Discord" />
+                Discord
+              </WowButton>
               <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
                 {{ t('raidDetail.markDone') }}
               </WowButton>
@@ -293,49 +298,82 @@
         <!-- Wowhead Raid Info -->
         <WowCard v-if="wowheadData?.zone_url || wowheadData?.bosses?.length" ref="wowheadSection" class="lg:col-span-3">
           <div class="flex items-center gap-2 mb-4">
-            <span class="text-accent-gold text-lg">📖</span>
+            <img :src="getUiIcon('loot')" class="w-5 h-5 rounded-sm" alt="" />
             <h2 class="wow-heading text-base">{{ t('raidDetail.raidInfo') }}</h2>
+            <span v-if="event.raid_size" class="text-xs text-text-muted ml-1">{{ event.raid_size }}-man</span>
             <a v-if="wowheadData.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
                class="ml-auto text-xs text-accent-gold hover:text-accent-gold/80 flex items-center gap-1">
-              {{ t('raidDetail.viewOnWowhead') }} ↗
+              {{ t('raidDetail.viewOnWowhead') }}
             </a>
           </div>
 
           <!-- Zone info bar -->
           <div v-if="wowheadData.zone_url" class="flex items-center gap-3 p-3 rounded-lg bg-bg-tertiary border border-border-default mb-4">
-            <span class="text-accent-gold">🗺️</span>
+            <img :src="getUiIcon('map')" class="w-6 h-6 rounded-sm" alt="" />
             <div class="flex-1">
               <span class="text-sm text-text-primary font-medium">{{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
               <span class="text-xs text-text-muted ml-2">{{ wowheadData.expansion }}</span>
             </div>
-            <span v-if="event.raid_size" class="text-xs text-text-muted">{{ event.raid_size }}-man</span>
           </div>
 
-          <!-- Boss loot table -->
+          <!-- Boss drops (inline, no external links needed) -->
           <div v-if="wowheadData.bosses?.length">
             <h3 class="text-xs text-text-muted uppercase tracking-wider mb-3">{{ t('raidDetail.bossesAndDrops') }} ({{ wowheadData.bosses.length }})</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <a v-for="boss in wowheadData.bosses" :key="boss.npc_id"
-                 :href="boss.loot_url" target="_blank" rel="noopener noreferrer"
-                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-gold/50 hover:bg-bg-tertiary transition-colors group">
-                <div class="w-8 h-8 rounded bg-bg-tertiary border border-border-default flex items-center justify-center text-sm flex-shrink-0 group-hover:border-accent-gold/30">
-                  💀
+            <div class="space-y-2">
+              <div v-for="boss in wowheadData.bosses" :key="boss.npc_id"
+                   class="rounded-lg bg-bg-secondary border border-border-default overflow-hidden">
+                <button
+                  class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-bg-tertiary transition-colors text-left"
+                  @click="toggleBossExpand(boss.npc_id)"
+                >
+                  <img :src="getUiIcon('boss')" class="w-8 h-8 rounded border border-border-default flex-shrink-0" alt="" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm text-text-primary font-medium truncate">{{ boss.name }}</div>
+                    <div class="text-[10px] text-text-muted">
+                      {{ boss.loot?.length ?? 0 }} {{ t('raidDetail.drops') }}
+                    </div>
+                  </div>
+                  <span class="text-xs text-text-muted transition-transform" :class="expandedBosses.has(boss.npc_id) ? 'rotate-180' : ''">&#9660;</span>
+                </button>
+                <!-- Expanded loot list -->
+                <div v-if="expandedBosses.has(boss.npc_id)" class="px-3 pb-3 border-t border-border-default">
+                  <div v-if="boss.loot?.length" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
+                    <a v-for="item in boss.loot" :key="item.id"
+                       :href="`${wowheadData.wowhead_base}/item=${item.id}`"
+                       :data-wowhead="`item=${item.id}&domain=${wowheadDomain}`"
+                       target="_blank" rel="noopener noreferrer"
+                       class="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-tertiary/50 hover:bg-bg-tertiary transition-colors text-xs group">
+                      <span class="w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 text-[10px]"
+                            :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'">
+                      </span>
+                      <span class="truncate" :class="(ITEM_QUALITY_COLORS[item.quality] || {}).text || 'text-text-primary'">{{ item.name }}</span>
+                    </a>
+                  </div>
+                  <div v-else class="text-xs text-text-muted py-2 text-center">
+                    <a :href="boss.loot_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:underline">
+                      {{ t('raidDetail.viewDropsOnWowhead') }}
+                    </a>
+                  </div>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm text-text-primary font-medium truncate group-hover:text-accent-gold transition-colors">{{ boss.name }}</div>
-                  <div class="text-[10px] text-text-muted">{{ t('raidDetail.clickForDrops') }}</div>
-                </div>
-                <span class="text-xs text-accent-gold/60 group-hover:text-accent-gold flex-shrink-0">↗</span>
-              </a>
+              </div>
             </div>
           </div>
 
-          <!-- Currencies & skinning note -->
-          <div v-if="wowheadData.zone_url" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
-            <div class="flex items-center gap-2 text-xs text-text-muted">
-              <span>💰</span>
-              <span>{{ t('raidDetail.currenciesAndMats') }}</span>
-              <a :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:text-accent-gold/80 ml-auto">{{ t('raidDetail.viewZoneDetails') }} ↗</a>
+          <!-- Currencies & materials -->
+          <div v-if="wowheadData.currencies?.length || wowheadData.zone_url" class="mt-4 p-3 rounded-lg bg-bg-tertiary border border-border-default">
+            <div class="flex items-center gap-2 text-xs text-text-muted mb-2">
+              <img :src="getUiIcon('coin')" class="w-4 h-4 rounded-sm" alt="" />
+              <span class="font-medium text-text-primary">{{ t('raidDetail.currenciesAndMats') }}</span>
+            </div>
+            <div v-if="wowheadData.currencies?.length" class="flex flex-wrap gap-2">
+              <span v-for="cur in wowheadData.currencies" :key="cur.name" class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-bg-secondary rounded border border-border-default">
+                {{ cur.name }}
+              </span>
+            </div>
+            <div v-else class="text-xs text-text-muted">
+              <a v-if="wowheadData.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer" class="text-accent-gold hover:underline">
+                {{ t('raidDetail.viewZoneDetails') }}
+              </a>
             </div>
           </div>
         </WowCard>
@@ -449,6 +487,31 @@
       :event-id="event?.id"
       @saved="onAttendanceSaved"
     />
+
+    <!-- Discord Webhook Modal -->
+    <WowModal v-model="showDiscordModal" title="Send to Discord" size="sm">
+      <div class="space-y-4">
+        <p class="text-sm text-text-muted">
+          Send this raid's details, lineup, and composition to your guild's Discord channel.
+        </p>
+        <p v-if="!guildHasDiscordWebhook" class="text-xs text-amber-300 bg-amber-900/20 border border-amber-700 rounded px-3 py-2">
+          Discord webhook URL is not configured. Set it in Guild Settings before sending.
+        </p>
+        <div v-if="discordError" class="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded px-3 py-2">
+          {{ discordError }}
+        </div>
+        <div v-if="discordSuccess" class="text-xs text-green-400 bg-green-900/20 border border-green-800 rounded px-3 py-2">
+          Raid details sent to Discord!
+        </div>
+        <div class="flex justify-end gap-2">
+          <WowButton variant="secondary" @click="showDiscordModal = false">Cancel</WowButton>
+          <WowButton variant="primary" :disabled="!guildHasDiscordWebhook || discordSending" @click="sendToDiscord">
+            <img :src="discordIcon" class="w-4 h-4 inline" alt="" />
+            {{ discordSending ? 'Sending...' : 'Send' }}
+          </WowButton>
+        </div>
+      </div>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -476,7 +539,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ITEM_QUALITY_COLORS } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
@@ -485,6 +548,7 @@ import * as raidDefsApi from '@/api/raidDefinitions'
 import * as attendanceApi from '@/api/attendance'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const route = useRoute()
 const router = useRouter()
@@ -492,7 +556,7 @@ const guildStore = useGuildStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const permissions = usePermissions()
-const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
+const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon, getUiIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
 const { formatDateTime } = useFormatting()
@@ -518,6 +582,15 @@ const confirmCancel = ref(false)
 const showEditModal = ref(false)
 const showLeaveModal = ref(false)
 const showAttendanceModal = ref(false)
+const showDiscordModal = ref(false)
+const discordSending = ref(false)
+const discordError = ref(null)
+const discordSuccess = ref(false)
+
+const guildHasDiscordWebhook = computed(() => {
+  const settings = guildStore.currentGuild?.settings
+  return !!(settings && settings.discord_webhook_url)
+})
 const hasAttendance = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
@@ -592,11 +665,25 @@ const mySignedUpCharacterIds = computed(() =>
 const bans = ref([])
 const wowheadData = ref(null)
 const wowheadSection = ref(null)
+const expandedBosses = ref(new Set())
 
 function scrollToWowhead() {
   wowheadSection.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     ?? wowheadSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+function toggleBossExpand(npcId) {
+  const s = new Set(expandedBosses.value)
+  if (s.has(npcId)) s.delete(npcId)
+  else s.add(npcId)
+  expandedBosses.value = s
+}
+
+const wowheadDomain = computed(() => {
+  const exp = wowheadData.value?.expansion
+  const domainMap = { classic: 'classic', tbc: 'tbc', wotlk: 'wotlk', cata: 'cata' }
+  return domainMap[exp] || ''
+})
 
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)
@@ -991,8 +1078,46 @@ async function loadWowheadData() {
   if (!guildId.value || !event.value?.id) return
   try {
     wowheadData.value = await eventsApi.getEventWowhead(guildId.value, event.value.id)
+    // Inject Wowhead tooltip script for item hover previews
+    if (wowheadData.value?.tooltip_script) {
+      injectWowheadTooltips(wowheadData.value.expansion)
+    }
   } catch {
     // Wowhead data is optional
+  }
+}
+
+function injectWowheadTooltips(expansion) {
+  // Prevent duplicate injection
+  if (document.getElementById('wowhead-tooltip-config')) return
+  const domainMap = { classic: 'classic', tbc: 'tbc', wotlk: 'wotlk', cata: 'cata' }
+  const domain = domainMap[expansion] || 'wow'
+  // Config script
+  const config = document.createElement('script')
+  config.id = 'wowhead-tooltip-config'
+  config.textContent = 'const whTooltips = {colorLinks: true, iconizeLinks: true, renameLinks: true};'
+  document.head.appendChild(config)
+  // Main script
+  const main = document.createElement('script')
+  main.src = `https://wow.zamimg.com/js/${domain}.js`
+  main.async = true
+  document.head.appendChild(main)
+}
+
+// --- Discord webhook ---
+async function sendToDiscord() {
+  if (!guildId.value || !event.value?.id) return
+  discordSending.value = true
+  discordError.value = null
+  discordSuccess.value = false
+  try {
+    await eventsApi.sendEventToDiscord(guildId.value, event.value.id)
+    discordSuccess.value = true
+    setTimeout(() => { showDiscordModal.value = false; discordSuccess.value = false }, 2000)
+  } catch (err) {
+    discordError.value = err?.response?.data?.error ?? 'Failed to send to Discord'
+  } finally {
+    discordSending.value = false
   }
 }
 

@@ -305,3 +305,104 @@ def get_or_create_discord_user(discord_info: dict) -> User:
     tenant_service.create_tenant(owner=user)
 
     return user
+
+
+# ---------------------------------------------------------------------------
+# Discord Webhook: Send raid details to a Discord channel
+# ---------------------------------------------------------------------------
+
+def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, site_url: str = "") -> bool:
+    """Send a rich embed about a raid event to a Discord channel via webhook.
+
+    Parameters
+    ----------
+    webhook_url : str
+        Discord webhook URL (https://discord.com/api/webhooks/...).
+    event_data : dict
+        Raid event data (title, starts_at_utc, raid_type, raid_size, etc.)
+    signups : list[dict]
+        List of signup dicts with character info and lineup_status.
+    site_url : str
+        Base URL for generating links to the raid on the site.
+
+    Returns True on success, False on failure.
+    """
+    if not webhook_url or not webhook_url.startswith("https://discord.com/api/webhooks/"):
+        logger.warning("Invalid Discord webhook URL")
+        return False
+
+    # Build signup summary
+    going = [s for s in signups if s.get("lineup_status") == "going"]
+    bench = [s for s in signups if s.get("lineup_status") == "bench"]
+
+    # Group going by role
+    role_groups = {}
+    for s in going:
+        role = s.get("chosen_role", "unknown")
+        char_name = s.get("character", {}).get("name", "Unknown")
+        class_name = s.get("character", {}).get("class_name", "")
+        if role not in role_groups:
+            role_groups[role] = []
+        role_groups[role].append(f"{char_name} ({class_name})")
+
+    role_labels = {
+        "main_tank": "🛡️ Main Tank",
+        "off_tank": "🛡️ Off Tank",
+        "healer": "💚 Healer",
+        "melee_dps": "⚔️ Melee DPS",
+        "range_dps": "🏹 Range DPS",
+    }
+
+    fields = []
+    for role, players in role_groups.items():
+        label = role_labels.get(role, role)
+        value = "\n".join(players[:10])
+        if len(players) > 10:
+            value += f"\n... and {len(players) - 10} more"
+        fields.append({"name": f"{label} ({len(players)})", "value": value or "-", "inline": True})
+
+    if bench:
+        bench_names = [s.get("character", {}).get("name", "?") for s in bench[:5]]
+        bench_text = ", ".join(bench_names)
+        if len(bench) > 5:
+            bench_text += f" +{len(bench) - 5} more"
+        fields.append({"name": f"⏳ Bench ({len(bench)})", "value": bench_text, "inline": False})
+
+    title = event_data.get("title", "Raid Event")
+    raid_size = event_data.get("raid_size", "")
+    starts = event_data.get("starts_at_utc", "")
+
+    description_parts = []
+    if starts:
+        description_parts.append(f"📅 **Starts:** {starts}")
+    if raid_size:
+        description_parts.append(f"👥 **Size:** {raid_size}-man")
+    description_parts.append(f"📝 **Signups:** {len(going)} going, {len(bench)} bench, {len(signups)} total")
+
+    if event_data.get("instructions"):
+        description_parts.append(f"\n📋 {event_data['instructions']}")
+
+    embed = {
+        "title": f"⚔️ {title}",
+        "description": "\n".join(description_parts),
+        "color": 0xFFD100,  # Gold color matching the site theme
+        "fields": fields,
+        "footer": {"text": "Raid Calendar"},
+    }
+
+    if site_url and event_data.get("id") and event_data.get("guild_id"):
+        embed["url"] = f"{site_url}/raids/{event_data['id']}"
+
+    payload = {
+        "embeds": [embed],
+    }
+
+    try:
+        resp = requests.post(webhook_url, json=payload, timeout=10)
+        if resp.status_code in (200, 204):
+            return True
+        logger.warning("Discord webhook failed: %s %s", resp.status_code, resp.text[:200])
+        return False
+    except Exception as exc:
+        logger.warning("Discord webhook error: %s", exc)
+        return False

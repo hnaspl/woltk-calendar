@@ -161,6 +161,7 @@
     "overview": "Przegląd",
     "profile": "Profil",
     "raidDefinitions": "Definicje rajdów",
+    "raidPlanning": "Planowanie rajdów",
     "recurringRaids": "Rajdy cykliczne",
     "templates": "Szablony"
   },
@@ -352,6 +353,8 @@
     "bossLoot": "Łupy",
     "bossesAndLoot": "Bossowie i łupy",
     "bossesAndDrops": "Bossowie i łupy",
+    "drops": "łupów",
+    "viewDropsOnWowhead": "Zobacz łupy na Wowhead",
     "clickForDrops": "Kliknij po tabelę łupów",
     "currenciesAndMats": "Waluty, skórowanie i materiały — szczegóły w informacjach o strefie",
     "viewZoneDetails": "Szczegóły strefy",

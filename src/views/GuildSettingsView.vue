@@ -48,6 +48,31 @@
           </form>
         </WowCard>
 
+        <!-- Discord Integration -->
+        <WowCard>
+          <div class="flex items-center gap-2 mb-4">
+            <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
+            <h2 class="wow-heading text-base">Discord Integration</h2>
+          </div>
+          <form @submit.prevent="saveDiscordWebhook" class="space-y-4 max-w-lg">
+            <div>
+              <label class="block text-xs text-text-muted mb-1">Webhook URL</label>
+              <input
+                v-model="discordWebhookUrl"
+                type="url"
+                placeholder="https://discord.com/api/webhooks/..."
+                class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+              />
+              <p class="text-[10px] text-text-muted mt-1">
+                Create a webhook in your Discord server: Server Settings &rarr; Integrations &rarr; Webhooks. Raid details can be sent to this channel from each raid event view.
+              </p>
+            </div>
+            <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
+            <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">Discord webhook saved!</div>
+            <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+          </form>
+        </WowCard>
+
         <!-- Armory Guild Lookup -->
         <WowCard>
           <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.armoryInfo') }}</h2>
@@ -245,6 +270,7 @@ import api from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useExpansionStore } from '@/stores/expansion'
 import { useConstantsStore } from '@/stores/constants'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const guildStore = useGuildStore()
 const uiStore = useUiStore()
@@ -263,6 +289,12 @@ const members = ref([])
 const showKickConfirm = ref(false)
 const kickTarget = ref(null)
 const allRoles = ref([])
+
+// Discord webhook
+const discordWebhookUrl = ref('')
+const discordSaving = ref(false)
+const discordSaveError = ref(null)
+const discordSaveSuccess = ref(false)
 
 const form = reactive({ name: '', realm: '', description: '', expansion_id: null })
 const guildRealmNames = ref([])
@@ -321,6 +353,7 @@ async function loadGuildData() {
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
+      discordWebhookUrl.value = (g.settings || {}).discord_webhook_url || ''
       await Promise.all([
         guildStore.fetchMembers(g.id),
         fetchRoles(),
@@ -437,6 +470,26 @@ async function saveGuild() {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
     saving.value = false
+  }
+}
+
+async function saveDiscordWebhook() {
+  discordSaveError.value = null
+  discordSaveSuccess.value = false
+  discordSaving.value = true
+  try {
+    const currentSettings = guildStore.currentGuild?.settings || {}
+    const newSettings = { ...currentSettings, discord_webhook_url: discordWebhookUrl.value.trim() }
+    const updated = await guildsApi.updateGuild(guildStore.currentGuild.id, {
+      settings_json: JSON.stringify(newSettings),
+    })
+    guildStore.currentGuild = updated
+    discordSaveSuccess.value = true
+    setTimeout(() => { discordSaveSuccess.value = false }, 3000)
+  } catch (err) {
+    discordSaveError.value = err?.response?.data?.message ?? 'Failed to save'
+  } finally {
+    discordSaving.value = false
   }
 }
 

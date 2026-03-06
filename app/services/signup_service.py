@@ -285,7 +285,8 @@ def update_signup(signup: Signup, data: dict) -> Signup:
     if new_role_val and new_role_val != old_role:
         _validate_class_role(signup.character_id, new_role_val)
 
-    allowed = {"chosen_spec", "chosen_role", "note", "gear_score_note"}
+    allowed = {"chosen_spec", "chosen_role", "note", "gear_score_note",
+               "attendance_status", "late_minutes"}
     for key, value in data.items():
         if key in allowed:
             setattr(signup, key, value)
