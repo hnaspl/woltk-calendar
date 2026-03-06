@@ -87,6 +87,22 @@ def upgrade_to_tenant():
     return jsonify(tenant.to_dict()), 201
 
 
+@bp.get("/resolve-subdomain")
+def resolve_subdomain():
+    """Return the tenant resolved from the current subdomain (if any).
+
+    Uses the ``g.tenant_from_subdomain`` value set by the
+    ``resolve_tenant_from_subdomain`` before-request middleware.
+    No authentication required — this is how anonymous visitors
+    discover which tenant a subdomain belongs to.
+    """
+    from flask import g as flask_g
+    tenant = getattr(flask_g, "tenant_from_subdomain", None)
+    if tenant:
+        return jsonify(tenant.to_dict()), 200
+    return jsonify(None), 200
+
+
 @bp.get("/<int:tenant_id>/usage")
 @login_required
 def get_tenant_usage(tenant_id: int):

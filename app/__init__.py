@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 
-from flask import Flask, jsonify, send_from_directory, session
+from flask import Flask, g, jsonify, request, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
@@ -100,6 +100,42 @@ def create_app(config_override: dict | None = None) -> Flask:
     @app.before_request
     def make_session_permanent():
         session.permanent = True
+
+    @app.before_request
+    def resolve_tenant_from_subdomain():
+        """Resolve tenant from subdomain in the Host header.
+
+        If the app is accessed via ``<slug>.example.com``, look up the
+        tenant by slug and store it in ``g.tenant_from_subdomain``.
+        The frontend or API can use this to auto-switch context.
+
+        Requires ``APP_DOMAIN`` env-var (e.g. ``example.com``) to know
+        which part of the host is the base domain.
+        """
+        g.tenant_from_subdomain = None
+        base_domain = app.config.get("APP_DOMAIN") or os.environ.get("APP_DOMAIN", "")
+        if not base_domain:
+            return  # Subdomain routing not configured
+
+        host = request.host  # e.g. "my-guild.example.com" or "example.com:5000"
+        # Strip port for comparison
+        host_without_port = host.split(":")[0]
+        base_without_port = base_domain.split(":")[0]
+
+        if not host_without_port.endswith(f".{base_without_port}"):
+            return  # Not a subdomain request
+
+        subdomain = host_without_port[: -(len(base_without_port) + 1)]
+        if not subdomain or "." in subdomain:
+            return  # Empty or multi-level subdomain
+
+        from app.services import tenant_service
+        if tenant_service._is_reserved(subdomain):
+            return  # Reserved name — ignore silently
+
+        tenant = tenant_service.get_tenant_by_slug(subdomain)
+        if tenant and tenant.is_active:
+            g.tenant_from_subdomain = tenant
 
     @login_manager.user_loader
     def load_user(user_id: str):
@@ -314,6 +350,14 @@ def _seed_system_settings_if_missing() -> int:
         "wowhead_tooltips": "true",
         "autosync_enabled": "true",
         "autosync_interval_minutes": "60",
+        # Password policy – all enabled by default
+        "password_min_length": "8",
+        "password_require_uppercase": "true",
+        "password_require_lowercase": "true",
+        "password_require_digit": "true",
+        "password_require_special": "true",
+        # Email activation – enabled by default
+        "email_activation_required": "true",
     }
     seeded = 0
     for key, default_value in defaults.items():

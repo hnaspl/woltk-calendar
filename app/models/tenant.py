@@ -26,10 +26,11 @@ class Tenant(db.Model):
     __tablename__ = "tenants"
     __table_args__ = (
         sa.Index("ix_tenants_slug", "slug"),
+        sa.Index("ix_tenants_name", "name"),
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(100), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     slug: Mapped[str] = mapped_column(sa.String(100), unique=True, nullable=False)
     owner_id: Mapped[int] = mapped_column(

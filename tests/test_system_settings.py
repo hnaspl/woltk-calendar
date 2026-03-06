@@ -16,7 +16,7 @@ class TestSystemSettingsSeeding:
         from app import _seed_system_settings_if_missing
 
         seeded = _seed_system_settings_if_missing()
-        assert seeded == 3
+        assert seeded == 9
 
         wh = db.session.get(SystemSetting, "wowhead_tooltips")
         assert wh is not None
@@ -29,6 +29,21 @@ class TestSystemSettingsSeeding:
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai is not None
         assert ai.value == "60"
+
+        # Password policy defaults – all enabled
+        for key in ("password_require_uppercase", "password_require_lowercase",
+                    "password_require_digit", "password_require_special"):
+            setting = db.session.get(SystemSetting, key)
+            assert setting is not None, f"{key} was not seeded"
+            assert setting.value == "true", f"{key} should default to true"
+
+        ml = db.session.get(SystemSetting, "password_min_length")
+        assert ml is not None
+        assert ml.value == "8"
+
+        ea = db.session.get(SystemSetting, "email_activation_required")
+        assert ea is not None
+        assert ea.value == "true"
 
     def test_seed_does_not_overwrite_existing(self, app, ctx):
         """Re-seeding must NOT overwrite user-modified values."""
@@ -69,7 +84,7 @@ class TestSystemSettingsSeeding:
         db.session.commit()
 
         seeded = _seed_system_settings_if_missing()
-        assert seeded == 2, "Should seed only the 2 missing settings"
+        assert seeded == 8, "Should seed only the 8 missing settings"
 
         # The existing one should be preserved
         wh = db.session.get(SystemSetting, "wowhead_tooltips")

@@ -26,6 +26,34 @@ MAX_INVITATION_EXPIRY_DAYS = 30
 
 
 # ---------------------------------------------------------------------------
+# Reserved names — disallowed as tenant slugs and names (subdomains)
+# ---------------------------------------------------------------------------
+
+RESERVED_SLUGS: frozenset[str] = frozenset({
+    # Common infrastructure / system subdomains
+    "admin", "administrator", "api", "app", "auth", "autoconfig",
+    "autodiscover", "billing", "blog", "calendar", "cdn", "cpanel",
+    "dashboard", "db", "debug", "demo", "dev", "docs", "email",
+    "ftp", "git", "grafana", "help", "imap", "info", "internal",
+    "localhost", "login", "logout", "mail", "manage", "monitor",
+    "mx", "ns", "ns1", "ns2", "panel", "pop", "pop3", "postmaster",
+    "prometheus", "proxy", "register", "root", "server", "settings",
+    "shop", "signup", "smtp", "socket", "ssl", "staging", "static",
+    "status", "support", "sys", "system", "test", "webmail", "wpad",
+    "ws", "wss", "www", "www1", "www2",
+    # Application-specific
+    "guild", "guilds", "raid", "raids", "workspace", "tenant",
+    "tenants", "invite", "invites", "character", "characters",
+    "event", "events", "user", "users", "owner", "member",
+})
+
+
+def _is_reserved(slug: str) -> bool:
+    """Return True if the slug is in the reserved names list."""
+    return slug.lower().strip() in RESERVED_SLUGS
+
+
+# ---------------------------------------------------------------------------
 # Slug generation
 # ---------------------------------------------------------------------------
 
@@ -34,19 +62,32 @@ def _slugify(text: str) -> str:
     slug = text.lower().strip()
     slug = re.sub(r"[^a-z0-9]+", "-", slug)
     slug = slug.strip("-")
-    return slug or "workspace"
+    return slug or "my-guild-hub"
 
 
 def _ensure_unique_slug(base_slug: str) -> str:
-    """Append a suffix if slug already exists."""
+    """Append a suffix if slug already exists or is reserved."""
     slug = base_slug
     counter = 0
-    while db.session.execute(
-        sa.select(Tenant).where(Tenant.slug == slug)
-    ).scalar_one_or_none() is not None:
+    while (
+        _is_reserved(slug)
+        or db.session.execute(
+            sa.select(Tenant).where(Tenant.slug == slug)
+        ).scalar_one_or_none() is not None
+    ):
         counter += 1
         slug = f"{base_slug}-{counter}"
     return slug
+
+
+def _validate_name_unique(name: str, exclude_id: int | None = None) -> None:
+    """Raise ValueError if tenant name is already taken (case-insensitive)."""
+    query = sa.select(Tenant).where(sa.func.lower(Tenant.name) == name.lower().strip())
+    if exclude_id is not None:
+        query = query.where(Tenant.id != exclude_id)
+    existing = db.session.execute(query).scalar_one_or_none()
+    if existing:
+        raise ValueError(_t("tenant.errors.nameTaken"))
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +114,13 @@ def create_tenant(
     if existing:
         raise ValueError(_t("tenant.errors.alreadyOwns"))
 
-    tenant_name = name or f"{owner.username}'s Workspace"
+    tenant_name = name or f"{owner.username}'s Guild Hub"
+    _validate_name_unique(tenant_name)
+
+    # Validate explicit slug against reserved list
+    if slug and _is_reserved(_slugify(slug)):
+        raise ValueError(_t("tenant.errors.reservedSlug"))
+
     tenant_slug = _ensure_unique_slug(slug or _slugify(tenant_name))
 
     # Look up default free plan for limits
@@ -131,13 +178,19 @@ def get_tenant_by_slug(slug: str) -> Optional[Tenant]:
 
 def update_tenant(tenant: Tenant, data: dict) -> Tenant:
     """Update tenant fields (owner or admin only)."""
-    allowed = {"name", "description", "settings_json"}
+    allowed = {"description", "settings_json"}
     for key, value in data.items():
         if key in allowed and value is not None:
             setattr(tenant, key, value)
-    # Handle slug separately (must be unique)
+    # Handle name separately (must be unique)
+    if "name" in data and data["name"] and data["name"] != tenant.name:
+        _validate_name_unique(data["name"], exclude_id=tenant.id)
+        tenant.name = data["name"]
+    # Handle slug separately (must be unique and not reserved)
     if "slug" in data and data["slug"]:
         new_slug = _slugify(data["slug"])
+        if _is_reserved(new_slug):
+            raise ValueError(_t("tenant.errors.reservedSlug"))
         existing = db.session.execute(
             sa.select(Tenant).where(Tenant.slug == new_slug, Tenant.id != tenant.id)
         ).scalar_one_or_none()
@@ -332,10 +385,14 @@ def list_all_tenants() -> list[Tenant]:
 
 def admin_update_tenant(tenant: Tenant, data: dict) -> Tenant:
     """Update tenant as global admin (includes plan, limits, active status)."""
-    admin_allowed = {"name", "description", "plan", "max_guilds", "max_members", "is_active"}
+    admin_allowed = {"description", "plan", "max_guilds", "max_members", "is_active"}
     for key, value in data.items():
         if key in admin_allowed and value is not None:
             setattr(tenant, key, value)
+    # Handle name separately (must be unique)
+    if "name" in data and data["name"] and data["name"] != tenant.name:
+        _validate_name_unique(data["name"], exclude_id=tenant.id)
+        tenant.name = data["name"]
     db.session.commit()
     return tenant
 
