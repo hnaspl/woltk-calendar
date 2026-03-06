@@ -37,7 +37,7 @@
       <div v-else class="space-y-3">
         <WowCard v-for="tpl in templates" :key="tpl.id">
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-            <div class="w-12 h-12 rounded border border-border-default bg-bg-tertiary flex items-center justify-center text-xl flex-shrink-0">📋</div>
+            <img :src="getRaidIcon(tpl.raid_definition?.code || tpl.raid_type)" :alt="tpl.name" class="w-12 h-12 rounded border border-border-default bg-bg-tertiary flex-shrink-0 object-cover" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-bold text-text-primary">{{ tpl.name }}</span>
@@ -74,10 +74,10 @@
                   </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
-                  <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
+                  <span v-if="s.recurrence_rule">{{ formatRecurrence(s.recurrence_rule) }}</span>
                   <span v-if="s.days_of_week?.length">{{ formatSeriesDays(s.days_of_week) }}</span>
-                  <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
-                  <span v-if="s.duration_minutes">⏱ {{ s.duration_minutes }}min</span>
+                  <span v-if="s.start_time_local">{{ s.start_time_local }}</span>
+                  <span v-if="s.duration_minutes">{{ s.duration_minutes }}min</span>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 flex-wrap">
@@ -96,12 +96,12 @@
 
       <!-- Orphan Recurring Raids section -->
       <div v-if="!loading && orphanSeries.length" class="mt-6">
-        <h2 class="wow-heading text-lg mb-3">🔁 {{ t('series.title') }}</h2>
+        <h2 class="wow-heading text-lg mb-3">{{ t('series.title') }}</h2>
         <p class="text-text-muted text-xs mb-3">Recurring schedules not linked to any template</p>
         <div class="space-y-2">
           <WowCard v-for="s in orphanSeries" :key="s.id">
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-              <div class="w-10 h-10 rounded border border-border-default bg-bg-tertiary flex items-center justify-center text-lg flex-shrink-0">🔁</div>
+              <img :src="getRaidIcon(s.raid_definition?.code || s.raid_type)" :alt="s.title" class="w-10 h-10 rounded border border-border-default bg-bg-tertiary flex-shrink-0 object-cover" />
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-bold text-text-primary">{{ s.title }}</span>
@@ -112,10 +112,10 @@
                   </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
-                  <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
+                  <span v-if="s.recurrence_rule">{{ formatRecurrence(s.recurrence_rule) }}</span>
                   <span v-if="s.days_of_week?.length">{{ formatSeriesDays(s.days_of_week) }}</span>
-                  <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
-                  <span v-if="s.duration_minutes">⏱ {{ s.duration_minutes }}min</span>
+                  <span v-if="s.start_time_local">{{ s.start_time_local }}</span>
+                  <span v-if="s.duration_minutes">{{ s.duration_minutes }}min</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
@@ -145,7 +145,6 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="form.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onTemplateRaidDefChange">
-            <option value="" disabled>{{ t('calendar.selectRaid') }}</option>
             <template v-for="group in templateRaidDefsByExpansion" :key="group.expansion">
               <optgroup :label="group.label">
                 <option v-for="d in group.defs" :key="d.id" :value="d.id">{{ d.name }} ({{ d.default_raid_size ?? d.size }}-man)</option>
@@ -392,6 +391,7 @@ import * as seriesApi from '@/api/series'
 import { useConstantsStore } from '@/stores/constants'
 import { groupRaidDefsByExpansion } from '@/constants'
 import { useI18n } from 'vue-i18n'
+import { useWowIcons } from '@/composables/useWowIcons'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
@@ -400,6 +400,7 @@ const permissions = usePermissions()
 const tzHelper = useTimezone()
 const constantsStore = useConstantsStore()
 const { t } = useI18n()
+const { getRaidIcon } = useWowIcons()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_templates'))
 const hasMultipleGuilds = computed(() => guildStore.guilds.length > 1)
@@ -554,7 +555,10 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
 
 function openAddModal() {
   editing.value = null
-  Object.assign(form, { name: '', raid_definition_id: '', raid_size: 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
+  const firstDef = raidDefinitions.value[0]
+  const firstId = firstDef?.id ?? ''
+  Object.assign(form, { name: '', raid_definition_id: firstId, raid_size: firstDef?.default_raid_size ?? 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null })
+  if (firstId) onTemplateRaidDefChange()
   applyToOtherGuilds.value = false
   selectedGuildIds.value = []
   formError.value = null; showModal.value = true

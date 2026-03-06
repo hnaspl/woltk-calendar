@@ -98,6 +98,35 @@
         />
       </div>
 
+      <!-- Attendance status (informational — NOT coupled with bench/queue) -->
+      <div v-if="form.characterId && roles.length > 0">
+        <label class="block text-xs text-text-muted mb-1">{{ t('signup.attendanceStatus') || 'Status' }}</label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="opt in ATTENDANCE_STATUS_OPTIONS"
+            :key="opt.value"
+            type="button"
+            class="flex-1 min-w-[4rem] flex flex-col items-center gap-0.5 py-2 rounded border text-xs transition-all"
+            :class="form.attendanceStatus === opt.value
+              ? (ATTENDANCE_STATUS_STYLE[opt.value] || {}).select || 'bg-accent-gold/10 border-accent-gold text-accent-gold'
+              : 'border-border-default text-text-muted hover:border-border-gold hover:text-text-primary'"
+            @click="form.attendanceStatus = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+        <!-- Late minutes input -->
+        <div v-if="form.attendanceStatus === 'late'" class="mt-2 flex items-center gap-2">
+          <input
+            v-model.number="form.lateMinutes"
+            type="number" min="1" max="120" step="5"
+            placeholder="Minutes late"
+            class="w-28 bg-bg-tertiary border border-amber-500/40 text-amber-300 rounded px-2 py-1 text-xs outline-none focus:border-amber-400"
+          />
+          <span class="text-[10px] text-text-muted">minutes late</span>
+        </div>
+      </div>
+
       <WowButton v-if="!form.characterId || roles.length > 0" type="submit" :loading="submitting" class="w-full">
         {{ existingSignup ? t('signup.updateSignup') : t('signup.title') }}
       </WowButton>
@@ -149,7 +178,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as guildExpansionsApi from '@/api/guild_expansions'
@@ -272,7 +301,7 @@ const isCharBanned = computed(() => {
   return form.characterId && props.bannedCharacterIds.includes(Number(form.characterId))
 })
 
-const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '' }
+const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '', attendanceStatus: 'going', lateMinutes: null }
 
 const form = reactive({ ...INITIAL_FORM })
 
@@ -329,6 +358,8 @@ watch(
       form.chosenRole  = s.chosen_role   ?? ''
       form.chosenSpec  = s.chosen_spec   ?? ''
       form.note        = s.note          ?? ''
+      form.attendanceStatus = s.attendance_status ?? 'going'
+      form.lateMinutes = s.late_minutes ?? null
     } else {
       // Reset form when editing ends so spec doesn't persist from previous character
       Object.assign(form, INITIAL_FORM)
@@ -349,7 +380,9 @@ async function handleSubmit() {
     character_id: form.characterId,
     chosen_role:  form.chosenRole,
     chosen_spec:  form.chosenSpec || undefined,
-    note:         form.note || undefined
+    note:         form.note || undefined,
+    attendance_status: form.attendanceStatus || 'going',
+    late_minutes: form.attendanceStatus === 'late' ? (form.lateMinutes || undefined) : undefined
   }
 
   // Auto-bench when player knowingly selects a full role

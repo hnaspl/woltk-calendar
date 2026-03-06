@@ -200,7 +200,35 @@
                           </span>
                         </div>
                       </div>
-                      <div class="flex flex-col gap-1 flex-shrink-0">
+                      <div class="flex flex-col gap-1.5 flex-shrink-0">
+                        <!-- Attendance status dropdown -->
+                        <select
+                          v-if="event.status === 'open' || event.status === 'draft'"
+                          :value="s.attendance_status || 'going'"
+                          class="text-[10px] pl-1.5 pr-5 py-1 rounded border bg-bg-secondary outline-none cursor-pointer appearance-auto"
+                          :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
+                          @change="updateMyAttendanceStatus(s, $event.target.value)"
+                        >
+                          <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <span v-else class="text-[10px] px-1.5 py-0.5 rounded text-center"
+                              :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
+                          {{ ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going'] || 'Going' }}
+                        </span>
+                        <!-- Late minutes input -->
+                        <div v-if="s.attendance_status === 'late' && (event.status === 'open' || event.status === 'draft')" class="flex items-center gap-1">
+                          <input
+                            type="number" min="1" max="120" step="5"
+                            :value="s.late_minutes || ''"
+                            placeholder="min"
+                            class="w-14 text-[10px] px-1.5 py-0.5 bg-bg-tertiary border border-amber-500/40 text-amber-300 rounded outline-none"
+                            @change="updateMyLateMinutes(s, $event.target.value)"
+                          />
+                          <span class="text-[9px] text-text-muted">min</span>
+                        </div>
+                        <span v-else-if="s.attendance_status === 'late' && s.late_minutes" class="text-[9px] text-amber-300 text-center">
+                          {{ s.late_minutes }} min late
+                        </span>
                         <button
                           v-if="event.status === 'open' || event.status === 'draft'"
                           class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
@@ -539,7 +567,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ITEM_QUALITY_COLORS } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ITEM_QUALITY_COLORS, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE, ATTENDANCE_STATUS_LABEL_MAP } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
@@ -995,6 +1023,33 @@ function onSignedUp(signup) {
 function leaveRaid(signup) {
   leaveSignup.value = signup
   showLeaveModal.value = true
+}
+
+async function updateMyAttendanceStatus(signup, newStatus) {
+  try {
+    const payload = { attendance_status: newStatus }
+    const updated = await signupsApi.updateSignupStatus(guildId.value, event.value.id, signup.id, payload)
+    // Update local signup object
+    const idx = signups.value.findIndex(s => s.id === signup.id)
+    if (idx >= 0) {
+      signups.value[idx] = { ...signups.value[idx], attendance_status: newStatus, late_minutes: updated?.late_minutes ?? null }
+    }
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update status', 'error')
+  }
+}
+
+async function updateMyLateMinutes(signup, minutes) {
+  try {
+    const payload = { attendance_status: 'late', late_minutes: parseInt(minutes) || null }
+    await signupsApi.updateSignupStatus(guildId.value, event.value.id, signup.id, payload)
+    const idx = signups.value.findIndex(s => s.id === signup.id)
+    if (idx >= 0) {
+      signups.value[idx] = { ...signups.value[idx], late_minutes: parseInt(minutes) || null }
+    }
+  } catch (err) {
+    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update late minutes', 'error')
+  }
 }
 
 async function confirmLeaveRaid() {

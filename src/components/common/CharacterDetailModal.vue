@@ -252,9 +252,19 @@ import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLa
 import { useExpansionData } from '@/composables/useExpansionData'
 import { refreshWowheadTooltips, getWowheadDomain, getWowheadBase } from '@/composables/useWowheadTooltips'
 import { useFormatting } from '@/composables/useFormatting'
+import { useGuildStore } from '@/stores/guild'
 
 const { t } = useI18n()
 const { classSpecs } = useExpansionData()
+const guildStore = useGuildStore()
+
+/** Derive current expansion from guild's highest enabled expansion, fallback to prop or 'wotlk'. */
+const effectiveExpansion = computed(() => {
+  if (props.expansion && props.expansion !== 'wotlk') return props.expansion
+  const g = guildStore.currentGuild
+  if (g?.expansion) return g.expansion
+  return props.expansion
+})
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -268,8 +278,8 @@ defineEmits(['update:modelValue'])
 const { getClassIcon, getClassColor, getSpecIcon, getRoleIcon, getProfessionIcon } = useWowIcons()
 const { formatDate } = useFormatting()
 
-const wowheadBase = computed(() => getWowheadBase(props.expansion))
-const wowheadItemDomain = computed(() => getWowheadDomain(props.expansion))
+const wowheadBase = computed(() => getWowheadBase(effectiveExpansion.value))
+const wowheadItemDomain = computed(() => getWowheadDomain(effectiveExpansion.value))
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')
@@ -292,13 +302,13 @@ const hasStats = computed(() =>
 
 // Refresh Wowhead tooltips when modal opens or equipment changes (only if enabled)
 watch(() => props.modelValue, (visible) => {
-  if (visible && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips()
+  if (visible && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips(effectiveExpansion.value)
 })
 watch(equipment, (items) => {
-  if (props.modelValue && items.length > 0 && props.useWowhead) refreshWowheadTooltips()
+  if (props.modelValue && items.length > 0 && props.useWowhead) refreshWowheadTooltips(effectiveExpansion.value)
 })
 onMounted(() => {
-  if (props.modelValue && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips()
+  if (props.modelValue && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips(effectiveExpansion.value)
 })
 
 // Equipment slot definitions with WoW-themed SVG paths and abbreviations

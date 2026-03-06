@@ -73,6 +73,17 @@ def create_signup(guild_id: int, event_id: int, membership):
         }), 409
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+
+    # Set initial attendance status if provided (purely informational, not coupled with bench/queue)
+    from app.constants import VALID_ATTENDANCE_STATUSES
+    initial_status = data.get("attendance_status")
+    if initial_status and initial_status in VALID_ATTENDANCE_STATUSES:
+        signup.attendance_status = initial_status
+        if initial_status == "late":
+            signup.late_minutes = data.get("late_minutes")
+        from app.extensions import db
+        db.session.commit()
+
     emit_signups_changed(event_id)
     emit_lineup_changed(event_id)
 
