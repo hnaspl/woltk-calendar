@@ -320,7 +320,7 @@
               :available-roles="availableRoles"
               @signup-updated="onSignupUpdated"
               @signup-removed="onSignupRemoved"
-              @signup-error="msg => uiStore.showToast(msg, 'error')"
+              @signup-error="msg => toast.error(msg)"
             />
             <CompositionSummary
               v-else
@@ -529,7 +529,7 @@ import LineupBoard from '@/components/raids/LineupBoard.vue'
 import AttendanceModal from '@/components/raids/AttendanceModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
@@ -550,7 +550,7 @@ const route = useRoute()
 const router = useRouter()
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon, getUiIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
@@ -851,9 +851,9 @@ async function toggleLock() {
       event.value = updated
     }
     const nowLocked = event.value.status === 'locked'
-    uiStore.showToast(t(nowLocked ? 'raidDetail.toasts.eventLocked' : 'raidDetail.toasts.eventUnlocked'), 'success')
+    toast.success(t(nowLocked ? 'raidDetail.toasts.eventLocked' : 'raidDetail.toasts.eventUnlocked'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.actionFailed'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.actionFailed'))
   } finally {
     actionLoading.value = false
   }
@@ -864,9 +864,9 @@ async function markComplete() {
   try {
     await eventsApi.completeEvent(guildId.value, event.value.id)
     event.value.status = 'completed'
-    uiStore.showToast(t('raidDetail.toasts.eventCompleted'), 'success')
+    toast.success(t('raidDetail.toasts.eventCompleted'))
   } catch {
-    uiStore.showToast(t('raidDetail.toasts.failedToComplete'), 'error')
+    toast.error(t('raidDetail.toasts.failedToComplete'))
   } finally {
     actionLoading.value = false
   }
@@ -878,9 +878,9 @@ async function cancelEvent() {
     await eventsApi.cancelEvent(guildId.value, event.value.id)
     event.value.status = 'cancelled'
     confirmCancel.value = false
-    uiStore.showToast(t('raidDetail.toasts.eventCancelled'), 'warning')
+    toast.warning(t('raidDetail.toasts.eventCancelled'))
   } catch {
-    uiStore.showToast(t('raidDetail.toasts.failedToCancel'), 'error')
+    toast.error(t('raidDetail.toasts.failedToCancel'))
   } finally {
     actionLoading.value = false
   }
@@ -907,10 +907,10 @@ async function doDuplicate() {
     }
     const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id, payload)
     showDuplicateModal.value = false
-    uiStore.showToast(t('raidDetail.toasts.eventDuplicated'), 'success')
+    toast.success(t('raidDetail.toasts.eventDuplicated'))
     router.push({ name: 'raid-detail', params: { id: newEvent.id } })
   } catch {
-    uiStore.showToast(t('raidDetail.toasts.failedToDuplicate'), 'error')
+    toast.error(t('raidDetail.toasts.failedToDuplicate'))
   } finally {
     actionLoading.value = false
   }
@@ -1017,7 +1017,7 @@ async function saveEvent() {
     const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)
     event.value = updated
     showEditModal.value = false
-    uiStore.showToast(t('raidDetail.toasts.eventUpdated'), 'success')
+    toast.success(t('raidDetail.toasts.eventUpdated'))
   } catch (err) {
     editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('raidDetail.toasts.failedToUpdate')
   } finally {
@@ -1027,7 +1027,7 @@ async function saveEvent() {
 
 function onSignedUp(signup) {
   signups.value.push(signup)
-  uiStore.showToast(t('common.toasts.signedUp'), 'success')
+  toast.success(t('common.toasts.signedUp'))
 }
 
 function leaveRaid(signup) {
@@ -1045,7 +1045,7 @@ async function updateMyAttendanceStatus(signup, newStatus) {
       signups.value[idx] = { ...signups.value[idx], attendance_status: newStatus, late_minutes: updated?.late_minutes ?? null }
     }
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update status', 'error')
+    toast.error(err?.response?.data?.error ?? 'Failed to update status')
   }
 }
 
@@ -1058,7 +1058,7 @@ async function updateMyLateMinutes(signup, minutes) {
       signups.value[idx] = { ...signups.value[idx], late_minutes: parseInt(minutes) || null }
     }
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? 'Failed to update late minutes', 'error')
+    toast.error(err?.response?.data?.error ?? 'Failed to update late minutes')
   }
 }
 
@@ -1080,9 +1080,9 @@ async function confirmLeaveRaid() {
       console.warn('Failed to reload signups', err)
       signups.value = signups.value.filter(s => s.id !== signupId)
     }
-    uiStore.showToast(t('raidDetail.toasts.leftRaid'), 'success')
+    toast.success(t('raidDetail.toasts.leftRaid'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('raidDetail.toasts.failedToLeave'), 'error')
+    toast.error(err?.response?.data?.message ?? t('raidDetail.toasts.failedToLeave'))
   } finally {
     actionLoading.value = false
   }
@@ -1097,7 +1097,7 @@ async function onSignupUpdated(updated) {
     const idx = signups.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) signups.value[idx] = updated
   }
-  uiStore.showToast(t('raidDetail.toasts.signupUpdated'), 'success')
+  toast.success(t('raidDetail.toasts.signupUpdated'))
   editingSignupId.value = null
 }
 
@@ -1111,7 +1111,7 @@ async function onSignupRemoved(signupId) {
   }
   // Refresh bans in case a permanent kick was applied
   try { bans.value = await signupsApi.getBans(guildId.value, event.value.id) } catch { /* ignore */ }
-  uiStore.showToast(t('raidDetail.toasts.signupRemoved'), 'success')
+  toast.success(t('raidDetail.toasts.signupRemoved'))
 }
 
 async function onLineupSaved(payload) {
@@ -1122,7 +1122,7 @@ async function onLineupSaved(payload) {
     console.warn('Failed to reload signups after lineup save', err)
   }
   if (!payload?.auto) {
-    uiStore.showToast(t('raidDetail.toasts.lineupSaved'), 'success')
+    toast.success(t('raidDetail.toasts.lineupSaved'))
   }
 }
 
@@ -1132,7 +1132,7 @@ function onLineupUpdated(counts) {
 
 function onAttendanceSaved() {
   hasAttendance.value = true
-  uiStore.showToast(t('raidDetail.toasts.attendanceRecorded'), 'success')
+  toast.success(t('raidDetail.toasts.attendanceRecorded'))
 }
 
 // --- Discord webhook ---
@@ -1173,12 +1173,13 @@ async function resolveReplacement(requestId, action) {
     // Reload signups and replacement requests
     signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
     await loadReplacementRequests()
-    uiStore.showToast(
-      action === 'confirm' ? 'Character swap confirmed!' : 'Character swap declined.',
-      action === 'confirm' ? 'success' : 'info'
-    )
+    if (action === 'confirm') {
+      toast.success('Character swap confirmed!')
+    } else {
+      toast.info('Character swap declined.')
+    }
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'))
   }
 }
 </script>

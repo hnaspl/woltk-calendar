@@ -313,7 +313,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
 import { useTenantStore } from '@/stores/tenant'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
@@ -330,7 +330,7 @@ const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const calStore = useCalendarStore()
 const tenantStore = useTenantStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const constantsStore = useConstantsStore()
 const { getRaidIcon, getAttendanceStatusIcon } = useWowIcons()
 const tzHelper = useTimezone()
@@ -545,14 +545,15 @@ async function resolveReplacement(req, action) {
     await signupsApi.resolveReplaceRequest(req.guild_id, req.event_id, req.id, { action })
     // Remove from local list
     replacementRequests.value = replacementRequests.value.filter(r => r.id !== req.id)
-    uiStore.showToast(
-      action === 'confirm' ? t('dashboard.swapConfirmed') : action === 'leave' ? t('dashboard.leftRaid') : t('dashboard.swapDeclined'),
-      action === 'confirm' ? 'success' : 'info'
-    )
+    if (action === 'confirm') {
+      toast.success(t('dashboard.swapConfirmed'))
+    } else {
+      toast.info(action === 'leave' ? t('dashboard.leftRaid') : t('dashboard.swapDeclined'))
+    }
     // Refresh signups in case lineup status changed
     await refreshSignups()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToProcessReplacement'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToProcessReplacement'))
   }
 }
 </script>

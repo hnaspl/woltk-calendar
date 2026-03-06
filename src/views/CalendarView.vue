@@ -176,7 +176,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import { useCalendarStore } from '@/stores/calendar'
 import { useGuildStore } from '@/stores/guild'
 import { usePermissions } from '@/composables/usePermissions'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useExpansionData } from '@/composables/useExpansionData'
@@ -189,7 +189,7 @@ import { useI18n } from 'vue-i18n'
 
 const calStore = useCalendarStore()
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const router = useRouter()
 const { joinGuild, leaveGuild, on, off } = useSocket()
@@ -422,7 +422,7 @@ async function createEvent() {
     }
     const newEvent = await eventsApi.createEvent(eventForm.guild_id, payload)
     showCreateModal.value = false
-    uiStore.showToast(t('calendar.raidScheduled'), 'success')
+    toast.success(t('calendar.raidScheduled'))
     await calStore.fetchEvents()
     router.push(`/raids/${newEvent.id}`)
   } catch (err) {

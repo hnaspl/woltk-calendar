@@ -266,7 +266,7 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import * as guildsApi from '@/api/guilds'
@@ -280,7 +280,7 @@ import { useConstantsStore } from '@/stores/constants'
 import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const authStore = useAuthStore()
 const expansionStore = useExpansionStore()
@@ -440,9 +440,9 @@ async function onExpansionChange() {
 
     await Promise.all([...enablePromises, ...disablePromises])
 
-    uiStore.showToast(t('guild.expansions.expansionUpdated'), 'success')
+    toast.success(t('guild.expansions.expansionUpdated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error || t('guild.expansions.failedToUpdate'), 'error')
+    toast.error(err?.response?.data?.error || t('guild.expansions.failedToUpdate'))
   } finally {
     expansionSaving.value = false
   }
@@ -472,7 +472,7 @@ async function saveGuild() {
       realm_name: form.realm,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
+    toast.success(t('guildSettings.toasts.settingsSaved'))
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
@@ -504,9 +504,9 @@ async function updateRole(member, role) {
   try {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
-    uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
+    toast.success(t('common.toasts.roleUpdated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'))
   }
 }
 
@@ -535,9 +535,9 @@ async function doKick() {
     await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
     members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
-    uiStore.showToast(t('common.toasts.memberRemoved'), 'success')
+    toast.success(t('common.toasts.memberRemoved'))
   } catch {
-    uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
+    toast.error(t('common.toasts.failedToRemoveMember'))
   } finally {
     saving.value = false
   }
@@ -565,7 +565,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'))
   } finally {
     loadingMemberChars.value = false
   }
@@ -593,7 +593,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToSearch'), 'error')
+      toast.error(err?.response?.data?.message ?? t('common.toasts.failedToSearch'))
     } finally {
       searchingUsers.value = false
     }
@@ -608,9 +608,9 @@ async function doAddMember(user) {
     showAddMember.value = false
     addMemberQuery.value = ''
     availableUsers.value = []
-    uiStore.showToast(t('guildSettings.toasts.memberAdded', { username: user.username }), 'success')
+    toast.success(t('guildSettings.toasts.memberAdded', { username: user.username }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.failedToAdd'))
   }
 }
 

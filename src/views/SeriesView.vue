@@ -248,7 +248,7 @@ import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import * as seriesApi from '@/api/series'
 import * as templatesApi from '@/api/templates'
@@ -256,7 +256,7 @@ import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const { t } = useI18n()
 
@@ -514,12 +514,12 @@ async function doSave() {
           const otherPayload = { ...form, realm_name: otherGuild?.realm_name ?? '' }
           try { await seriesApi.createSeries(guildId, otherPayload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
+        if (failed > 0) toast.warning(t('common.copy.failedToCreateInGuilds', { count: failed }))
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? t('series.toasts.seriesUpdated') : t('series.toasts.seriesCreated', { guild: guildLabel }), 'success')
+    toast.success(editing.value ? t('series.toasts.seriesUpdated') : t('series.toasts.seriesCreated', { guild: guildLabel }))
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -536,9 +536,9 @@ async function doGenerate() {
   try {
     const events = await seriesApi.generateEvents(guildStore.currentGuild.id, generateTarget.value.id, { count: generateCount.value })
     generateResult.value = Array.isArray(events) ? events.length : generateCount.value
-    uiStore.showToast(t('series.toasts.eventsGenerated', { count: generateResult.value }), 'success')
+    toast.success(t('series.toasts.eventsGenerated', { count: generateResult.value }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'), 'error')
+    toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'))
   } finally { saving.value = false }
 }
 
@@ -548,8 +548,8 @@ async function doDelete() {
     await seriesApi.deleteSeries(guildStore.currentGuild.id, deleteTarget.value.id)
     seriesList.value = seriesList.value.filter(s => s.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('series.seriesDeleted'), 'success')
-  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+    toast.success(t('series.seriesDeleted'))
+  } catch { toast.error(t('common.toasts.failedToDelete')) }
   finally { saving.value = false }
 }
 
@@ -565,9 +565,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
+    toast.warning(t('common.copy.copiedWithFailures', { succeeded, failed }))
   } else {
-    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.title, count: succeeded }), 'success')
+    toast.success(t('common.copy.copiedSuccess', { name: copySource.value.title, count: succeeded }))
   }
   saving.value = false
 }

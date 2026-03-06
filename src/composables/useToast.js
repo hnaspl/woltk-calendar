@@ -19,6 +19,7 @@ export function useToast() {
     success: (msg, duration) => ui.showToast(msg, 'success', duration),
     error: (msg, duration) => ui.showToast(msg, 'error', duration),
     info: (msg, duration) => ui.showToast(msg, 'info', duration),
+    warning: (msg, duration) => ui.showToast(msg, 'warning', duration),
     dismiss: () => ui.dismissToast(),
   }
 }

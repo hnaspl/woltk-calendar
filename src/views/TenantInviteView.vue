@@ -103,12 +103,12 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import InviteLinkCard from '@/components/common/InviteLinkCard.vue'
 import { useTenantStore } from '@/stores/tenant'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as tenantsApi from '@/api/tenants'
 
 const { t } = useI18n()
 const tenantStore = useTenantStore()
-const uiStore = useUiStore()
+const toast = useToast()
 
 const invitations = ref([])
 const loading = ref(false)
@@ -162,7 +162,7 @@ async function doRevoke(inv) {
   try {
     await tenantsApi.revokeTenantInvitation(tenantStore.activeTenantId, inv.id)
     await fetchInvitations()
-    uiStore.showToast(t('tenant.inviteRevoked'), 'success')
+    toast.success(t('tenant.inviteRevoked'))
   } catch {
     // ignore
   }

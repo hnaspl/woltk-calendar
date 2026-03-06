@@ -292,7 +292,7 @@ import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useExpansionData } from '@/composables/useExpansionData'
@@ -303,7 +303,7 @@ import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
 const { t } = useI18n()
@@ -534,12 +534,12 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await raidDefsApi.createRaidDefinition(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
+        if (failed > 0) toast.warning(t('common.copy.failedToCreateInGuilds', { count: failed }))
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? t('raidDefinitions.definitionUpdated') : t('raidDefinitions.toasts.definitionCreated', { guild: guildLabel }), 'success')
+    toast.success(editing.value ? t('raidDefinitions.definitionUpdated') : t('raidDefinitions.toasts.definitionCreated', { guild: guildLabel }))
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -555,8 +555,8 @@ async function doDelete() {
     await raidDefsApi.deleteRaidDefinition(guildStore.currentGuild.id, deleteTarget.value.id)
     definitions.value = definitions.value.filter(d => d.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('raidDefinitions.definitionDeleted'), 'success')
-  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+    toast.success(t('raidDefinitions.definitionDeleted'))
+  } catch { toast.error(t('common.toasts.failedToDelete')) }
   finally { saving.value = false }
 }
 
@@ -572,9 +572,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
+    toast.warning(t('common.copy.copiedWithFailures', { succeeded, failed }))
   } else {
-    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
+    toast.success(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }))
   }
   saving.value = false
 }
@@ -611,11 +611,11 @@ async function doImport() {
   showImportModal.value = false
   importSaving.value = false
   if (succeeded > 0) {
-    uiStore.showToast(t('raidDefinitions.importSuccess', { count: succeeded }), 'success')
+    toast.success(t('raidDefinitions.importSuccess', { count: succeeded }))
     loadDefinitions()
   }
   if (failed > 0) {
-    uiStore.showToast(t('raidDefinitions.importFailed', { count: failed }), 'warning')
+    toast.warning(t('raidDefinitions.importFailed', { count: failed }))
   }
 }
 </script>

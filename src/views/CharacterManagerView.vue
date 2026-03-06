@@ -339,7 +339,7 @@ import SpecBadge from '@/components/common/SpecBadge.vue'
 import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useConstantsStore } from '@/stores/constants'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { ROLE_OPTIONS, normalizeSpecName } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
@@ -352,7 +352,7 @@ import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const constantsStore = useConstantsStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const { getClassIcon, getProfessionIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { t } = useI18n()
@@ -672,12 +672,12 @@ async function saveChar() {
       const updated = await charApi.updateCharacter(guildStore.currentGuild.id, editingChar.value.id, payload)
       const idx = characters.value.findIndex(c => c.id === editingChar.value.id)
       if (idx !== -1) characters.value[idx] = mapChar(updated)
-      uiStore.showToast(t('characters.toasts.characterUpdated'), 'success')
+      toast.success(t('characters.toasts.characterUpdated'))
     } else {
       const created = await charApi.createCharacter(guildStore.currentGuild.id, payload)
       characters.value.push(mapChar(created))
       lastAddedName.value = payload.name
-      uiStore.showToast(t('characters.toasts.characterAdded'), 'success')
+      toast.success(t('characters.toasts.characterAdded'))
     }
     const wasEditing = !!editingChar.value
     armoryData.value = null
@@ -697,9 +697,9 @@ async function setMain(char) {
   try {
     await charApi.setMainCharacter(guildStore.currentGuild.id, char.id)
     characters.value.forEach(c => { c.is_main = c.id === char.id })
-    uiStore.showToast(t('characters.toasts.setAsMain', { name: char.name }), 'success')
+    toast.success(t('characters.toasts.setAsMain', { name: char.name }))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToSetMain'), 'error')
+    toast.error(t('characters.toasts.failedToSetMain'))
   }
 }
 
@@ -709,9 +709,9 @@ async function syncFromArmory(char) {
     const updated = await armoryLookupApi.syncCharacter(char.id)
     const idx = characters.value.findIndex(c => c.id === char.id)
     if (idx !== -1) characters.value[idx] = mapChar(updated)
-    uiStore.showToast(t('characters.toasts.syncedFromArmory', { name: char.name }), 'success')
+    toast.success(t('characters.toasts.syncedFromArmory', { name: char.name }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('characters.toasts.syncFailed'), 'error')
+    toast.error(err?.response?.data?.error ?? t('characters.toasts.syncFailed'))
   } finally {
     syncing.value = null
   }
@@ -723,9 +723,9 @@ async function doArchive() {
     await charApi.archiveCharacter(guildStore.currentGuild.id, removeTarget.value.id)
     characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
     showRemoveConfirm.value = false
-    uiStore.showToast(t('characters.toasts.characterArchived'), 'success')
+    toast.success(t('characters.toasts.characterArchived'))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToArchive'), 'error')
+    toast.error(t('characters.toasts.failedToArchive'))
   } finally {
     saving.value = false
   }
@@ -737,9 +737,9 @@ async function doDelete() {
     await charApi.deleteCharacter(guildStore.currentGuild.id, removeTarget.value.id)
     characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
     showRemoveConfirm.value = false
-    uiStore.showToast(t('characters.toasts.characterDeleted'), 'success')
+    toast.success(t('characters.toasts.characterDeleted'))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToDeleteChar'), 'error')
+    toast.error(t('characters.toasts.failedToDeleteChar'))
   } finally {
     saving.value = false
   }
@@ -751,9 +751,9 @@ async function doUnarchive(char) {
     const restored = await charApi.unarchiveCharacter(guildStore.currentGuild.id, char.id)
     archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== char.id)
     characters.value.push(mapChar(restored))
-    uiStore.showToast(t('characters.toasts.characterRestored', { name: char.name }), 'success')
+    toast.success(t('characters.toasts.characterRestored', { name: char.name }))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToRestore'), 'error')
+    toast.error(t('characters.toasts.failedToRestore'))
   } finally {
     saving.value = false
   }
@@ -765,9 +765,9 @@ async function doDeleteArchived() {
     await charApi.deleteCharacter(guildStore.currentGuild.id, deleteTarget.value.id)
     archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('characters.toasts.characterDeleted'), 'success')
+    toast.success(t('characters.toasts.characterDeleted'))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToDeleteChar'), 'error')
+    toast.error(t('characters.toasts.failedToDeleteChar'))
   } finally {
     saving.value = false
   }

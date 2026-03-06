@@ -413,7 +413,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useTimezone } from '@/composables/useTimezone'
 import * as templatesApi from '@/api/templates'
@@ -426,7 +426,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
 const constantsStore = useConstantsStore()
@@ -679,7 +679,7 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await templatesApi.createTemplate(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
+        if (failed > 0) toast.warning(t('common.copy.failedToCreateInGuilds', { count: failed }))
       }
       // Auto-create recurring series when days-of-week are selected
       if (form.days_of_week.length > 0) {
@@ -706,7 +706,7 @@ async function doSave() {
     showModal.value = false
     const isNew = !editing.value
     const guildLabel = currentGuildLabel.value
-    uiStore.showToast(editing.value ? t('templates.toasts.templateUpdated') : t('templates.toasts.templateCreated', { guild: guildLabel }), 'success')
+    toast.success(editing.value ? t('templates.toasts.templateUpdated') : t('templates.toasts.templateCreated', { guild: guildLabel }))
     // Only show recurring prompt if no days were selected (series not auto-created)
     if (isNew && form.days_of_week.length === 0) {
       showRecurringPrompt.value = true
@@ -722,9 +722,9 @@ async function doApply() {
   try {
     await templatesApi.applyTemplate(guildStore.currentGuild.id, applyTarget.value.id, { start_time: tzHelper.guildLocalToUtc(applyDate.value) })
     showApply.value = false
-    uiStore.showToast(t('templates.eventScheduled'), 'success')
+    toast.success(t('templates.eventScheduled'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('templates.toasts.failedToApply'), 'error')
+    toast.error(err?.response?.data?.message ?? t('templates.toasts.failedToApply'))
   } finally { saving.value = false }
 }
 
@@ -745,8 +745,8 @@ async function doDelete() {
     await templatesApi.deleteTemplate(guildStore.currentGuild.id, deleteTarget.value.id)
     templates.value = templates.value.filter(t => t.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('templates.templateDeleted'), 'success')
-  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+    toast.success(t('templates.templateDeleted'))
+  } catch { toast.error(t('common.toasts.failedToDelete')) }
   finally { saving.value = false }
 }
 
@@ -762,9 +762,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
+    toast.warning(t('common.copy.copiedWithFailures', { succeeded, failed }))
   } else {
-    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
+    toast.success(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }))
   }
   saving.value = false
 }
@@ -836,11 +836,11 @@ async function saveSeries() {
       const updated = await seriesApi.updateSeries(guildStore.currentGuild.id, editingSeries.value.id, payload)
       const idx = seriesList.value.findIndex(s => s.id === editingSeries.value.id)
       if (idx !== -1) seriesList.value[idx] = updated
-      uiStore.showToast(t('series.toasts.seriesUpdated'), 'success')
+      toast.success(t('series.toasts.seriesUpdated'))
     } else {
       const created = await seriesApi.createSeries(guildStore.currentGuild.id, payload)
       seriesList.value.push(created)
-      uiStore.showToast(t('series.toasts.seriesCreated', { guild: currentGuildLabel.value }), 'success')
+      toast.success(t('series.toasts.seriesCreated', { guild: currentGuildLabel.value }))
     }
     showSeriesModal.value = false
   } catch (err) {
@@ -859,8 +859,8 @@ async function doDeleteSeries() {
     await seriesApi.deleteSeries(guildStore.currentGuild.id, seriesDeleteTarget.value.id)
     seriesList.value = seriesList.value.filter(s => s.id !== seriesDeleteTarget.value.id)
     showSeriesDeleteConfirm.value = false
-    uiStore.showToast(t('series.seriesDeleted'), 'success')
-  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+    toast.success(t('series.seriesDeleted'))
+  } catch { toast.error(t('common.toasts.failedToDelete')) }
   finally { seriesSaving.value = false }
 }
 
@@ -878,9 +878,9 @@ async function doGenerate() {
   try {
     const events = await seriesApi.generateEvents(guildStore.currentGuild.id, generateTarget.value.id, { count: generateCount.value })
     generateResult.value = Array.isArray(events) ? events.length : generateCount.value
-    uiStore.showToast(t('series.toasts.eventsGenerated', { count: generateResult.value }), 'success')
+    toast.success(t('series.toasts.eventsGenerated', { count: generateResult.value }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'), 'error')
+    toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'))
   } finally { seriesSaving.value = false }
 }
 </script>
