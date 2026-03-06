@@ -173,8 +173,8 @@
                   <a
                     v-for="(item, i) in equipment"
                     :key="i"
-                    :href="item.item ? `https://www.wowhead.com/wotlk/item=${item.item}` : undefined"
-                    :data-wowhead="item.item ? `item=${item.item}&domain=wotlk` : undefined"
+                    :href="item.item ? `${wowheadBase}/item=${item.item}` : undefined"
+                    :data-wowhead="item.item ? `item=${item.item}&domain=${wowheadItemDomain}` : undefined"
                     target="_blank"
                     class="equip-link flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
                     @click.stop
@@ -250,7 +250,7 @@ import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLabel } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
-import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
+import { refreshWowheadTooltips, getWowheadDomain, getWowheadBase } from '@/composables/useWowheadTooltips'
 import { useFormatting } from '@/composables/useFormatting'
 
 const { t } = useI18n()
@@ -260,12 +260,16 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   character: { type: Object, default: null },
   useWowhead: { type: Boolean, default: true },
+  expansion: { type: String, default: 'wotlk' },
 })
 
 defineEmits(['update:modelValue'])
 
 const { getClassIcon, getClassColor, getSpecIcon, getRoleIcon, getProfessionIcon } = useWowIcons()
 const { formatDate } = useFormatting()
+
+const wowheadBase = computed(() => getWowheadBase(props.expansion))
+const wowheadItemDomain = computed(() => getWowheadDomain(props.expansion))
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')

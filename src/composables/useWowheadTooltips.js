@@ -54,6 +54,15 @@ export function getWowheadDomain(expansion) {
 }
 
 /**
+ * Get the Wowhead base URL for a given expansion.
+ * E.g. 'wotlk' → 'https://www.wowhead.com/wotlk'
+ */
+export function getWowheadBase(expansion) {
+  const domain = EXPANSION_DOMAIN_MAP[expansion]
+  return domain ? `https://www.wowhead.com/${domain}` : 'https://www.wowhead.com'
+}
+
+/**
  * Refresh Wowhead tooltips after Vue has rendered new item links.
  * Call this in onMounted / onUpdated / watch callbacks.
  *
