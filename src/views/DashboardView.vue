@@ -287,7 +287,7 @@
                 <!-- Attendance status indicator -->
                 <span v-if="su.attendance_status && su.attendance_status !== 'going'" class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0" :class="(ATTENDANCE_STATUS_STYLE[su.attendance_status] || {}).badge">
                   <img :src="getAttendanceStatusIcon(su.attendance_status)" class="w-3 h-3 rounded-sm" alt="" />
-                  {{ ATTENDANCE_STATUS_LABEL_MAP[su.attendance_status] }}{{ su.attendance_status === 'late' && su.late_minutes ? ' ~' + su.late_minutes + 'min' : '' }}
+                  {{ t(ATTENDANCE_STATUS_I18N_MAP[su.attendance_status]) }}{{ su.attendance_status === 'late' && su.late_minutes ? ' ~' + su.late_minutes + 'min' : '' }}
                 </span>
               </div>
             </WowCard>
@@ -318,7 +318,7 @@ import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
 import { useSocket } from '@/composables/useSocket'
-import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, ATTENDANCE_STATUS_I18N_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as guildExpansionsApi from '@/api/guild_expansions'

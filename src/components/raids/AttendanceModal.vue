@@ -103,11 +103,18 @@ watch(
     // Only include players who are in the lineup (not bench or declined)
     players.value = props.signups
       .filter(s => s.lineup_status === 'going')
-      .map(s => ({
-        signup: s,
-        outcome: 'attended',
-        note: ''
-      }))
+      .map(s => {
+        // Auto-populate outcome from signup attendance_status
+        let outcome = 'attended'
+        const status = s.attendance_status
+        if (status === 'late') outcome = 'late'
+        else if (status === 'not_going' || status === 'did_not_show') outcome = 'no_show'
+        return {
+          signup: s,
+          outcome,
+          note: status === 'late' && s.late_minutes ? `~${s.late_minutes} min late` : ''
+        }
+      })
   },
   { immediate: true }
 )
