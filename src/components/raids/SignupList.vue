@@ -175,13 +175,13 @@
                       </span>
                     </div>
                     <!-- Late minutes -->
-                    <div v-if="signup.attendance_status === 'late'" class="mt-2 flex items-center gap-1.5 justify-end">
+                    <div v-if="signup.attendance_status === 'late'" class="mt-2 flex items-center gap-2 justify-end">
                       <input
                         v-if="(canManage || isOwnSignup(signup)) && lateMinutesTarget === signup.id"
                         v-model.number="lateMinutesValue"
                         type="number" min="1" max="999"
                         :placeholder="t('signup.minutesLate')"
-                        class="w-20 bg-bg-secondary border border-amber-500/40 text-amber-300 text-xs rounded px-2 py-1 outline-none focus:border-amber-400"
+                        class="w-24 bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-3 py-1.5 outline-none focus:border-border-gold"
                         @blur="saveLateMinutes(signup)"
                         @keyup.enter="saveLateMinutes(signup)"
                       />

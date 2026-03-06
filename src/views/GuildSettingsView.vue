@@ -7,77 +7,82 @@
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
 
       <template v-else>
-        <!-- Guild info form -->
-        <WowCard>
-          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
-          <form @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-              <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            </div>
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
-              <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option value="">{{ t('common.fields.selectRealm') }}</option>
-                <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
-              <select v-model.number="form.expansion_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onExpansionChange">
-                <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
-              </select>
-              <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
-              <div v-if="form.expansion_id && includedExpansions.length" class="mt-2 flex flex-wrap gap-1">
-                <span v-for="exp in includedExpansions" :key="exp.id"
-                  class="px-2 py-0.5 rounded text-xs font-medium bg-green-900/30 text-green-300 border border-green-700/50">
-                  ✓ {{ exp.name }}
-                </span>
-              </div>
-              <div v-if="expansionSaving" class="mt-2 text-xs text-text-muted flex items-center gap-1">
-                <div class="w-3 h-3 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
-                {{ t('common.labels.saving') }}
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
-              <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
-            </div>
-            <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
-            <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
-          </form>
-        </WowCard>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <!-- Left column: Settings + Discord -->
+          <div class="space-y-4 sm:space-y-6">
+            <!-- Guild info form -->
+            <WowCard>
+              <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
+              <form @submit.prevent="saveGuild" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
+                  <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
+                  <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                    <option value="">{{ t('common.fields.selectRealm') }}</option>
+                    <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
+                  <select v-model.number="form.expansion_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onExpansionChange">
+                    <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
+                  </select>
+                  <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
+                  <div v-if="form.expansion_id && includedExpansions.length" class="mt-2 flex flex-wrap gap-1">
+                    <span v-for="exp in includedExpansions" :key="exp.id"
+                      class="px-2 py-0.5 rounded text-xs font-medium bg-green-900/30 text-green-300 border border-green-700/50">
+                      ✓ {{ exp.name }}
+                    </span>
+                  </div>
+                  <div v-if="expansionSaving" class="mt-2 text-xs text-text-muted flex items-center gap-1">
+                    <div class="w-3 h-3 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+                    {{ t('common.labels.saving') }}
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
+                  <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
+                </div>
+                <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
+                <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
+              </form>
+            </WowCard>
 
-        <!-- Discord Integration -->
-        <WowCard>
-          <div class="flex items-center gap-2 mb-4">
-            <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
-            <h2 class="wow-heading text-base">{{ t('guild.settings.discordIntegration') }}</h2>
+            <!-- Discord Integration -->
+            <WowCard>
+              <div class="flex items-center gap-2 mb-4">
+                <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
+                <h2 class="wow-heading text-base">{{ t('guild.settings.discordIntegration') }}</h2>
+              </div>
+              <form @submit.prevent="saveDiscordWebhook" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.webhookUrl') }}</label>
+                  <input
+                    v-model="discordWebhookUrl"
+                    type="url"
+                    placeholder="https://discord.com/api/webhooks/..."
+                    class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+                  />
+                  <p class="text-[10px] text-text-muted mt-1">
+                    {{ t('guild.settings.webhookHelp') }}
+                  </p>
+                </div>
+                <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
+                <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ t('guild.settings.webhookSaved') }}</div>
+                <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+              </form>
+            </WowCard>
           </div>
-          <form @submit.prevent="saveDiscordWebhook" class="space-y-4 max-w-lg">
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.webhookUrl') }}</label>
-              <input
-                v-model="discordWebhookUrl"
-                type="url"
-                placeholder="https://discord.com/api/webhooks/..."
-                class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-              />
-              <p class="text-[10px] text-text-muted mt-1">
-                {{ t('guild.settings.webhookHelp') }}
-              </p>
-            </div>
-            <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
-            <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ t('guild.settings.webhookSaved') }}</div>
-            <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
-          </form>
-        </WowCard>
 
-        <!-- Armory Guild Lookup -->
-        <WowCard>
+          <!-- Right column: Armory Guild Lookup -->
+          <div class="space-y-4 sm:space-y-6">
+            <WowCard>
           <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.armoryInfo') }}</h2>
           <p class="text-text-muted text-sm mb-4">{{ t('members.fetchRoster') }}</p>
-          <form @submit.prevent="fetchArmoryGuild" class="flex items-end gap-3 max-w-lg">
+          <form @submit.prevent="fetchArmoryGuild" class="flex flex-wrap items-end gap-3">
             <div class="flex-1">
               <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildName') }}</label>
               <input v-model="armoryGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
@@ -125,6 +130,8 @@
             </div>
           </div>
         </WowCard>
+          </div>
+        </div>
 
         <!-- Members table -->
         <WowCard>

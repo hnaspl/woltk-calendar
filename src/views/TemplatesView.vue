@@ -136,7 +136,7 @@
     </div>
 
     <!-- Add/Edit template modal -->
-    <WowModal v-model="showModal" :title="editing ? t('templates.editTemplate') : t('templates.newTemplateTitle')" size="md">
+    <WowModal v-model="showModal" :title="editing ? t('templates.editTemplate') : t('templates.newTemplateTitle')" size="lg">
       <form @submit.prevent="saveTemplate" class="space-y-4">
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('templates.templateName') }}</label>
@@ -595,7 +595,11 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
 
 function openAddModal() {
   editing.value = null
-  const firstDef = raidDefinitions.value[0]
+  // Select first raid from the latest expansion group (grouped descending by addon)
+  const groups = templateRaidDefsByExpansion.value
+  const firstDef = groups.length > 0 && groups[0].defs.length > 0
+    ? groups[0].defs[0]
+    : raidDefinitions.value[0] ?? null
   const firstId = firstDef?.id ?? ''
   Object.assign(form, { name: '', raid_definition_id: firstId, raid_size: firstDef?.default_raid_size ?? 25, difficulty: 'normal', default_instructions: '', close_registration_minutes: null, days_of_week: [], start_time: '19:00', duration_minutes: 180, recurrence_rule: 'weekly' })
   if (firstId) onTemplateRaidDefChange()
