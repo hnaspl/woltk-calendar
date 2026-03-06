@@ -363,7 +363,9 @@
     "wowheadZone": "Strefa Wowhead",
     "viewZone": "Zobacz strefę",
     "tooltipInfo": "Podpowiedzi Wowhead są ładowane automatycznie dla przedmiotów i zaklęć powiązanych z tym rajdem.",
-    "wowheadBase": "Bazowy URL Wowhead"
+    "wowheadBase": "Bazowy URL Wowhead",
+    "leaveRaid": "Opuść rajd",
+    "mySignupsTitle": "Moje zapisy ({count})"
   },
   "characters": {
     "addAnother": "Dodaj kolejną postać",
@@ -567,7 +569,12 @@
       "eventsGenerated": "Wygenerowano {count} wydarzeń!"
     },
     "twoEvents": "2 wydarzenia",
-    "weekly": "Co tydzień"
+    "weekly": "Co tydzień",
+    "oneWeek": "1 tydzień",
+    "twoWeeks": "2 tygodnie",
+    "fourWeeks": "4 tygodnie (1 miesiąc)",
+    "eightWeeks": "8 tygodni (2 miesiące)",
+    "twelveWeeks": "12 tygodni (3 miesiące)"
   },
   "roles": {
     "addGrantRule": "Dodaj regułę przypisywania",
@@ -697,7 +704,11 @@
       "race": "Rasa",
       "noRosterData": "Brak danych rostera.",
       "guildName": "Nazwa Gildii",
-      "armoryInfo": "Informacje o gildii z Armory"
+      "armoryInfo": "Informacje o gildii z Armory",
+      "discordIntegration": "Integracja Discord",
+      "webhookUrl": "URL Webhooka",
+      "webhookHelp": "Utwórz webhooka w swoim serwerze Discord: Ustawienia serwera → Integracje → Webhooki. Szczegóły rajdów mogą być wysyłane na ten kanał z widoku wydarzenia rajdowego.",
+      "webhookSaved": "Webhook Discord zapisany!"
     },
     "toasts": {
       "failedToJoin": "Nie udało się dołączyć do gildii",
@@ -1173,7 +1184,15 @@
       "replacementNotPending": "Ta prośba o zastępstwo nie jest już oczekująca",
       "signupGone": "Zapis już nie istnieje",
       "invalidAction": "Nieprawidłowa akcja"
-    }
+    },
+    "attendanceStatus": "Status",
+    "attendanceGoing": "Idę",
+    "attendanceTentative": "Niepewny",
+    "attendanceLate": "Spóźniony",
+    "attendanceNotGoing": "Nie idę",
+    "attendanceAlt": "Alt",
+    "attendanceDidNotShow": "Nie pojawił się",
+    "minutesLate": "minut spóźnienia"
   },
   "signupList": {
     "achievementPoints": "Punkty osiągnięć",

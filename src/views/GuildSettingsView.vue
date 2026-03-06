@@ -52,11 +52,11 @@
         <WowCard>
           <div class="flex items-center gap-2 mb-4">
             <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
-            <h2 class="wow-heading text-base">Discord Integration</h2>
+            <h2 class="wow-heading text-base">{{ t('guild.settings.discordIntegration') }}</h2>
           </div>
           <form @submit.prevent="saveDiscordWebhook" class="space-y-4 max-w-lg">
             <div>
-              <label class="block text-xs text-text-muted mb-1">Webhook URL</label>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.webhookUrl') }}</label>
               <input
                 v-model="discordWebhookUrl"
                 type="url"
@@ -64,11 +64,11 @@
                 class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
               />
               <p class="text-[10px] text-text-muted mt-1">
-                Create a webhook in your Discord server: Server Settings &rarr; Integrations &rarr; Webhooks. Raid details can be sent to this channel from each raid event view.
+                {{ t('guild.settings.webhookHelp') }}
               </p>
             </div>
             <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
-            <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">Discord webhook saved!</div>
+            <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ t('guild.settings.webhookSaved') }}</div>
             <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
           </form>
         </WowCard>

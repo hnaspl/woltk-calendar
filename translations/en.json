@@ -366,7 +366,9 @@
     "wowheadZone": "Wowhead Zone",
     "viewZone": "View Zone",
     "tooltipInfo": "Wowhead tooltips are loaded automatically for items and spells linked in this raid.",
-    "wowheadBase": "Wowhead base URL"
+    "wowheadBase": "Wowhead base URL",
+    "leaveRaid": "Leave Raid",
+    "mySignupsTitle": "My Signups ({count})"
   },
   "characters": {
     "addAnother": "Add Another Character",
@@ -570,7 +572,12 @@
       "eventsGenerated": "{count} event(s) generated!"
     },
     "twoEvents": "2 events",
-    "weekly": "Weekly"
+    "weekly": "Weekly",
+    "oneWeek": "1 week",
+    "twoWeeks": "2 weeks",
+    "fourWeeks": "4 weeks (1 month)",
+    "eightWeeks": "8 weeks (2 months)",
+    "twelveWeeks": "12 weeks (3 months)"
   },
   "roles": {
     "addGrantRule": "Add Grant Rule",
@@ -700,7 +707,11 @@
       "race": "Race",
       "noRosterData": "No roster data available.",
       "guildName": "Guild Name",
-      "armoryInfo": "Armory Guild Info"
+      "armoryInfo": "Armory Guild Info",
+      "discordIntegration": "Discord Integration",
+      "webhookUrl": "Webhook URL",
+      "webhookHelp": "Create a webhook in your Discord server: Server Settings → Integrations → Webhooks. Raid details can be sent to this channel from each raid event view.",
+      "webhookSaved": "Discord webhook saved!"
     },
     "toasts": {
       "failedToJoin": "Failed to join guild",
@@ -1193,7 +1204,15 @@
       "replacementNotPending": "This replacement request is no longer pending",
       "signupGone": "Signup no longer exists",
       "invalidAction": "Invalid action"
-    }
+    },
+    "attendanceStatus": "Status",
+    "attendanceGoing": "Going",
+    "attendanceTentative": "Tentative",
+    "attendanceLate": "Late",
+    "attendanceNotGoing": "Not Going",
+    "attendanceAlt": "Alt",
+    "attendanceDidNotShow": "Did Not Show",
+    "minutesLate": "minutes late"
   },
   "signupList": {
     "achievementPoints": "Achievement Points",

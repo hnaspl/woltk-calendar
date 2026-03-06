@@ -74,10 +74,10 @@
                   </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
-                  <span v-if="s.recurrence_rule">{{ formatRecurrence(s.recurrence_rule) }}</span>
+                  <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
                   <span v-if="s.days_of_week?.length">{{ formatSeriesDays(s.days_of_week) }}</span>
-                  <span v-if="s.start_time_local">{{ s.start_time_local }}</span>
-                  <span v-if="s.duration_minutes">{{ s.duration_minutes }}min</span>
+                  <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
+                  <span v-if="s.duration_minutes">⏱ {{ s.duration_minutes }}min</span>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 flex-wrap">
@@ -96,7 +96,7 @@
 
       <!-- Orphan Recurring Raids section -->
       <div v-if="!loading && orphanSeries.length" class="mt-6">
-        <h2 class="wow-heading text-lg mb-3">{{ t('series.title') }}</h2>
+        <h2 class="wow-heading text-lg mb-3">🔁 {{ t('series.title') }}</h2>
         <p class="text-text-muted text-xs mb-3">Recurring schedules not linked to any template</p>
         <div class="space-y-2">
           <WowCard v-for="s in orphanSeries" :key="s.id">
@@ -112,10 +112,10 @@
                   </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mt-1">
-                  <span v-if="s.recurrence_rule">{{ formatRecurrence(s.recurrence_rule) }}</span>
+                  <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
                   <span v-if="s.days_of_week?.length">{{ formatSeriesDays(s.days_of_week) }}</span>
-                  <span v-if="s.start_time_local">{{ s.start_time_local }}</span>
-                  <span v-if="s.duration_minutes">{{ s.duration_minutes }}min</span>
+                  <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
+                  <span v-if="s.duration_minutes">⏱ {{ s.duration_minutes }}min</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
@@ -342,10 +342,11 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('series.howManyEvents') }}</label>
           <select v-model.number="generateCount" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option :value="1">{{ t('series.oneEvent') }}</option>
-            <option :value="2">{{ t('series.twoEvents') }}</option>
-            <option :value="4">{{ t('series.fourEvents') }}</option>
-            <option :value="8">{{ t('series.eightEvents') }}</option>
+            <option :value="1">{{ t('series.oneWeek') }}</option>
+            <option :value="2">{{ t('series.twoWeeks') }}</option>
+            <option :value="4">{{ t('series.fourWeeks') }}</option>
+            <option :value="8">{{ t('series.eightWeeks') }}</option>
+            <option :value="12">{{ t('series.twelveWeeks') }}</option>
           </select>
         </div>
         <div v-if="generateResult" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">

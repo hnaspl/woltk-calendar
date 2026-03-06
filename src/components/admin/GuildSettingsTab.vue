@@ -42,6 +42,31 @@
       </form>
     </WowCard>
 
+    <!-- Discord Integration -->
+    <WowCard>
+      <div class="flex items-center gap-2 mb-4">
+        <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
+        <h2 class="wow-heading text-base">{{ t('guild.settings.discordIntegration') }}</h2>
+      </div>
+      <form @submit.prevent="saveDiscordWebhook" class="space-y-4 max-w-lg">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.webhookUrl') }}</label>
+          <input
+            v-model="discordWebhookUrl"
+            type="url"
+            placeholder="https://discord.com/api/webhooks/..."
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+          <p class="text-[10px] text-text-muted mt-1">
+            {{ t('guild.settings.webhookHelp') }}
+          </p>
+        </div>
+        <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
+        <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ t('guild.settings.webhookSaved') }}</div>
+        <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+      </form>
+    </WowCard>
+
     <!-- Armory Guild Info (only for armory-sourced guilds) -->
     <WowCard v-if="isArmorySource">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -162,6 +187,7 @@ import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
 import * as guildRealmsApi from '@/api/guild_realms'
 import { useTimezone } from '@/composables/useTimezone'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const { t } = useI18n()
 const guildStore = useGuildStore()
@@ -179,6 +205,12 @@ const noGuild = ref(false)
 const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
 const guildRealmNames = ref([])
 const isArmorySource = ref(false)
+
+// Discord webhook
+const discordWebhookUrl = ref('')
+const discordSaving = ref(false)
+const discordSaveError = ref(null)
+const discordSaveSuccess = ref(false)
 
 const timezoneOptions = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -222,6 +254,7 @@ async function loadGuildData() {
     }
     Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
     isArmorySource.value = !!g.armory_source
+    discordWebhookUrl.value = (g.settings || {}).discord_webhook_url || ''
     // Load guild-configured realms from API
     try {
       const data = await guildRealmsApi.getGuildRealms(g.id)
@@ -281,6 +314,26 @@ async function saveGuild() {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
     saving.value = false
+  }
+}
+
+async function saveDiscordWebhook() {
+  discordSaveError.value = null
+  discordSaveSuccess.value = false
+  discordSaving.value = true
+  try {
+    const g = guildStore.currentGuild
+    const currentSettings = g.settings || {}
+    const newSettings = { ...currentSettings, discord_webhook_url: discordWebhookUrl.value.trim() }
+    await guildsApi.updateGuild(g.id, { settings_json: JSON.stringify(newSettings) })
+    // Update local guild store
+    g.settings = newSettings
+    discordSaveSuccess.value = true
+    setTimeout(() => { discordSaveSuccess.value = false }, 3000)
+  } catch (err) {
+    discordSaveError.value = err?.response?.data?.message ?? 'Failed to save'
+  } finally {
+    discordSaving.value = false
   }
 }
 

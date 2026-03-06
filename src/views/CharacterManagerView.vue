@@ -79,8 +79,15 @@
                 <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
               </div>
               <!-- Synced metadata -->
-              <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
-                {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
+              <div v-if="char.metadata?.professions?.length" class="flex items-center gap-1.5 flex-wrap mb-2">
+                <span
+                  v-for="prof in char.metadata.professions"
+                  :key="prof.name"
+                  class="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
+                >
+                  <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
+                  {{ prof.name }} {{ prof.skill || '' }}
+                </span>
               </div>
               <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
                 Synced {{ tzHelper.formatGuildDate(char.metadata.last_synced) }}
@@ -340,7 +347,7 @@ import { useI18n } from 'vue-i18n'
 const guildStore = useGuildStore()
 const constantsStore = useConstantsStore()
 const uiStore = useUiStore()
-const { getClassIcon } = useWowIcons()
+const { getClassIcon, getProfessionIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { t } = useI18n()
 

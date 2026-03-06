@@ -91,122 +91,122 @@
             <!-- Normal display -->
             <div
               v-else
-              class="flex items-start gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 rounded-lg bg-bg-tertiary/60 hover:bg-bg-tertiary transition-colors w-full"
+              class="rounded-lg border border-border-default bg-bg-tertiary/60 hover:border-border-gold/40 transition-colors overflow-hidden"
             >
-              <!-- Class icon -->
-              <img
-                v-if="signup.character?.class_name"
-                :src="getClassIcon(signup.character.class_name)"
-                :alt="signup.character.class_name"
-                class="w-8 h-8 sm:w-10 sm:h-10 rounded border border-border-default flex-shrink-0 mt-0.5"
-              />
-              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded bg-bg-secondary flex-shrink-0 mt-0.5" v-else />
-
-              <!-- Content -->
-              <div class="flex-1 min-w-0">
-                <!-- Row 1: Name + Level + Achievements -->
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-sm sm:text-base font-semibold text-text-primary truncate">
-                    {{ signup.character?.name ?? 'Unknown' }}
-                  </span>
-                  <span v-if="charLevel(signup)" class="inline-flex items-center gap-0.5 text-xs font-medium text-accent-gold bg-accent-gold/10 px-2 py-0.5 rounded-full border border-accent-gold/20">
-                    {{ charLevel(signup) }}
-                  </span>
-                  <span
-                    v-if="charAchievements(signup)"
-                    class="text-xs text-amber-400"
-                    :title="t('signupList.achievementPoints')"
-                  >🏆 {{ charAchievements(signup) }}</span>
-                </div>
-                <!-- Row 2: Class + Role -->
-                <div class="flex items-center gap-1.5 flex-wrap mt-2">
-                  <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
-                  <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
-                </div>
-                <!-- Row 3: Specializations -->
-                <div v-if="signup.chosen_spec" class="flex items-center gap-1.5 flex-wrap mt-1.5">
-                  <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
-                </div>
-                <!-- Row 4: Professions with icons -->
-                <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-2 mt-2 flex-wrap">
-                  <span
-                    v-for="prof in charProfessions(signup)"
-                    :key="prof.name"
-                    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
-                  >
-                    <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
-                    {{ prof.name }} {{ prof.skill }}
-                  </span>
-                </div>
-                <!-- Gear score note -->
-                <div v-if="signup.gear_score_note" class="text-xs text-amber-300 mt-2">
-                  ⚔️ GS: {{ signup.gear_score_note }}
-                </div>
-                <!-- Note -->
-                <div v-if="signup.note" class="text-xs text-text-muted mt-1.5 italic truncate" :title="signup.note">
-                  📝 {{ signup.note }}
-                </div>
-                <!-- Bench queue position -->
-                <div v-if="signup.bench_info" class="text-xs text-yellow-400 mt-2 flex items-center gap-1">
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-400/10 border border-yellow-500/30 rounded">
-                    <img :src="getRoleIcon(signup.bench_info.waiting_for)" class="w-3.5 h-3.5 rounded-sm" alt="" />
-                    Queue #{{ signup.bench_info.queue_position }} for {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
-                  </span>
-                </div>
-                <!-- Attendance status (informational — NOT coupled with bench/queue) -->
-                <div class="flex items-center gap-2 mt-2">
-                  <img :src="getAttendanceStatusIcon(signup.attendance_status || 'going')" class="w-4 h-4 rounded-sm flex-shrink-0" :alt="ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going']" />
-                  <select
-                    v-if="canManage || isOwnSignup(signup)"
-                    :value="signup.attendance_status || 'going'"
-                    class="bg-bg-secondary border text-xs rounded px-2 py-1 outline-none transition-colors"
-                    :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).select"
-                    @change="onAttendanceStatusChange(signup, $event)"
-                  >
-                    <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                  </select>
-                  <span v-else class="text-xs px-2 py-0.5 rounded" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
-                    {{ ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going'] }}
-                  </span>
-                  <span v-if="(signup.attendance_status === 'late') && signup.late_minutes" class="text-[10px] text-amber-300">
-                    ~{{ signup.late_minutes }} min
-                  </span>
-                  <!-- Late minutes input (shown only when changing to late) -->
-                  <input
-                    v-if="(canManage || isOwnSignup(signup)) && (signup.attendance_status === 'late') && lateMinutesTarget === signup.id"
-                    v-model.number="lateMinutesValue"
-                    type="number"
-                    min="1"
-                    max="999"
-                    placeholder="min"
-                    class="w-16 bg-bg-secondary border border-amber-500/40 text-amber-300 text-xs rounded px-2 py-1 outline-none focus:border-amber-400"
-                    @blur="saveLateMinutes(signup)"
-                    @keyup.enter="saveLateMinutes(signup)"
+              <!-- Card body -->
+              <div class="p-4 sm:p-5">
+                <div class="flex items-start gap-4">
+                  <!-- Class icon (larger, prominent) -->
+                  <img
+                    v-if="signup.character?.class_name"
+                    :src="getClassIcon(signup.character.class_name)"
+                    :alt="signup.character.class_name"
+                    class="w-14 h-14 rounded-lg border border-border-default flex-shrink-0"
                   />
+                  <div class="w-14 h-14 rounded-lg bg-bg-secondary border border-border-default flex-shrink-0" v-else />
+
+                  <!-- Main info -->
+                  <div class="flex-1 min-w-0">
+                    <!-- Name row -->
+                    <div class="flex items-center gap-2 flex-wrap mb-2">
+                      <span class="text-base sm:text-lg font-bold text-text-primary">
+                        {{ signup.character?.name ?? 'Unknown' }}
+                      </span>
+                      <span v-if="charLevel(signup)" class="text-xs font-semibold text-accent-gold bg-accent-gold/10 px-2 py-0.5 rounded-full border border-accent-gold/20">
+                        {{ charLevel(signup) }}
+                      </span>
+                      <span
+                        v-if="charAchievements(signup)"
+                        class="text-xs text-amber-400"
+                        :title="t('signupList.achievementPoints')"
+                      >🏆 {{ charAchievements(signup) }}</span>
+                    </div>
+
+                    <!-- Class + Role badges -->
+                    <div class="flex items-center gap-2 flex-wrap mb-3">
+                      <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
+                      <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
+                    </div>
+
+                    <!-- Specs -->
+                    <div v-if="signup.chosen_spec" class="flex items-center gap-2 flex-wrap mb-3">
+                      <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
+                    </div>
+
+                    <!-- Professions -->
+                    <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-2 flex-wrap mb-3">
+                      <span
+                        v-for="prof in charProfessions(signup)"
+                        :key="prof.name"
+                        class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-bg-secondary border border-border-default rounded text-text-muted"
+                      >
+                        <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
+                        {{ prof.name }} {{ prof.skill }}
+                      </span>
+                    </div>
+
+                    <!-- Note -->
+                    <p v-if="signup.note" class="text-sm text-text-muted italic mb-2" :title="signup.note">📝 {{ signup.note }}</p>
+
+                    <!-- Bench queue info -->
+                    <div v-if="signup.bench_info" class="mb-2">
+                      <span class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-yellow-400/10 border border-yellow-500/30 rounded text-yellow-400 font-medium">
+                        <img :src="getRoleIcon(signup.bench_info.waiting_for)" class="w-4 h-4 rounded-sm" alt="" />
+                        Queue #{{ signup.bench_info.queue_position }} · {{ ROLE_LABEL_MAP[signup.bench_info.waiting_for] || signup.bench_info.waiting_for }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Right: Attendance status (top-right corner) -->
+                  <div class="flex-shrink-0">
+                    <div class="flex items-center gap-2">
+                      <img :src="getAttendanceStatusIcon(signup.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going']" />
+                      <select
+                        v-if="canManage || isOwnSignup(signup)"
+                        :value="signup.attendance_status || 'going'"
+                        class="bg-bg-secondary border text-sm rounded-md px-3 py-1.5 outline-none transition-colors cursor-pointer"
+                        :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).select"
+                        @change="onAttendanceStatusChange(signup, $event)"
+                      >
+                        <option v-for="opt in ATTENDANCE_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                      </select>
+                      <span v-else class="text-sm px-3 py-1 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
+                        {{ ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going'] }}
+                      </span>
+                    </div>
+                    <!-- Late minutes -->
+                    <div v-if="signup.attendance_status === 'late'" class="mt-2 flex items-center gap-1.5 justify-end">
+                      <input
+                        v-if="(canManage || isOwnSignup(signup)) && lateMinutesTarget === signup.id"
+                        v-model.number="lateMinutesValue"
+                        type="number" min="1" max="999"
+                        :placeholder="t('signup.minutesLate')"
+                        class="w-20 bg-bg-secondary border border-amber-500/40 text-amber-300 text-xs rounded px-2 py-1 outline-none focus:border-amber-400"
+                        @blur="saveLateMinutes(signup)"
+                        @keyup.enter="saveLateMinutes(signup)"
+                      />
+                      <span v-else-if="signup.late_minutes" class="text-xs text-amber-300">~{{ signup.late_minutes }} {{ t('signup.minutesLate') }}</span>
+                    </div>
+                  </div>
                 </div>
-                <!-- Action row: View Details button + Officer actions -->
-                <div class="flex items-center gap-1 sm:gap-2 mt-3 flex-wrap">
-                  <button
-                    class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-border-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold transition-colors"
-                    :aria-label="'View details for ' + (signup.character?.name ?? 'character')"
-                    @click.stop="openCharacterModal(signup.character)"
-                  >🔍 {{ t('signupList.viewDetails') }}</button>
-                  <!-- Officer action buttons -->
-                  <template v-if="canManage">
-                    <button
-                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400 transition-colors"
-                      @click.stop="startEdit(signup)"
-                    >{{ t('common.buttons.edit') }}</button>
-                    <button
-                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-colors"
-                      @click.stop="startReplaceCharacter(signup)"
-                    >{{ t('signupList.replace') }}</button>
-                    <button
-                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-colors"
-                      @click.stop="removeSignup(signup)"
-                    >{{ t('common.buttons.remove') }}</button>
-                  </template>
-                </div>
+              </div>
+
+              <!-- Card footer: Action buttons -->
+              <div class="px-4 sm:px-5 py-3 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
+                <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click.stop="openCharacterModal(signup.character)">
+                  🔍 {{ t('signupList.viewDetails') }}
+                </WowButton>
+                <template v-if="canManage">
+                  <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click.stop="startEdit(signup)">
+                    {{ t('common.buttons.edit') }}
+                  </WowButton>
+                  <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click.stop="startReplaceCharacter(signup)">
+                    {{ t('signupList.replace') }}
+                  </WowButton>
+                  <WowButton variant="danger" class="text-xs !py-1.5 !px-3" @click.stop="removeSignup(signup)">
+                    {{ t('common.buttons.remove') }}
+                  </WowButton>
+                </template>
               </div>
             </div>
           </template>
@@ -306,6 +306,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
+import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'

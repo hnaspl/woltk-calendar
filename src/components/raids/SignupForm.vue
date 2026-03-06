@@ -100,7 +100,7 @@
 
       <!-- Attendance status (informational — NOT coupled with bench/queue) -->
       <div v-if="form.characterId && roles.length > 0">
-        <label class="block text-xs text-text-muted mb-1">{{ t('signup.attendanceStatus') || 'Status' }}</label>
+        <label class="block text-xs text-text-muted mb-1">{{ t('signup.attendanceStatus') }}</label>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="opt in ATTENDANCE_STATUS_OPTIONS"
@@ -120,10 +120,10 @@
           <input
             v-model.number="form.lateMinutes"
             type="number" min="1" max="120" step="5"
-            placeholder="Minutes late"
+            :placeholder="t('signup.minutesLate')"
             class="w-28 bg-bg-tertiary border border-amber-500/40 text-amber-300 rounded px-2 py-1 text-xs outline-none focus:border-amber-400"
           />
-          <span class="text-[10px] text-text-muted">minutes late</span>
+          <span class="text-[10px] text-text-muted">{{ t('signup.minutesLate') }}</span>
         </div>
       </div>
 
