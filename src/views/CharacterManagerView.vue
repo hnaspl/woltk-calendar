@@ -79,13 +79,13 @@
                 <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
               </div>
               <!-- Synced metadata -->
-              <div v-if="char.metadata?.professions?.length" class="flex items-center gap-1.5 flex-wrap mb-2">
+              <div v-if="char.metadata?.professions?.length" class="flex items-center gap-2 flex-wrap mb-3">
                 <span
                   v-for="prof in char.metadata.professions"
                   :key="prof.name"
-                  class="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
+                  class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-bg-secondary border border-border-default rounded text-text-muted"
                 >
-                  <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
+                  <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
                   {{ prof.name }} {{ prof.skill || '' }}
                 </span>
               </div>

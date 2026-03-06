@@ -310,9 +310,11 @@ def _fetch_npc_loot(npc_id: int, expansion: str) -> list[dict]:
                 "quality": quality,
             })
 
-        # Sort by quality (legendary first), limit to top 20
+        # Sort by quality (legendary first), cap at 20 items to keep
+        # the response size reasonable for the frontend loot grid.
+        _MAX_LOOT_ITEMS = 20
         loot.sort(key=lambda x: x.get("quality", 0), reverse=True)
-        loot = loot[:20]
+        loot = loot[:_MAX_LOOT_ITEMS]
 
         _npc_loot_cache[cache_key] = loot
         return loot
