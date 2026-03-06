@@ -223,7 +223,7 @@
                               :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
                               @change="updateMyAttendanceStatus(s, $event.target.value)"
                             >
-                              <option v-for="opt in ATTENDANCE_STATUS_OPTIONS.filter(o => o.value !== 'did_not_show')" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
+                              <option v-for="opt in playerAttendanceOptions" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
                             </select>
                           </div>
                           <!-- Late minutes -->
@@ -598,6 +598,10 @@ const guildHasDiscordWebhook = computed(() => {
   const settings = guildStore.currentGuild?.settings
   return !!(settings && settings.discord_webhook_url)
 })
+
+const playerAttendanceOptions = computed(() =>
+  ATTENDANCE_STATUS_OPTIONS.filter(o => o.value !== 'did_not_show')
+)
 const hasAttendance = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
