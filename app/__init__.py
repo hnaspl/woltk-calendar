@@ -110,9 +110,8 @@ def create_app(config_override: dict | None = None) -> Flask:
         if not hasattr(_cu, "active_tenant_id") or not _cu.is_authenticated:
             return  # Not logged in or no tenant context
         header_tid = request.headers.get("X-Tenant-Id", type=int)
-        if header_tid and getattr(_cu, "active_tenant_id", None):
-            if header_tid != _cu.active_tenant_id:
-                return jsonify({"error": "Tenant mismatch"}), 403
+        if header_tid and getattr(_cu, "active_tenant_id", None) and header_tid != _cu.active_tenant_id:
+            return jsonify({"error": "Tenant mismatch"}), 403
 
     @app.before_request
     def resolve_tenant_from_subdomain():

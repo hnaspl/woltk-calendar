@@ -374,7 +374,7 @@ async function changeMemberRole(member, newRole) {
   try {
     await guildsApi.adminUpdateMemberRole(selectedGuild.value.id, member.user_id, newRole)
     member.role = newRole
-    toast.info(t('admin.guilds.roleUpdated'))
+    toast.success(t('admin.guilds.roleUpdated'))
   } catch (err) {
     toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
@@ -393,7 +393,7 @@ async function doTransferOwnership() {
   try {
     await guildsApi.adminTransferOwnership(selectedGuild.value.id, transferTarget.value.user_id)
     showTransferModal.value = false
-    toast.info(t('admin.guilds.ownershipTransferred'))
+    toast.success(t('admin.guilds.ownershipTransferred'))
     await loadGuilds()
     await viewMembers(selectedGuild.value)
   } catch (err) {
@@ -411,7 +411,7 @@ async function doSendNotification() {
   try {
     await guildsApi.adminSendNotification(selectedGuild.value.id, notifyTarget.value.user_id, notifyMessage.value)
     showNotifyModal.value = false
-    toast.info(t('admin.guilds.notificationSent'))
+    toast.success(t('admin.guilds.notificationSent'))
   } catch (err) {
     toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
   }
@@ -426,7 +426,7 @@ async function doDeleteGuild() {
   try {
     await guildsApi.adminDeleteGuild(deleteGuildTarget.value.id)
     showDeleteGuildModal.value = false
-    toast.info(t('admin.guilds.guildDeleted'))
+    toast.success(t('admin.guilds.guildDeleted'))
     await loadGuilds()
   } catch (err) {
     toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))
@@ -443,7 +443,7 @@ async function doRemoveMember() {
     await guildsApi.adminRemoveMember(selectedGuild.value.id, removeMemberTarget.value.user_id)
     showRemoveMemberModal.value = false
     guildMembers.value = guildMembers.value.filter(m => m.user_id !== removeMemberTarget.value.user_id)
-    toast.info(t('admin.guilds.memberRemovedSuccess'))
+    toast.success(t('admin.guilds.memberRemovedSuccess'))
     await loadGuilds()
   } catch (err) {
     toast.error(err?.response?.data?.error ?? t('admin.guilds.loadError'))

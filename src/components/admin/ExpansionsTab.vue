@@ -445,10 +445,10 @@ async function saveExpansion() {
   try {
     if (editingExpansion.value) {
       await expansionsApi.updateExpansion(editingExpansion.value.id, payload)
-      toast.info('Expansion updated')
+      toast.success('Expansion updated')
     } else {
       await expansionsApi.createExpansion(payload)
-      toast.info('Expansion created')
+      toast.success('Expansion created')
     }
     showExpansionModal.value = false
     await loadExpansions()
@@ -469,7 +469,7 @@ async function doDeleteExpansion() {
   try {
     await expansionsApi.deleteExpansion(deleteExpansionTarget.value.id)
     showDeleteExpansionModal.value = false
-    toast.info('Expansion deleted')
+    toast.success('Expansion deleted')
     if (selectedExpansion.value?.id === deleteExpansionTarget.value.id) {
       selectedExpansion.value = null
       raids.value = []
@@ -486,7 +486,7 @@ async function toggleExpansionActive(exp) {
   togglingId.value = exp.id
   try {
     await expansionsApi.updateExpansion(exp.id, { is_active: !exp.is_active })
-    toast.info(`Expansion ${exp.is_active ? 'disabled' : 'enabled'}`)
+    toast.success(`Expansion ${exp.is_active ? 'disabled' : 'enabled'}`)
     await loadExpansions()
   } catch (err) {
     toast.error(err?.response?.data?.error ?? 'Failed to toggle expansion')
@@ -500,7 +500,7 @@ async function doSetDefault(exp) {
   try {
     await expansionsApi.setDefaultExpansion(exp.slug)
     defaultExpansionSlug.value = exp.slug
-    toast.info(`${exp.name} set as default`)
+    toast.success(`${exp.name} set as default`)
   } catch (err) {
     toast.error(err?.response?.data?.error ?? 'Failed to set default expansion')
   } finally {
@@ -540,10 +540,10 @@ async function saveRaid() {
   try {
     if (editingRaid.value) {
       await expansionsApi.updateRaid(editingRaid.value.id, raidForm.value)
-      toast.info(t('admin.raidDefinitions.updated'))
+      toast.success(t('admin.raidDefinitions.updated'))
     } else {
       await expansionsApi.addRaid(selectedExpansion.value.id, raidForm.value)
-      toast.info(t('admin.raidDefinitions.created'))
+      toast.success(t('admin.raidDefinitions.created'))
     }
     showRaidModal.value = false
     await loadRaids(selectedExpansion.value.slug)
@@ -564,7 +564,7 @@ async function doDeleteRaid() {
   try {
     await expansionsApi.deleteRaid(deleteTarget.value.id)
     showDeleteModal.value = false
-    toast.info(t('admin.raidDefinitions.deleted'))
+    toast.success(t('admin.raidDefinitions.deleted'))
     await loadRaids(selectedExpansion.value.slug)
   } catch (err) {
     toast.error(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'))
