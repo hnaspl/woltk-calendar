@@ -69,7 +69,7 @@
     </WowCard>
 
     <!-- SMTP / Email Settings -->
-    <WowCard v-if="authStore.user?.is_admin">
+    <WowCard>
       <h2 class="wow-heading text-base mb-2">{{ t('admin.smtp.title') }}</h2>
       <p class="text-text-muted text-xs mb-4">{{ t('admin.smtp.help') }}</p>
 
@@ -182,7 +182,7 @@
     </WowCard>
 
     <!-- Password Policy -->
-    <WowCard v-if="authStore.user?.is_admin">
+    <WowCard>
       <h2 class="wow-heading text-base mb-2">{{ t('admin.passwordPolicy.title') }}</h2>
       <p class="text-text-muted text-xs mb-4">{{ t('admin.passwordPolicy.help') }}</p>
 
@@ -222,7 +222,7 @@
     </WowCard>
 
     <!-- Discord OAuth Settings (Global Admin only) -->
-    <WowCard v-if="authStore.user?.is_admin">
+    <WowCard>
       <h2 class="wow-heading text-base mb-2">{{ t('admin.system.discord.title') }}</h2>
       <p class="text-text-muted text-xs mb-4">{{ t('admin.system.discord.help') }}</p>
 

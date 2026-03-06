@@ -1160,7 +1160,11 @@
       "selectPlan": "Wybierz plan",
       "usage": "Użycie",
       "usageTitle": "Użycie zasobów",
-      "events": "Wydarzenia"
+      "events": "Wydarzenia",
+      "features": "Funkcje",
+      "featuresTitle": "Funkcje najemcy",
+      "noFeatures": "Brak skonfigurowanych funkcji.",
+      "renameTenant": "Zmień nazwę"
     },
     "title": "Panel admina",
     "users": {

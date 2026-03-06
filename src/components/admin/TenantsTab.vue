@@ -31,8 +31,10 @@
               class="hover:bg-bg-tertiary/50 transition-colors"
             >
               <td class="px-4 py-2.5">
-                <div class="text-text-primary font-medium">{{ tenant.name }}</div>
-                <div class="text-xs text-text-muted">{{ tenant.slug }}</div>
+                <button type="button" class="text-left group" @click="openRenameModal(tenant)">
+                  <div class="text-text-primary font-medium group-hover:text-accent-gold transition-colors">{{ tenant.name }}</div>
+                  <div class="text-xs text-text-muted">{{ tenant.slug }}</div>
+                </button>
               </td>
               <td class="hidden sm:table-cell px-4 py-2.5">
                 <div class="flex items-center gap-2">
@@ -143,6 +145,28 @@
         <p v-if="!Object.keys(tenantFeatures).length" class="text-sm text-text-muted text-center py-4">{{ t('admin.tenants.noFeatures') }}</p>
       </div>
     </WowModal>
+
+    <!-- Rename tenant modal -->
+    <WowModal v-model="showRenameModal" :title="t('admin.tenants.renameTenant')" size="sm">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.tenants.name') }}</label>
+          <input
+            v-model="renameForm.name"
+            type="text"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+            :placeholder="t('admin.tenants.name')"
+          />
+        </div>
+        <div v-if="renameError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ renameError }}</div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showRenameModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="renameSaving" @click="doRenameTenant">{{ t('common.buttons.save') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
   </div>
 </template>
 
@@ -189,6 +213,16 @@ const showFeaturesModal = computed({
 })
 const tenantFeatures = ref(null)
 const loadingFeatures = ref(false)
+
+// Tenant rename
+const renamingTenant = ref(null)
+const showRenameModal = computed({
+  get: () => !!renamingTenant.value,
+  set: (v) => { if (!v) renamingTenant.value = null }
+})
+const renameForm = ref({ name: '' })
+const renameSaving = ref(false)
+const renameError = ref('')
 
 async function fetchTenants() {
   loading.value = true
@@ -294,6 +328,27 @@ async function doDelete(tenant) {
     await fetchTenants()
   } catch {
     // ignore
+  }
+}
+
+function openRenameModal(tenant) {
+  renamingTenant.value = tenant
+  renameForm.value = { name: tenant.name }
+  renameError.value = ''
+}
+
+async function doRenameTenant() {
+  if (!renamingTenant.value || !renameForm.value.name.trim()) return
+  renameSaving.value = true
+  renameError.value = ''
+  try {
+    await tenantsApi.adminUpdateTenant(renamingTenant.value.id, { name: renameForm.value.name.trim() })
+    renamingTenant.value = null
+    await fetchTenants()
+  } catch (err) {
+    renameError.value = err.response?.data?.error || err.response?.data?.message || t('common.labels.error')
+  } finally {
+    renameSaving.value = false
   }
 }
 

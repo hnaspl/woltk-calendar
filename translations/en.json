@@ -1170,7 +1170,8 @@
       "events": "Events",
       "features": "Features",
       "featuresTitle": "Tenant Features",
-      "noFeatures": "No features configured."
+      "noFeatures": "No features configured.",
+      "renameTenant": "Rename Tenant"
     },
     "title": "Admin Panel",
     "users": {
