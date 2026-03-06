@@ -348,12 +348,10 @@ function itemQualityText(item) {
   return getItemQualityText(item)
 }
 
-/** Inline style for item name color — uses WoW quality hex colors for accurate rendering. */
-const QUALITY_HEX = ITEM_QUALITY_HEX
 function itemQualityStyle(item) {
   const q = item.quality
   if (q == null) return {}
-  const hex = QUALITY_HEX[q]
+  const hex = ITEM_QUALITY_HEX[q]
   return hex ? { color: hex } : {}
 }
 

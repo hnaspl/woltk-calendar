@@ -389,9 +389,9 @@
                       <!-- Fallback quality-colored border square — hidden when Wowhead injects item icon -->
                       <span class="loot-icon-fallback w-5 h-5 rounded border flex-shrink-0"
                             :class="(ITEM_QUALITY_COLORS[item.quality] || {}).border || 'border-border-default'"
-                            :style="{ backgroundColor: QUALITY_HEX[item.quality] ? QUALITY_HEX[item.quality] + '18' : 'transparent' }">
+                            :style="{ backgroundColor: ITEM_QUALITY_HEX[item.quality] ? ITEM_QUALITY_HEX[item.quality] + '18' : 'transparent' }">
                       </span>
-                      <span class="truncate" :style="{ color: QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
+                      <span class="truncate" :style="{ color: ITEM_QUALITY_HEX[item.quality] || '#ccc' }">{{ item.name }}</span>
                     </a>
                   </div>
                   <div v-else class="text-xs text-text-muted py-2 text-center">
@@ -731,8 +731,6 @@ function toggleBossExpand(npcId) {
 
 const wowheadDomain = computed(() => getWowheadDomain(wowheadData.value?.expansion))
 
-/** Alias for template usage — imported from centralized constants. */
-const QUALITY_HEX = ITEM_QUALITY_HEX
 
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)

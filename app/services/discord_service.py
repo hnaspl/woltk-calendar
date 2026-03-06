@@ -19,6 +19,7 @@ from urllib.parse import quote, urlencode
 import requests
 import sqlalchemy as sa
 
+from app.constants import ROLE_LABELS
 from app.extensions import db
 from app.models.user import User
 from app.models.system_setting import SystemSetting
@@ -335,15 +336,6 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
     going = [s for s in signups if s.get("lineup_status") == "going"]
     bench = [s for s in signups if s.get("lineup_status") == "bench"]
 
-    # Role display names and emojis for Discord
-    ROLE_EMOJI = {
-        "main_tank": "🛡️",
-        "off_tank": "🔰",
-        "healer": "💚",
-        "melee_dps": "⚔️",
-        "range_dps": "🏹",
-    }
-
     # Group going by role
     role_groups: dict[str, list[str]] = {}
     for s in going:
@@ -359,9 +351,8 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
         role_groups[role].append(entry)
 
     def _role_display(role_key: str) -> str:
-        emoji = ROLE_EMOJI.get(role_key, "📋")
-        label = role_key.replace("_", " ").title()
-        return f"{emoji} {label}"
+        label = ROLE_LABELS.get(role_key, role_key.replace("_", " ").title())
+        return label
 
     fields = []
     for role, players in role_groups.items():
@@ -375,9 +366,9 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
     comp_parts = []
     for role in ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]:
         if role in role_groups:
-            emoji = ROLE_EMOJI.get(role, "")
+            label = ROLE_LABELS.get(role, role.replace("_", " ").title())
             count = len(role_groups[role])
-            comp_parts.append(f"{emoji} {count}")
+            comp_parts.append(f"{label}: {count}")
     if comp_parts:
         fields.insert(0, {
             "name": "📊 Composition",
@@ -390,8 +381,8 @@ def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, s
         for s in bench[:8]:
             char_name = s.get("character", {}).get("name", "?")
             role = s.get("chosen_role", "")
-            emoji = ROLE_EMOJI.get(role, "")
-            bench_entries.append(f"{emoji} {char_name}")
+            role_label = ROLE_LABELS.get(role, role.replace("_", " ").title())
+            bench_entries.append(f"{role_label}: {char_name}")
         bench_text = "\n".join(bench_entries)
         if len(bench) > 8:
             bench_text += f"\n*+{len(bench) - 8} more on bench*"
