@@ -338,13 +338,17 @@ function openRenameModal(tenant) {
 }
 
 async function doRenameTenant() {
-  if (!renamingTenant.value || !renameForm.value.name.trim()) return
+  if (!renamingTenant.value) return
+  if (!renameForm.value.name.trim()) {
+    renameError.value = t('common.labels.error')
+    return
+  }
   renameSaving.value = true
   renameError.value = ''
   try {
     await tenantsApi.adminUpdateTenant(renamingTenant.value.id, { name: renameForm.value.name.trim() })
-    renamingTenant.value = null
     await fetchTenants()
+    renamingTenant.value = null
   } catch (err) {
     renameError.value = err.response?.data?.error || err.response?.data?.message || t('common.labels.error')
   } finally {
