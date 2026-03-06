@@ -167,7 +167,15 @@ def duplicate_event(guild_id: int, event_id: int, membership):
     new_starts_at = None
     if data.get("starts_at_utc"):
         new_starts_at = datetime.fromisoformat(data["starts_at_utc"])
-    new_event = event_service.duplicate_event(event, current_user.id, new_starts_at)
+    new_close_signups = None
+    if data.get("close_signups_at"):
+        new_close_signups = datetime.fromisoformat(data["close_signups_at"])
+    copy_signups = data.get("copy_signups", False)
+    new_event = event_service.duplicate_event(
+        event, current_user.id, new_starts_at,
+        new_close_signups_at=new_close_signups,
+        copy_signups=copy_signups,
+    )
     emit_events_changed(guild_id)
     return jsonify(new_event.to_dict()), 201
 

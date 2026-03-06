@@ -87,6 +87,18 @@
         />
       </div>
 
+      <!-- Attendance status (Going/Tentative/Not Going/Alt — no did_not_show or late for players) -->
+      <div v-if="form.characterId && roles.length > 0">
+        <label class="block text-xs text-text-muted mb-1">{{ t('signup.attendanceStatus') }}</label>
+        <select
+          v-model="form.attendanceStatus"
+          class="w-full bg-bg-tertiary border text-sm rounded px-3 py-2 outline-none cursor-pointer"
+          :class="(ATTENDANCE_STATUS_STYLE[form.attendanceStatus] || {}).select || 'border-green-500/40 text-green-300'"
+        >
+          <option v-for="opt in signupAttendanceOptions" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
+        </select>
+      </div>
+
       <!-- Note (hidden when character has no valid roles) -->
       <div v-if="!form.characterId || roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.note') }}</label>
@@ -149,7 +161,7 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE } from '@/constants'
 import { useExpansionData } from '@/composables/useExpansionData'
 import { useConstantsStore } from '@/stores/constants'
 import * as guildExpansionsApi from '@/api/guild_expansions'
@@ -272,7 +284,12 @@ const isCharBanned = computed(() => {
   return form.characterId && props.bannedCharacterIds.includes(Number(form.characterId))
 })
 
-const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '' }
+/** Attendance options for player signup: exclude did_not_show and late (admin-only statuses) */
+const signupAttendanceOptions = computed(() =>
+  ATTENDANCE_STATUS_OPTIONS.filter(o => o.value !== 'did_not_show' && o.value !== 'late')
+)
+
+const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '', attendanceStatus: 'going' }
 
 const form = reactive({ ...INITIAL_FORM })
 
@@ -329,6 +346,7 @@ watch(
       form.chosenRole  = s.chosen_role   ?? ''
       form.chosenSpec  = s.chosen_spec   ?? ''
       form.note        = s.note          ?? ''
+      form.attendanceStatus = s.attendance_status ?? 'going'
     } else {
       // Reset form when editing ends so spec doesn't persist from previous character
       Object.assign(form, INITIAL_FORM)
@@ -350,6 +368,7 @@ async function handleSubmit() {
     chosen_role:  form.chosenRole,
     chosen_spec:  form.chosenSpec || undefined,
     note:         form.note || undefined,
+    attendance_status: form.attendanceStatus || 'going',
   }
 
   // Auto-bench when player knowingly selects a full role
@@ -397,6 +416,7 @@ async function forceBenchSignup() {
     chosen_spec:  form.chosenSpec || undefined,
     note:         form.note || undefined,
     force_bench:  true,
+    attendance_status: form.attendanceStatus || 'going',
   }
 
   try {

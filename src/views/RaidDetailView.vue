@@ -102,7 +102,7 @@
                 <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
                   {{ (event.status === 'locked' || event.is_locked) ? t('raidDetail.unlock') : t('raidDetail.lock') }}
                 </WowButton>
-                <WowButton variant="secondary" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
+                <WowButton variant="secondary" @click="openDuplicateModal">{{ t('raidDetail.duplicate') }}</WowButton>
                 <WowButton variant="secondary" @click="showDiscordModal = true" title="Send to Discord">
                   <img :src="discordIcon" class="w-4 h-4 inline" alt="Discord" />
                   Discord
@@ -171,17 +171,17 @@
                       : 'border-border-default bg-bg-tertiary hover:border-border-gold/40'"
                   >
                     <!-- Card body -->
-                    <div class="p-4 sm:p-5">
-                      <div class="flex items-start gap-4">
+                    <div class="p-5 sm:p-6">
+                      <div class="flex items-start gap-5">
                         <img
                           :src="getClassIcon(s.character?.class_name)"
                           :alt="s.character?.class_name ?? ''"
-                          class="w-14 h-14 rounded-lg border border-border-default flex-shrink-0"
+                          class="w-16 h-16 rounded-lg border border-border-default flex-shrink-0"
                         />
                         <div class="flex-1 min-w-0">
                           <!-- Name + status -->
-                          <div class="flex items-center gap-2 flex-wrap mb-2">
-                            <span class="text-base sm:text-lg font-bold" :style="{ color: getClassColor(s.character?.class_name) }">
+                          <div class="flex items-center gap-2.5 flex-wrap mb-3">
+                            <span class="text-lg sm:text-xl font-bold" :style="{ color: getClassColor(s.character?.class_name) }">
                               {{ s.character?.name ?? '?' }}
                             </span>
                             <RoleBadge :role="s.chosen_role" />
@@ -193,16 +193,16 @@
                           </div>
 
                           <!-- Specs -->
-                          <div v-if="s.chosen_spec" class="flex items-center gap-2 flex-wrap mb-3">
+                          <div v-if="s.chosen_spec" class="flex items-center gap-2.5 flex-wrap mb-3">
                             <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
                           </div>
 
                           <!-- Professions -->
-                          <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-2 flex-wrap mb-3">
+                          <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-2.5 flex-wrap mb-3">
                             <span
                               v-for="prof in mySignupProfessions(s)"
                               :key="prof.name"
-                              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-bg-secondary border border-border-default rounded text-text-muted"
+                              class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-bg-secondary border border-border-default rounded text-text-muted"
                             >
                               <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
                               {{ prof.name }} {{ prof.skill || '' }}
@@ -210,7 +210,7 @@
                           </div>
 
                           <!-- Note -->
-                          <p v-if="s.note" class="text-sm text-text-muted italic mb-2">📝 {{ s.note }}</p>
+                          <p v-if="s.note" class="text-sm text-text-muted italic mb-3">{{ s.note }}</p>
                         </div>
 
                         <!-- Right: Attendance status -->
@@ -242,7 +242,7 @@
                         <div class="flex-shrink-0" v-else>
                           <div class="flex items-center gap-2">
                             <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
-                            <span class="text-sm px-3 py-1 rounded-md"
+                            <span class="text-sm px-3 py-1.5 rounded-md"
                                   :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
                               {{ t(ATTENDANCE_STATUS_I18N_MAP[s.attendance_status || 'going']) }}
                             </span>
@@ -255,11 +255,11 @@
                     </div>
 
                     <!-- Card footer: Action buttons -->
-                    <div v-if="event.status === 'open' || event.status === 'draft'" class="px-4 sm:px-5 py-3 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
-                      <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click="editingSignupId = editingSignupId === s.id ? null : s.id">
+                    <div v-if="event.status === 'open' || event.status === 'draft'" class="px-5 sm:px-6 py-3.5 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
+                      <WowButton variant="secondary" class="text-xs !py-2 !px-4" @click="editingSignupId = editingSignupId === s.id ? null : s.id">
                         {{ editingSignupId === s.id ? t('common.buttons.cancel') : t('common.buttons.edit') }}
                       </WowButton>
-                      <WowButton variant="danger" class="text-xs !py-1.5 !px-3" @click="leaveRaid(s)">
+                      <WowButton variant="danger" class="text-xs !py-2 !px-4" @click="leaveRaid(s)">
                         {{ t('raidDetail.leaveRaid') }}
                       </WowButton>
                     </div>
@@ -346,7 +346,7 @@
             <img :src="getUiIcon('loot')" class="w-5 h-5 rounded-sm" alt="" />
             <h2 class="wow-heading text-base">{{ t('raidDetail.raidInfo') }}</h2>
             <span v-if="wowheadData?.raid_size" class="text-xs px-2 py-0.5 rounded bg-accent-gold/20 text-accent-gold border border-accent-gold/40">
-              {{ wowheadData.raid_size }}-man {{ wowheadData.difficulty === 'heroic' ? 'Heroic' : 'Normal' }}
+              {{ wowheadData.raid_size }}-man {{ wowheadData.difficulty === 'heroic' ? t('calendar.heroic') : t('calendar.normal') }}
             </span>
             <span class="text-xs text-text-muted ml-1">({{ wowheadData.loot.length }} {{ t('raidDetail.drops') }})</span>
             <a v-if="wowheadData?.zone_url" :href="wowheadData.zone_url" target="_blank" rel="noopener noreferrer"
@@ -457,6 +457,45 @@
         <div class="flex justify-end gap-3">
           <WowButton variant="secondary" @click="showEditModal = false">{{ t('common.buttons.cancel') }}</WowButton>
           <WowButton :loading="actionLoading" @click="saveEvent">{{ t('common.buttons.save') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
+    <!-- Duplicate Event modal -->
+    <WowModal v-model="showDuplicateModal" :title="t('raidDetail.duplicate')" size="md">
+      <form @submit.prevent="doDuplicate" class="space-y-4">
+        <p class="text-sm text-text-muted">{{ t('raidDetail.duplicateDescription') }}</p>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }} *</label>
+          <input
+            v-model="duplicateForm.starts_at"
+            type="datetime-local"
+            :min="todayDatetimeLocal"
+            required
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.closeSignupsAt') }}</label>
+          <input
+            v-model="duplicateForm.close_signups_at"
+            type="datetime-local"
+            :min="todayDatetimeLocal"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+          <span class="text-[10px] text-text-muted">{{ t('calendar.closeSignupsHelp') }}</span>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="duplicateForm.copy_signups" type="checkbox" class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold cursor-pointer" />
+          <span class="text-sm text-text-primary">{{ t('raidDetail.duplicateCopySignups') }}</span>
+        </label>
+        <p class="text-[10px] text-text-muted -mt-2 ml-6">{{ t('raidDetail.duplicateCopySignupsHelp') }}</p>
+        <div v-if="duplicateError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ duplicateError }}</div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showDuplicateModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="actionLoading" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
         </div>
       </template>
     </WowModal>
@@ -587,6 +626,9 @@ const error = ref(null)
 const actionLoading = ref(false)
 const confirmCancel = ref(false)
 const showEditModal = ref(false)
+const showDuplicateModal = ref(false)
+const duplicateError = ref(null)
+const duplicateForm = reactive({ starts_at: '', close_signups_at: '', copy_signups: false })
 const showLeaveModal = ref(false)
 const showAttendanceModal = ref(false)
 const showDiscordModal = ref(false)
@@ -907,9 +949,26 @@ async function cancelEvent() {
 }
 
 async function doDuplicate() {
+  duplicateError.value = null
+  if (!duplicateForm.starts_at) {
+    duplicateError.value = t('raidDetail.duplicateSelectDate')
+    return
+  }
+  if (duplicateForm.close_signups_at && new Date(duplicateForm.close_signups_at) >= new Date(duplicateForm.starts_at)) {
+    duplicateError.value = t('calendar.closeSignupsError')
+    return
+  }
   actionLoading.value = true
   try {
-    const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id)
+    const payload = {
+      starts_at_utc: tz.guildLocalToUtc(duplicateForm.starts_at),
+      copy_signups: duplicateForm.copy_signups,
+    }
+    if (duplicateForm.close_signups_at) {
+      payload.close_signups_at = tz.guildLocalToUtc(duplicateForm.close_signups_at)
+    }
+    const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id, payload)
+    showDuplicateModal.value = false
     uiStore.showToast(t('raidDetail.toasts.eventDuplicated'), 'success')
     router.push({ name: 'raid-detail', params: { id: newEvent.id } })
   } catch {
@@ -917,6 +976,43 @@ async function doDuplicate() {
   } finally {
     actionLoading.value = false
   }
+}
+
+const todayDatetimeLocal = computed(() => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const h = String(now.getHours()).padStart(2, '0')
+  const min = String(now.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${d}T${h}:${min}`
+})
+
+function openDuplicateModal() {
+  if (!event.value) return
+  // Default to 1 week later, same time
+  const origStart = event.value.starts_at_utc ?? event.value.start_time
+  let defaultStart = ''
+  if (origStart) {
+    const d = new Date(origStart)
+    d.setDate(d.getDate() + 7)
+    defaultStart = toLocalDatetime(d.toISOString())
+  }
+  // Default close_signups_at: same offset from start as original
+  let defaultClose = ''
+  if (event.value.close_signups_at && origStart) {
+    const origStartMs = new Date(origStart).getTime()
+    const origCloseMs = new Date(event.value.close_signups_at).getTime()
+    const offset = origStartMs - origCloseMs
+    if (defaultStart && offset > 0) {
+      const newStartMs = new Date(tz.guildLocalToUtc(defaultStart)).getTime()
+      const newCloseMs = newStartMs - offset
+      defaultClose = toLocalDatetime(new Date(newCloseMs).toISOString())
+    }
+  }
+  Object.assign(duplicateForm, { starts_at: defaultStart, close_signups_at: defaultClose, copy_signups: false })
+  duplicateError.value = null
+  showDuplicateModal.value = true
 }
 
 function toLocalDatetime(utcStr) {

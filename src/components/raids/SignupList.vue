@@ -23,16 +23,16 @@
             </span>
             <span class="text-xs text-text-muted">({{ group.items.length }})</span>
           </div>
-          <div class="space-y-3">
+          <div class="space-y-4">
             <template v-for="signup in group.items" :key="signup.id">
             <!-- Inline edit form (officer only) -->
-            <div v-if="editingSignupId === signup.id" class="px-3 py-3 rounded-lg bg-bg-tertiary border border-border-gold space-y-3">
-              <div class="flex items-center gap-2">
+            <div v-if="editingSignupId === signup.id" class="px-4 py-4 rounded-lg bg-bg-tertiary border border-border-gold space-y-3">
+              <div class="flex items-center gap-3">
                 <img
                   v-if="signup.character?.class_name"
                   :src="getClassIcon(signup.character.class_name)"
                   :alt="signup.character.class_name"
-                  class="w-6 h-6 rounded border border-border-default flex-shrink-0"
+                  class="w-8 h-8 rounded border border-border-default flex-shrink-0"
                 />
                 <span class="text-sm font-medium text-text-primary">{{ signup.character?.name ?? 'Unknown' }}</span>
                 <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
@@ -94,51 +94,51 @@
               class="rounded-lg border border-border-default bg-bg-tertiary/60 hover:border-border-gold/40 transition-colors overflow-hidden"
             >
               <!-- Card body -->
-              <div class="p-4 sm:p-5">
-                <div class="flex items-start gap-4">
+              <div class="p-5 sm:p-6">
+                <div class="flex items-start gap-5">
                   <!-- Class icon (larger, prominent) -->
                   <img
                     v-if="signup.character?.class_name"
                     :src="getClassIcon(signup.character.class_name)"
                     :alt="signup.character.class_name"
-                    class="w-14 h-14 rounded-lg border border-border-default flex-shrink-0"
+                    class="w-16 h-16 rounded-lg border border-border-default flex-shrink-0"
                   />
-                  <div class="w-14 h-14 rounded-lg bg-bg-secondary border border-border-default flex-shrink-0" v-else />
+                  <div class="w-16 h-16 rounded-lg bg-bg-secondary border border-border-default flex-shrink-0" v-else />
 
                   <!-- Main info -->
                   <div class="flex-1 min-w-0">
                     <!-- Name row -->
-                    <div class="flex items-center gap-2 flex-wrap mb-2">
-                      <span class="text-base sm:text-lg font-bold text-text-primary">
+                    <div class="flex items-center gap-2.5 flex-wrap mb-3">
+                      <span class="text-lg sm:text-xl font-bold text-text-primary">
                         {{ signup.character?.name ?? 'Unknown' }}
                       </span>
-                      <span v-if="charLevel(signup)" class="text-xs font-semibold text-accent-gold bg-accent-gold/10 px-2 py-0.5 rounded-full border border-accent-gold/20">
+                      <span v-if="charLevel(signup)" class="text-xs font-semibold text-accent-gold bg-accent-gold/10 px-2.5 py-0.5 rounded-full border border-accent-gold/20">
                         {{ charLevel(signup) }}
                       </span>
                       <span
                         v-if="charAchievements(signup)"
                         class="text-xs text-amber-400"
                         :title="t('signupList.achievementPoints')"
-                      >🏆 {{ charAchievements(signup) }}</span>
+                      >{{ charAchievements(signup) }} AP</span>
                     </div>
 
                     <!-- Class + Role badges -->
-                    <div class="flex items-center gap-2 flex-wrap mb-3">
+                    <div class="flex items-center gap-2.5 flex-wrap mb-3">
                       <ClassBadge v-if="signup.character?.class_name" :class-name="signup.character.class_name" />
                       <RoleBadge v-if="signup.chosen_role" :role="signup.chosen_role" />
                     </div>
 
                     <!-- Specs -->
-                    <div v-if="signup.chosen_spec" class="flex items-center gap-2 flex-wrap mb-3">
+                    <div v-if="signup.chosen_spec" class="flex items-center gap-2.5 flex-wrap mb-3">
                       <SpecBadge v-for="sp in signup.chosen_spec.split(',').map(s => s.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="signup.character?.class_name" />
                     </div>
 
                     <!-- Professions -->
-                    <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-2 flex-wrap mb-3">
+                    <div v-if="charProfessions(signup).length > 0" class="flex items-center gap-2.5 flex-wrap mb-3">
                       <span
                         v-for="prof in charProfessions(signup)"
                         :key="prof.name"
-                        class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-bg-secondary border border-border-default rounded text-text-muted"
+                        class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-bg-secondary border border-border-default rounded text-text-muted"
                       >
                         <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
                         {{ prof.name }} {{ prof.skill }}
@@ -146,7 +146,7 @@
                     </div>
 
                     <!-- Note -->
-                    <p v-if="signup.note" class="text-sm text-text-muted italic mb-2" :title="signup.note">📝 {{ signup.note }}</p>
+                    <p v-if="signup.note" class="text-sm text-text-muted italic mb-3" :title="signup.note">{{ signup.note }}</p>
 
                     <!-- Bench queue info -->
                     <div v-if="signup.bench_info" class="mb-2">
@@ -161,7 +161,7 @@
                   <div class="flex-shrink-0">
                     <div class="flex items-center gap-2">
                       <img :src="getAttendanceStatusIcon(signup.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[signup.attendance_status || 'going']" />
-                      <span class="text-sm px-3 py-1 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
+                      <span class="text-sm px-3 py-1.5 rounded-md" :class="(ATTENDANCE_STATUS_STYLE[signup.attendance_status || 'going'] || {}).badge">
                         {{ t(ATTENDANCE_STATUS_I18N_MAP[signup.attendance_status || 'going']) }}
                       </span>
                     </div>
@@ -173,18 +173,18 @@
               </div>
 
               <!-- Card footer: Action buttons -->
-              <div class="px-4 sm:px-5 py-3 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
-                <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click.stop="openCharacterModal(signup.character)">
-                  🔍 {{ t('signupList.viewDetails') }}
+              <div class="px-5 sm:px-6 py-3.5 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
+                <WowButton variant="secondary" class="text-xs !py-2 !px-4" @click.stop="openCharacterModal(signup.character)">
+                  {{ t('signupList.viewDetails') }}
                 </WowButton>
                 <template v-if="canManage">
-                  <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click.stop="startEdit(signup)">
+                  <WowButton variant="secondary" class="text-xs !py-2 !px-4" @click.stop="startEdit(signup)">
                     {{ t('common.buttons.edit') }}
                   </WowButton>
-                  <WowButton variant="secondary" class="text-xs !py-1.5 !px-3" @click.stop="startReplaceCharacter(signup)">
+                  <WowButton variant="secondary" class="text-xs !py-2 !px-4" @click.stop="startReplaceCharacter(signup)">
                     {{ t('signupList.replace') }}
                   </WowButton>
-                  <WowButton variant="danger" class="text-xs !py-1.5 !px-3" @click.stop="removeSignup(signup)">
+                  <WowButton variant="danger" class="text-xs !py-2 !px-4" @click.stop="removeSignup(signup)">
                     {{ t('common.buttons.remove') }}
                   </WowButton>
                 </template>

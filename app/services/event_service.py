@@ -461,10 +461,24 @@ def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[
     )
 
 
-def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[datetime] = None) -> RaidEvent:
-    """Duplicate an existing raid event. Optionally set a new start time."""
+def duplicate_event(
+    event: RaidEvent,
+    created_by: int,
+    new_starts_at: Optional[datetime] = None,
+    new_close_signups_at: Optional[datetime] = None,
+    copy_signups: bool = False,
+) -> RaidEvent:
+    """Duplicate an existing raid event. Optionally set a new start time,
+    close-signups time, and copy existing signups."""
     starts_at = new_starts_at or event.starts_at_utc + timedelta(weeks=1)
     duration = event.ends_at_utc - event.starts_at_utc
+
+    # Determine close_signups_at: use provided value, or preserve original offset
+    close_signups = new_close_signups_at
+    if close_signups is None and event.close_signups_at and event.starts_at_utc:
+        offset = event.starts_at_utc - event.close_signups_at
+        close_signups = starts_at - offset
+
     new_event = RaidEvent(
         guild_id=event.guild_id,
         series_id=event.series_id,
@@ -480,7 +494,29 @@ def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[d
         raid_type=event.raid_type,
         instructions=event.instructions,
         created_by=created_by,
+        close_signups_at=close_signups,
     )
     db.session.add(new_event)
+    db.session.flush()  # get new_event.id for signups
+
+    if copy_signups:
+        from app.models.signup import Signup
+        originals = db.session.execute(
+            sa.select(Signup).where(Signup.raid_event_id == event.id)
+        ).scalars().all()
+        for s in originals:
+            dup = Signup(
+                tenant_id=s.tenant_id,
+                guild_id=s.guild_id,
+                raid_event_id=new_event.id,
+                user_id=s.user_id,
+                character_id=s.character_id,
+                chosen_spec=s.chosen_spec,
+                chosen_role=s.chosen_role,
+                note=s.note,
+                attendance_status="going",
+            )
+            db.session.add(dup)
+
     db.session.commit()
     return new_event
