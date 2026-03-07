@@ -43,6 +43,7 @@ class AuditLog(db.Model):
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id], lazy="select")
+    guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
 
     def to_dict(self) -> dict:
         d = {
@@ -70,6 +71,9 @@ class AuditLog(db.Model):
         # Include username if user relationship is loaded
         if self.user:
             d["username"] = self.user.username
+        # Include guild name for guild-scoped actions
+        if self.guild:
+            d["guild_name"] = self.guild.name
         return d
 
     def __repr__(self) -> str:

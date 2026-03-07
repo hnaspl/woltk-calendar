@@ -18,7 +18,8 @@
       "generate": "Generate",
       "continue": "Continue",
       "goBack": "Go Back",
-      "apply": "Apply"
+      "apply": "Apply",
+      "preview": "Preview"
     },
     "copy": {
       "copyToOther": "Also create in my other guilds",
@@ -2108,10 +2109,21 @@
     "actions": {
       "member_removed": "Member removed",
       "member_role_changed": "Role changed",
+      "member_left": "Member left",
+      "member_joined": "Member joined",
       "guild_settings_updated": "Guild settings updated",
+      "guild_created": "Guild created",
+      "guild_deleted": "Guild deleted",
       "matrix_class_updated": "Matrix class updated",
       "matrix_class_reset": "Matrix class reset",
       "matrix_reset": "Matrix reset",
+      "invitation_created": "Invitation created",
+      "invitation_revoked": "Invitation revoked",
+      "invitation_accepted": "Invitation accepted",
+      "application_submitted": "Application submitted",
+      "application_approved": "Application approved",
+      "application_declined": "Application declined",
+      "ownership_transferred": "Ownership transferred",
       "tenant_settings_updated": "Panel settings updated",
       "tenant_member_role_changed": "Member role changed",
       "tenant_member_removed": "Member removed"

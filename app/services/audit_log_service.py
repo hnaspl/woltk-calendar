@@ -59,7 +59,7 @@ def list_logs(
     """List audit log entries with optional filters."""
     stmt = (
         sa.select(AuditLog)
-        .options(sa.orm.joinedload(AuditLog.user))
+        .options(sa.orm.joinedload(AuditLog.user), sa.orm.joinedload(AuditLog.guild))
         .order_by(AuditLog.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -94,6 +94,6 @@ def get_log(log_id: int) -> Optional[AuditLog]:
     """Get a single audit log entry by ID."""
     return db.session.execute(
         sa.select(AuditLog)
-        .options(sa.orm.joinedload(AuditLog.user))
+        .options(sa.orm.joinedload(AuditLog.user), sa.orm.joinedload(AuditLog.guild))
         .where(AuditLog.id == log_id)
     ).scalar_one_or_none()

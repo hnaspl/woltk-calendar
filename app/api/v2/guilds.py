@@ -110,10 +110,34 @@ def admin_update_member(guild_id: int, user_id: int):
     data = get_json()
     new_role = data.get("role")
     if new_role:
+        old_role = target.role
         target.role = new_role
+
+        from app.models.user import User
+        target_user = db.session.get(User, user_id)
+        target_username = target_user.username if target_user else f"User#{user_id}"
+
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="member_role_changed",
+            tenant_id=guild.tenant_id,
+            guild_id=guild_id,
+            entity_type="guild_member",
+            entity_name=target_username,
+            description=f"Changed {target_username}'s role to {new_role} in {guild.name}",
+            change_data={"old_role": old_role, "new_role": new_role},
+        )
         db.session.commit()
         if user_id != current_user.id:
             notify.notify_guild_role_changed(user_id, guild, new_role)
+            notify.notify_guild_role_changed_admin(
+                target_user_id=user_id,
+                guild=guild,
+                new_role=new_role,
+                changed_by_user_id=current_user.id,
+                changed_by_username=current_user.username,
+                target_username=target_username,
+            )
     return jsonify(target.to_dict()), 200
 
 
@@ -199,6 +223,22 @@ def admin_transfer_ownership(guild_id: int):
     if old_owner_membership is not None:
         old_owner_membership.role = "member"
 
+    from app.models.user import User
+    target_user = db.session.get(User, target_user_id)
+    target_username = target_user.username if target_user else f"User#{target_user_id}"
+    old_owner = db.session.get(User, old_owner_id)
+    old_owner_username = old_owner.username if old_owner else f"User#{old_owner_id}"
+
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="ownership_transferred",
+        tenant_id=guild.tenant_id,
+        guild_id=guild_id,
+        entity_type="guild",
+        entity_name=guild.name,
+        description=f"Transferred ownership of {guild.name} from {old_owner_username} to {target_username}",
+    )
+
     db.session.commit()
     notify.notify_ownership_transferred(guild, target_user_id, old_owner_id)
     emit_guild_changed(guild_id)
@@ -213,6 +253,17 @@ def admin_delete_guild(guild_id: int):
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
+
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="guild_deleted",
+        tenant_id=guild.tenant_id,
+        entity_type="guild",
+        entity_name=guild.name,
+        description=f"Deleted guild {guild.name}",
+    )
+    db.session.commit()
+
     guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": _t("api.guilds.deleted")}), 200
@@ -356,6 +407,18 @@ def create_guild():
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409
     emit_guilds_changed()
+
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="guild_created",
+        tenant_id=current_user.active_tenant_id,
+        guild_id=guild.id,
+        entity_type="guild",
+        entity_name=guild.name,
+        description=f"Created guild {guild.name} on {guild.realm_name}",
+    )
+    db.session.commit()
+
     return jsonify(guild.to_dict()), 201
 
 
@@ -451,14 +514,19 @@ def delete_guild(guild_id: int):
         if not guild.tenant_id or not _ts.is_tenant_admin(guild.tenant_id, current_user.id):
             return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="guild_deleted",
+        tenant_id=guild.tenant_id,
+        entity_type="guild",
+        entity_name=guild.name,
+        description=f"Deleted guild {guild.name}",
+    )
+    db.session.commit()
+
     guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": _t("api.guilds.deleted")}), 200
-
-
-# ---------------------------------------------------------------------------
-# Members
-# ---------------------------------------------------------------------------
 
 @bp.get("/<int:guild_id>/members")
 @login_required
@@ -651,6 +719,22 @@ def transfer_ownership(guild_id: int):
     ).scalar_one_or_none()
     if old_owner_membership is not None:
         old_owner_membership.role = "member"
+
+    from app.models.user import User
+    target_user = db.session.get(User, target_user_id)
+    target_username = target_user.username if target_user else f"User#{target_user_id}"
+    old_owner = db.session.get(User, old_owner_id)
+    old_owner_username = old_owner.username if old_owner else f"User#{old_owner_id}"
+
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="ownership_transferred",
+        tenant_id=guild.tenant_id,
+        guild_id=guild_id,
+        entity_type="guild",
+        entity_name=guild.name,
+        description=f"Transferred ownership of {guild.name} from {old_owner_username} to {target_username}",
+    )
 
     db.session.commit()
 

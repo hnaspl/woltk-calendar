@@ -338,6 +338,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSystemSettings } from '@/composables/useSystemSettings'
 import { useFormatting } from '@/composables/useFormatting'
+import { useCharacterPreview } from '@/composables/useCharacterPreview'
 import * as guildsApi from '@/api/guilds'
 import api from '@/api'
 
@@ -546,13 +547,11 @@ const loadingMemberChars = ref(false)
 const memberCharsTitle = ref('')
 
 // Character detail modal
-const showCharDetailModal = ref(false)
-const charDetailTarget = ref(null)
-
-function openCharDetailModal(character) {
-  charDetailTarget.value = character
-  showCharDetailModal.value = true
-}
+const {
+  showModal: showCharDetailModal,
+  target: charDetailTarget,
+  open: openCharDetailModal,
+} = useCharacterPreview()
 
 async function viewMemberChars(member) {
   const username = member.username ?? member.user?.username ?? 'Unknown'

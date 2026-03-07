@@ -190,7 +190,7 @@
                       <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
                       <td class="px-4 py-2.5 text-center">
                         <WowButton variant="secondary" class="text-xs py-1 px-2.5" @click="openCharDetail(ch)">
-                          🔍
+                          🔍 {{ t('common.buttons.preview') }}
                         </WowButton>
                       </td>
                     </tr>
@@ -224,6 +224,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { usePermissions } from '@/composables/usePermissions'
+import { useCharacterPreview } from '@/composables/useCharacterPreview'
 import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
 import * as guildRealmsApi from '@/api/guild_realms'
@@ -410,74 +411,14 @@ const lastRefreshed = ref(null)
 let autoRefreshTimer = null
 
 // Character detail modal
-const showCharDetailModal = ref(false)
-const charDetailTarget = ref(null)
+const {
+  showModal: showCharDetailModal,
+  target: charDetailTarget,
+  open: openCharPreview,
+} = useCharacterPreview()
 
-const fetchingCharDetail = ref(false)
-
-async function openCharDetail(ch) {
-  const realm = ch.realm || guildStore.currentGuild?.realm_name || ''
-  // Show modal immediately with basic roster data
-  charDetailTarget.value = {
-    name: ch.name,
-    class_name: ch.class_name,
-    realm_name: realm,
-    default_role: ch.role || '',
-    primary_spec: ch.spec || '',
-    secondary_spec: ch.secondary_spec || '',
-    armory_url: ch.armory_url || '',
-    level: ch.level,
-    metadata: {
-      level: ch.level,
-      race: ch.race,
-      faction: ch.faction,
-      guild: armoryGuildData.value?.name,
-      gear_score: ch.gear_score,
-      achievement_points: ch.achievement_points,
-      honorable_kills: ch.honorable_kills,
-      professions: ch.professions || [],
-      talents: ch.talents || [],
-      equipment: ch.equipment || [],
-    },
-  }
-  showCharDetailModal.value = true
-
-  // Fetch full character data from armory (equipment, talents, etc.)
-  if (realm && ch.name && guildStore.currentGuild?.id) {
-    fetchingCharDetail.value = true
-    try {
-      const fullData = await armoryLookupApi.lookupCharacter(realm, ch.name, guildStore.currentGuild.id)
-      if (fullData) {
-        charDetailTarget.value = {
-          name: fullData.name || ch.name,
-          class_name: fullData.class_name || ch.class_name,
-          realm_name: fullData.realm || realm,
-          default_role: ch.role || '',
-          primary_spec: ch.spec || '',
-          secondary_spec: ch.secondary_spec || '',
-          armory_url: fullData.armory_url || ch.armory_url || '',
-          level: fullData.level || ch.level,
-          metadata: {
-            level: fullData.level || ch.level,
-            race: fullData.race || ch.race,
-            faction: fullData.faction || ch.faction,
-            guild: fullData.guild || armoryGuildData.value?.name,
-            gear_score: fullData.gear_score || ch.gear_score,
-            achievement_points: fullData.achievement_points || ch.achievement_points,
-            honorable_kills: fullData.honorable_kills || ch.honorable_kills,
-            professions: fullData.professions || ch.professions || [],
-            talents: fullData.talents || ch.talents || [],
-            equipment: fullData.equipment || ch.equipment || [],
-          },
-        }
-      }
-    } catch (err) {
-      // Keep basic roster data on failure — modal already visible
-      console.warn('Failed to fetch full character data:', err?.response?.data?.error || err?.message)
-    } finally {
-      fetchingCharDetail.value = false
-    }
-  }
+function openCharDetail(ch) {
+  openCharPreview(ch, { guild: armoryGuildData.value?.name })
 }
 
 async function fetchArmoryRoster() {

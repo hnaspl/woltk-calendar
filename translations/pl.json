@@ -18,7 +18,8 @@
       "generate": "Generuj",
       "continue": "Kontynuuj",
       "goBack": "Wróć",
-      "apply": "Zastosuj"
+      "apply": "Zastosuj",
+      "preview": "Podgląd"
     },
     "copy": {
       "copyToOther": "Utwórz także w moich innych gildiach",
@@ -2108,10 +2109,21 @@
     "actions": {
       "member_removed": "Usunięto członka",
       "member_role_changed": "Zmieniono rangę",
+      "member_left": "Członek opuścił gildię",
+      "member_joined": "Członek dołączył",
       "guild_settings_updated": "Zaktualizowano ustawienia gildii",
+      "guild_created": "Utworzono gildię",
+      "guild_deleted": "Usunięto gildię",
       "matrix_class_updated": "Zaktualizowano macierz klasy",
       "matrix_class_reset": "Zresetowano macierz klasy",
       "matrix_reset": "Zresetowano macierz",
+      "invitation_created": "Utworzono zaproszenie",
+      "invitation_revoked": "Anulowano zaproszenie",
+      "invitation_accepted": "Przyjęto zaproszenie",
+      "application_submitted": "Złożono podanie",
+      "application_approved": "Zaakceptowano podanie",
+      "application_declined": "Odrzucono podanie",
+      "ownership_transferred": "Przeniesiono własność",
       "tenant_settings_updated": "Zaktualizowano ustawienia panelu",
       "tenant_member_role_changed": "Zmieniono rangę członka",
       "tenant_member_removed": "Usunięto członka"

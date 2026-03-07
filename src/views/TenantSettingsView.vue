@@ -173,6 +173,9 @@
                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-blue-900/30 text-blue-300 border border-blue-700/50">
                           {{ t(`auditLog.actions.${entry.action}`, entry.action) }}
                         </span>
+                        <span v-if="entry.guild_name" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-900/30 text-purple-300 border border-purple-700/50">
+                          {{ entry.guild_name }}
+                        </span>
                         <span class="text-xs text-text-muted">
                           {{ t('auditLog.by') }}
                           <span class="text-text-primary font-medium">{{ entry.username || 'Unknown' }}</span>
@@ -246,8 +249,12 @@ const auditTotal = ref(0)
 const auditLoading = ref(false)
 const auditFilter = ref('')
 const auditActions = [
-  'member_removed', 'member_role_changed', 'guild_settings_updated',
+  'member_removed', 'member_role_changed', 'member_left', 'member_joined',
+  'guild_settings_updated', 'guild_created', 'guild_deleted',
   'matrix_class_updated', 'matrix_class_reset', 'matrix_reset',
+  'invitation_created', 'invitation_revoked', 'invitation_accepted',
+  'application_submitted', 'application_approved', 'application_declined',
+  'ownership_transferred',
   'tenant_settings_updated', 'tenant_member_role_changed', 'tenant_member_removed',
 ]
 

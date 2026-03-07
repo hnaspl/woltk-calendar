@@ -68,7 +68,7 @@
                   </div>
                 </div>
                 <WowButton variant="secondary" class="text-xs py-1 px-2 flex-shrink-0" @click="openCharDetail(char)">
-                  {{ t('signupList.viewDetails') }}
+                  🔍 {{ t('common.buttons.preview') }}
                 </WowButton>
               </div>
 
@@ -352,6 +352,7 @@ import * as armoryLookupApi from '@/api/armory_lookup'
 import * as guildRealmsApi from '@/api/guild_realms'
 import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useTimezone } from '@/composables/useTimezone'
+import { useCharacterPreview, prepareCharacterForModal } from '@/composables/useCharacterPreview'
 import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
@@ -360,25 +361,6 @@ const toast = useToast()
 const { getClassIcon, getProfessionIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { t } = useI18n()
-
-/** Map display char to CharacterDetailModal format */
-function prepareCharacterData(char) {
-  return {
-    name: char.name,
-    class_name: char.class,
-    realm_name: char.realm,
-    default_role: char.role,
-    primary_spec: char.spec,
-    secondary_spec: char.secondary_spec,
-    armory_url: char.armory_url,
-    metadata: char.metadata ?? {}
-  }
-}
-
-function openCharDetail(char) {
-  charDetailTarget.value = prepareCharacterData(char)
-  showCharDetailModal.value = true
-}
 
 const characters = ref([])
 const archivedCharacters = ref([])
@@ -400,8 +382,12 @@ const deleteTarget = ref(null)
 const manualEntry = ref(false)
 const showAddAnother = ref(false)
 const lastAddedName = ref('')
-const showCharDetailModal = ref(false)
-const charDetailTarget = ref(null)
+
+const {
+  showModal: showCharDetailModal,
+  target: charDetailTarget,
+  open: openCharDetail,
+} = useCharacterPreview()
 
 const { wowClasses: systemClasses, classSpecs: systemSpecs, classRoles: systemRoles } = useExpansionData()
 
