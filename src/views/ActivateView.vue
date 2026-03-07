@@ -82,8 +82,10 @@ onMounted(async () => {
 
   try {
     const data = await authApi.activateAccount(token)
-    // Backend auto-logs in the user — update auth store
-    authStore.user = data.user ?? data
+    // Backend auto-logs in the user and returns user data — update auth store
+    if (data && data.id) {
+      authStore.user = data
+    }
     success.value = true
   } catch (err) {
     error.value = err?.response?.data?.error || t('auth.activationFailedDesc')

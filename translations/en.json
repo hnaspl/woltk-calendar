@@ -2046,6 +2046,7 @@
     "characterCreated": "Character created successfully!",
     "characterCreateError": "Failed to create character.",
     "doneDesc": "Your account is ready. Head to the dashboard to explore your new raid management tools.",
-    "goToDashboard": "Go to Dashboard"
+    "goToDashboard": "Go to Dashboard",
+    "doneTitle": "You're All Set!"
   }
 }
