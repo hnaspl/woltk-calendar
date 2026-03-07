@@ -149,8 +149,8 @@
               ✓ {{ t('guild.realmsDiscovered', { count: discoveredRealms.length }) }}
             </div>
           </div>
-          <!-- Realm hint input (optional - shown when no realms auto-discovered, helps narrow search) -->
-          <div v-if="newGuild.armory_url.trim() && !discoveringRealms && discoveredRealms.length === 0">
+          <!-- Realm hint input (always visible when armory URL is set, helps narrow search) -->
+          <div v-if="newGuild.armory_url.trim() && discoveredRealms.length === 0">
             <label class="block text-xs text-text-muted mb-1">{{ t('guild.realmHint') }}</label>
             <input v-model="lookupRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmHintPlaceholder')" @keydown.enter.prevent="lookupGuild()" />
             <p class="text-xs text-text-muted mt-1">{{ t('guild.realmHintHelp') }}</p>
@@ -537,8 +537,13 @@ const discoveredRealms = ref([])
 let _lastDiscoveredUrl = ''
 
 async function onArmoryUrlChange() {
-  const url = newGuild.armory_url.trim()
+  let url = newGuild.armory_url.trim()
   if (!url || url === _lastDiscoveredUrl) return
+  // Auto-prepend https:// if no protocol is provided
+  if (url && !url.match(/^https?:\/\//i)) {
+    url = 'https://' + url
+    newGuild.armory_url = url
+  }
   _lastDiscoveredUrl = url
   discoveringRealms.value = true
   discoveredRealms.value = []

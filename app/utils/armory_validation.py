@@ -55,6 +55,10 @@ def validate_armory_url(url: str, extra_allowed_domains: list[str] | None = None
 
     url = url.strip()
 
+    # Auto-prepend https:// if no scheme is provided
+    if url and "://" not in url:
+        url = "https://" + url
+
     # ---- parse ----
     try:
         parsed = urlparse(url)

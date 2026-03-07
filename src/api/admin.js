@@ -12,6 +12,8 @@ export const getSystemSettings = () => api.get('/admin/settings/system')
 
 export const updateSystemSettings = (data) => api.put('/admin/settings/system', data)
 
+export const testSmtp = () => api.post('/admin/settings/smtp-test')
+
 export const getDiscordSettings = () => api.get('/admin/settings/discord')
 
 export const updateDiscordSettings = (data) => api.put('/admin/settings/discord', data)

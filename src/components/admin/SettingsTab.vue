@@ -175,8 +175,12 @@
           </label>
         </div>
 
-        <div class="pt-2">
+        <div class="pt-2 flex items-center gap-3 flex-wrap">
           <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">{{ t('admin.system.saveSettings') }}</WowButton>
+          <WowButton variant="secondary" :loading="testingSmtp" @click="testSmtpConnection">{{ t('admin.smtp.testConnection') }}</WowButton>
+          <span v-if="smtpTestResult" class="text-xs" :class="smtpTestResult === 'ok' ? 'text-green-400' : 'text-red-400'">
+            {{ smtpTestResult === 'ok' ? '✓ ' + t('admin.smtp.testSuccess') : smtpTestResult }}
+          </span>
         </div>
       </div>
     </WowCard>
@@ -289,6 +293,8 @@ const toast = useToast()
 const sysSettingsLoading = ref(true)
 const sysSettingsSaving = ref(false)
 const syncing = ref(false)
+const testingSmtp = ref(false)
+const smtpTestResult = ref(null)
 const settingsForm = ref({
   wowhead_tooltips: true,
   autosync_enabled: true,
@@ -416,6 +422,21 @@ async function triggerManualSync() {
     toast.error(t('admin.system.toasts.syncFailed'))
   } finally {
     syncing.value = false
+  }
+}
+
+async function testSmtpConnection() {
+  testingSmtp.value = true
+  smtpTestResult.value = null
+  try {
+    // Save settings first to ensure the backend has the latest
+    await adminApi.updateSystemSettings(settingsForm.value)
+    const result = await adminApi.testSmtp()
+    smtpTestResult.value = result.success ? 'ok' : (result.error || t('admin.smtp.testFailed'))
+  } catch (err) {
+    smtpTestResult.value = err?.response?.data?.error || t('admin.smtp.testFailed')
+  } finally {
+    testingSmtp.value = false
   }
 }
 

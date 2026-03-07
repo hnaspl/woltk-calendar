@@ -193,8 +193,12 @@
             <div class="text-sm font-semibold text-accent-gold">{{ t('characters.importFromArmory') }}</div>
             <p class="text-xs text-text-muted">{{ t('characters.importHelp') }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input v-model="form.name" :placeholder="t('characters.characterName')" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
               <div>
+                <label class="block text-xs text-text-muted mb-1">{{ t('characters.nameRequired') }}</label>
+                <input v-model="form.name" :placeholder="t('characters.characterName')" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
                 <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
                 <select v-else v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                   <option value="">{{ t('common.fields.selectRealm') }}</option>

@@ -1277,7 +1277,12 @@
       "fromEmail": "From Email",
       "fromName": "From Name",
       "requireActivation": "Require email activation",
-      "requireActivationHelp": "New users must verify their email before they can log in. Unactivated accounts are automatically removed after 3 days."
+      "requireActivationHelp": "New users must verify their email before they can log in. Unactivated accounts are automatically removed after 3 days.",
+      "testConnection": "Test Connection",
+      "testSuccess": "SMTP connection successful",
+      "testFailed": "SMTP connection failed",
+      "notConfigured": "SMTP is not configured — set host and from email first",
+      "authFailed": "SMTP authentication failed — check username and password"
     },
     "passwordPolicy": {
       "title": "Password Policy",

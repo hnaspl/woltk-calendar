@@ -47,19 +47,24 @@ class AuditLog(db.Model):
     def to_dict(self) -> dict:
         d = {
             "id": self.id,
-            "tenant_id": self.tenant_id,
-            "guild_id": self.guild_id,
-            "user_id": self.user_id,
             "action": self.action,
             "entity_type": self.entity_type,
-            "entity_id": self.entity_id,
             "entity_name": self.entity_name,
             "description": self.description,
             "created_at": utc_iso(self.created_at),
         }
         if self.change_data:
             try:
-                d["change_data"] = json.loads(self.change_data)
+                parsed = json.loads(self.change_data)
+                # Only expose safe change data fields
+                safe_data = {}
+                if "changed_fields" in parsed:
+                    safe_data["changed_fields"] = parsed["changed_fields"]
+                if "old_role" in parsed:
+                    safe_data["old_role"] = parsed["old_role"]
+                if "new_role" in parsed:
+                    safe_data["new_role"] = parsed["new_role"]
+                d["change_data"] = safe_data
             except (json.JSONDecodeError, TypeError):
                 d["change_data"] = {}
         # Include username if user relationship is loaded

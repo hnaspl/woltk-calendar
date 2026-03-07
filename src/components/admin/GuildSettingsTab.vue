@@ -422,13 +422,17 @@ function openCharDetail(ch) {
     secondary_spec: ch.secondary_spec || '',
     armory_url: ch.armory_url || '',
     level: ch.level,
-    metadata: ch.metadata ?? {
+    metadata: {
       level: ch.level,
       race: ch.race,
       faction: ch.faction,
       guild: armoryGuildData.value?.name,
       gear_score: ch.gear_score,
       achievement_points: ch.achievement_points,
+      honorable_kills: ch.honorable_kills,
+      professions: ch.professions || [],
+      talents: ch.talents || [],
+      equipment: ch.equipment || [],
     },
   }
   showCharDetailModal.value = true

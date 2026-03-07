@@ -483,6 +483,42 @@ def update_system_settings():
 
 
 # ---------------------------------------------------------------------------
+# SMTP test
+# ---------------------------------------------------------------------------
+
+@bp.post("/settings/smtp-test")
+@login_required
+@require_admin
+def test_smtp_settings():
+    """Test the SMTP connection using the currently saved settings."""
+    from app.services.email_service import get_smtp_config, is_smtp_configured
+    import smtplib
+    import ssl
+
+    if not is_smtp_configured():
+        return jsonify({"success": False, "error": _t("admin.smtp.notConfigured")}), 200
+
+    cfg = get_smtp_config()
+    try:
+        if cfg["tls"]:
+            context = ssl.create_default_context()
+            server = smtplib.SMTP(cfg["host"], cfg["port"], timeout=10)
+            server.starttls(context=context)
+        else:
+            server = smtplib.SMTP(cfg["host"], cfg["port"], timeout=10)
+
+        if cfg["username"] and cfg["password"]:
+            server.login(cfg["username"], cfg["password"])
+
+        server.quit()
+        return jsonify({"success": True}), 200
+    except smtplib.SMTPAuthenticationError:
+        return jsonify({"success": False, "error": _t("admin.smtp.authFailed")}), 200
+    except (smtplib.SMTPException, OSError, TimeoutError) as exc:
+        return jsonify({"success": False, "error": str(exc)}), 200
+
+
+# ---------------------------------------------------------------------------
 # Discord OAuth configuration
 # ---------------------------------------------------------------------------
 

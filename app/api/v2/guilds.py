@@ -313,6 +313,10 @@ def create_guild():
     armory_url = (data.get("armory_url") or "").strip() or None
     expansion_id = data.get("expansion_id")
 
+    # Auto-prepend https:// if no protocol is provided
+    if armory_url and "://" not in armory_url:
+        armory_url = "https://" + armory_url
+
     # Validate armory URL if provided
     if armory_url:
         from app.utils.armory_validation import validate_armory_url

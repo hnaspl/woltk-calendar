@@ -1277,7 +1277,12 @@
       "fromEmail": "Email nadawcy",
       "fromName": "Nazwa nadawcy",
       "requireActivation": "Wymagaj aktywacji email",
-      "requireActivationHelp": "Nowi użytkownicy muszą zweryfikować email przed zalogowaniem. Nieaktywowane konta są automatycznie usuwane po 3 dniach."
+      "requireActivationHelp": "Nowi użytkownicy muszą zweryfikować email przed zalogowaniem. Nieaktywowane konta są automatycznie usuwane po 3 dniach.",
+      "testConnection": "Testuj połączenie",
+      "testSuccess": "Połączenie SMTP udane",
+      "testFailed": "Połączenie SMTP nie powiodło się",
+      "notConfigured": "SMTP nie jest skonfigurowany — najpierw ustaw serwer i adres nadawcy",
+      "authFailed": "Uwierzytelnianie SMTP nie powiodło się — sprawdź nazwę użytkownika i hasło"
     },
     "passwordPolicy": {
       "title": "Polityka haseł",
