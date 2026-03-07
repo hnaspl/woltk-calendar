@@ -87,6 +87,18 @@
         />
       </div>
 
+      <!-- Attendance status (Going/Tentative/Not Going/Alt — no did_not_show or late for players) -->
+      <div v-if="form.characterId && roles.length > 0">
+        <label class="block text-xs text-text-muted mb-1">{{ t('signup.attendanceStatus') }}</label>
+        <select
+          v-model="form.attendanceStatus"
+          class="w-full bg-bg-tertiary border text-sm rounded px-3 py-2 outline-none cursor-pointer"
+          :class="(ATTENDANCE_STATUS_STYLE[form.attendanceStatus] || {}).select || 'border-green-500/40 text-green-300'"
+        >
+          <option v-for="opt in signupAttendanceOptions" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
+        </select>
+      </div>
+
       <!-- Note (hidden when character has no valid roles) -->
       <div v-if="!form.characterId || roles.length > 0">
         <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.note') }}</label>
@@ -149,9 +161,22 @@ import WowModal from '@/components/common/WowModal.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import * as signupsApi from '@/api/signups'
 import * as charactersApi from '@/api/characters'
-import { ROLE_OPTIONS, ROLE_LABEL_MAP, CLASS_ROLES } from '@/constants'
+import { ROLE_OPTIONS, ROLE_LABEL_MAP, ROLE_VALUES, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 
 const { t } = useI18n()
+const { classRoles: expansionClassRoles } = useExpansionData()
+const constantsStore = useConstantsStore()
+const guildClassRoles = ref({})
+
+// Use guild-specific class roles → constants store → expansion data as fallback chain
+const classRoles = computed(() => {
+  if (Object.keys(guildClassRoles.value).length) return guildClassRoles.value
+  if (Object.keys(constantsStore.classRoles).length) return constantsStore.classRoles
+  return expansionClassRoles.value
+})
 
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
@@ -159,7 +184,7 @@ const props = defineProps({
   existingSignup: { type: Object, default: null },
   signedUpCharacterIds: { type: Array, default: () => [] },
   bannedCharacterIds: { type: Array, default: () => [] },
-  availableRoles: { type: Array, default: () => ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps'] },
+  availableRoles: { type: Array, default: () => ROLE_VALUES },
   roleSlotInfo: { type: Object, default: () => ({}) }
 })
 
@@ -197,7 +222,7 @@ const classAllowedRoles = computed(() => {
   if (!form.characterId) return null
   const selected = characters.value.find(c => String(c.id) === String(form.characterId))
   if (!selected || !selected.class_name) return null
-  return CLASS_ROLES[selected.class_name] ?? null
+  return classRoles.value[selected.class_name] ?? null
 })
 
 const roles = computed(() =>
@@ -259,11 +284,23 @@ const isCharBanned = computed(() => {
   return form.characterId && props.bannedCharacterIds.includes(Number(form.characterId))
 })
 
-const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '' }
+/** Attendance options for player signup: exclude did_not_show and late (admin-only statuses) */
+const signupAttendanceOptions = computed(() =>
+  ATTENDANCE_STATUS_OPTIONS.filter(o => o.value !== 'did_not_show' && o.value !== 'late')
+)
+
+const INITIAL_FORM = { characterId: '', chosenRole: '', chosenSpec: '', note: '', attendanceStatus: 'going' }
 
 const form = reactive({ ...INITIAL_FORM })
 
 onMounted(async () => {
+  // Load guild-specific class/role data
+  if (props.guildId) {
+    try {
+      const data = await guildExpansionsApi.getGuildConstants(props.guildId)
+      if (data?.class_roles) guildClassRoles.value = data.class_roles
+    } catch { /* fallback to constants store */ }
+  }
   try {
     characters.value = await charactersApi.getMyCharacters(props.guildId)
   } catch {
@@ -286,9 +323,16 @@ function onCharacterChange() {
   const selected = characters.value.find(c => String(c.id) === String(charId))
   if (selected && !props.existingSignup) {
     // Only auto-fill role if it's valid for the character's class
-    const allowed = CLASS_ROLES[selected.class_name] ?? []
+    const allowed = classRoles.value[selected.class_name] ?? []
     const defaultRole = selected.default_role || ''
-    form.chosenRole = allowed.includes(defaultRole) ? defaultRole : ''
+    if (allowed.includes(defaultRole)) {
+      form.chosenRole = defaultRole
+    } else if (allowed.length === 1) {
+      // Auto-select role when only one option is valid (e.g., Rogue → melee_dps)
+      form.chosenRole = allowed[0]
+    } else {
+      form.chosenRole = ''
+    }
     form.chosenSpec = selected.primary_spec || ''
   }
 }
@@ -302,6 +346,7 @@ watch(
       form.chosenRole  = s.chosen_role   ?? ''
       form.chosenSpec  = s.chosen_spec   ?? ''
       form.note        = s.note          ?? ''
+      form.attendanceStatus = s.attendance_status ?? 'going'
     } else {
       // Reset form when editing ends so spec doesn't persist from previous character
       Object.assign(form, INITIAL_FORM)
@@ -322,7 +367,8 @@ async function handleSubmit() {
     character_id: form.characterId,
     chosen_role:  form.chosenRole,
     chosen_spec:  form.chosenSpec || undefined,
-    note:         form.note || undefined
+    note:         form.note || undefined,
+    attendance_status: form.attendanceStatus || 'going',
   }
 
   // Auto-bench when player knowingly selects a full role
@@ -370,6 +416,7 @@ async function forceBenchSignup() {
     chosen_spec:  form.chosenSpec || undefined,
     note:         form.note || undefined,
     force_bench:  true,
+    attendance_status: form.attendanceStatus || 'going',
   }
 
   try {

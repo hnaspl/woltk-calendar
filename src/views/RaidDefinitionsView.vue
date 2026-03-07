@@ -13,12 +13,35 @@
       <template v-else>
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <h1 class="wow-heading text-xl sm:text-2xl">{{ t('raidDefinitions.title') }}</h1>
-        <WowButton @click="openAddModal">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          {{ t('raidDefinitions.newDefinition') }}
-        </WowButton>
+        <div class="flex items-center gap-2">
+          <WowButton variant="secondary" @click="openImportModal" :disabled="noGuild">
+            📥 {{ t('raidDefinitions.importFromGlobal') }}
+          </WowButton>
+          <WowButton @click="openAddModal" :disabled="noGuild">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            {{ t('raidDefinitions.newDefinition') }}
+          </WowButton>
+        </div>
+      </div>
+
+      <!-- Expansion filter -->
+      <div v-if="guildExpansions.length > 0" class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+          :class="!selectedExpansion ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+          @click="selectedExpansion = null"
+        >{{ t('common.labels.all') }}</button>
+        <button
+          v-for="exp in guildExpansions"
+          :key="exp.id"
+          type="button"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+          :class="selectedExpansion === (exp.expansion_slug || exp.slug) ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+          @click="selectedExpansion = exp.expansion_slug || exp.slug"
+        >{{ exp.expansion_name || exp.name }}</button>
       </div>
 
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -28,13 +51,13 @@
         {{ t('raidDefinitions.noGuild') }}
       </div>
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
-      <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
+      <div v-else-if="filteredDefinitions.length === 0" class="text-center py-12 text-text-muted">
         {{ t('raidDefinitions.noDefinitions') }}
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <WowCard v-for="def in definitions" :key="def.id">
+        <WowCard v-for="def in filteredDefinitions" :key="def.id">
           <div class="flex items-start gap-3 mb-3">
-            <img :src="getRaidIcon(def.raid_type)" :alt="def.raid_type" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
+            <img :src="getRaidIcon(def.code || def.raid_type)" :alt="def.name" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-text-primary truncate">{{ def.name }}</span>
@@ -42,6 +65,8 @@
               </div>
               <div class="flex items-center gap-1.5 mt-1">
                 <RaidSizeBadge v-if="def.size" :size="def.size" />
+                <span v-if="def.supported_sizes && def.supported_sizes.length > 1" class="text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-muted border border-border-default">{{ def.supported_sizes.join('/') }}-man</span>
+                <span v-if="def.expansion" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-700/40 uppercase">{{ constantsStore.expansionLabelMap[def.expansion] || def.expansion }}</span>
                 <RealmBadge v-if="def.realm" :realm="def.realm" />
               </div>
             </div>
@@ -210,6 +235,50 @@
         </div>
       </template>
     </WowModal>
+
+    <!-- Import from Global modal -->
+    <WowModal v-model="showImportModal" :title="t('raidDefinitions.importFromGlobal')" size="md">
+      <div v-if="importLoading" class="flex items-center gap-2 text-text-muted py-4">
+        <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+        {{ t('common.labels.loading') }}
+      </div>
+      <div v-else-if="importableDefinitions.length === 0" class="text-center py-8 text-text-muted">
+        {{ t('raidDefinitions.noImportable') }}
+      </div>
+      <div v-else class="space-y-4 max-h-96 overflow-y-auto">
+        <div v-for="group in importableByExpansion" :key="group.expansion">
+          <h3 class="text-xs uppercase tracking-wider text-text-muted font-semibold mb-2">{{ group.label }}</h3>
+          <div class="space-y-2">
+            <div
+              v-for="def in group.defs"
+              :key="def.id"
+              class="flex items-center gap-3 p-3 rounded-lg border transition-colors"
+              :class="selectedImports.includes(def.id) ? 'bg-accent-gold/10 border-accent-gold/50' : 'bg-bg-tertiary border-border-default hover:border-border-gold'"
+            >
+              <input type="checkbox" :value="def.id" v-model="selectedImports" class="rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold" />
+              <img :src="getRaidIcon(def.raid_type || def.code)" :alt="def.name" class="w-8 h-8 rounded border border-border-default flex-shrink-0" />
+              <div class="flex-1 min-w-0">
+                <span class="font-medium text-text-primary text-sm">{{ def.name }}</span>
+                <div class="text-xs text-text-muted flex items-center gap-2">
+                  <span v-if="def.supported_sizes && def.supported_sizes.length > 1">{{ def.supported_sizes.join('/') }}-man</span>
+                  <span v-else>{{ def.default_raid_size }}-man</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-between w-full">
+          <span v-if="importableDefinitions.length > 0" class="text-xs text-text-muted">{{ t('raidDefinitions.selectedCount', { count: selectedImports.length }) }}</span>
+          <span v-else />
+          <div class="flex gap-3">
+            <WowButton variant="secondary" @click="showImportModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+            <WowButton :loading="importSaving" :disabled="selectedImports.length === 0" @click="doImport">{{ t('raidDefinitions.importSelected') }}</WowButton>
+          </div>
+        </div>
+      </template>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -223,19 +292,22 @@ import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { RAID_TYPES } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const { getRaidIcon } = useWowIcons()
 const { t } = useI18n()
+const constantsStore = useConstantsStore()
 
 const hasViewAccess = computed(() => permissions.can('create_events') || permissions.can('manage_raid_definitions'))
 const canManageDefaults = computed(() => permissions.can('manage_default_definitions'))
@@ -251,11 +323,37 @@ const showModal = ref(false)
 const showDeleteConfirm = ref(false)
 const showCopyModal = ref(false)
 const showNoGuildConfirm = ref(false)
+const showImportModal = ref(false)
+const importLoading = ref(false)
+const importSaving = ref(false)
+const importableDefinitions = ref([])
+const selectedImports = ref([])
+
+const importableByExpansion = computed(() => {
+  const groups = {}
+  for (const def of importableDefinitions.value) {
+    const exp = def.expansion || 'unknown'
+    if (!groups[exp]) {
+      const ge = guildExpansions.value.find(e => e.expansion_slug === exp)
+      groups[exp] = {
+        expansion: exp,
+        label: ge?.expansion_name || constantsStore.expansionLabelMap[exp] || exp,
+        sortOrder: ge?.sort_order ?? 999,
+        defs: []
+      }
+    }
+    groups[exp].defs.push(def)
+  }
+  return Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder)
+})
+
 const editing = ref(null)
 const deleteTarget = ref(null)
 const copySource = ref(null)
+const selectedExpansion = ref(null)
+const guildExpansions = ref([])
 
-const raidTypes = RAID_TYPES
+const { raidTypes } = useExpansionData()
 
 const form = reactive({ name: '', raid_type: '', size: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 })
 const selectedGuildId = ref(null)
@@ -288,6 +386,11 @@ const allOtherGuildsSelected = computed(() =>
 const allCopyGuildsSelected = computed(() =>
   otherGuilds.value.length > 0 && otherGuilds.value.every(g => copyGuildIds.value.includes(g.id))
 )
+
+const filteredDefinitions = computed(() => {
+  if (!selectedExpansion.value) return definitions.value
+  return definitions.value.filter(d => d.expansion === selectedExpansion.value)
+})
 
 function toggleAllOtherGuilds(e) {
   selectedGuildIds.value = e.target.checked ? copyTargetGuilds.value.map(g => g.id) : []
@@ -326,11 +429,36 @@ onMounted(async () => {
     return
   }
   loadDefinitions()
+  // Ensure constants store has expansions for label lookups
+  if (constantsStore.expansions.length === 0) {
+    constantsStore.fetchConstants().catch(() => {})
+  }
+  // Load guild expansions for the filter
+  try {
+    const guildId = guildStore.currentGuildId
+    if (guildId) {
+      const res = await guildExpansionsApi.getGuildExpansions(guildId)
+      guildExpansions.value = (res?.expansions ?? res ?? [])
+      guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    }
+  } catch {
+    guildExpansions.value = []
+  }
 })
 
 // Reload when guild changes in sidebar
-watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
-  if (newId && newId !== oldId) loadDefinitions()
+watch(() => guildStore.currentGuild?.id, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadDefinitions()
+    selectedExpansion.value = null
+    try {
+      const res = await guildExpansionsApi.getGuildExpansions(newId)
+      guildExpansions.value = (res?.expansions ?? res ?? [])
+      guildExpansions.value.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    } catch {
+      guildExpansions.value = []
+    }
+  }
 })
 
 function openAddModal() {
@@ -406,12 +534,12 @@ async function doSave() {
         for (const guildId of selectedGuildIds.value) {
           try { await raidDefsApi.createRaidDefinition(guildId, payload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
+        if (failed > 0) toast.warning(t('common.copy.failedToCreateInGuilds', { count: failed }))
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? t('raidDefinitions.definitionUpdated') : t('raidDefinitions.toasts.definitionCreated', { guild: guildLabel }), 'success')
+    toast.success(editing.value ? t('raidDefinitions.definitionUpdated') : t('raidDefinitions.toasts.definitionCreated', { guild: guildLabel }))
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -427,8 +555,8 @@ async function doDelete() {
     await raidDefsApi.deleteRaidDefinition(guildStore.currentGuild.id, deleteTarget.value.id)
     definitions.value = definitions.value.filter(d => d.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('raidDefinitions.definitionDeleted'), 'success')
-  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+    toast.success(t('raidDefinitions.definitionDeleted'))
+  } catch { toast.error(t('common.toasts.failedToDelete')) }
   finally { saving.value = false }
 }
 
@@ -444,10 +572,50 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
+    toast.warning(t('common.copy.copiedWithFailures', { succeeded, failed }))
   } else {
-    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }), 'success')
+    toast.success(t('common.copy.copiedSuccess', { name: copySource.value.name, count: succeeded }))
   }
   saving.value = false
+}
+
+async function openImportModal() {
+  showImportModal.value = true
+  importLoading.value = true
+  selectedImports.value = []
+  importableDefinitions.value = []
+  // Ensure expansion labels are available
+  if (constantsStore.expansions.length === 0) {
+    constantsStore.fetchConstants().catch(() => {})
+  }
+  try {
+    const data = await raidDefsApi.getAvailableDefinitions(guildStore.currentGuild.id)
+    importableDefinitions.value = Array.isArray(data) ? data : []
+  } catch {
+    importableDefinitions.value = []
+  } finally {
+    importLoading.value = false
+  }
+}
+
+async function doImport() {
+  if (selectedImports.value.length === 0) return
+  importSaving.value = true
+  let succeeded = 0, failed = 0
+  for (const defId of selectedImports.value) {
+    try {
+      await raidDefsApi.importRaidDefinition(guildStore.currentGuild.id, defId)
+      succeeded++
+    } catch { failed++ }
+  }
+  showImportModal.value = false
+  importSaving.value = false
+  if (succeeded > 0) {
+    toast.success(t('raidDefinitions.importSuccess', { count: succeeded }))
+    loadDefinitions()
+  }
+  if (failed > 0) {
+    toast.warning(t('raidDefinitions.importFailed', { count: failed }))
+  }
 }
 </script>

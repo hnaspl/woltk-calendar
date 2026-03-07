@@ -171,10 +171,12 @@ import * as lineupApi from '@/api/lineup'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useSocket } from '@/composables/useSocket'
-import { useUiStore } from '@/stores/ui'
-import { CLASS_ROLES, ROLE_LABEL_MAP } from '@/constants'
+import { useToast } from '@/composables/useToast'
+import { ROLE_LABEL_MAP, ROLE_VALUES, LINEUP_COLUMNS, ROLE_TO_GROUP, LINEUP_GROUP_KEYS, DEFAULT_ROLE, DEFAULT_ROLE_SLOT_COUNTS, ROLE_TO_SLOT_PROP } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 
 const { t } = useI18n()
+const { classRoles } = useExpansionData()
 
 const props = defineProps({
   signups:        { type: Array,          default: () => [] },
@@ -182,11 +184,11 @@ const props = defineProps({
   guildId:        { type: [Number,String], required: true },
   canManage:      { type: Boolean, default: false },
   currentUserId:  { type: [Number,String], default: null },
-  meleeDpsSlots:  { type: Number, default: 0 },
-  mainTankSlots:  { type: Number, default: 1 },
-  offTankSlots:   { type: Number, default: 1 },
-  healerSlots:    { type: Number, default: 5 },
-  rangeDpsSlots:  { type: Number, default: 18 }
+  meleeDpsSlots:  { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.melee_dps },
+  mainTankSlots:  { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.main_tank },
+  offTankSlots:   { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.off_tank },
+  healerSlots:    { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.healer },
+  rangeDpsSlots:  { type: Number, default: DEFAULT_ROLE_SLOT_COUNTS.range_dps }
 })
 
 const emit = defineEmits(['saved', 'lineup-updated'])
@@ -195,7 +197,7 @@ const {
   draggedId, dragSourceKey, dragSourceIndex, dragOverTarget,
   isDragging, startDrag, endDrag, handleDragOver, handleDragLeave,
 } = useDragDrop()
-const uiStore = useUiStore()
+const toast = useToast()
 const saving = ref(false)
 const dirty = ref(false)
 const lineupVersion = ref(null)
@@ -205,13 +207,12 @@ const benchQueue = ref([]) // Ordered list of bench signup objects from API
 const showRoleChangeModal = ref(false)
 const roleChangePending = ref(null) // { signup, targetKey, targetCol }
 
-const allColumns = computed(() => [
-  { key: 'main_tanks', role: 'main_tank', label: ROLE_LABEL_MAP.main_tank,  labelClass: 'text-blue-200', slots: props.mainTankSlots },
-  { key: 'off_tanks',  role: 'off_tank',  label: ROLE_LABEL_MAP.off_tank,   labelClass: 'text-cyan-300',  slots: props.offTankSlots },
-  { key: 'melee_dps',  role: 'melee_dps', label: ROLE_LABEL_MAP.melee_dps,  labelClass: 'text-blue-300',  slots: props.meleeDpsSlots },
-  { key: 'healers',    role: 'healer',    label: ROLE_LABEL_MAP.healer,     labelClass: 'text-green-300', slots: props.healerSlots },
-  { key: 'range_dps',  role: 'range_dps', label: ROLE_LABEL_MAP.range_dps,  labelClass: 'text-red-300',   slots: props.rangeDpsSlots },
-])
+const allColumns = computed(() =>
+  LINEUP_COLUMNS.map(col => {
+    const propName = ROLE_TO_SLOT_PROP[col.role]
+    return { ...col, slots: props[propName] ?? DEFAULT_ROLE_SLOT_COUNTS[col.role] }
+  })
+)
 
 /** Only show columns that have at least 1 slot configured */
 const columns = computed(() => allColumns.value.filter(c => c.slots > 0))
@@ -224,9 +225,19 @@ const gridClass = computed(() => {
   return 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
 })
 
-const lineup = ref({ main_tanks: [], off_tanks: [], melee_dps: [], healers: [], range_dps: [] })
+const lineup = ref(Object.fromEntries(LINEUP_GROUP_KEYS.map(k => [k, []])))
 
 // ── Drag handlers (state managed by useDragDrop composable) ──
+
+/**
+ * Copy lineup data from an API response object into the lineup ref.
+ * Uses LINEUP_GROUP_KEYS to avoid hardcoded group names.
+ */
+function applyLineupData(data) {
+  for (const key of LINEUP_GROUP_KEYS) {
+    lineup.value[key] = data[key] ?? []
+  }
+}
 
 function onDragStart(e, signup, sourceKey, idx) {
   if (!props.canManage) {
@@ -241,7 +252,7 @@ function onDragEnd() {
 }
 
 function findSignupById(id) {
-  for (const key of ['main_tanks', 'off_tanks', 'melee_dps', 'healers', 'range_dps']) {
+  for (const key of LINEUP_GROUP_KEYS) {
     const idx = lineup.value[key].findIndex(s => Number(s.id) === id)
     if (idx !== -1) return { key, idx, signup: lineup.value[key][idx] }
   }
@@ -254,7 +265,7 @@ function findSignupById(id) {
 function isClassAllowedForRole(signup, role) {
   const className = signup?.character?.class_name
   if (!className) return true // allow if class unknown
-  const allowed = CLASS_ROLES[className]
+  const allowed = classRoles.value[className]
   if (!allowed) return true // allow if class not in map
   return allowed.includes(role)
 }
@@ -277,7 +288,7 @@ function onDropColumn(e, targetKey) {
     // Block if class cannot take the target role
     if (!isClassAllowedForRole(found.signup, col.role)) {
       const className = found.signup?.character?.class_name ?? 'This class'
-      uiStore.showToast(`${className} cannot be assigned to ${col.label}.`, 'error')
+      toast.error(`${className} cannot be assigned to ${col.label}.`)
       return
     }
     roleChangePending.value = { signup: found.signup, sourceKey: found.key, sourceIdx: found.idx, targetKey, targetCol: col }
@@ -290,7 +301,7 @@ function onDropColumn(e, targetKey) {
     const currentCount = lineup.value[targetKey].length
     const alreadyInTarget = lineup.value[targetKey].find(s => Number(s.id) === id)
     if (!alreadyInTarget && currentCount >= col.slots) {
-      uiStore.showToast(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first.`, 'error')
+      toast.error(`${col.label} slots are full (${currentCount}/${col.slots}). Remove someone first.`)
       return
     }
   }
@@ -341,7 +352,7 @@ function confirmRoleChange() {
   // Overflow check
   const currentCount = lineup.value[targetKey].length
   if (currentCount >= targetCol.slots) {
-    uiStore.showToast(`${targetCol.label} slots are full (${currentCount}/${targetCol.slots}). Remove someone first.`, 'error')
+    toast.error(`${targetCol.label} slots are full (${currentCount}/${targetCol.slots}). Remove someone first.`)
     showRoleChangeModal.value = false
     roleChangePending.value = null
     return
@@ -416,11 +427,7 @@ async function loadLineup() {
     const data = await lineupApi.getLineup(props.guildId, props.eventId)
     // Guard: skip applying server data if user made DnD changes while request was in flight
     if (dirty.value) return
-    lineup.value.main_tanks = data.main_tanks ?? []
-    lineup.value.off_tanks  = data.off_tanks  ?? []
-    lineup.value.melee_dps  = data.melee_dps  ?? []
-    lineup.value.healers    = data.healers    ?? []
-    lineup.value.range_dps  = data.range_dps  ?? []
+    applyLineupData(data)
     benchQueue.value        = data.bench_queue ?? []
     lineupVersion.value     = data.version ?? null
     enforceSlotLimits()
@@ -481,11 +488,9 @@ watch(dirty, (isDirty, wasDirty) => {
 
 function autoPopulateFromSignups() {
   const going = props.signups.filter(s => s.lineup_status === 'going')
-  lineup.value.main_tanks = going.filter(s => s.chosen_role === 'main_tank')
-  lineup.value.off_tanks  = going.filter(s => s.chosen_role === 'off_tank')
-  lineup.value.melee_dps  = going.filter(s => s.chosen_role === 'melee_dps')
-  lineup.value.healers    = going.filter(s => s.chosen_role === 'healer')
-  lineup.value.range_dps  = going.filter(s => s.chosen_role === 'range_dps')
+  for (const [role, groupKey] of Object.entries(ROLE_TO_GROUP)) {
+    lineup.value[groupKey] = going.filter(s => s.chosen_role === role)
+  }
   enforceSlotLimits()
 }
 
@@ -496,20 +501,18 @@ const activeSignups = computed(() =>
 
 const assignedIds = computed(() => {
   const ids = new Set()
-  ;['main_tanks', 'off_tanks', 'melee_dps', 'healers', 'range_dps'].forEach(k =>
+  LINEUP_GROUP_KEYS.forEach(k =>
     lineup.value[k].forEach(s => ids.add(Number(s.id)))
   )
   return ids
 })
 
 // Emit lineup counts so CompositionSummary can reflect the Lineup Board
-const lineupCounts = computed(() => ({
-  main_tank: lineup.value.main_tanks.length,
-  off_tank:  lineup.value.off_tanks.length,
-  melee_dps: lineup.value.melee_dps.length,
-  healer:    lineup.value.healers.length,
-  range_dps: lineup.value.range_dps.length,
-}))
+const lineupCounts = computed(() =>
+  Object.fromEntries(
+    Object.entries(ROLE_TO_GROUP).map(([role, groupKey]) => [role, lineup.value[groupKey].length])
+  )
+)
 
 watch(lineupCounts, (counts) => {
   emit('lineup-updated', counts)
@@ -542,7 +545,7 @@ const benchByRole = computed(() => {
   const groups = {}
   const counters = {} // per-role position counter
   for (const s of bench.value) {
-    const role = s.chosen_role || 'range_dps'
+    const role = s.chosen_role || DEFAULT_ROLE
     if (!groups[role]) {
       groups[role] = []
       counters[role] = 0
@@ -550,9 +553,8 @@ const benchByRole = computed(() => {
     counters[role]++
     groups[role].push({ ...s, roleQueuePos: counters[role] })
   }
-  // Return entries sorted by role label for consistent display
-  const roleOrder = ['main_tank', 'off_tank', 'melee_dps', 'healer', 'range_dps']
-  return roleOrder
+  // Return entries sorted by ROLE_VALUES for consistent display
+  return ROLE_VALUES
     .filter(r => groups[r])
     .map(r => ({ role: r, label: ROLE_LABEL_MAP[r] || r, players: groups[r] }))
 })
@@ -614,7 +616,7 @@ function getFlatBenchIndex(role, roleIdx) {
   // Convert role + role-relative index to a flat bench array index
   let flatIdx = 0
   for (const s of bench.value) {
-    const sRole = s.chosen_role || 'range_dps'
+    const sRole = s.chosen_role || DEFAULT_ROLE
     if (sRole === role) {
       if (roleIdx === 0) return flatIdx
       roleIdx--
@@ -656,21 +658,15 @@ async function saveLineup(auto = false) {
   if (saving.value) return
   saving.value = true
   try {
-    const result = await lineupApi.saveLineup(props.guildId, props.eventId, {
-      main_tanks: lineup.value.main_tanks.map(s => s.id),
-      off_tanks:  lineup.value.off_tanks.map(s => s.id),
-      melee_dps:  lineup.value.melee_dps.map(s => s.id),
-      healers:    lineup.value.healers.map(s => s.id),
-      range_dps:  lineup.value.range_dps.map(s => s.id),
-      bench_queue: bench.value.map(s => ({ id: s.id, chosen_role: s.chosen_role })),
-      version:    lineupVersion.value,
-    })
+    const payload = Object.fromEntries(
+      LINEUP_GROUP_KEYS.map(k => [k, lineup.value[k].map(s => s.id)])
+    )
+    payload.bench_queue = bench.value.map(s => ({ id: s.id, chosen_role: s.chosen_role }))
+    payload.version = lineupVersion.value
+
+    const result = await lineupApi.saveLineup(props.guildId, props.eventId, payload)
     // Update local state from server response
-    lineup.value.main_tanks = result.main_tanks ?? []
-    lineup.value.off_tanks  = result.off_tanks  ?? []
-    lineup.value.melee_dps  = result.melee_dps  ?? []
-    lineup.value.healers    = result.healers    ?? []
-    lineup.value.range_dps  = result.range_dps  ?? []
+    applyLineupData(result)
     benchQueue.value        = result.bench_queue ?? []
     lineupVersion.value     = result.version ?? null
     dirty.value = false
@@ -679,20 +675,16 @@ async function saveLineup(auto = false) {
     if (err?.response?.status === 409 && err?.response?.data?.error === 'lineup_conflict') {
       // Another officer modified the lineup — apply their version and notify
       const fresh = err.response.data.lineup
-      lineup.value.main_tanks = fresh.main_tanks ?? []
-      lineup.value.off_tanks  = fresh.off_tanks  ?? []
-      lineup.value.melee_dps  = fresh.melee_dps  ?? []
-      lineup.value.healers    = fresh.healers    ?? []
-      lineup.value.range_dps  = fresh.range_dps  ?? []
+      applyLineupData(fresh)
       benchQueue.value        = fresh.bench_queue ?? []
       lineupVersion.value     = fresh.version ?? null
       dirty.value = false
-      uiStore.showToast(t('lineup.toasts.updatedByOfficer'), 'warning')
+      toast.warning(t('lineup.toasts.updatedByOfficer'))
       emit('saved', { auto: true })
     } else {
       console.error('Failed to save lineup', err)
       if (!auto) {
-        uiStore.showToast(err?.response?.data?.message ?? t('lineup.toasts.failedToSave'), 'error')
+        toast.error(err?.response?.data?.message ?? t('lineup.toasts.failedToSave'))
       }
     }
   } finally {

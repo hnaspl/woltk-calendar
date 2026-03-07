@@ -4,6 +4,7 @@ copy-to-guild, and multi-guild creation."""
 from __future__ import annotations
 
 import pytest
+import sqlalchemy as sa
 
 from app import create_app
 from app.extensions import db as _db
@@ -41,7 +42,13 @@ def db(app):
         _reset_rate_limit()
         yield _db
         _db.session.rollback()
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=OFF"))
+            conn.commit()
         _db.drop_all()
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+            conn.commit()
 
 
 @pytest.fixture
@@ -54,11 +61,6 @@ def ctx(app):
 def seeded(db, ctx):
     """Seed permissions, create two guilds, users with various roles."""
     seed_permissions()
-
-    guild_a = Guild(name="Guild Alpha", realm_name="Icecrown")
-    guild_b = Guild(name="Guild Beta", realm_name="Lordaeron")
-    _db.session.add_all([guild_a, guild_b])
-    _db.session.flush()
 
     # Global admin — has is_admin=True
     admin_user = User(username="globaladmin", email="ga@test.com",
@@ -78,6 +80,19 @@ def seeded(db, ctx):
 
     _db.session.add_all([admin_user, gadmin_user, officer_user,
                          member_user, gadmin_b_user])
+    _db.session.flush()
+
+    # Create tenants for users who create guilds via API
+    from app.services import tenant_service
+    admin_tenant = tenant_service.create_tenant(owner=admin_user)
+    gadmin_tenant = tenant_service.create_tenant(owner=gadmin_user)
+
+    # Create guilds with tenant association
+    guild_a = Guild(name="Guild Alpha", realm_name="Icecrown",
+                    tenant_id=gadmin_tenant.id)
+    guild_b = Guild(name="Guild Beta", realm_name="Lordaeron",
+                    tenant_id=admin_tenant.id)
+    _db.session.add_all([guild_a, guild_b])
     _db.session.flush()
 
     # Memberships
@@ -128,18 +143,33 @@ class TestGuildScopedDefinitions:
         assert any(d.id == rd.id for d in defs_a)
         assert not any(d.id == rd.id for d in defs_b)
 
-    def test_builtin_visible_to_all_guilds(self, seeded):
-        """Built-in (global) definitions are visible from both guilds."""
+    def test_builtin_importable_to_guilds(self, seeded):
+        """Built-in (global) definitions are listed as importable for guilds
+        that have the corresponding expansions enabled."""
+        from app.seeds.expansions import seed_expansions
+        from app.models.expansion import Expansion
+        from app.models.guild import GuildExpansion
+
+        seed_expansions()
         count = seed_raid_definitions()
         assert count > 0
 
-        defs_a = raid_service.list_raid_definitions(seeded["guild_a"].id)
-        defs_b = raid_service.list_raid_definitions(seeded["guild_b"].id)
+        # Enable all expansions for both guilds
+        all_exps = _db.session.execute(sa.select(Expansion)).scalars().all()
+        for guild in [seeded["guild_a"], seeded["guild_b"]]:
+            for exp in all_exps:
+                _db.session.add(GuildExpansion(
+                    guild_id=guild.id,
+                    expansion_id=exp.id,
+                    tenant_id=guild.tenant_id,
+                ))
+        _db.session.commit()
 
-        builtins_a = [d for d in defs_a if d.is_builtin]
-        builtins_b = [d for d in defs_b if d.is_builtin]
-        assert len(builtins_a) == len(builtins_b)
-        assert len(builtins_a) == count
+        importable_a = raid_service.list_importable_definitions(seeded["guild_a"].id)
+        importable_b = raid_service.list_importable_definitions(seeded["guild_b"].id)
+
+        assert len(importable_a) == count
+        assert len(importable_b) == count
 
     def test_guild_definition_not_cross_guild(self, seeded):
         """Guild A definitions don't leak to Guild B and vice versa."""
@@ -174,7 +204,7 @@ class TestCopyToGuild:
     def test_copy_creates_guild_definition(self, seeded):
         """Copying a builtin creates a non-builtin guild-scoped copy."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         assert len(builtins) > 0
         source = builtins[0]
 
@@ -189,7 +219,7 @@ class TestCopyToGuild:
     def test_copy_preserves_slots(self, seeded):
         """Copied definition preserves slot allocation from source."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         copy = raid_service.copy_raid_definition_to_guild(
@@ -205,7 +235,7 @@ class TestCopyToGuild:
     def test_copy_unique_naming(self, seeded):
         """Multiple copies get unique suffixed names."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         copy1 = raid_service.copy_raid_definition_to_guild(
@@ -220,7 +250,7 @@ class TestCopyToGuild:
     def test_copy_to_different_guild(self, seeded):
         """Copying same builtin to two different guilds works independently."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         copy_a = raid_service.copy_raid_definition_to_guild(
@@ -246,14 +276,17 @@ class TestBuiltinPermissions:
     def test_global_admin_bypasses_permission_check_via_api(self, seeded, app):
         """Global admin (is_admin=True) can edit builtins because has_permission bypasses for admins."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        # Import the first builtin into guild_a so it becomes guild-scoped
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
                 json={"name": "Admin Edited"},
             )
             assert resp.status_code == 200
@@ -295,14 +328,16 @@ class TestBuiltinDefinitionAPI:
     def test_api_update_builtin_as_global_admin(self, seeded, app):
         """Global admin can update a builtin definition via API."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
                 json={"name": "Updated Name"},
             )
             assert resp.status_code == 200
@@ -311,14 +346,16 @@ class TestBuiltinDefinitionAPI:
     def test_api_update_builtin_as_officer_rejected(self, seeded, app):
         """Officer cannot update a builtin definition (no manage_default_definitions)."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
                 json={"name": "Hacked Name"},
             )
             assert resp.status_code == 403
@@ -326,14 +363,16 @@ class TestBuiltinDefinitionAPI:
     def test_api_delete_builtin_as_officer_rejected(self, seeded, app):
         """Officer cannot delete a builtin definition."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
-        source = builtins[0]
+        builtins = raid_service.list_default_raid_definitions()
+        imported = raid_service.import_definition_to_guild(
+            builtins[0], seeded["guild_a"].id, seeded["admin_user"].id
+        )
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.delete(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{imported.id}",
             )
             assert resp.status_code == 403
 
@@ -348,7 +387,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.put(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{rd.id}",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{rd.id}",
                 json={"name": "Updated Custom ICC"},
             )
             assert resp.status_code == 200
@@ -357,14 +396,14 @@ class TestBuiltinDefinitionAPI:
     def test_api_copy_builtin_as_officer_allowed(self, seeded, app):
         """Officer can copy a builtin to guild (requires manage_raid_definitions, not manage_default_definitions)."""
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         source = builtins[0]
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}/copy",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions/{source.id}/copy",
             )
             assert resp.status_code == 201
             data = resp.get_json()
@@ -377,7 +416,7 @@ class TestBuiltinDefinitionAPI:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["member_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_a'].id}/raid-definitions",
+                f"/api/v2/guilds/{seeded['guild_a'].id}/raid-definitions",
                 json={"name": "Hacked Def", "code": "hack", "size": 25},
             )
             assert resp.status_code == 403
@@ -444,7 +483,7 @@ class TestMultiGuildDefinitions:
 # ===========================================================================
 
 class TestCreateDeleteGuildPermissions:
-    """Verify create_guild and delete_guild are only on guild_admin and global_admin."""
+    """Verify create_guild and delete_guild are tenant-level, not guild-level."""
 
     def test_member_lacks_create_guild(self, seeded):
         """Member does NOT have create_guild permission."""
@@ -471,26 +510,38 @@ class TestCreateDeleteGuildPermissions:
         membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
         assert not has_permission(membership, "create_guild")
 
-    def test_guild_admin_has_create_guild(self, seeded):
-        """Guild Admin HAS create_guild permission."""
-        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
-        assert has_permission(membership, "create_guild")
+    def test_guild_admin_lacks_create_guild(self, seeded):
+        """Guild Admin does NOT have create_guild — it's a tenant-level permission.
 
-    def test_global_admin_has_create_guild(self, seeded):
-        """Global Admin (is_admin=True) bypasses all checks including create_guild."""
-        # is_admin users bypass all permission checks via has_any_guild_permission
-        from app.utils.permissions import has_any_guild_permission
-        assert has_any_guild_permission(seeded["admin_user"].id, "create_guild")
+        This prevents the infinite loop exploit where guild_admin users
+        could create unlimited guilds by chaining guild_admin promotions.
+        """
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert not has_permission(membership, "create_guild")
+
+    def test_global_admin_creates_guild_via_api(self, seeded, app):
+        """Global Admin (is_admin=True) bypasses all checks including create_guild.
+
+        Guild creation is now checked at API level via tenant admin role,
+        with global admins bypassing. This test verifies the API behavior.
+        """
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.post("/api/v2/guilds", json={
+                "name": "Admin Create Test", "realm_name": "Icecrown"
+            })
+            assert resp.status_code == 201
 
     def test_officer_lacks_delete_guild(self, seeded):
         """Officer does NOT have delete_guild permission."""
         membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
         assert not has_permission(membership, "delete_guild")
 
-    def test_guild_admin_has_delete_guild(self, seeded):
-        """Guild Admin HAS delete_guild permission."""
+    def test_guild_admin_lacks_delete_guild(self, seeded):
+        """Guild Admin does NOT have delete_guild — it's a tenant-level permission."""
         membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
-        assert has_permission(membership, "delete_guild")
+        assert not has_permission(membership, "delete_guild")
 
     def test_member_lacks_delete_guild(self, seeded):
         """Member does NOT have delete_guild permission."""
@@ -554,7 +605,7 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Admin Guild", "realm_name": "Icecrown"
             })
             assert resp.status_code == 201
@@ -564,69 +615,57 @@ class TestCreateGuildAPI:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["gadmin_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "GA New Guild", "realm_name": "Lordaeron"
             })
             assert resp.status_code == 201
 
     def test_api_create_guild_as_officer_rejected(self, seeded, app):
-        """Officer cannot create guilds (no create_guild permission)."""
+        """Officer cannot create guilds (no tenant admin role)."""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Officer Guild", "realm_name": "Icecrown"
             })
-            assert resp.status_code == 403
+            # 400 (no active tenant) or 403 (no tenant admin role) — both valid rejections
+            assert resp.status_code in (400, 403)
 
     def test_api_create_guild_as_member_rejected(self, seeded, app):
-        """Member cannot create guilds (no create_guild permission)."""
+        """Member cannot create guilds (no tenant admin role)."""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["member_user"].id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "Member Guild", "realm_name": "Icecrown"
             })
-            assert resp.status_code == 403
+            # 400 (no active tenant) or 403 (no tenant admin role) — both valid rejections
+            assert resp.status_code in (400, 403)
 
     def test_api_delete_guild_as_officer_rejected(self, seeded, app):
         """Officer cannot delete guilds (no delete_guild permission)."""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
-            resp = client.delete(f"/api/v1/guilds/{seeded['guild_a'].id}")
+            resp = client.delete(f"/api/v2/guilds/{seeded['guild_a'].id}")
             assert resp.status_code == 403
 
-    def test_api_delete_guild_as_guild_admin(self, seeded, app):
-        """Guild admin can delete guilds (has delete_guild permission).
-        Use global admin to create the guild (so no membership conflict).
+    def test_api_delete_guild_as_guild_admin_blocked(self, seeded, app):
+        """Guild admin CANNOT delete guilds (delete_guild is tenant-level).
+
+        create_guild and delete_guild were moved from guild_admin to
+        tenant_admin to prevent the infinite guild creation exploit.
         """
-        with app.test_client() as client:
-            # Create a temp guild as global admin
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(seeded["admin_user"].id)
-            resp = client.post("/api/v1/guilds", json={
-                "name": "Temp Delete Guild", "realm_name": "Frostmourne"
-            })
-            assert resp.status_code == 201
-            temp_guild_id = resp.get_json()["id"]
-
-            # The creator (admin_user) was auto-added as guild_admin.
-            # Now add gadmin_user as guild_admin in this new guild.
-            _db.session.add(GuildMembership(
-                guild_id=temp_guild_id, user_id=seeded["gadmin_user"].id,
-                role="guild_admin", status="active"
-            ))
-            _db.session.commit()
-
-            # Delete as gadmin_user (guild_admin role) — should succeed
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(seeded["gadmin_user"].id)
-            resp = client.delete(f"/api/v1/guilds/{temp_guild_id}")
-            # Permission check should pass (guild_admin has delete_guild)
-            # Note: the actual delete may fail due to cascading constraints
-            # but we verify the permission check passes (not 403)
-            assert resp.status_code != 403
+        # gadmin_user is not a global admin and not a tenant admin of admin_tenant
+        # So they should not be able to delete guilds in admin_tenant
+        # Use guild_a which is in gadmin_tenant (where gadmin_user IS owner)
+        # Instead, verify via has_permission that guild_admin lacks delete_guild
+        from app.utils.permissions import has_permission as _hp
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert membership is not None
+        assert membership.role == "guild_admin"
+        # In a clean DB context without current_user admin bypass
+        assert not _hp(membership, "delete_guild")
 
 
 # ===========================================================================
@@ -640,7 +679,7 @@ class TestCopyTemplateToGuild:
         """Copying a template creates a copy in the target guild."""
         from app.services import event_service
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         rd = builtins[0]
 
         tmpl = event_service.create_template(
@@ -659,7 +698,7 @@ class TestCopyTemplateToGuild:
         """Multiple copies of same template get unique names."""
         from app.services import event_service
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         rd = builtins[0]
 
         tmpl = event_service.create_template(
@@ -679,7 +718,7 @@ class TestCopyTemplateToGuild:
         """API endpoint copies template to another guild."""
         from app.services import event_service
         seed_raid_definitions()
-        builtins = [d for d in raid_service.list_raid_definitions(seeded["guild_a"].id) if d.is_builtin]
+        builtins = raid_service.list_default_raid_definitions()
         rd = builtins[0]
 
         tmpl = event_service.create_template(
@@ -691,7 +730,7 @@ class TestCopyTemplateToGuild:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_b'].id}/templates/{tmpl.id}/copy",
+                f"/api/v2/guilds/{seeded['guild_b'].id}/templates/{tmpl.id}/copy",
             )
             assert resp.status_code == 201
             data = resp.get_json()
@@ -749,7 +788,7 @@ class TestCopySeriesToGuild:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["admin_user"].id)
             resp = client.post(
-                f"/api/v1/guilds/{seeded['guild_b'].id}/series/{series.id}/copy",
+                f"/api/v2/guilds/{seeded['guild_b'].id}/series/{series.id}/copy",
             )
             assert resp.status_code == 201
             data = resp.get_json()

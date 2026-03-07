@@ -1,5 +1,5 @@
 <template>
-  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('common.labels.recordAttendance')" size="lg">
+  <WowModal :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)" :title="t('common.labels.recordAttendance')" size="xl">
     <div class="space-y-4">
       <p class="text-text-muted text-sm">
         {{ t('attendance.modal.description') }}
@@ -17,6 +17,7 @@
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('common.labels.class') }}</th>
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase hidden sm:table-cell">{{ t('common.fields.role') }}</th>
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('attendance.modal.outcome') }}</th>
+              <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('signup.minutesLate') }}</th>
               <th class="text-left px-3 py-2 text-xs text-text-muted uppercase">{{ t('common.fields.note') }}</th>
             </tr>
           </thead>
@@ -30,7 +31,8 @@
               <td class="px-3 py-2">
                 <select
                   v-model="p.outcome"
-                  class="bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
+                  class="bg-bg-tertiary border text-text-primary text-sm rounded-md px-3 py-1.5 outline-none cursor-pointer transition-colors"
+                  :class="outcomeStyle(p.outcome)"
                 >
                   <option value="attended">{{ t('attendance.attended') }}</option>
                   <option value="late">{{ t('attendance.late') }}</option>
@@ -39,9 +41,19 @@
               </td>
               <td class="px-3 py-2">
                 <input
+                  v-if="p.outcome === 'late'"
+                  v-model.number="p.lateMinutes"
+                  type="number" min="1" max="999"
+                  placeholder="15"
+                  class="w-20 bg-bg-tertiary border border-amber-500/40 text-amber-300 text-sm rounded-md px-3 py-1.5 outline-none focus:border-border-gold"
+                />
+                <span v-else class="text-text-muted text-xs">—</span>
+              </td>
+              <td class="px-3 py-2">
+                <input
                   v-model="p.note"
                   :placeholder="t('common.labels.optionalNote')"
-                  class="w-full bg-bg-tertiary border border-border-default text-text-primary text-xs rounded px-2 py-1 focus:border-border-gold outline-none"
+                  class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded-md px-3 py-1.5 outline-none focus:border-border-gold"
                 />
               </td>
             </tr>
@@ -71,7 +83,7 @@ import { useI18n } from 'vue-i18n'
 import WowModal from '@/components/common/WowModal.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as attendanceApi from '@/api/attendance'
 import { ROLE_LABEL_MAP } from '@/constants'
 
@@ -86,9 +98,16 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 
 const { t } = useI18n()
 const { getClassColor } = useWowIcons()
-const uiStore = useUiStore()
+const toast = useToast()
 
 function roleLabel(role) { return ROLE_LABEL_MAP[role] || role }
+
+function outcomeStyle(outcome) {
+  if (outcome === 'attended') return 'border-green-500/40 text-green-300 focus:border-green-400'
+  if (outcome === 'late') return 'border-amber-500/40 text-amber-300 focus:border-amber-400'
+  if (outcome === 'no_show') return 'border-red-500/40 text-red-300 focus:border-red-400'
+  return 'border-border-default'
+}
 
 const players = ref([])
 const saving = ref(false)
@@ -103,11 +122,19 @@ watch(
     // Only include players who are in the lineup (not bench or declined)
     players.value = props.signups
       .filter(s => s.lineup_status === 'going')
-      .map(s => ({
-        signup: s,
-        outcome: 'attended',
-        note: ''
-      }))
+      .map(s => {
+        // Auto-populate outcome from signup attendance_status
+        let outcome = 'attended'
+        const status = s.attendance_status
+        if (status === 'late') outcome = 'late'
+        else if (status === 'did_not_show') outcome = 'no_show'
+        return {
+          signup: s,
+          outcome,
+          lateMinutes: s.late_minutes || null,
+          note: status === 'late' && s.late_minutes ? `~${s.late_minutes} min late` : ''
+        }
+      })
   },
   { immediate: true }
 )
@@ -125,12 +152,13 @@ async function saveAttendance() {
         user_id: p.signup.user_id,
         character_id: p.signup.character_id,
         outcome: p.outcome,
+        late_minutes: p.outcome === 'late' ? (p.lateMinutes || null) : undefined,
         note: p.note || undefined
       })
       saved++
       saveProgress.value = `${saved} / ${total} saved…`
     }
-    uiStore.showToast(t('attendance.modal.recorded'), 'success')
+    toast.success(t('attendance.modal.recorded'))
     emit('saved')
     emit('update:modelValue', false)
   } catch (err) {

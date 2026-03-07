@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
+import sqlalchemy as sa
 
 os.environ["FLASK_ENV"] = "testing"
 
@@ -41,7 +42,15 @@ def db(app):
         _reset_rate_limit()
         yield _db
         _db.session.rollback()
+        # Disable FK checks for SQLite during drop_all to handle circular FKs
+        # (users.active_tenant_id <-> tenants.owner_id)
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=OFF"))
+            conn.commit()
         _db.drop_all()
+        with _db.engine.connect() as conn:
+            conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+            conn.commit()
 
 
 @pytest.fixture
@@ -54,6 +63,9 @@ def ctx(app):
 @pytest.fixture
 def seed(db, ctx):
     """Create seed data: guild, 2 users, raid definition, raid event with 2 DPS slots."""
+    from app.seeds.expansions import seed_expansions
+    seed_expansions()
+
     guild = Guild(name="Test Guild", realm_name="Icecrown", created_by=None)
     db.session.add(guild)
     db.session.flush()
@@ -113,3 +125,27 @@ def seed(db, ctx):
         "char1": char1, "char2": char2, "char3": char3,
         "raid_def": raid_def, "event": event,
     }
+
+
+@pytest.fixture
+def tenant_with_owner(db, ctx):
+    """Create a user with an auto-provisioned tenant workspace."""
+    from app.services import tenant_service
+    user = User(username="tenant_owner", email="towner@test.com", password_hash="x", is_active=True)
+    db.session.add(user)
+    db.session.flush()
+    tenant = tenant_service.create_tenant(owner=user, name="Test Workspace")
+    return {"user": user, "tenant": tenant}
+
+
+@pytest.fixture
+def guild_in_tenant(db, ctx, tenant_with_owner):
+    """Create a guild within a tenant context."""
+    from app.services import guild_service
+    user = tenant_with_owner["user"]
+    tenant = tenant_with_owner["tenant"]
+    guild = guild_service.create_guild(
+        name="Tenant Guild", realm_name="Icecrown",
+        created_by=user.id, tenant_id=tenant.id,
+    )
+    return {"user": user, "tenant": tenant, "guild": guild}

@@ -3,7 +3,7 @@
     <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <h1 class="wow-heading text-xl sm:text-2xl">{{ t('characters.title') }}</h1>
-        <WowButton @click="openAddModal">
+        <WowButton @click="openAddModal" :disabled="errorIsNoGuild">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -47,45 +47,56 @@
             :gold="char.is_main"
             class="relative"
           >
+            <div class="flex flex-col h-full">
             <!-- Main badge -->
             <span
               v-if="char.is_main"
               class="absolute top-3 right-3 text-[10px] font-bold text-accent-gold bg-accent-gold/10 border border-accent-gold/30 px-1.5 py-0.5 rounded"
             >{{ t('characters.main') }}</span>
 
-            <CharacterTooltip :character="charToTooltip(char)" position="right">
-              <div class="flex items-center gap-3 mb-3 cursor-pointer">
+              <div class="flex items-center gap-3 mb-3">
                 <img
                   :src="getClassIcon(char.class)"
                   :alt="char.class"
                   class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default"
                 />
-                <div>
+                <div class="flex-1 min-w-0">
                   <div class="font-bold text-text-primary">{{ char.name }}</div>
                   <div class="text-xs text-text-muted">{{ char.realm }}</div>
                   <div v-if="char.metadata?.level" class="text-xs text-text-muted">
                     Level {{ char.metadata.level }} {{ char.metadata.race || '' }}
                   </div>
                 </div>
+                <WowButton variant="secondary" class="text-xs py-1 px-2 flex-shrink-0" @click="openCharDetail(char)">
+                  🔍 {{ t('common.buttons.preview') }}
+                </WowButton>
               </div>
-            </CharacterTooltip>
 
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              <ClassBadge :class-name="char.class" />
-              <RoleBadge v-if="char.role" :role="char.role" />
-              <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
-              <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
+            <div class="flex-1">
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <ClassBadge :class-name="char.class" />
+                <RoleBadge v-if="char.role" :role="char.role" />
+                <SpecBadge v-if="char.spec" :spec="char.spec" :class-name="char.class" />
+                <SpecBadge v-if="char.secondary_spec" :spec="char.secondary_spec" :class-name="char.class" />
+              </div>
+              <!-- Synced metadata -->
+              <div v-if="char.metadata?.professions?.length" class="flex items-center gap-2 flex-wrap mb-3">
+                <span
+                  v-for="prof in char.metadata.professions"
+                  :key="prof.name"
+                  class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-bg-secondary border border-border-default rounded text-text-muted"
+                >
+                  <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
+                  {{ prof.name }} {{ prof.skill || '' }}
+                </span>
+              </div>
+              <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
+                Synced {{ tzHelper.formatGuildDate(char.metadata.last_synced) }}
+              </div>
+              <div v-else class="mb-3"></div>
             </div>
-            <!-- Synced metadata -->
-            <div v-if="char.metadata?.professions?.length" class="text-xs text-text-muted mb-2">
-              {{ char.metadata.professions.map(p => `${p.name} (${p.skill})`).join(', ') }}
-            </div>
-            <div v-if="char.metadata?.last_synced" class="text-[10px] text-text-muted/60 mb-3">
-              Synced {{ tzHelper.formatGuildDate(char.metadata.last_synced) }}
-            </div>
-            <div v-else class="mb-3"></div>
 
-            <div class="flex flex-wrap gap-1.5 sm:gap-2">
+            <div class="flex flex-wrap gap-1.5 sm:gap-2 mt-auto">
               <WowButton
                 v-if="!char.is_main"
                 variant="secondary"
@@ -95,7 +106,7 @@
               <WowButton
                 variant="secondary"
                 class="flex-1 text-xs py-1.5"
-                @click="syncFromWarmane(char)"
+                @click="syncFromArmory(char)"
                 :loading="syncing === char.id"
               >{{ t('characters.sync') }}</WowButton>
               <WowButton
@@ -108,6 +119,7 @@
                 class="text-xs py-1.5 px-3"
                 @click="confirmRemove(char)"
               >✕</WowButton>
+            </div>
             </div>
           </WowCard>
         </div>
@@ -172,28 +184,32 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
-          {{ t('characters.syncedFromWarmane') }}<template v-if="!isRoleLocked"> {{ t('characters.roleCanChange') }}</template>
+          {{ t('characters.syncedFromArmory') }}<template v-if="!isRoleLocked"> {{ t('characters.roleCanChange') }}</template>
         </div>
 
         <!-- STEP 1: Armory import (only when adding, not editing) -->
         <div v-if="!editingChar && !manualEntry" class="space-y-4">
           <div class="p-4 rounded bg-accent-gold/5 border border-accent-gold/30 space-y-3">
-            <div class="text-sm font-semibold text-accent-gold">{{ t('characters.importFromWarmane') }}</div>
+            <div class="text-sm font-semibold text-accent-gold">{{ t('characters.importFromArmory') }}</div>
             <p class="text-xs text-text-muted">{{ t('characters.importHelp') }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input v-model="form.name" :placeholder="t('characters.characterName')" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
               <div>
+                <label class="block text-xs text-text-muted mb-1">{{ t('characters.nameRequired') }}</label>
+                <input v-model="form.name" :placeholder="t('characters.characterName')" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
                 <input v-if="guildStore.currentGuild?.realm_name" :value="form.realm" disabled class="w-full bg-bg-secondary border border-border-default text-text-muted rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed" />
                 <select v-else v-model="form.realm" class="w-full bg-bg-secondary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
                   <option value="">{{ t('common.fields.selectRealm') }}</option>
-                  <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+                  <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
                 </select>
                 <span v-if="guildStore.currentGuild?.realm_name" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromWarmane">
-                {{ t('characters.lookupOnWarmane') }}
+              <WowButton variant="secondary" class="text-xs py-1.5" :loading="lookingUp" :disabled="!form.name || !form.realm" @click="lookupFromArmory">
+                {{ t('characters.lookupOnArmory') }}
               </WowButton>
               <span v-if="lookupResult === 'found'" class="text-xs text-green-400">✓ {{ t('characters.foundOnArmory') }}</span>
               <span v-else-if="lookupResult === 'not_found'" class="text-xs text-yellow-400">{{ t('characters.notFoundOnArmory') }}</span>
@@ -214,7 +230,7 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('characters.classRequired') }}</label>
-            <select v-model="form.class" required :disabled="isArmoryLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" @change="onClassChange">
+            <select v-model="form.class" required :disabled="isArmoryLocked || classLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" @change="onClassChange">
               <option value="">{{ t('characters.selectClass') }}</option>
               <option v-for="c in wowClasses" :key="c" :value="c">{{ c }}</option>
             </select>
@@ -223,7 +239,7 @@
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
             <select v-model="form.realm" required :disabled="isArmoryLocked || isRealmLocked" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">{{ t('common.fields.selectRealm') }}</option>
-              <option v-for="r in (guildRealms.length ? guildRealms : warmaneRealms)" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in guildRealms" :key="r" :value="r">{{ r }}</option>
             </select>
             <span v-if="isRealmLocked" class="text-[10px] text-text-muted">{{ t('characters.realmFromGuild') }}</span>
             <span v-else-if="guildRealms.length" class="text-[10px] text-text-muted">{{ t('characters.onlyGuildRealms') }}</span>
@@ -251,10 +267,7 @@
             </select>
             <input v-else v-model="form.secondary_spec" :disabled="isArmoryLocked" placeholder="e.g. Unholy, Protection…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
-          <div>
-            <label class="block text-xs text-text-muted mb-1">{{ t('characters.warmaneUrl') }}</label>
-            <input v-model="form.armory_url" :disabled="isArmoryLocked" placeholder="https://armory.warmane.com/character/…" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
-          </div>
+          <!-- Armory URL hidden — handled via lookup step only -->
         </template>
 
         <div v-if="formError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ formError }}</div>
@@ -310,6 +323,11 @@
         </div>
       </template>
     </WowModal>
+
+    <CharacterDetailModal
+      v-model="showCharDetailModal"
+      :character="charDetailTarget"
+    />
   </AppShell>
 </template>
 
@@ -322,35 +340,27 @@ import WowModal from '@/components/common/WowModal.vue'
 import ClassBadge from '@/components/common/ClassBadge.vue'
 import RoleBadge from '@/components/common/RoleBadge.vue'
 import SpecBadge from '@/components/common/SpecBadge.vue'
-import CharacterTooltip from '@/components/common/CharacterTooltip.vue'
+import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useConstantsStore } from '@/stores/constants'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { WARMANE_REALMS, WOW_CLASSES, ROLE_OPTIONS, CLASS_ROLES, CLASS_SPECS, normalizeSpecName } from '@/constants'
+import { ROLE_OPTIONS, normalizeSpecName } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as charApi from '@/api/characters'
-import * as warmaneApi from '@/api/warmane'
+import * as armoryLookupApi from '@/api/armory_lookup'
+import * as guildRealmsApi from '@/api/guild_realms'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useTimezone } from '@/composables/useTimezone'
+import { useCharacterPreview, prepareCharacterForModal } from '@/composables/useCharacterPreview'
 import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
-const { getClassIcon } = useWowIcons()
+const constantsStore = useConstantsStore()
+const toast = useToast()
+const { getClassIcon, getProfessionIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { t } = useI18n()
-
-/** Map display char to CharacterTooltip format */
-function charToTooltip(char) {
-  return {
-    name: char.name,
-    class_name: char.class,
-    realm_name: char.realm,
-    default_role: char.role,
-    primary_spec: char.spec,
-    secondary_spec: char.secondary_spec,
-    armory_url: char.armory_url,
-    metadata: char.metadata ?? {}
-  }
-}
 
 const characters = ref([])
 const archivedCharacters = ref([])
@@ -373,8 +383,62 @@ const manualEntry = ref(false)
 const showAddAnother = ref(false)
 const lastAddedName = ref('')
 
-const wowClasses = WOW_CLASSES
-const warmaneRealms = WARMANE_REALMS
+const {
+  showModal: showCharDetailModal,
+  target: charDetailTarget,
+  open: openCharDetail,
+} = useCharacterPreview()
+
+const { wowClasses: systemClasses, classSpecs: systemSpecs, classRoles: systemRoles } = useExpansionData()
+
+// Guild-scoped expansion data (overrides system-wide when available)
+const guildClasses = ref(null)
+const guildSpecsMap = ref(null)
+const guildRolesMap = ref(null)
+
+const wowClasses = computed(() => {
+  if (guildClasses.value?.length) return guildClasses.value
+  if (systemClasses.value?.length) return systemClasses.value
+  return constantsStore.wowClasses ?? []
+})
+const classSpecs = computed(() => {
+  if (guildSpecsMap.value && Object.keys(guildSpecsMap.value).length) return guildSpecsMap.value
+  if (systemSpecs.value && Object.keys(systemSpecs.value).length) return systemSpecs.value
+  return constantsStore.classSpecs ?? {}
+})
+const classRoles = computed(() => {
+  if (guildRolesMap.value && Object.keys(guildRolesMap.value).length) return guildRolesMap.value
+  if (systemRoles.value && Object.keys(systemRoles.value).length) return systemRoles.value
+  return constantsStore.classRoles ?? {}
+})
+
+const configuredRealms = ref([])
+
+/** Load guild-scoped expansion constants (classes/specs/roles filtered by enabled expansions). */
+async function loadGuildConstants() {
+  const guildId = guildStore.currentGuildId
+  if (!guildId) return
+  try {
+    const data = await guildExpansionsApi.getGuildConstants(guildId)
+    if (data.wow_classes) guildClasses.value = data.wow_classes
+    if (data.class_specs) guildSpecsMap.value = data.class_specs
+    if (data.class_roles) guildRolesMap.value = data.class_roles
+  } catch {
+    // Fall back to system-wide expansion data
+  }
+}
+
+/** Load guild-configured realms from API, fallback to empty array */
+async function loadGuildRealms() {
+  const guildId = guildStore.currentGuildId
+  if (!guildId) return
+  try {
+    const data = await guildRealmsApi.getGuildRealms(guildId)
+    configuredRealms.value = (data.realms || []).map(r => r.name)
+  } catch {
+    configuredRealms.value = []
+  }
+}
 
 /** Lock all fields when editing a character imported from armory */
 const isArmoryLocked = computed(() => !!editingChar.value && !!editingChar.value.armory_url)
@@ -387,16 +451,19 @@ const isRealmLocked = computed(() => !editingChar.value && !!guildStore.currentG
 
 /** Realms from guilds the user belongs to (for character realm selector) */
 const guildRealms = computed(() => {
+  // Prefer guild-configured realms from API; fallback to guild membership realms
+  if (configuredRealms.value.length) return configuredRealms.value
   const realms = new Set(guildStore.guilds.map(g => g.realm_name).filter(Boolean))
   return [...realms].sort()
 })
 
 const form = reactive({ name: '', class: '', realm: '', role: '', spec: '', secondary_spec: '', armory_url: '' })
+const classLocked = ref(false)
 
 /** Roles filtered by the selected class */
 const filteredRoles = computed(() => {
   if (!form.class) return ROLE_OPTIONS
-  const allowed = CLASS_ROLES[form.class] ?? []
+  const allowed = classRoles.value[form.class] ?? []
   if (allowed.length === 0) return ROLE_OPTIONS
   return ROLE_OPTIONS.filter(r => allowed.includes(r.value))
 })
@@ -404,7 +471,7 @@ const filteredRoles = computed(() => {
 /** Specs filtered by the selected class */
 const filteredSpecs = computed(() => {
   if (!form.class) return []
-  return CLASS_SPECS[form.class] ?? []
+  return classSpecs.value[form.class] ?? []
 })
 
 // Map backend response fields to display-friendly names
@@ -429,6 +496,8 @@ onMounted(async () => {
     loading.value = false
     return
   }
+  await loadGuildRealms()
+  await loadGuildConstants()
   try {
     const raw = await charApi.getMyCharacters(guildStore.currentGuild?.id)
     characters.value = (Array.isArray(raw) ? raw : []).map(mapChar)
@@ -480,6 +549,7 @@ function openAddModal() {
   editingChar.value = null
   const guildRealm = guildStore.currentGuild?.realm_name ?? ''
   Object.assign(form, { name: '', class: '', realm: guildRealm, role: '', spec: '', secondary_spec: '', armory_url: '' })
+  classLocked.value = false
   formError.value = null
   lookingUp.value = false
   lookupResult.value = null
@@ -494,9 +564,11 @@ function addAnotherCharacter() {
 
 /** Reset role and specs when class changes so invalid values don't persist */
 function onClassChange() {
-  const allowed = CLASS_ROLES[form.class] ?? []
+  const allowed = classRoles.value[form.class] ?? []
   if (form.role && !allowed.includes(form.role)) form.role = ''
-  const specs = CLASS_SPECS[form.class] ?? []
+  // Auto-select role when only one option is valid (e.g., Rogue → melee_dps)
+  if (!form.role && allowed.length === 1) form.role = allowed[0]
+  const specs = classSpecs.value[form.class] ?? []
   if (form.spec && specs.length > 0 && !specs.includes(form.spec)) form.spec = ''
   if (form.secondary_spec && specs.length > 0 && !specs.includes(form.secondary_spec)) form.secondary_spec = ''
 }
@@ -518,18 +590,19 @@ function confirmDelete(char) {
   showDeleteConfirm.value = true
 }
 
-async function lookupFromWarmane() {
+async function lookupFromArmory() {
   if (!form.name || !form.realm) return
   lookingUp.value = true
   lookupResult.value = null
   formError.value = null
   try {
-    const data = await warmaneApi.lookupCharacter(form.realm, form.name)
+    const data = await armoryLookupApi.lookupCharacter(form.realm, form.name, guildStore.currentGuildId)
     if (data?.class_name) {
       form.class = data.class_name
-      // Auto-populate default role from CLASS_ROLES
-      const allowed = CLASS_ROLES[data.class_name] ?? []
-      if (allowed.length > 0 && !form.role) {
+      classLocked.value = true
+      // Auto-populate default role from classRoles
+      const allowed = classRoles.value[data.class_name] ?? []
+      if (allowed.length > 0) {
         form.role = allowed[0]
       }
     }
@@ -537,13 +610,13 @@ async function lookupFromWarmane() {
     if (data?.name) form.name = data.name
     // Auto-fill spec from talents
     if (data?.talents?.length) {
-      form.spec = normalizeSpecName(data.talents[0]?.tree, form.class) || ''
+      form.spec = normalizeSpecName(data.talents[0]?.tree, form.class, classSpecs.value) || ''
       if (data.talents.length > 1) {
-        form.secondary_spec = normalizeSpecName(data.talents[1]?.tree, form.class) || ''
+        form.secondary_spec = normalizeSpecName(data.talents[1]?.tree, form.class, classSpecs.value) || ''
       }
     }
-    // Store warmane data for metadata on save
-    warmaneData.value = data
+    // Store armory data for metadata on save
+    armoryData.value = data
     lookupResult.value = 'found'
   } catch {
     lookupResult.value = 'not_found'
@@ -552,7 +625,7 @@ async function lookupFromWarmane() {
   }
 }
 
-const warmaneData = ref(null)
+const armoryData = ref(null)
 
 async function saveChar() {
   formError.value = null
@@ -569,19 +642,19 @@ async function saveChar() {
       secondary_spec: form.secondary_spec || undefined,
       armory_url: form.armory_url || undefined,
     }
-    // Include warmane metadata when creating from lookup
-    if (!editingChar.value && warmaneData.value) {
+    // Include armory metadata when creating from lookup
+    if (!editingChar.value && armoryData.value) {
       payload.metadata = {
-        level: warmaneData.value.level,
-        race: warmaneData.value.race,
-        gender: warmaneData.value.gender,
-        faction: warmaneData.value.faction,
-        guild: warmaneData.value.guild,
-        achievement_points: warmaneData.value.achievement_points,
-        honorable_kills: warmaneData.value.honorable_kills,
-        professions: warmaneData.value.professions || [],
-        talents: warmaneData.value.talents || [],
-        equipment: warmaneData.value.equipment || [],
+        level: armoryData.value.level,
+        race: armoryData.value.race,
+        gender: armoryData.value.gender,
+        faction: armoryData.value.faction,
+        guild: armoryData.value.guild,
+        achievement_points: armoryData.value.achievement_points,
+        honorable_kills: armoryData.value.honorable_kills,
+        professions: armoryData.value.professions || [],
+        talents: armoryData.value.talents || [],
+        equipment: armoryData.value.equipment || [],
         last_synced: new Date().toISOString(),
       }
     }
@@ -589,15 +662,15 @@ async function saveChar() {
       const updated = await charApi.updateCharacter(guildStore.currentGuild.id, editingChar.value.id, payload)
       const idx = characters.value.findIndex(c => c.id === editingChar.value.id)
       if (idx !== -1) characters.value[idx] = mapChar(updated)
-      uiStore.showToast(t('characters.toasts.characterUpdated'), 'success')
+      toast.success(t('characters.toasts.characterUpdated'))
     } else {
       const created = await charApi.createCharacter(guildStore.currentGuild.id, payload)
       characters.value.push(mapChar(created))
       lastAddedName.value = payload.name
-      uiStore.showToast(t('characters.toasts.characterAdded'), 'success')
+      toast.success(t('characters.toasts.characterAdded'))
     }
     const wasEditing = !!editingChar.value
-    warmaneData.value = null
+    armoryData.value = null
     showModal.value = false
     // Show "add another?" prompt only when creating new characters
     if (!wasEditing) {
@@ -614,21 +687,21 @@ async function setMain(char) {
   try {
     await charApi.setMainCharacter(guildStore.currentGuild.id, char.id)
     characters.value.forEach(c => { c.is_main = c.id === char.id })
-    uiStore.showToast(t('characters.toasts.setAsMain', { name: char.name }), 'success')
+    toast.success(t('characters.toasts.setAsMain', { name: char.name }))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToSetMain'), 'error')
+    toast.error(t('characters.toasts.failedToSetMain'))
   }
 }
 
-async function syncFromWarmane(char) {
+async function syncFromArmory(char) {
   syncing.value = char.id
   try {
-    const updated = await warmaneApi.syncCharacter(char.id)
+    const updated = await armoryLookupApi.syncCharacter(char.id)
     const idx = characters.value.findIndex(c => c.id === char.id)
     if (idx !== -1) characters.value[idx] = mapChar(updated)
-    uiStore.showToast(t('characters.toasts.syncedFromWarmane', { name: char.name }), 'success')
+    toast.success(t('characters.toasts.syncedFromArmory', { name: char.name }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('characters.toasts.syncFailed'), 'error')
+    toast.error(err?.response?.data?.error ?? t('characters.toasts.syncFailed'))
   } finally {
     syncing.value = null
   }
@@ -640,9 +713,9 @@ async function doArchive() {
     await charApi.archiveCharacter(guildStore.currentGuild.id, removeTarget.value.id)
     characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
     showRemoveConfirm.value = false
-    uiStore.showToast(t('characters.toasts.characterArchived'), 'success')
+    toast.success(t('characters.toasts.characterArchived'))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToArchive'), 'error')
+    toast.error(t('characters.toasts.failedToArchive'))
   } finally {
     saving.value = false
   }
@@ -654,9 +727,9 @@ async function doDelete() {
     await charApi.deleteCharacter(guildStore.currentGuild.id, removeTarget.value.id)
     characters.value = characters.value.filter(c => c.id !== removeTarget.value.id)
     showRemoveConfirm.value = false
-    uiStore.showToast(t('characters.toasts.characterDeleted'), 'success')
+    toast.success(t('characters.toasts.characterDeleted'))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToDeleteChar'), 'error')
+    toast.error(t('characters.toasts.failedToDeleteChar'))
   } finally {
     saving.value = false
   }
@@ -668,9 +741,9 @@ async function doUnarchive(char) {
     const restored = await charApi.unarchiveCharacter(guildStore.currentGuild.id, char.id)
     archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== char.id)
     characters.value.push(mapChar(restored))
-    uiStore.showToast(t('characters.toasts.characterRestored', { name: char.name }), 'success')
+    toast.success(t('characters.toasts.characterRestored', { name: char.name }))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToRestore'), 'error')
+    toast.error(t('characters.toasts.failedToRestore'))
   } finally {
     saving.value = false
   }
@@ -682,9 +755,9 @@ async function doDeleteArchived() {
     await charApi.deleteCharacter(guildStore.currentGuild.id, deleteTarget.value.id)
     archivedCharacters.value = archivedCharacters.value.filter(c => c.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('characters.toasts.characterDeleted'), 'success')
+    toast.success(t('characters.toasts.characterDeleted'))
   } catch {
-    uiStore.showToast(t('characters.toasts.failedToDeleteChar'), 'error')
+    toast.error(t('characters.toasts.failedToDeleteChar'))
   } finally {
     saving.value = false
   }

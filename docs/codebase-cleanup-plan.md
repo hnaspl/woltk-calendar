@@ -270,7 +270,7 @@ be identical in both frontend and backend.
 
 ### 6.1 Implemented: Option A (API Endpoint)
 
-A public `GET /api/v1/meta/constants` endpoint serves all shared constants:
+A public `GET /api/v2/meta/constants` endpoint serves all shared constants:
 
 | Key | Source |
 |-----|--------|
@@ -310,8 +310,8 @@ The bench/queue system spans:
 | **Models** | `app/models/signup.py` | `Signup`, `LineupSlot`, `RaidBan`, `CharacterReplacement` |
 | **Services** | `app/services/signup_service.py` | `create_signup()`, `delete_signup()`, `decline_signup()`, `_auto_promote_bench()`, `_validate_class_role()`, `_count_assigned_slots_by_role()` |
 | **Services** | `app/services/lineup_service.py` | `get_lineup_grouped()`, `auto_assign_slot()`, `add_to_bench_queue()`, `update_lineup_grouped()`, `reorder_bench_queue()`, `get_bench_info()` |
-| **API** | `app/api/v1/signups.py` | `POST /signups`, `DELETE /signups/<id>`, `POST /signups/<id>/decline`, ban/replace endpoints |
-| **API** | `app/api/v1/lineup.py` | `GET /lineup`, `PUT /lineup`, `PUT /lineup/bench-reorder`, `POST /lineup/confirm` |
+| **API** | `app/api/v2/signups.py` | `POST /signups`, `DELETE /signups/<id>`, `POST /signups/<id>/decline`, ban/replace endpoints |
+| **API** | `app/api/v2/lineup.py` | `GET /lineup`, `PUT /lineup`, `PUT /lineup/bench-reorder`, `POST /lineup/confirm` |
 | **Notifications** | `app/utils/notify.py` | `notify_signup_confirmed()`, `notify_signup_benched()`, `notify_signup_promoted()`, `notify_queue_position_changed()` |
 | **Real-time** | `app/utils/realtime.py` | `emit_signups_changed()`, `emit_lineup_changed()` |
 | **Frontend** | `src/components/raids/LineupBoard.vue` | Drag-drop lineup editor + bench queue |
@@ -439,8 +439,8 @@ The bench/queue system spans:
 - [x] Add validation test for constants sync (`tests/test_constants_sync.py` — 7 tests)
 
 ### Phase 5 – Cross-Stack (Option A: API Endpoint)
-- [x] Create `GET /api/v1/meta/constants` endpoint (`app/api/v1/meta.py`)
-- [x] Register `meta` blueprint in `app/api/v1/__init__.py`
+- [x] Create `GET /api/v2/meta/constants` endpoint (`app/api/v2/meta.py`)
+- [x] Register `meta` blueprint in `app/api/v2/__init__.py`
 - [x] Create `src/api/meta.js` — frontend API module
 - [x] Create `src/stores/constants.js` — Pinia store (fetches on app init, static defaults)
 - [x] Fetch constants in router bootstrap (`src/router/index.js`) — fire-and-forget, non-blocking
@@ -519,7 +519,7 @@ The bench/queue system is the most interconnected feature in the codebase:
 | `src/composables/useFormatting.js` | Shared date/time formatting |
 | `app/utils/api_helpers.py` | API response helpers, get_or_404, validate_required |
 | `app/utils/decorators.py` | @require_guild_permission decorator |
-| `app/api/v1/meta.py` | GET /api/v1/meta/constants — shared constants endpoint |
+| `app/api/v2/meta.py` | GET /api/v2/meta/constants — shared constants endpoint |
 | `src/api/meta.js` | Frontend API module for meta endpoint |
 | `src/stores/constants.js` | Pinia store for shared constants |
 | `tests/test_api_helpers.py` | Tests for new API helpers |
@@ -546,10 +546,10 @@ The bench/queue system is the most interconnected feature in the codebase:
 | File | Change |
 |------|--------|
 | `app/constants.py` | Add cross-reference comments, align raid names |
-| `app/api/v1/signups.py` | Use shared helpers, decorator |
-| `app/api/v1/lineup.py` | Use shared helpers, decorator |
-| `app/api/v1/events.py` | Use shared helpers, decorator |
-| `app/api/v1/guilds.py` | Use shared helpers, decorator |
+| `app/api/v2/signups.py` | Use shared helpers, decorator |
+| `app/api/v2/lineup.py` | Use shared helpers, decorator |
+| `app/api/v2/events.py` | Use shared helpers, decorator |
+| `app/api/v2/guilds.py` | Use shared helpers, decorator |
 | Other API files | Incremental decorator/helper adoption |
 
 ### Files NOT to Touch
@@ -575,8 +575,8 @@ A final sweep after all 6 phases were completed. Findings documented below.
 |------|----------|--------|
 | `permission_required()` decorator | `app/utils/permissions.py:158-184` | Removed — superseded by `@require_guild_permission` in `app/utils/decorators.py`, never imported anywhere |
 | Unused imports (`wraps`, `Callable`, `jsonify`) | `app/utils/permissions.py:9-12` | Removed — only used by the deleted decorator |
-| `request.get_json(silent=True) or {}` pattern | `app/api/v1/auth.py:17,37,71,79` | Replaced with shared `get_json()` from `app/utils/api_helpers.py` |
-| Unused `request` import | `app/api/v1/auth.py:5` | Removed — no longer needed after `get_json()` migration |
+| `request.get_json(silent=True) or {}` pattern | `app/api/v2/auth.py:17,37,71,79` | Replaced with shared `get_json()` from `app/utils/api_helpers.py` |
+| Unused `request` import | `app/api/v2/auth.py:5` | Removed — no longer needed after `get_json()` migration |
 | Local `formatDateTime()` | `src/views/RaidDetailView.vue:902-910` | Extracted to `useFormatting.js` composable with unified format |
 | Local `formatDateTime()` | `src/views/DashboardView.vue:400-407` | Extracted to `useFormatting.js` composable with unified format |
 | Local `formatTimeOnly()` | `src/views/DashboardView.vue:408-414` | Extracted to `useFormatting.js` composable |

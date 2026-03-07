@@ -89,12 +89,24 @@ def _notify(
     guild_id: Optional[int] = None,
     raid_event_id: Optional[int] = None,
     *,
+    tenant_id: Optional[int] = None,
     title_key: Optional[str] = None,
     body_key: Optional[str] = None,
     title_params: Optional[dict] = None,
     body_params: Optional[dict] = None,
 ) -> None:
     """Create a notification and push it in real time."""
+    # Auto-derive tenant_id from guild if not provided
+    resolved_tenant_id = tenant_id
+    if resolved_tenant_id is None and guild_id is not None:
+        try:
+            from app.models.guild import Guild
+            guild = db.session.get(Guild, guild_id)
+            if guild and guild.tenant_id:
+                resolved_tenant_id = guild.tenant_id
+        except Exception:
+            pass
+
     try:
         create_notification(
             user_id=user_id,
@@ -103,6 +115,7 @@ def _notify(
             body=body,
             guild_id=guild_id,
             raid_event_id=raid_event_id,
+            tenant_id=resolved_tenant_id,
             title_key=title_key,
             body_key=body_key,
             title_params=title_params,
@@ -718,3 +731,205 @@ def notify_attendance_recorded(record, event) -> None:
         title_params={"event": etag},
         body_params={"character": char_name, "outcome": record.outcome, "note": note_text},
     )
+
+
+# ---------------------------------------------------------------------------
+# Tenant admin notifications
+# ---------------------------------------------------------------------------
+
+def _get_tenant_admins(tenant_id: int, exclude_user_id: int | None = None) -> list[int]:
+    """Return user IDs of tenant admins and owner, excluding the given user."""
+    from app.models.tenant import TenantMembership
+    rows = db.session.execute(
+        sa.select(TenantMembership.user_id).where(
+            TenantMembership.tenant_id == tenant_id,
+            TenantMembership.role.in_(["owner", "admin"]),
+        )
+    ).scalars().all()
+    if exclude_user_id is not None:
+        return [uid for uid in rows if uid != exclude_user_id]
+    return list(rows)
+
+
+def notify_member_removed_from_guild(
+    removed_user_id: int,
+    guild,
+    removed_by_user_id: int,
+    removed_username: str,
+    target_username: str,
+) -> None:
+    """Notify tenant admins when a member is removed from a guild."""
+    tag = _guild_tag(guild)
+    if guild.tenant_id:
+        for admin_id in _get_tenant_admins(guild.tenant_id, exclude_user_id=removed_by_user_id):
+            _notify(
+                user_id=admin_id,
+                notification_type="guild_member_removed_admin",
+                title=f"👤 {target_username} removed from {guild.name} {tag}",
+                body=f"{removed_username} removed {target_username} from {guild.name}.",
+                guild_id=guild.id,
+                title_key="notify.memberRemovedAdmin.title",
+                body_key="notify.memberRemovedAdmin.body",
+                title_params={"targetUser": target_username, "guildName": guild.name, "guildTag": tag},
+                body_params={"actor": removed_username, "targetUser": target_username, "guildName": guild.name},
+            )
+
+
+def notify_guild_settings_changed(
+    guild,
+    changed_by_user_id: int,
+    changed_by_username: str,
+    changes_summary: str,
+) -> None:
+    """Notify tenant admins when guild settings are changed."""
+    tag = _guild_tag(guild)
+    if guild.tenant_id:
+        for admin_id in _get_tenant_admins(guild.tenant_id, exclude_user_id=changed_by_user_id):
+            _notify(
+                user_id=admin_id,
+                notification_type="guild_settings_changed",
+                title=f"⚙️ {guild.name} settings updated {tag}",
+                body=f"{changed_by_username} updated guild settings: {changes_summary}",
+                guild_id=guild.id,
+                title_key="notify.guildSettingsChanged.title",
+                body_key="notify.guildSettingsChanged.body",
+                title_params={"guildName": guild.name, "guildTag": tag},
+                body_params={"actor": changed_by_username, "changes": changes_summary},
+            )
+
+
+def notify_guild_role_changed_admin(
+    target_user_id: int,
+    guild,
+    new_role: str,
+    changed_by_user_id: int,
+    changed_by_username: str,
+    target_username: str,
+) -> None:
+    """Notify tenant admins when a member's guild role is changed."""
+    from app.models.permission import SystemRole
+    display_name = db.session.execute(
+        sa.select(SystemRole.display_name).where(SystemRole.name == new_role)
+    ).scalar_one_or_none()
+    display = display_name if display_name else new_role.replace("_", " ").title()
+    tag = _guild_tag(guild)
+    if guild.tenant_id:
+        for admin_id in _get_tenant_admins(guild.tenant_id, exclude_user_id=changed_by_user_id):
+            _notify(
+                user_id=admin_id,
+                notification_type="guild_role_changed_admin",
+                title=f"🏅 {target_username}'s role changed in {guild.name} {tag}",
+                body=f"{changed_by_username} changed {target_username}'s role to {display}.",
+                guild_id=guild.id,
+                title_key="notify.guildRoleChangedAdmin.title",
+                body_key="notify.guildRoleChangedAdmin.body",
+                title_params={
+                    "targetUser": target_username, "guildName": guild.name,
+                    "guildTag": tag, "role": display,
+                },
+                body_params={
+                    "actor": changed_by_username, "targetUser": target_username,
+                    "role": display,
+                },
+            )
+
+
+def notify_guild_matrix_changed(
+    guild,
+    changed_by_user_id: int,
+    changed_by_username: str,
+    action_detail: str,
+) -> None:
+    """Notify tenant admins when the class-role matrix is changed."""
+    tag = _guild_tag(guild)
+    if guild.tenant_id:
+        for admin_id in _get_tenant_admins(guild.tenant_id, exclude_user_id=changed_by_user_id):
+            _notify(
+                user_id=admin_id,
+                notification_type="guild_matrix_changed",
+                title=f"📊 Class-role matrix updated for {guild.name} {tag}",
+                body=f"{changed_by_username} {action_detail}.",
+                guild_id=guild.id,
+                title_key="notify.guildMatrixChanged.title",
+                body_key="notify.guildMatrixChanged.body",
+                title_params={"guildName": guild.name, "guildTag": tag},
+                body_params={"actor": changed_by_username, "detail": action_detail},
+            )
+
+
+def notify_tenant_settings_changed(
+    tenant,
+    changed_by_user_id: int,
+    changed_by_username: str,
+    changes_summary: str,
+) -> None:
+    """Notify other tenant admins when tenant settings are changed."""
+    for admin_id in _get_tenant_admins(tenant.id, exclude_user_id=changed_by_user_id):
+        _notify(
+            user_id=admin_id,
+            notification_type="tenant_settings_changed",
+            title=f"⚙️ {tenant.name} settings updated",
+            body=f"{changed_by_username} updated panel settings: {changes_summary}",
+            tenant_id=tenant.id,
+            title_key="notify.tenantSettingsChanged.title",
+            body_key="notify.tenantSettingsChanged.body",
+            title_params={"tenantName": tenant.name},
+            body_params={"actor": changed_by_username, "changes": changes_summary},
+        )
+
+
+def notify_tenant_member_role_changed(
+    tenant,
+    target_user_id: int,
+    new_role: str,
+    changed_by_user_id: int,
+    changed_by_username: str,
+    target_username: str,
+) -> None:
+    """Notify other tenant admins when a member's tenant role is changed."""
+    for admin_id in _get_tenant_admins(tenant.id, exclude_user_id=changed_by_user_id):
+        _notify(
+            user_id=admin_id,
+            notification_type="tenant_member_role_changed",
+            title=f"🏅 {target_username}'s role changed in {tenant.name}",
+            body=f"{changed_by_username} changed {target_username}'s role to {new_role}.",
+            tenant_id=tenant.id,
+            title_key="notify.tenantMemberRoleChanged.title",
+            body_key="notify.tenantMemberRoleChanged.body",
+            title_params={"targetUser": target_username, "tenantName": tenant.name, "role": new_role},
+            body_params={"actor": changed_by_username, "targetUser": target_username, "role": new_role},
+        )
+    # Also notify the target user
+    _notify(
+        user_id=target_user_id,
+        notification_type="tenant_role_changed",
+        title=f"🏅 Your role changed in {tenant.name}",
+        body=f"Your role in {tenant.name} has been changed to {new_role}.",
+        tenant_id=tenant.id,
+        title_key="notify.tenantRoleChanged.title",
+        body_key="notify.tenantRoleChanged.body",
+        title_params={"tenantName": tenant.name, "role": new_role},
+        body_params={"tenantName": tenant.name, "role": new_role},
+    )
+
+
+def notify_tenant_member_removed(
+    tenant,
+    removed_user_id: int,
+    removed_by_user_id: int,
+    removed_by_username: str,
+    target_username: str,
+) -> None:
+    """Notify tenant admins when a member is removed from the tenant."""
+    for admin_id in _get_tenant_admins(tenant.id, exclude_user_id=removed_by_user_id):
+        _notify(
+            user_id=admin_id,
+            notification_type="tenant_member_removed_admin",
+            title=f"👤 {target_username} removed from {tenant.name}",
+            body=f"{removed_by_username} removed {target_username} from the panel.",
+            tenant_id=tenant.id,
+            title_key="notify.tenantMemberRemovedAdmin.title",
+            body_key="notify.tenantMemberRemovedAdmin.body",
+            title_params={"targetUser": target_username, "tenantName": tenant.name},
+            body_params={"actor": removed_by_username, "targetUser": target_username},
+        )

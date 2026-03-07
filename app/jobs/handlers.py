@@ -40,7 +40,11 @@ def handle_send_notification(payload: dict) -> None:
 
 def auto_lock_upcoming_events(app: Flask) -> None:
     """Auto-lock events that have reached their close_signups_at time,
-    or events starting within 4 hours if no close time is set."""
+    or events starting within 4 hours if no close time is set.
+
+    Processes all tenants — each event's tenant_id is preserved and the
+    locking logic is identical regardless of tenant.
+    """
     from datetime import datetime, timedelta, timezone as tz
 
     import sqlalchemy as sa
@@ -75,39 +79,51 @@ def auto_lock_upcoming_events(app: Flask) -> None:
             event.status = "locked"
             event.locked_at = now
             locked += 1
+            logger.debug(
+                "Auto-locked event %d (guild_id=%d, tenant_id=%s)",
+                event.id, event.guild_id, getattr(event, "tenant_id", None),
+            )
         if locked:
             db.session.commit()
-            logger.info("Auto-locked %d events", locked)
+            logger.info("Auto-locked %d events across all tenants", locked)
 
 
 @register_handler("sync_all_characters")
 def handle_sync_all_characters(payload: dict) -> None:
-    """Sync all active characters from the Warmane armory."""
+    """Sync all active characters from the armory.
+
+    Accepts optional ``guild_id`` or ``tenant_id`` in *payload* to limit
+    scope.  When neither is supplied, all characters across all tenants
+    are synced.
+    """
     from datetime import datetime, timezone as tz
 
     from app.extensions import db
     from app.constants import normalize_spec_name
-    from app.services import character_service, warmane_service
+    from app.services import character_service, armory_service
     from app.services.character_service import _default_role_for_class
 
     guild_id = payload.get("guild_id")
+    tenant_id = payload.get("tenant_id")
     import sqlalchemy as sa
     from app.models.character import Character
 
     stmt = sa.select(Character).where(Character.is_active.is_(True))
     if guild_id:
         stmt = stmt.where(Character.guild_id == guild_id)
+    if tenant_id:
+        stmt = stmt.where(Character.tenant_id == tenant_id)
 
     chars = list(db.session.execute(stmt).scalars().all())
     synced = 0
     batch_size = 20
     for char in chars:
         try:
-            data = warmane_service.fetch_character(char.realm_name, char.name)
+            data = armory_service.fetch_character(char.realm_name, char.name)
             if data is None or (isinstance(data, dict) and "error" in data):
-                logger.warning("Skipping sync for %s/%s: no data from Warmane", char.realm_name, char.name)
+                logger.warning("Skipping sync for %s/%s: no data from armory", char.realm_name, char.name)
                 continue
-            char_data = warmane_service.build_character_dict(data, char.realm_name)
+            char_data = armory_service.build_character_dict(data, char.realm_name)
             if char_data.get("class_name"):
                 char.class_name = char_data["class_name"]
                 # Auto-populate default_role if not already set
@@ -146,27 +162,49 @@ def handle_sync_all_characters(payload: dict) -> None:
 
 
 def process_job_queue(app: Flask) -> None:
-    """Entry point called by the scheduler to drain queued jobs."""
-    from app.jobs.worker import claim_next_job, complete_job, fail_job
+    """Entry point called by the scheduler to drain queued jobs.
+
+    Processes jobs in a tenant-fair round-robin order: one job per tenant
+    per round, cycling through tenants until the batch limit is reached
+    or no more jobs are available.
+    """
+    from app.jobs.worker import claim_next_job_for_tenant, claim_next_job, complete_job, fail_job
+    from app.jobs.worker import get_queued_tenant_ids
 
     max_batch = 50  # prevent unbounded loop from blocking the DB
 
     with app.app_context():
         processed = 0
-        while processed < max_batch:
-            job = claim_next_job()
-            if job is None:
-                break
-            handler = _HANDLERS.get(job.type)
-            if handler is None:
-                fail_job(job, f"No handler registered for job type: {job.type!r}")
-                logger.warning("No handler for job type %r (id=%s)", job.type, job.id)
-                continue
-            try:
-                handler(job.payload)
-                complete_job(job)
-                logger.debug("Completed job %s (type=%r)", job.id, job.type)
-            except Exception as exc:
-                fail_job(job, str(exc))
-                logger.exception("Job %s (type=%r) failed: %s", job.id, job.type, exc)
-            processed += 1
+
+        # Get distinct tenant_ids of queued jobs for round-robin
+        tenant_ids = get_queued_tenant_ids()
+
+        if not tenant_ids:
+            return
+
+        # Round-robin: cycle through tenants, one job each per pass
+        stalled = set()
+        while processed < max_batch and len(stalled) < len(tenant_ids):
+            for tid in tenant_ids:
+                if tid in stalled:
+                    continue
+                if processed >= max_batch:
+                    break
+                job = claim_next_job_for_tenant(tid)
+                if job is None:
+                    stalled.add(tid)
+                    continue
+                handler = _HANDLERS.get(job.type)
+                if handler is None:
+                    fail_job(job, f"No handler registered for job type: {job.type!r}")
+                    logger.warning("No handler for job type %r (id=%s)", job.type, job.id)
+                    processed += 1
+                    continue
+                try:
+                    handler(job.payload)
+                    complete_job(job)
+                    logger.debug("Completed job %s (type=%r, tenant=%s)", job.id, job.type, tid)
+                except Exception as exc:
+                    fail_job(job, str(exc))
+                    logger.exception("Job %s (type=%r) failed: %s", job.id, job.type, exc)
+                processed += 1

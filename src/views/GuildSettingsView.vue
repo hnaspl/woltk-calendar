@@ -7,61 +7,108 @@
       <div v-else-if="error" class="p-4 rounded-lg bg-red-900/30 border border-red-600 text-red-300">{{ error }}</div>
 
       <template v-else>
-        <!-- Guild info form -->
-        <WowCard>
-          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
-          <form @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-              <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
-            </div>
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
-              <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option value="">{{ t('common.fields.selectRealm') }}</option>
-                <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
-              <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
-            </div>
-            <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
-            <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
-          </form>
-        </WowCard>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <!-- Left column: Settings + Discord -->
+          <div class="space-y-4 sm:space-y-6">
+            <!-- Guild info form -->
+            <WowCard>
+              <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
+              <form @submit.prevent="saveGuild" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
+                  <input v-model="form.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
+                  <select v-model="form.realm" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                    <option value="">{{ t('common.fields.selectRealm') }}</option>
+                    <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
+                  <select v-model.number="form.expansion_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onExpansionChange">
+                    <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
+                  </select>
+                  <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
+                  <div v-if="form.expansion_id && includedExpansions.length" class="mt-2 flex flex-wrap gap-1">
+                    <span v-for="exp in includedExpansions" :key="exp.id"
+                      class="px-2 py-0.5 rounded text-xs font-medium bg-green-900/30 text-green-300 border border-green-700/50">
+                      ✓ {{ exp.name }}
+                    </span>
+                  </div>
+                  <div v-if="expansionSaving" class="mt-2 text-xs text-text-muted flex items-center gap-1">
+                    <div class="w-3 h-3 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+                    {{ t('common.labels.saving') }}
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
+                  <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
+                </div>
+                <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
+                <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
+              </form>
+            </WowCard>
 
-        <!-- Warmane Guild Lookup -->
-        <WowCard>
-          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.warmaneInfo') }}</h2>
+            <!-- Discord Integration -->
+            <WowCard>
+              <div class="flex items-center gap-2 mb-4">
+                <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
+                <h2 class="wow-heading text-base">{{ t('guild.settings.discordIntegration') }}</h2>
+              </div>
+              <form @submit.prevent="saveDiscordWebhook" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.webhookUrl') }}</label>
+                  <input
+                    v-model="discordWebhookUrl"
+                    type="url"
+                    placeholder="https://discord.com/api/webhooks/..."
+                    class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+                  />
+                  <p class="text-[10px] text-text-muted mt-1">
+                    {{ t('guild.settings.webhookHelp') }}
+                  </p>
+                </div>
+                <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
+                <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ t('guild.settings.webhookSaved') }}</div>
+                <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+              </form>
+            </WowCard>
+          </div>
+
+          <!-- Right column: Armory Guild Lookup -->
+          <div class="space-y-4 sm:space-y-6">
+            <WowCard>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.armoryInfo') }}</h2>
           <p class="text-text-muted text-sm mb-4">{{ t('members.fetchRoster') }}</p>
-          <form @submit.prevent="fetchWarmaneGuild" class="flex items-end gap-3 max-w-lg">
+          <form @submit.prevent="fetchArmoryGuild" class="flex flex-wrap items-end gap-3">
             <div class="flex-1">
               <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildName') }}</label>
-              <input v-model="warmaneGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+              <input v-model="armoryGuildName" :placeholder="form.name || 'Guild name'" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
             </div>
             <div class="w-40">
               <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realm') }}</label>
-              <select v-model="warmaneGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-                <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
+              <select v-model="armoryGuildRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
-            <WowButton type="submit" :loading="fetchingWarmane" variant="secondary">{{ t('guildSettings.fetch') }}</WowButton>
+            <WowButton type="submit" :loading="fetchingArmory" variant="secondary">{{ t('guildSettings.fetch') }}</WowButton>
           </form>
 
-          <div v-if="warmaneError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
+          <div v-if="armoryError" class="mt-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ armoryError }}</div>
 
-          <div v-if="warmaneGuildData" class="mt-4 space-y-3">
+          <div v-if="armoryGuildData" class="mt-4 space-y-3">
             <div class="flex items-center gap-4 text-sm">
               <span class="text-text-muted">Guild:</span>
-              <span class="text-text-primary font-medium">{{ warmaneGuildData.name }}</span>
-              <span v-if="warmaneGuildData.faction" class="px-2 py-0.5 rounded text-xs font-medium"
-                :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
-              >{{ warmaneGuildData.faction }}</span>
-              <span class="text-text-muted">{{ warmaneGuildData.member_count }} members</span>
+              <span class="text-text-primary font-medium">{{ armoryGuildData.name }}</span>
+              <span v-if="armoryGuildData.faction" class="px-2 py-0.5 rounded text-xs font-medium"
+                :class="armoryGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+              >{{ armoryGuildData.faction }}</span>
+              <span class="text-text-muted">{{ armoryGuildData.member_count }} members</span>
             </div>
 
-            <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-64 overflow-y-auto">
+            <div v-if="armoryGuildData.roster?.length" class="overflow-x-auto max-h-64 overflow-y-auto">
               <table class="w-full text-xs">
                 <thead class="sticky top-0">
                   <tr class="bg-bg-tertiary border-b border-border-default">
@@ -72,7 +119,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-border-default">
-                  <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50">
+                  <tr v-for="ch in armoryGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50">
                     <td class="px-3 py-1.5 text-text-primary">{{ ch.name }}</td>
                     <td class="px-3 py-1.5 text-text-muted">{{ ch.class_name }}</td>
                     <td class="px-3 py-1.5 text-text-muted">{{ ch.level }}</td>
@@ -83,6 +130,8 @@
             </div>
           </div>
         </WowCard>
+          </div>
+        </div>
 
         <!-- Members table -->
         <WowCard>
@@ -217,20 +266,27 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useGuildStore } from '@/stores/guild'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
-import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
-import * as warmaneApi from '@/api/warmane'
+import * as armoryLookupApi from '@/api/armory_lookup'
+import * as guildRealmsApi from '@/api/guild_realms'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import api from '@/api'
 import { useI18n } from 'vue-i18n'
+import { useExpansionStore } from '@/stores/expansion'
+import { useConstantsStore } from '@/stores/constants'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const authStore = useAuthStore()
+const expansionStore = useExpansionStore()
+const constantsStore = useConstantsStore()
 const { t } = useI18n()
+const expansionSaving = ref(false)
 
 const loading = ref(true)
 const saving = ref(false)
@@ -241,8 +297,14 @@ const showKickConfirm = ref(false)
 const kickTarget = ref(null)
 const allRoles = ref([])
 
-const form = reactive({ name: '', realm: '', description: '' })
-const warmaneRealms = WARMANE_REALMS
+// Discord webhook
+const discordWebhookUrl = ref('')
+const discordSaving = ref(false)
+const discordSaveError = ref(null)
+const discordSaveSuccess = ref(false)
+
+const form = reactive({ name: '', realm: '', description: '', expansion_id: null })
+const guildRealmNames = ref([])
 
 async function fetchRoles() {
   try {
@@ -251,6 +313,22 @@ async function fetchRoles() {
     allRoles.value = []
   }
 }
+
+const allExpansions = computed(() =>
+  constantsStore.expansions.length ? constantsStore.expansions : expansionStore.expansions
+)
+
+const sortedExpansions = computed(() => {
+  return [...allExpansions.value].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
+})
+
+const includedExpansions = computed(() => {
+  const selected = sortedExpansions.value.find(e => e.id === form.expansion_id)
+  if (!selected) return []
+  return [...allExpansions.value]
+    .filter(e => (e.sort_order ?? 0) <= (selected.sort_order ?? 0))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+})
 
 /** Roles the current user is allowed to grant, based on the roles API can_grant list */
 const grantableRoles = computed(() => {
@@ -282,16 +360,91 @@ async function loadGuildData() {
     const g = guildStore.currentGuild
     if (g) {
       Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '' })
+      discordWebhookUrl.value = (g.settings || {}).discord_webhook_url || ''
       await Promise.all([
         guildStore.fetchMembers(g.id),
-        fetchRoles()
+        fetchRoles(),
+        loadGuildRealmNames(g.id),
       ])
       members.value = guildStore.members
+
+      // Load current guild expansion
+      try {
+        if (expansionStore.expansions.length === 0 && constantsStore.expansions.length === 0) {
+          await expansionStore.fetchExpansions(true)
+        }
+        const expData = await guildExpansionsApi.getGuildExpansions(g.id)
+        const enabledExps = (expData.expansions || [])
+        if (enabledExps.length > 0) {
+          const allExps = allExpansions.value
+          let highestEnabled = null
+          for (const ge of enabledExps) {
+            const full = allExps.find(e => e.id === ge.expansion_id)
+            if (full && (!highestEnabled || (full.sort_order ?? 0) > (highestEnabled.sort_order ?? 0))) {
+              highestEnabled = full
+            }
+          }
+          if (highestEnabled) form.expansion_id = highestEnabled.id
+        } else if (sortedExpansions.value.length) {
+          form.expansion_id = sortedExpansions.value[0].id
+        }
+      } catch { /* ignore */ }
     }
   } catch {
     error.value = t('guildSettings.failedToLoad')
   } finally {
     loading.value = false
+  }
+}
+
+async function loadGuildRealmNames(guildId) {
+  try {
+    const data = await guildRealmsApi.getGuildRealms(guildId)
+    guildRealmNames.value = (data.realms || []).map(r => r.name)
+  } catch {
+    guildRealmNames.value = []
+  }
+}
+
+async function onExpansionChange() {
+  const guildId = guildStore.currentGuildId
+  if (!guildId || !form.expansion_id) return
+
+  expansionSaving.value = true
+  try {
+    const expData = await guildExpansionsApi.getGuildExpansions(guildId)
+    const currentEnabled = new Set((expData.expansions || []).map(e => e.expansion_id))
+
+    const selected = sortedExpansions.value.find(e => e.id === form.expansion_id)
+    if (!selected) return
+
+    const shouldBeEnabled = new Set(
+      allExpansions.value
+        .filter(e => (e.sort_order ?? 0) <= (selected.sort_order ?? 0))
+        .map(e => e.id)
+    )
+
+    const enablePromises = []
+    for (const id of shouldBeEnabled) {
+      if (!currentEnabled.has(id)) {
+        enablePromises.push(guildExpansionsApi.enableExpansion(guildId, id))
+      }
+    }
+
+    const disablePromises = []
+    for (const id of currentEnabled) {
+      if (!shouldBeEnabled.has(id)) {
+        disablePromises.push(guildExpansionsApi.disableExpansion(guildId, id))
+      }
+    }
+
+    await Promise.all([...enablePromises, ...disablePromises])
+
+    toast.success(t('guild.expansions.expansionUpdated'))
+  } catch (err) {
+    toast.error(err?.response?.data?.error || t('guild.expansions.failedToUpdate'))
+  } finally {
+    expansionSaving.value = false
   }
 }
 
@@ -319,7 +472,7 @@ async function saveGuild() {
       realm_name: form.realm,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
+    toast.success(t('guildSettings.toasts.settingsSaved'))
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
@@ -327,13 +480,33 @@ async function saveGuild() {
   }
 }
 
+async function saveDiscordWebhook() {
+  discordSaveError.value = null
+  discordSaveSuccess.value = false
+  discordSaving.value = true
+  try {
+    const currentSettings = guildStore.currentGuild?.settings || {}
+    const newSettings = { ...currentSettings, discord_webhook_url: discordWebhookUrl.value.trim() }
+    const updated = await guildsApi.updateGuild(guildStore.currentGuild.id, {
+      settings_json: JSON.stringify(newSettings),
+    })
+    guildStore.currentGuild = updated
+    discordSaveSuccess.value = true
+    setTimeout(() => { discordSaveSuccess.value = false }, 3000)
+  } catch (err) {
+    discordSaveError.value = err?.response?.data?.message ?? 'Failed to save'
+  } finally {
+    discordSaving.value = false
+  }
+}
+
 async function updateRole(member, role) {
   try {
     await guildsApi.updateMemberRole(guildStore.currentGuild.id, member.user_id, role)
     member.role = role
-    uiStore.showToast(t('common.toasts.roleUpdated'), 'success')
+    toast.success(t('common.toasts.roleUpdated'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToUpdateRole'))
   }
 }
 
@@ -362,20 +535,20 @@ async function doKick() {
     await guildsApi.removeMember(guildStore.currentGuild.id, kickTarget.value.user_id)
     members.value = members.value.filter(m => m.user_id !== kickTarget.value.user_id)
     showKickConfirm.value = false
-    uiStore.showToast(t('common.toasts.memberRemoved'), 'success')
+    toast.success(t('common.toasts.memberRemoved'))
   } catch {
-    uiStore.showToast(t('common.toasts.failedToRemoveMember'), 'error')
+    toast.error(t('common.toasts.failedToRemoveMember'))
   } finally {
     saving.value = false
   }
 }
 
-// Warmane guild lookup
-const warmaneGuildName = ref('')
-const warmaneGuildRealm = ref('Icecrown')
-const fetchingWarmane = ref(false)
-const warmaneError = ref(null)
-const warmaneGuildData = ref(null)
+// Armory guild lookup
+const armoryGuildName = ref('')
+const armoryGuildRealm = ref('Icecrown')
+const fetchingArmory = ref(false)
+const armoryError = ref(null)
+const armoryGuildData = ref(null)
 
 // Member characters viewer
 const showMemberChars = ref(false)
@@ -392,7 +565,7 @@ async function viewMemberChars(member) {
   try {
     memberChars.value = await guildsApi.getMemberCharacters(guildStore.currentGuild.id, member.user_id)
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToLoadCharacters'))
   } finally {
     loadingMemberChars.value = false
   }
@@ -420,7 +593,7 @@ function searchUsers() {
       )
     } catch (err) {
       availableUsers.value = []
-      uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToSearch'), 'error')
+      toast.error(err?.response?.data?.message ?? t('common.toasts.failedToSearch'))
     } finally {
       searchingUsers.value = false
     }
@@ -435,28 +608,28 @@ async function doAddMember(user) {
     showAddMember.value = false
     addMemberQuery.value = ''
     availableUsers.value = []
-    uiStore.showToast(t('guildSettings.toasts.memberAdded', { username: user.username }), 'success')
+    toast.success(t('guildSettings.toasts.memberAdded', { username: user.username }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToAdd'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.failedToAdd'))
   }
 }
 
-async function fetchWarmaneGuild() {
-  warmaneError.value = null
-  warmaneGuildData.value = null
-  const name = warmaneGuildName.value || form.name
-  const realm = warmaneGuildRealm.value || form.realm
+async function fetchArmoryGuild() {
+  armoryError.value = null
+  armoryGuildData.value = null
+  const name = armoryGuildName.value || form.name
+  const realm = armoryGuildRealm.value || form.realm
   if (!name || !realm) {
-    warmaneError.value = 'Guild name and realm are required'
+    armoryError.value = 'Guild name and realm are required'
     return
   }
-  fetchingWarmane.value = true
+  fetchingArmory.value = true
   try {
-    warmaneGuildData.value = await warmaneApi.lookupGuild(realm, name)
+    armoryGuildData.value = await armoryLookupApi.lookupGuild(realm, name, guildStore.currentGuild?.id)
   } catch (err) {
-    warmaneError.value = err?.response?.data?.message ?? 'Guild not found on Warmane'
+    armoryError.value = err?.response?.data?.message ?? 'Guild not found on armory'
   } finally {
-    fetchingWarmane.value = false
+    fetchingArmory.value = false
   }
 }
 </script>

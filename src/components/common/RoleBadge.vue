@@ -16,7 +16,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { ROLE_LABEL_MAP } from '@/constants'
+import { ROLE_LABEL_MAP, ROLE_STYLE_MAP } from '@/constants'
 
 const props = defineProps({
   role: { type: String, required: true }
@@ -29,13 +29,6 @@ const iconUrl = computed(() => getRoleIcon(props.role))
 const roleLabel = computed(() => ROLE_LABEL_MAP[props.role?.toLowerCase()] ?? props.role)
 
 const roleClass = computed(() => {
-  switch (props.role?.toLowerCase()) {
-    case 'melee_dps': return 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-    case 'main_tank': return 'bg-blue-600/20 text-blue-200 border border-blue-400/30'
-    case 'off_tank':  return 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-    case 'healer':    return 'bg-green-500/20 text-green-300 border border-green-500/30'
-    case 'range_dps': return 'bg-red-500/20 text-red-300 border border-red-500/30'
-    default:          return 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
-  }
+  return ROLE_STYLE_MAP[props.role?.toLowerCase()] ?? 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
 })
 </script>

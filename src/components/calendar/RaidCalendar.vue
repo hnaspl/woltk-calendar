@@ -30,8 +30,14 @@
           <span class="tooltip-label">{{ t('calendar.signups') }}:</span>
           <span>{{ tooltip.signupCount }} / {{ tooltip.size }}</span>
         </div>
-        <div v-if="tooltip.signupExpired" class="tooltip-row tooltip-warning">
-          ⚠ {{ t('calendar.signupExpired') }}
+        <div v-if="tooltip.raidEnded" class="tooltip-row tooltip-warning">
+          {{ t('calendar.raidEnded') }}
+        </div>
+        <div v-else-if="tooltip.signupExpired" class="tooltip-row tooltip-warning">
+          {{ t('calendar.signupExpired') }}
+        </div>
+        <div v-if="tooltip.hasAttendance" class="tooltip-row tooltip-success">
+          {{ t('calendar.attendanceRecorded') }}
         </div>
       </div>
     </div>
@@ -77,7 +83,9 @@ const tooltip = reactive({
   difficulty: 'normal',
   difficultyLabel: '',
   signupCount: null,
-  signupExpired: false
+  signupExpired: false,
+  raidEnded: false,
+  hasAttendance: false
 })
 
 let tooltipTimeout = null
@@ -135,11 +143,14 @@ function showTooltip(info) {
   tooltip.difficultyLabel = difficultyLabels.value[tooltip.difficulty] ?? tooltip.difficulty
   tooltip.signupCount = ev.signup_count ?? null
 
-  // Check if signup time has expired
+  // Check if raid has ended (start time passed) vs just signup closed
   const closeAt = ev.close_signups_at ? new Date(ev.close_signups_at) : null
   const startsAt = ev.starts_at_utc ? new Date(ev.starts_at_utc) : null
   const now = new Date()
-  tooltip.signupExpired = (closeAt && now > closeAt) || (startsAt && now > startsAt)
+  const raidEnded = startsAt && now > startsAt
+  tooltip.raidEnded = raidEnded
+  tooltip.signupExpired = !raidEnded && (closeAt && now > closeAt)
+  tooltip.hasAttendance = ev.status === 'completed' || !!ev.has_attendance
 
   // Position relative to wrapper; show above event if near bottom
   tooltip.x = rect.left - wrapperRect.left + rect.width / 2
@@ -347,6 +358,12 @@ watch(() => props.events, () => {
 .status-draft { color: #a0aec0; }
 .tooltip-warning {
   color: #ecc94b;
+  font-weight: 600;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+.tooltip-success {
+  color: #68d391;
   font-weight: 600;
   justify-content: center;
   margin-top: 0.25rem;

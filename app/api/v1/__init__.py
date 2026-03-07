@@ -1,48 +1,14 @@
-"""API v1 package: registers all blueprints under /api/v1."""
+"""API v1 package — DEPRECATED.
+
+All endpoints have been consolidated into ``app.api.v2`` under the
+``/api/v2`` prefix.  This package is kept as an empty stub so that existing
+imports (e.g. ``from app.api.v1 import …``) do not break.
+"""
 
 from __future__ import annotations
 
 from flask import Flask
 
 
-def register_blueprints(app: Flask) -> None:
-    from app.api.v1 import (
-        admin,
-        auth,
-        guilds,
-        characters,
-        raid_definitions,
-        templates,
-        series,
-        events,
-        signups,
-        lineup,
-        attendance,
-        notifications,
-        warmane,
-        roles,
-        meta,
-        armory,
-    )
-
-    prefix = "/api/v1"
-    guild_prefix = f"{prefix}/guilds/<int:guild_id>"
-
-    app.register_blueprint(meta.bp, url_prefix=f"{prefix}/meta")
-    app.register_blueprint(auth.bp, url_prefix=f"{prefix}/auth")
-    app.register_blueprint(admin.bp, url_prefix=f"{prefix}/admin")
-    app.register_blueprint(guilds.bp, url_prefix=f"{prefix}/guilds")
-    app.register_blueprint(characters.bp, url_prefix=f"{prefix}/characters")
-    app.register_blueprint(raid_definitions.bp, url_prefix=f"{guild_prefix}/raid-definitions")
-    app.register_blueprint(raid_definitions.admin_bp, url_prefix=f"{prefix}/admin/raid-definitions")
-    app.register_blueprint(templates.bp, url_prefix=f"{guild_prefix}/templates")
-    app.register_blueprint(series.bp, url_prefix=f"{guild_prefix}/series")
-    app.register_blueprint(events.bp, url_prefix=f"{guild_prefix}/events")
-    app.register_blueprint(events.all_events_bp, url_prefix=f"{prefix}/events")
-    app.register_blueprint(signups.bp, url_prefix=f"{guild_prefix}/events/<int:event_id>/signups")
-    app.register_blueprint(lineup.bp, url_prefix=f"{guild_prefix}/events/<int:event_id>/lineup")
-    app.register_blueprint(attendance.bp, url_prefix=f"{prefix}")
-    app.register_blueprint(notifications.bp, url_prefix=f"{prefix}/notifications")
-    app.register_blueprint(warmane.bp, url_prefix=f"{prefix}/warmane")
-    app.register_blueprint(roles.bp, url_prefix=f"{prefix}/roles")
-    app.register_blueprint(armory.bp, url_prefix=f"{prefix}/armory")
+def register_blueprints(app: Flask) -> None:  # noqa: ARG001
+    """No-op — all routes are now registered by ``app.api.v2``."""

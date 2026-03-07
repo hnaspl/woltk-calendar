@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import * as eventsApi from '@/api/events'
 import { useGuildStore } from '@/stores/guild'
 
@@ -7,6 +7,25 @@ export const useCalendarStore = defineStore('calendar', () => {
   const events = ref([])
   const loading = ref(false)
   const error = ref(null)
+
+  // Watch for tenant switches — clear calendar data (lazy to avoid circular dep)
+  let _tenantWatchSet = false
+  const _setupTenantWatch = () => {
+    if (_tenantWatchSet) return
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      const tenantStore = useTenantStore()
+      watch(() => tenantStore.activeTenantId, (newId, oldId) => {
+        if (newId !== oldId && oldId !== null) {
+          events.value = []
+        }
+      })
+      _tenantWatchSet = true
+    } catch {
+      // Tenant store not yet initialized — skip watcher
+    }
+  }
+  _setupTenantWatch()
 
   const filters = ref({
     raidType: '',

@@ -1,144 +1,215 @@
 <template>
   <div class="space-y-6">
-    <!-- Guild info form -->
-    <WowCard>
-      <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
+    <!-- No guild message -->
+    <div v-if="noGuild" class="p-4 rounded-lg bg-blue-900/30 border border-blue-600 text-blue-300">
+      {{ t('guild.settings.noGuild') }}
+    </div>
+    <template v-else>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Left column: Settings -->
+      <div class="space-y-6">
+        <!-- Guild info form -->
+        <WowCard>
+          <h2 class="wow-heading text-base mb-4">{{ t('guild.settings.information') }}</h2>
 
-      <div v-if="loading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
+          <div v-if="loading" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+          <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
 
-      <form v-else @submit.prevent="saveGuild" class="space-y-4 max-w-lg">
-        <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-          <input v-model="form.name" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
-          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.nameLocked') }}</p>
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
-          <select v-model="form.realm" required :disabled="isWarmaneSource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-            <option value="">{{ t('common.fields.selectRealm') }}</option>
-            <option v-for="r in warmaneRealms" :key="r" :value="r">{{ r }}</option>
-          </select>
-          <p v-if="isWarmaneSource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
-          <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
-        </div>
-        <div>
-          <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildTimezone') }}</label>
-          <select v-model="form.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-            <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tzLabel(tz) }}</option>
-          </select>
-          <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.timezoneHelp') }}</p>
-        </div>
-        <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
-        <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
-      </form>
-    </WowCard>
+          <form v-else @submit.prevent="saveGuild" class="space-y-4">
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
+              <input v-model="form.name" required :disabled="isArmorySource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
+              <p v-if="isArmorySource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.nameLocked') }}</p>
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
+              <select v-model="form.realm" required :disabled="isArmorySource" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                <option value="">{{ t('common.fields.selectRealm') }}</option>
+                <option v-for="r in guildRealmNames" :key="r" :value="r">{{ r }}</option>
+              </select>
+              <p v-if="isArmorySource" class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.realmLocked') }}</p>
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('common.labels.description') }}</label>
+              <textarea v-model="form.description" rows="3" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-none" />
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.guildTimezone') }}</label>
+              <select v-model="form.timezone" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+                <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tzLabel(tz) }}</option>
+              </select>
+              <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.timezoneHelp') }}</p>
+            </div>
+            <div v-if="saveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ saveError }}</div>
+            <WowButton type="submit" :loading="saving">{{ t('common.fields.saveChanges') }}</WowButton>
+          </form>
+        </WowCard>
 
-    <!-- Warmane Guild Info (only for Warmane-sourced guilds) -->
-    <WowCard v-if="isWarmaneSource">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <div class="flex items-center gap-3">
-          <img :src="getGuildIcon()" alt="Guild" class="w-8 h-8 rounded" />
-          <h2 class="wow-heading text-lg">{{ t('guild.settings.warmaneInfo') }}</h2>
-        </div>
-        <div class="flex items-center gap-3 sm:gap-4">
-          <span v-if="lastRefreshed" class="text-xs text-text-muted">
-            {{ t('guild.settings.lastRefreshed') }} {{ lastRefreshed }}
-          </span>
-          <WowButton
-            v-if="canManualRefresh"
-            variant="secondary"
-            class="text-sm py-1.5 px-4 flex-shrink-0"
-            :loading="fetchingWarmane"
-            @click="fetchWarmaneRoster"
-          >{{ t('guild.settings.refresh') }}</WowButton>
-        </div>
+        <!-- Discord Integration -->
+        <WowCard>
+          <div class="flex items-center gap-2 mb-4">
+            <img :src="discordIcon" class="w-5 h-5" alt="Discord" />
+            <h2 class="wow-heading text-base">{{ t('guild.settings.discordIntegration') }}</h2>
+          </div>
+          <form @submit.prevent="saveDiscordWebhook" class="space-y-4">
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.webhookUrl') }}</label>
+              <input
+                v-model="discordWebhookUrl"
+                type="url"
+                placeholder="https://discord.com/api/webhooks/..."
+                class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+              />
+              <p class="text-[10px] text-text-muted mt-1">
+                {{ t('guild.settings.webhookHelp') }}
+              </p>
+            </div>
+            <div v-if="discordSaveError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ discordSaveError }}</div>
+            <div v-if="discordSaveSuccess" class="p-3 rounded bg-green-900/30 border border-green-600 text-green-300 text-sm">{{ t('guild.settings.webhookSaved') }}</div>
+            <WowButton type="submit" :loading="discordSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+          </form>
+        </WowCard>
+
+        <!-- Bench / Queue Settings -->
+        <WowCard>
+          <h2 class="wow-heading text-base mb-2">{{ t('guild.settings.benchSettings') }}</h2>
+          <p class="text-text-muted text-xs mb-4">{{ t('guild.settings.benchSettingsHelp') }}</p>
+
+          <form @submit.prevent="saveBenchSettings" class="space-y-4">
+            <div>
+              <label class="block text-xs text-text-muted mb-1">{{ t('guild.settings.benchDisplayLimit') }}</label>
+              <input
+                v-model.number="benchDisplayLimit"
+                type="number"
+                min="1"
+                max="100"
+                class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+              />
+              <p class="text-[10px] text-text-muted mt-1">{{ t('guild.settings.benchDisplayLimitHelp') }}</p>
+            </div>
+            <WowButton type="submit" :loading="benchSaving">{{ t('common.fields.saveChanges') }}</WowButton>
+          </form>
+        </WowCard>
       </div>
 
-      <div v-if="fetchingWarmane && !warmaneGuildData" class="h-56 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else-if="warmaneError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ warmaneError }}</div>
-
-      <div v-else-if="warmaneGuildData" class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-        <!-- Left column: Guild Info -->
-        <div class="space-y-6">
-          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">{{ t('guild.settings.guildDetails') }}</h3>
-
-          <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-5 space-y-4">
-            <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.guildName') }}</span>
-              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.name }}</span>
+      <!-- Right column: Armory Guild Info -->
+      <div v-if="isArmorySource" class="space-y-6">
+        <WowCard>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div class="flex items-center gap-3">
+              <img :src="getGuildIcon()" alt="Guild" class="w-8 h-8 rounded" />
+              <h2 class="wow-heading text-lg">{{ t('guild.settings.armoryInfo') }}</h2>
             </div>
-            <div class="border-t border-border-default/50" />
             <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.realmRequired').replace(' *', '') }}</span>
-              <span class="text-sm sm:text-base text-text-primary">{{ warmaneGuildData.realm }}</span>
-            </div>
-            <div class="border-t border-border-default/50" />
-            <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.faction') }}</span>
-              <span v-if="warmaneGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
-                :class="warmaneGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
-              >
-                <img :src="getFactionIcon(warmaneGuildData.faction)" :alt="warmaneGuildData.faction" class="w-6 h-6 rounded" />
-                {{ warmaneGuildData.faction }}
+              <span v-if="lastRefreshed" class="text-xs text-text-muted">
+                {{ t('guild.settings.lastRefreshed') }} {{ lastRefreshed }}
               </span>
-              <span v-else class="text-sm sm:text-base text-text-muted">{{ t('common.labels.unknown') }}</span>
-            </div>
-            <div class="border-t border-border-default/50" />
-            <div class="flex items-center gap-3 sm:gap-4">
-              <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.labels.members') }}</span>
-              <span class="text-sm sm:text-base text-text-primary font-semibold">{{ warmaneGuildData.member_count ?? warmaneGuildData.roster?.length ?? 0 }}</span>
+              <WowButton
+                v-if="canManualRefresh"
+                variant="secondary"
+                class="text-sm py-1.5 px-4 flex-shrink-0"
+                :loading="fetchingArmory"
+                @click="fetchArmoryRoster"
+              >{{ t('guild.settings.refresh') }}</WowButton>
             </div>
           </div>
 
-          <!-- Class distribution -->
-          <div v-if="classDistribution.length">
-            <h4 class="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">{{ t('guild.settings.classDistribution') }}</h4>
-            <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-4">
-              <div class="grid grid-cols-2 gap-3">
-                <div v-for="cd in classDistribution" :key="cd.name" class="flex items-center gap-3 py-1">
-                  <img :src="getClassIcon(cd.name)" :alt="cd.name" class="w-6 h-6 rounded flex-shrink-0" />
-                  <span class="text-sm font-medium" :style="{ color: getClassColor(cd.name) }">{{ cd.name }}</span>
-                  <span class="text-sm text-text-muted ml-auto font-medium">{{ cd.count }}</span>
+          <div v-if="fetchingArmory && !armoryGuildData" class="h-56 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
+          <div v-else-if="armoryError" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ armoryError }}</div>
+
+          <template v-else-if="armoryGuildData">
+            <!-- Guild details -->
+            <div class="space-y-6 mb-6">
+              <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider">{{ t('guild.settings.guildDetails') }}</h3>
+
+              <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-5 space-y-4">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('guild.settings.guildName') }}</span>
+                  <span class="text-sm sm:text-base text-text-primary font-semibold">{{ armoryGuildData.name }}</span>
+                </div>
+                <div class="border-t border-border-default/50" />
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.realmRequired').replace(' *', '') }}</span>
+                  <span class="text-sm sm:text-base text-text-primary">{{ armoryGuildData.realm }}</span>
+                </div>
+                <div class="border-t border-border-default/50" />
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.fields.faction') }}</span>
+                  <span v-if="armoryGuildData.faction" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
+                    :class="armoryGuildData.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
+                  >
+                    <img :src="getFactionIcon(armoryGuildData.faction)" :alt="armoryGuildData.faction" class="w-6 h-6 rounded" />
+                    {{ armoryGuildData.faction }}
+                  </span>
+                  <span v-else class="text-sm sm:text-base text-text-muted">{{ t('common.labels.unknown') }}</span>
+                </div>
+                <div class="border-t border-border-default/50" />
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <span class="text-sm text-text-muted w-20 sm:w-28 flex-shrink-0 font-medium">{{ t('common.labels.members') }}</span>
+                  <span class="text-sm sm:text-base text-text-primary font-semibold">{{ armoryGuildData.member_count ?? armoryGuildData.roster?.length ?? 0 }}</span>
+                </div>
+              </div>
+
+              <!-- Class distribution -->
+              <div v-if="classDistribution.length">
+                <h4 class="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">{{ t('guild.settings.classDistribution') }}</h4>
+                <div class="bg-bg-secondary/50 rounded-lg border border-border-default p-4">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div v-for="cd in classDistribution" :key="cd.name" class="flex items-center gap-3 py-1">
+                      <img :src="getClassIcon(cd.name)" :alt="cd.name" class="w-6 h-6 rounded flex-shrink-0" />
+                      <span class="text-sm font-medium" :style="{ color: getClassColor(cd.name) }">{{ cd.name }}</span>
+                      <span class="text-sm text-text-muted ml-auto font-medium">{{ cd.count }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Right column: Member Roster -->
-        <div>
-          <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">{{ t('guild.settings.memberRoster', { count: warmaneGuildData.roster?.length ?? 0 }) }}</h3>
-          <div v-if="warmaneGuildData.roster?.length" class="overflow-x-auto max-h-[32rem] overflow-y-auto rounded-lg border border-border-default">
-            <table class="w-full text-sm">
-              <thead class="sticky top-0 z-10">
-                <tr class="bg-bg-tertiary border-b border-border-default">
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.character') }}</th>
-                  <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.level') }}</th>
-                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.race') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-border-default/60">
-                <tr v-for="ch in warmaneGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50 transition-colors">
-                  <td class="px-4 py-2.5">
-                    <div class="flex items-center gap-3">
-                      <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-7 h-7 rounded flex-shrink-0" />
-                      <span class="font-semibold text-sm" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
-                    </div>
-                  </td>
-                  <td class="px-4 py-2.5 text-text-muted font-medium">{{ ch.level }}</td>
-                  <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-else class="text-center py-12 text-text-muted text-sm bg-bg-secondary/30 rounded-lg border border-border-default">{{ t('guild.settings.noRosterData') }}</div>
-        </div>
+            <!-- Member Roster -->
+            <div>
+              <h3 class="text-base font-semibold text-accent-gold uppercase tracking-wider mb-4">{{ t('guild.settings.memberRoster', { count: armoryGuildData.roster?.length ?? 0 }) }}</h3>
+              <div v-if="armoryGuildData.roster?.length" class="overflow-x-auto max-h-[32rem] overflow-y-auto rounded-lg border border-border-default">
+                <table class="w-full text-sm">
+                  <thead class="sticky top-0 z-10">
+                    <tr class="bg-bg-tertiary border-b border-border-default">
+                      <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.character') }}</th>
+                      <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.level') }}</th>
+                      <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.race') }}</th>
+                      <th class="text-center px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider w-20"></th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-border-default/60">
+                    <tr v-for="ch in armoryGuildData.roster" :key="ch.name" class="hover:bg-bg-tertiary/50 transition-colors">
+                      <td class="px-4 py-2.5">
+                        <div class="flex items-center gap-3">
+                          <img :src="getClassIcon(ch.class_name)" :alt="ch.class_name" class="w-7 h-7 rounded flex-shrink-0" />
+                          <span class="font-semibold text-sm" :style="{ color: getClassColor(ch.class_name) }">{{ ch.name }}</span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-2.5 text-text-muted font-medium">{{ ch.level }}</td>
+                      <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
+                      <td class="px-4 py-2.5 text-center">
+                        <WowButton variant="secondary" class="text-xs py-1 px-2.5" @click="openCharDetail(ch)">
+                          🔍 {{ t('common.buttons.preview') }}
+                        </WowButton>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="text-center py-12 text-text-muted text-sm bg-bg-secondary/30 rounded-lg border border-border-default">{{ t('guild.settings.noRosterData') }}</div>
+            </div>
+          </template>
+        </WowCard>
       </div>
-    </WowCard>
+    </div>
+    </template>
+
+    <!-- Character Detail Modal -->
+    <CharacterDetailModal
+      v-model="showCharDetailModal"
+      :character="charDetailTarget"
+    />
   </div>
 </template>
 
@@ -147,20 +218,24 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
+import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { usePermissions } from '@/composables/usePermissions'
-import { WARMANE_REALMS } from '@/constants'
+import { useCharacterPreview } from '@/composables/useCharacterPreview'
 import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
+import * as guildRealmsApi from '@/api/guild_realms'
+import * as armoryLookupApi from '@/api/armory_lookup'
 import { useTimezone } from '@/composables/useTimezone'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const { t } = useI18n()
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const { getClassIcon, getClassColor, getFactionIcon, getGuildIcon } = useWowIcons()
 const permissions = usePermissions()
 const tzHelper = useTimezone()
@@ -169,9 +244,20 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const saveError = ref(null)
+const noGuild = ref(false)
 const form = reactive({ name: '', realm: '', description: '', timezone: 'Europe/Warsaw' })
-const warmaneRealms = WARMANE_REALMS
-const isWarmaneSource = ref(false)
+const guildRealmNames = ref([])
+const isArmorySource = ref(false)
+
+// Discord webhook
+const discordWebhookUrl = ref('')
+const discordSaving = ref(false)
+const discordSaveError = ref(null)
+const discordSaveSuccess = ref(false)
+
+// Bench settings
+const benchDisplayLimit = ref(8)
+const benchSaving = ref(false)
 
 const timezoneOptions = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -206,11 +292,29 @@ const canManualRefresh = computed(() => {
 async function loadGuildData() {
   loading.value = true
   error.value = null
+  noGuild.value = false
   try {
     const g = guildStore.currentGuild
-    if (g) {
-      Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
-      isWarmaneSource.value = !!g.warmane_source
+    if (!g) {
+      noGuild.value = true
+      return
+    }
+    Object.assign(form, { name: g.name ?? '', realm: g.realm_name ?? '', description: g.description ?? '', timezone: g.timezone ?? 'Europe/Warsaw' })
+    isArmorySource.value = !!g.armory_source
+    discordWebhookUrl.value = (g.settings || {}).discord_webhook_url || ''
+    benchDisplayLimit.value = parseInt((g.settings || {}).bench_display_limit, 10) || 8
+    // Load guild-configured realms from API
+    try {
+      const data = await guildRealmsApi.getGuildRealms(g.id)
+      const realmList = (data.realms || []).map(r => r.name)
+      // Always include the current guild realm in the list
+      if (g.realm_name && !realmList.includes(g.realm_name)) {
+        realmList.push(g.realm_name)
+      }
+      guildRealmNames.value = realmList.sort()
+    } catch {
+      // Fallback: at least show the current realm
+      guildRealmNames.value = g.realm_name ? [g.realm_name] : []
     }
   } catch {
     error.value = t('guildSettings.failedToLoad')
@@ -221,8 +325,8 @@ async function loadGuildData() {
 
 onMounted(async () => {
   await loadGuildData()
-  if (isWarmaneSource.value) {
-    await fetchWarmaneRoster()
+  if (isArmorySource.value) {
+    await fetchArmoryRoster()
     await loadAutoRefreshInterval()
   }
 })
@@ -233,10 +337,10 @@ watch(
     if (newId && newId !== oldId) {
       stopAutoRefresh()
       await loadGuildData()
-      warmaneGuildData.value = null
-      warmaneError.value = null
-      if (isWarmaneSource.value) {
-        await fetchWarmaneRoster()
+      armoryGuildData.value = null
+      armoryError.value = null
+      if (isArmorySource.value) {
+        await fetchArmoryRoster()
         await loadAutoRefreshInterval()
       }
     }
@@ -253,7 +357,7 @@ async function saveGuild() {
       timezone: form.timezone,
     })
     guildStore.currentGuild = updated
-    uiStore.showToast(t('guildSettings.toasts.settingsSaved'), 'success')
+    toast.success(t('guildSettings.toasts.settingsSaved'))
   } catch (err) {
     saveError.value = err?.response?.data?.message ?? 'Failed to save'
   } finally {
@@ -261,23 +365,72 @@ async function saveGuild() {
   }
 }
 
-// Warmane guild info
-const fetchingWarmane = ref(false)
-const warmaneError = ref(null)
-const warmaneGuildData = ref(null)
+async function saveDiscordWebhook() {
+  discordSaveError.value = null
+  discordSaveSuccess.value = false
+  discordSaving.value = true
+  try {
+    const g = guildStore.currentGuild
+    const currentSettings = g.settings || {}
+    const newSettings = { ...currentSettings, discord_webhook_url: discordWebhookUrl.value.trim() }
+    await guildsApi.updateGuild(g.id, { settings_json: JSON.stringify(newSettings) })
+    // Update local guild store
+    g.settings = newSettings
+    discordSaveSuccess.value = true
+    setTimeout(() => { discordSaveSuccess.value = false }, 3000)
+  } catch (err) {
+    discordSaveError.value = err?.response?.data?.message ?? 'Failed to save'
+  } finally {
+    discordSaving.value = false
+  }
+}
+
+async function saveBenchSettings() {
+  benchSaving.value = true
+  try {
+    const g = guildStore.currentGuild
+    const currentSettings = g.settings || {}
+    const limit = Math.max(1, Math.min(100, benchDisplayLimit.value || 8))
+    const newSettings = { ...currentSettings, bench_display_limit: limit }
+    await guildsApi.updateGuild(g.id, { settings_json: JSON.stringify(newSettings) })
+    g.settings = newSettings
+    benchDisplayLimit.value = limit
+    toast.success(t('guildSettings.toasts.settingsSaved'))
+  } catch (err) {
+    toast.error(err?.response?.data?.error ?? 'Failed to save')
+  } finally {
+    benchSaving.value = false
+  }
+}
+
+// Armory guild info
+const fetchingArmory = ref(false)
+const armoryError = ref(null)
+const armoryGuildData = ref(null)
 const lastRefreshed = ref(null)
 let autoRefreshTimer = null
 
-async function fetchWarmaneRoster() {
+// Character detail modal
+const {
+  showModal: showCharDetailModal,
+  target: charDetailTarget,
+  open: openCharPreview,
+} = useCharacterPreview()
+
+function openCharDetail(ch) {
+  openCharPreview(ch, { guild: armoryGuildData.value?.name })
+}
+
+async function fetchArmoryRoster() {
   if (!guildStore.currentGuild?.id) return
-  warmaneError.value = null
-  fetchingWarmane.value = true
+  armoryError.value = null
+  fetchingArmory.value = true
   const maxAttempts = 2
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      warmaneGuildData.value = await guildsApi.getWarmaneRoster(guildStore.currentGuild.id)
+      armoryGuildData.value = await guildsApi.getArmoryRoster(guildStore.currentGuild.id)
       lastRefreshed.value = tzHelper.formatGuildTime(new Date().toISOString(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      warmaneError.value = null
+      armoryError.value = null
       break
     } catch (err) {
       if (attempt < maxAttempts) {
@@ -285,15 +438,15 @@ async function fetchWarmaneRoster() {
         await new Promise(resolve => setTimeout(resolve, 2000))
         continue
       }
-      warmaneError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from Warmane'
+      armoryError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Could not fetch roster from armory'
     }
   }
-  fetchingWarmane.value = false
+  fetchingArmory.value = false
 }
 
 // Class distribution computed from roster
 const classDistribution = computed(() => {
-  const roster = warmaneGuildData.value?.roster
+  const roster = armoryGuildData.value?.roster
   if (!roster?.length) return []
   const counts = {}
   for (const ch of roster) {
@@ -311,10 +464,10 @@ async function loadAutoRefreshInterval() {
   try {
     const settings = await adminApi.getSystemSettings()
     const enabled = settings.autosync_enabled === 'true'
-    const intervalMin = parseInt(settings.autosync_interval_minutes) || 60
+    const intervalMin = parseInt(settings.autosync_interval_minutes, 10) || 60
     if (enabled && intervalMin > 0) {
       autoRefreshTimer = setInterval(() => {
-        if (isWarmaneSource.value) fetchWarmaneRoster()
+        if (isArmorySource.value) fetchArmoryRoster()
       }, intervalMin * 60 * 1000)
     }
   } catch {

@@ -5,7 +5,10 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="wow-heading text-xl sm:text-2xl">{{ t('common.labels.dashboard') }}</h1>
-          <p class="text-text-muted text-sm mt-0.5">{{ t('dashboard.welcome', { name: authStore.user?.username }) }}</p>
+          <p class="text-text-muted text-sm mt-0.5">
+            {{ t('dashboard.welcome', { name: authStore.user?.username }) }}
+            <span v-if="tenantStore.activeTenant" class="text-accent-gold/70"> · {{ tenantStore.activeTenant.name }}</span>
+          </p>
         </div>
         <RouterLink to="/calendar">
           <WowButton variant="secondary">
@@ -39,6 +42,68 @@
         <WowCard class="text-center">
           <div class="text-2xl sm:text-3xl font-bold text-red-400">{{ missingResponseCount }}</div>
           <div class="text-xs text-text-muted mt-1">{{ t('dashboard.noResponse') }}</div>
+        </WowCard>
+      </div>
+
+      <!-- Guild & Tenant info -->
+      <div v-if="!loading && guildStore.currentGuild" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+        <WowCard>
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">⚔️</span>
+            <div>
+              <div class="text-sm font-semibold text-text-primary">{{ guildStore.currentGuild.name }}</div>
+              <div class="text-xs text-text-muted">{{ guildStore.currentGuild.realm_name }}</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-bg-tertiary rounded p-2 text-center">
+              <div class="text-lg font-bold text-accent-gold">{{ guildStore.members?.length ?? 0 }}</div>
+              <div class="text-text-muted">{{ t('common.labels.members') }}</div>
+            </div>
+            <div class="bg-bg-tertiary rounded p-2 text-center">
+              <div class="text-lg font-bold text-purple-400">{{ totalEvents }}</div>
+              <div class="text-text-muted">{{ t('dashboard.totalEvents') }}</div>
+            </div>
+          </div>
+        </WowCard>
+        <WowCard>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">📊</span>
+            <span class="text-sm font-semibold text-text-primary">{{ t('dashboard.raidActivity') }}</span>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-text-muted">{{ t('dashboard.thisWeek') }}</span>
+              <span class="text-text-primary font-medium">{{ eventsThisWeek }} {{ t('dashboard.raids') }}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-text-muted">{{ t('dashboard.nextWeek') }}</span>
+              <span class="text-text-primary font-medium">{{ eventsNextWeek }} {{ t('dashboard.raids') }}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-text-muted">{{ t('dashboard.averageSignups') }}</span>
+              <span class="text-text-primary font-medium">{{ avgSignupsPerRaid }}</span>
+            </div>
+          </div>
+        </WowCard>
+        <WowCard>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">⏳</span>
+            <span class="text-sm font-semibold text-text-primary">{{ t('dashboard.benchQueue') }}</span>
+          </div>
+          <div v-if="benchedSignups.length === 0" class="text-xs text-text-muted py-2">
+            {{ t('dashboard.noPlayersOnBench') }}
+          </div>
+          <div v-else class="space-y-1.5">
+            <div v-for="su in benchedSignups.slice(0, 5)" :key="su.id" class="flex items-center gap-2 text-xs">
+              <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
+              <span class="text-text-primary truncate flex-1">{{ su.character?.name ?? t('dashboard.signedUp') }}</span>
+              <span class="text-yellow-400 text-[10px]">{{ t('dashboard.queue') }} #{{ su.bench_info?.queue_position ?? '?' }}</span>
+            </div>
+            <p v-if="benchedSignups.length > 5" class="text-[10px] text-text-muted">
+              +{{ benchedSignups.length - 5 }} {{ t('dashboard.more') }}
+            </p>
+          </div>
         </WowCard>
       </div>
 
@@ -172,7 +237,7 @@
                     <span v-if="ev.duration_minutes" class="text-text-muted">· ⏱️ ~{{ formatDuration(ev.duration_minutes) }}</span>
                   </div>
                   <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span v-if="raidTypeLabel(ev.raid_type)" class="text-[10px] text-amber-300">⚔️ {{ raidTypeLabel(ev.raid_type) }}</span>
+                    <span v-if="raidTypeLabel(ev.raid_type, raidTypes)" class="text-[10px] text-amber-300">⚔️ {{ raidTypeLabel(ev.raid_type, raidTypes) }}</span>
                     <RealmBadge v-if="ev.realm_name || ev.realm" :realm="ev.realm_name ?? ev.realm" />
                     <span v-if="ev.close_signups_at" class="text-[10px] text-text-muted">🔒 {{ t('dashboard.signupsClose', { time: formatDateTime(ev.close_signups_at) }) }}</span>
                   </div>
@@ -206,7 +271,7 @@
                 <ClassBadge v-if="su.character?.class_name" :class-name="su.character.class_name" />
                 <div class="flex-1 min-w-0">
                   <span class="text-sm text-text-primary truncate block">{{ su.event_title ?? 'Raid' }}</span>
-                  <span v-if="raidTypeLabel(su.raid_type)" class="text-[10px] text-amber-300 truncate block">{{ raidTypeLabel(su.raid_type) }}</span>
+                  <span v-if="raidTypeLabel(su.raid_type, raidTypes)" class="text-[10px] text-amber-300 truncate block">{{ raidTypeLabel(su.raid_type, raidTypes) }}</span>
                   <span v-if="su.character?.name" class="text-xs text-text-muted truncate block">
                     {{ su.character.name }}
                   </span>
@@ -219,6 +284,11 @@
                 </span>
                 <span v-else-if="su.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('common.labels.declined') }}</span>
                 <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded flex-shrink-0">{{ t('common.labels.inLineup') }}</span>
+                <!-- Attendance status indicator -->
+                <span v-if="su.attendance_status && su.attendance_status !== 'going'" class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0" :class="(ATTENDANCE_STATUS_STYLE[su.attendance_status] || {}).badge">
+                  <img :src="getAttendanceStatusIcon(su.attendance_status)" class="w-3 h-3 rounded-sm" alt="" />
+                  {{ t(ATTENDANCE_STATUS_I18N_MAP[su.attendance_status]) }}{{ su.attendance_status === 'late' && su.late_minutes ? ' ~' + su.late_minutes + 'min' : '' }}
+                </span>
               </div>
             </WowCard>
           </RouterLink>
@@ -242,12 +312,16 @@ import SpecBadge from '@/components/common/SpecBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
 import { useCalendarStore } from '@/stores/calendar'
-import { useUiStore } from '@/stores/ui'
+import { useTenantStore } from '@/stores/tenant'
+import { useToast } from '@/composables/useToast'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
 import { useSocket } from '@/composables/useSocket'
-import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, ATTENDANCE_STATUS_I18N_MAP, ATTENDANCE_STATUS_STYLE } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import { useI18n } from 'vue-i18n'
@@ -255,12 +329,23 @@ import { useI18n } from 'vue-i18n'
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
 const calStore = useCalendarStore()
-const uiStore = useUiStore()
-const { getRaidIcon } = useWowIcons()
+const tenantStore = useTenantStore()
+const toast = useToast()
+const constantsStore = useConstantsStore()
+const { getRaidIcon, getAttendanceStatusIcon } = useWowIcons()
 const tzHelper = useTimezone()
 const { formatDateTime, formatTimeOnly } = useFormatting()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const { t } = useI18n()
+const { raidTypes: expansionRaidTypes } = useExpansionData()
+const guildRaidTypes = ref([])
+
+// Use guild-specific raidTypes if loaded, otherwise fall back to constants store then expansion data
+const raidTypes = computed(() => {
+  if (guildRaidTypes.value.length) return guildRaidTypes.value
+  if (constantsStore.raidTypes.length) return constantsStore.raidTypes
+  return expansionRaidTypes.value
+})
 
 let isActive = true
 const loading = ref(true)
@@ -308,7 +393,16 @@ onMounted(async () => {
   nowTimer = setInterval(() => { now.value = new Date() }, 60000)
   try {
     await guildStore.fetchGuilds()
-    if (guildStore.currentGuild) joinGuild(guildStore.currentGuild.id)
+    if (guildStore.currentGuild) {
+      joinGuild(guildStore.currentGuild.id)
+      // Load guild-specific raid type labels
+      guildExpansionsApi.getGuildConstants(guildStore.currentGuild.id).then(data => {
+        if (data?.raid_types) {
+          guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
+        }
+      }).catch(() => { /* ignore — fall back to expansion data */ })
+      guildStore.fetchMembers(guildStore.currentGuild.id).catch(() => {})
+    }
     await refreshDashboard()
   } finally {
     loading.value = false
@@ -337,7 +431,15 @@ watch(
   (newId, oldId) => {
     if (oldId) leaveGuild(oldId)
     if (newId) joinGuild(newId)
-    if (newId && newId !== oldId) refreshDashboard()
+    if (newId && newId !== oldId) {
+      refreshDashboard()
+      // Reload guild-specific raid type labels
+      guildExpansionsApi.getGuildConstants(newId).then(data => {
+        if (data?.raid_types) {
+          guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
+        }
+      }).catch(() => { guildRaidTypes.value = [] })
+    }
   }
 )
 
@@ -362,6 +464,40 @@ const missingResponseCount = computed(() => {
   const signedUpEventIds = new Set(mySignups.value.map(s => s.raid_event_id))
   return upcomingEvents.value.filter(ev => !signedUpEventIds.has(ev.id)).length
 })
+
+const totalEvents = computed(() => calStore.events.length)
+
+const eventsThisWeek = computed(() => {
+  const nowMs = now.value.getTime()
+  const weekEnd = nowMs + 7 * 86400000
+  return calStore.events.filter(ev => {
+    const ts = new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date).getTime()
+    return ts >= nowMs && ts <= weekEnd && ev.status !== 'cancelled'
+  }).length
+})
+
+const eventsNextWeek = computed(() => {
+  const nowMs = now.value.getTime()
+  const weekStart = nowMs + 7 * 86400000
+  const weekEnd = nowMs + 14 * 86400000
+  return calStore.events.filter(ev => {
+    const ts = new Date(ev.starts_at_utc ?? ev.start_time ?? ev.date).getTime()
+    return ts >= weekStart && ts <= weekEnd && ev.status !== 'cancelled'
+  }).length
+})
+
+const avgSignupsPerRaid = computed(() => {
+  const upcoming = upcomingEvents.value
+  if (upcoming.length === 0) return '—'
+  const total = upcoming.reduce((sum, ev) => sum + (ev.signup_count ?? 0), 0)
+  return (total / upcoming.length).toFixed(1)
+})
+
+const benchedSignups = computed(() =>
+  mySignups.value
+    .filter(s => s.lineup_status === 'bench')
+    .sort((a, b) => (a.bench_info?.queue_position ?? 999) - (b.bench_info?.queue_position ?? 999))
+)
 
 // Sort: lineup first, then bench ordered by queue position, then declined
 const sortedMySignups = computed(() => {
@@ -409,14 +545,15 @@ async function resolveReplacement(req, action) {
     await signupsApi.resolveReplaceRequest(req.guild_id, req.event_id, req.id, { action })
     // Remove from local list
     replacementRequests.value = replacementRequests.value.filter(r => r.id !== req.id)
-    uiStore.showToast(
-      action === 'confirm' ? t('dashboard.swapConfirmed') : action === 'leave' ? t('dashboard.leftRaid') : t('dashboard.swapDeclined'),
-      action === 'confirm' ? 'success' : 'info'
-    )
+    if (action === 'confirm') {
+      toast.success(t('dashboard.swapConfirmed'))
+    } else {
+      toast.info(action === 'leave' ? t('dashboard.leftRaid') : t('dashboard.swapDeclined'))
+    }
     // Refresh signups in case lineup status changed
     await refreshSignups()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('common.toasts.failedToProcessReplacement'), 'error')
+    toast.error(err?.response?.data?.error ?? t('common.toasts.failedToProcessReplacement'))
   }
 }
 </script>

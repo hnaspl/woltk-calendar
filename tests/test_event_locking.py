@@ -111,7 +111,7 @@ class TestCompletedEventAPIProtection:
 
         event_service.complete_event(event)
 
-        resp = client.post(f"/api/v1/guilds/{guild.id}/events/{event.id}/lock")
+        resp = client.post(f"/api/v2/guilds/{guild.id}/events/{event.id}/lock")
         assert resp.status_code == 400
         assert "completed" in resp.get_json()["error"].lower()
 
@@ -124,7 +124,7 @@ class TestCompletedEventAPIProtection:
 
         event_service.complete_event(event)
 
-        resp = client.post(f"/api/v1/guilds/{guild.id}/events/{event.id}/unlock")
+        resp = client.post(f"/api/v2/guilds/{guild.id}/events/{event.id}/unlock")
         assert resp.status_code == 400
         assert "completed" in resp.get_json()["error"].lower()
 
@@ -147,7 +147,7 @@ class TestCompletedEventAPIProtection:
         )
 
         resp = client.put(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}",
             json={"title": "Changed Title"},
         )
         assert resp.status_code == 403
@@ -163,7 +163,7 @@ class TestCompletedEventAPIProtection:
         event_service.complete_event(event)
 
         resp = client.put(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}",
             json={"title": "New Title"},
         )
         assert resp.status_code == 200
@@ -243,7 +243,7 @@ class TestCompletedEventSignupProtection:
         event_service.complete_event(event)
 
         resp = client.post(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/signups",
             json={"character_id": char.id, "chosen_role": "main_tank"},
         )
         assert resp.status_code == 403
@@ -259,7 +259,7 @@ class TestCompletedEventSignupProtection:
         event_service.cancel_event(event)
 
         resp = client.post(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/signups",
             json={"character_id": char.id, "chosen_role": "main_tank"},
         )
         assert resp.status_code == 403
@@ -282,7 +282,7 @@ class TestCompletedEventSignupProtection:
         event_service.complete_event(event)
 
         resp = client.put(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups/{signup.id}",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/signups/{signup.id}",
             json={"note": "changed"},
         )
         assert resp.status_code == 403
@@ -305,7 +305,7 @@ class TestCompletedEventSignupProtection:
         event_service.complete_event(event)
 
         resp = client.delete(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups/{signup.id}",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/signups/{signup.id}",
         )
         assert resp.status_code == 403
 
@@ -327,7 +327,7 @@ class TestCompletedEventSignupProtection:
         event_service.complete_event(event)
 
         resp = client.post(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/signups/{signup.id}/decline",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/signups/{signup.id}/decline",
         )
         assert resp.status_code == 403
 
@@ -352,7 +352,7 @@ class TestCompletedEventLineupProtection:
         event_service.complete_event(event)
 
         resp = client.put(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/lineup",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/lineup",
             json={"melee_dps": [], "healers": [], "range_dps": []},
         )
         assert resp.status_code == 403
@@ -367,7 +367,7 @@ class TestCompletedEventLineupProtection:
         event_service.complete_event(event)
 
         resp = client.put(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/lineup/bench-reorder",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/lineup/bench-reorder",
             json={"ordered_signup_ids": []},
         )
         assert resp.status_code == 403
@@ -382,6 +382,6 @@ class TestCompletedEventLineupProtection:
         event_service.complete_event(event)
 
         resp = client.post(
-            f"/api/v1/guilds/{guild.id}/events/{event.id}/lineup/confirm",
+            f"/api/v2/guilds/{guild.id}/events/{event.id}/lineup/confirm",
         )
         assert resp.status_code == 403

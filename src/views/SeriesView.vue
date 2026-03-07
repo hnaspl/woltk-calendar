@@ -51,6 +51,7 @@
                 <RealmBadge v-if="s.realm_name" :realm="s.realm_name" />
                 <span v-if="s.template_id" class="text-accent-gold">📋 {{ templateName(s.template_id) }}</span>
                 <span v-if="s.recurrence_rule">📅 {{ formatRecurrence(s.recurrence_rule) }}</span>
+                <span v-if="s.days_of_week?.length" class="text-text-muted">{{ s.days_of_week.map(d => dayLabels[d] || d).join(', ') }}</span>
                 <span v-if="s.start_time_local">🕐 {{ s.start_time_local }}</span>
                 <span>⏱ {{ s.duration_minutes }}min</span>
               </div>
@@ -101,6 +102,7 @@
               <option value="">{{ t('common.fields.select') }}</option>
               <option value="weekly">{{ t('series.weekly') }}</option>
               <option value="biweekly">{{ t('series.biweekly') }}</option>
+              <option value="custom_days">{{ t('series.customDays') }}</option>
             </select>
           </div>
           <div>
@@ -108,12 +110,23 @@
             <input v-model="form.start_time_local" type="time" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
           </div>
         </div>
+        <div v-if="form.recurrence_rule === 'custom_days'" class="space-y-2">
+          <label class="block text-xs text-text-muted">{{ t('series.selectDays') }}</label>
+          <div class="flex flex-wrap gap-2">
+            <label v-for="(dayName, dayIdx) in dayLabels" :key="dayIdx"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded border cursor-pointer transition-colors text-sm"
+              :class="form.days_of_week.includes(dayIdx) ? 'bg-accent-gold/20 border-accent-gold text-accent-gold' : 'bg-bg-tertiary border-border-default text-text-muted hover:border-border-gold'"
+            >
+              <input type="checkbox" :value="dayIdx" v-model="form.days_of_week" class="sr-only" />
+              {{ dayName }}
+            </label>
+          </div>
+        </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidSize') }}</label>
-            <select v-model.number="form.default_raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="form.default_raid_size" :disabled="seriesSelectedSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in seriesSelectedSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
           </div>
           <div>
@@ -235,7 +248,7 @@ import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
 import RealmBadge from '@/components/common/RealmBadge.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import * as seriesApi from '@/api/series'
 import * as templatesApi from '@/api/templates'
@@ -243,7 +256,7 @@ import { useI18n } from 'vue-i18n'
 
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const { t } = useI18n()
 
@@ -274,6 +287,7 @@ const selectedGuildId = ref(null)
 const form = reactive({
   title: '',
   recurrence_rule: 'weekly',
+  days_of_week: [],
   start_time_local: '19:00',
   duration_minutes: 180,
   default_raid_size: 25,
@@ -300,6 +314,19 @@ const selectedGuildObj = computed(() =>
 const selectedGuildLabel = computed(() => {
   const g = selectedGuildObj.value
   return g ? `${g.name} (${g.realm_name})` : ''
+})
+
+// Derive available sizes from the selected template's raid definition
+const seriesSelectedSizes = computed(() => {
+  if (!form.template_id) return [10, 20, 25, 40]
+  const tpl = templates.value.find(t => t.id === form.template_id)
+  if (tpl?.raid_definition) {
+    const rd = tpl.raid_definition
+    if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+      return [...rd.supported_sizes].sort((a, b) => a - b)
+    }
+  }
+  return [form.default_raid_size || 25]
 })
 
 const allOtherGuildsSelected = computed(() =>
@@ -360,9 +387,20 @@ watch(() => guildStore.currentGuild?.id, (newId, oldId) => {
   if (newId && newId !== oldId) loadData()
 })
 
+const dayLabels = {
+  0: t('series.days.mon'),
+  1: t('series.days.tue'),
+  2: t('series.days.wed'),
+  3: t('series.days.thu'),
+  4: t('series.days.fri'),
+  5: t('series.days.sat'),
+  6: t('series.days.sun'),
+}
+
 function formatRecurrence(rule) {
   if (!rule) return ''
   if (rule.toLowerCase().includes('biweekly')) return t('series.everyTwoWeeks')
+  if (rule.toLowerCase().includes('custom_days')) return t('series.selectedDays')
   if (rule.toLowerCase().includes('weekly')) return t('series.everyWeek')
   return rule
 }
@@ -388,7 +426,7 @@ function openAddModal() {
   selectedGuildId.value = guildStore.currentGuild?.id ?? null
   Object.assign(form, {
     title: '',
-    recurrence_rule: 'weekly', start_time_local: '19:00',
+    recurrence_rule: 'weekly', days_of_week: [], start_time_local: '19:00',
     duration_minutes: 180, default_raid_size: 25, default_difficulty: 'normal',
     template_id: null
   })
@@ -403,6 +441,7 @@ function openEditModal(s) {
   Object.assign(form, {
     title: s.title,
     recurrence_rule: s.recurrence_rule ?? 'weekly',
+    days_of_week: Array.isArray(s.days_of_week) ? s.days_of_week.map(Number) : [],
     start_time_local: s.start_time_local ?? '19:00',
     duration_minutes: s.duration_minutes ?? 180,
     default_raid_size: s.default_raid_size ?? 25,
@@ -475,12 +514,12 @@ async function doSave() {
           const otherPayload = { ...form, realm_name: otherGuild?.realm_name ?? '' }
           try { await seriesApi.createSeries(guildId, otherPayload) } catch { failed++ }
         }
-        if (failed > 0) uiStore.showToast(t('common.copy.failedToCreateInGuilds', { count: failed }), 'warning')
+        if (failed > 0) toast.warning(t('common.copy.failedToCreateInGuilds', { count: failed }))
       }
     }
     showModal.value = false
     const guildLabel = targetGuild ? `${targetGuild.name} (${targetGuild.realm_name})` : ''
-    uiStore.showToast(editing.value ? t('series.toasts.seriesUpdated') : t('series.toasts.seriesCreated', { guild: guildLabel }), 'success')
+    toast.success(editing.value ? t('series.toasts.seriesUpdated') : t('series.toasts.seriesCreated', { guild: guildLabel }))
     // Switch to target guild if different from current (only for single-guild creation, not multi-guild copy)
     if (!editing.value && targetGuildId !== guildStore.currentGuild?.id && !applyToOtherGuilds.value) {
       guildStore.setCurrentGuild(targetGuild)
@@ -497,9 +536,9 @@ async function doGenerate() {
   try {
     const events = await seriesApi.generateEvents(guildStore.currentGuild.id, generateTarget.value.id, { count: generateCount.value })
     generateResult.value = Array.isArray(events) ? events.length : generateCount.value
-    uiStore.showToast(t('series.toasts.eventsGenerated', { count: generateResult.value }), 'success')
+    toast.success(t('series.toasts.eventsGenerated', { count: generateResult.value }))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'), 'error')
+    toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? t('series.toasts.failedToGenerate'))
   } finally { saving.value = false }
 }
 
@@ -509,8 +548,8 @@ async function doDelete() {
     await seriesApi.deleteSeries(guildStore.currentGuild.id, deleteTarget.value.id)
     seriesList.value = seriesList.value.filter(s => s.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('series.seriesDeleted'), 'success')
-  } catch { uiStore.showToast(t('common.toasts.failedToDelete'), 'error') }
+    toast.success(t('series.seriesDeleted'))
+  } catch { toast.error(t('common.toasts.failedToDelete')) }
   finally { saving.value = false }
 }
 
@@ -526,9 +565,9 @@ async function doCopy() {
   }
   showCopyModal.value = false
   if (failed > 0) {
-    uiStore.showToast(t('common.copy.copiedWithFailures', { succeeded, failed }), 'warning')
+    toast.warning(t('common.copy.copiedWithFailures', { succeeded, failed }))
   } else {
-    uiStore.showToast(t('common.copy.copiedSuccess', { name: copySource.value.title, count: succeeded }), 'success')
+    toast.success(t('common.copy.copiedSuccess', { name: copySource.value.title, count: succeeded }))
   }
   saving.value = false
 }

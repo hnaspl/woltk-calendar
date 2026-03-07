@@ -19,6 +19,7 @@ def create_notification(
     guild_id: Optional[int] = None,
     raid_event_id: Optional[int] = None,
     *,
+    tenant_id: Optional[int] = None,
     title_key: Optional[str] = None,
     body_key: Optional[str] = None,
     title_params: Optional[dict] = None,
@@ -32,6 +33,7 @@ def create_notification(
         body=body,
         guild_id=guild_id,
         raid_event_id=raid_event_id,
+        tenant_id=tenant_id,
         title_key=title_key,
         body_key=body_key,
         title_params=_json.dumps(title_params) if title_params else None,
@@ -42,16 +44,23 @@ def create_notification(
     return notif
 
 
-def list_notifications(user_id: int, *, limit: int = 50, offset: int = 0) -> list[Notification]:
-    return list(
-        db.session.execute(
-            sa.select(Notification)
-            .where(Notification.user_id == user_id)
-            .order_by(Notification.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        ).scalars().all()
+def list_notifications(user_id: int, *, tenant_id: Optional[int] = None, limit: int = 50, offset: int = 0) -> list[Notification]:
+    stmt = (
+        sa.select(Notification)
+        .where(Notification.user_id == user_id)
+        .order_by(Notification.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
+    if tenant_id is not None:
+        # Show notifications for this tenant + system-wide (tenant_id IS NULL)
+        stmt = stmt.where(
+            sa.or_(
+                Notification.tenant_id == tenant_id,
+                Notification.tenant_id.is_(None),
+            )
+        )
+    return list(db.session.execute(stmt).scalars().all())
 
 
 def mark_read(notification: Notification) -> Notification:
@@ -76,14 +85,20 @@ def get_notification(notification_id: int) -> Optional[Notification]:
     return db.session.get(Notification, notification_id)
 
 
-def unread_count(user_id: int) -> int:
+def unread_count(user_id: int, *, tenant_id: Optional[int] = None) -> int:
     """Return the number of unread notifications for a user."""
-    return db.session.execute(
-        sa.select(sa.func.count(Notification.id)).where(
-            Notification.user_id == user_id,
-            Notification.read_at.is_(None),
+    stmt = sa.select(sa.func.count(Notification.id)).where(
+        Notification.user_id == user_id,
+        Notification.read_at.is_(None),
+    )
+    if tenant_id is not None:
+        stmt = stmt.where(
+            sa.or_(
+                Notification.tenant_id == tenant_id,
+                Notification.tenant_id.is_(None),
+            )
         )
-    ).scalar_one()
+    return db.session.execute(stmt).scalar_one()
 
 
 def delete_notification(notification_id: int, user_id: int) -> bool:

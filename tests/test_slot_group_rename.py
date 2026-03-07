@@ -18,7 +18,8 @@ import pytest
 import sqlalchemy as sa
 
 from app.enums import Role, SlotGroup
-from app.constants import CLASS_ROLES, ROLE_SLOTS
+from app.constants import ROLE_SLOTS
+from app.utils.class_roles import allowed_roles_for_class
 from app.extensions import db
 from app.models.character import Character
 from app.models.guild import Guild
@@ -35,6 +36,9 @@ from app.services import lineup_service, signup_service
 @pytest.fixture
 def rename_seed(db, ctx):
     """Seed data with all 5 role types: main_tank, off_tank, melee_dps, healer, range_dps."""
+    from app.seeds.expansions import seed_expansions
+    seed_expansions()
+
     guild = Guild(name="Rename Test Guild", realm_name="Icecrown", created_by=None)
     db.session.add(guild)
     db.session.flush()
@@ -164,39 +168,41 @@ class TestEnumValues:
 # ---------------------------------------------------------------------------
 
 class TestConstants:
-    """Verify CLASS_ROLES and ROLE_SLOTS use new role names."""
+    """Verify class roles and ROLE_SLOTS use new role names (DB-driven)."""
+
+    @pytest.fixture(autouse=True)
+    def _seed_expansion(self, db, ctx):
+        from app.seeds.expansions import seed_expansions
+        seed_expansions()
 
     def test_class_roles_no_old_values(self):
-        for cls, roles in CLASS_ROLES.items():
+        """All DB-driven roles should use new names (no 'tank' or 'dps')."""
+        from app.models.expansion import ExpansionClass
+        import sqlalchemy as sa
+        classes = db.session.execute(sa.select(ExpansionClass)).scalars().all()
+        for cls in classes:
+            roles = allowed_roles_for_class(cls.name) or []
             for r in roles:
-                assert r.value != "tank", f"{cls} has old 'tank' role"
-                assert r.value != "dps", f"{cls} has old 'dps' role"
+                assert r != "tank", f"{cls.name} has old 'tank' role"
+                assert r != "dps", f"{cls.name} has old 'dps' role"
 
     def test_hunter_has_range_dps(self):
-        from app.enums import WowClass
-        roles = CLASS_ROLES[WowClass.HUNTER]
-        values = [r.value for r in roles]
+        values = allowed_roles_for_class("Hunter") or []
         assert "range_dps" in values
         assert "dps" not in values
 
     def test_rogue_has_melee_dps(self):
-        from app.enums import WowClass
-        roles = CLASS_ROLES[WowClass.ROGUE]
-        values = [r.value for r in roles]
+        values = allowed_roles_for_class("Rogue") or []
         assert "melee_dps" in values
         assert "tank" not in values
 
     def test_warrior_has_melee_dps(self):
-        from app.enums import WowClass
-        roles = CLASS_ROLES[WowClass.WARRIOR]
-        values = [r.value for r in roles]
+        values = allowed_roles_for_class("Warrior") or []
         assert "melee_dps" in values
         assert "tank" not in values
 
     def test_druid_has_both_dps_types(self):
-        from app.enums import WowClass
-        roles = CLASS_ROLES[WowClass.DRUID]
-        values = [r.value for r in roles]
+        values = allowed_roles_for_class("Druid") or []
         assert "melee_dps" in values
         assert "range_dps" in values
 

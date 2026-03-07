@@ -140,7 +140,7 @@ class TestTimezoneAPIRoundtrip:
             # Login
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(admin.id)
-            resp = client.get(f"/api/v1/guilds/{g.id}")
+            resp = client.get(f"/api/v2/guilds/{g.id}")
             assert resp.status_code == 200
             data = resp.get_json()
             assert data["timezone"] == "Europe/Madrid"
@@ -151,10 +151,12 @@ class TestTimezoneAPIRoundtrip:
                      password_hash="x", is_active=True, is_admin=True)
         db.session.add(admin)
         db.session.commit()
+        from app.services import tenant_service
+        tenant_service.create_tenant(owner=admin)
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(admin.id)
-            resp = client.post("/api/v1/guilds", json={
+            resp = client.post("/api/v2/guilds", json={
                 "name": "TZCreateGuild",
                 "realm_name": "Lordaeron",
                 "timezone": "Asia/Shanghai"
@@ -173,7 +175,7 @@ class TestTimezoneAPIRoundtrip:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(admin.id)
-            resp = client.put(f"/api/v1/guilds/{g.id}", json={
+            resp = client.put(f"/api/v2/guilds/{g.id}", json={
                 "timezone": "Europe/Istanbul"
             })
             assert resp.status_code == 200
@@ -189,7 +191,7 @@ class TestTimezoneAPIRoundtrip:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(u.id)
-            resp = client.get("/api/v1/auth/me")
+            resp = client.get("/api/v2/auth/me")
             assert resp.status_code == 200
             data = resp.get_json()
             assert data["timezone"] == "US/Central"
@@ -203,7 +205,7 @@ class TestTimezoneAPIRoundtrip:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(u.id)
-            resp = client.put("/api/v1/auth/profile", json={
+            resp = client.put("/api/v2/auth/profile", json={
                 "timezone": "Pacific/Auckland"
             })
             assert resp.status_code == 200

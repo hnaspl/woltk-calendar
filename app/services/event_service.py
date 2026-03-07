@@ -10,6 +10,17 @@ import sqlalchemy as sa
 from app.extensions import db
 from app.models.guild import Guild
 from app.models.raid import EventSeries, RaidEvent, RaidTemplate
+from app.utils.sanitizer import sanitize_text
+
+
+def _sanitize_field(value: str | None, field_name: str) -> str | None:
+    """Sanitize an optional text field, raising ValueError on dangerous content."""
+    if value is None:
+        return None
+    clean, error = sanitize_text(str(value), field_name=field_name)
+    if error:
+        raise ValueError(error)
+    return clean
 
 
 # ---------------------------------------------------------------------------
@@ -26,6 +37,7 @@ def create_template(guild_id: int, created_by: int, data: dict) -> RaidTemplate:
         difficulty=data.get("difficulty", "normal"),
         expected_duration_minutes=data.get("expected_duration_minutes", 180),
         default_instructions=data.get("default_instructions"),
+        close_registration_minutes=data.get("close_registration_minutes"),
         is_active=data.get("is_active", True),
     )
     if "target_roles" in data:
@@ -42,7 +54,7 @@ def get_template(tmpl_id: int) -> Optional[RaidTemplate]:
 def update_template(tmpl: RaidTemplate, data: dict) -> RaidTemplate:
     allowed = {
         "name", "raid_size", "difficulty", "expected_duration_minutes",
-        "default_instructions", "is_active",
+        "default_instructions", "close_registration_minutes", "is_active",
     }
     for key, value in data.items():
         if key in allowed:
@@ -107,6 +119,9 @@ def copy_template_to_guild(
 # ---------------------------------------------------------------------------
 
 def create_series(guild_id: int, created_by: int, data: dict) -> EventSeries:
+    days = data.get("days_of_week")
+    if isinstance(days, list):
+        days = ",".join(str(d) for d in days)
     series = EventSeries(
         guild_id=guild_id,
         created_by=created_by,
@@ -115,6 +130,7 @@ def create_series(guild_id: int, created_by: int, data: dict) -> EventSeries:
         realm_name=data["realm_name"],
         timezone=data.get("timezone", "UTC"),
         recurrence_rule=data.get("recurrence_rule"),
+        days_of_week=days,
         start_time_local=data.get("start_time_local"),
         duration_minutes=data.get("duration_minutes", 180),
         default_raid_size=data.get("default_raid_size", 25),
@@ -138,6 +154,9 @@ def update_series(series: EventSeries, data: dict) -> EventSeries:
     for key, value in data.items():
         if key in allowed:
             setattr(series, key, value)
+    if "days_of_week" in data:
+        days = data["days_of_week"]
+        series.days_of_week = ",".join(str(d) for d in days) if isinstance(days, list) else days
     db.session.commit()
     return series
 
@@ -182,6 +201,7 @@ def copy_series_to_guild(
         realm_name=realm_name,
         timezone=source.timezone,
         recurrence_rule=source.recurrence_rule,
+        days_of_week=source.days_of_week,
         start_time_local=source.start_time_local,
         duration_minutes=source.duration_minutes,
         default_raid_size=source.default_raid_size,
@@ -196,36 +216,86 @@ def copy_series_to_guild(
 def generate_events_from_series(series: EventSeries, count: int = 4) -> list[RaidEvent]:
     """Generate ``count`` future RaidEvents from a series' recurrence rule.
 
-    Supports simple weekly/biweekly rules encoded as ``weekly`` or ``biweekly``.
-    For full iCal rrule support, integrate the ``dateutil`` library.
+    Supports:
+    - ``weekly`` / ``biweekly`` recurrence rules
+    - ``days_of_week`` comma-separated day numbers (0=Monday .. 6=Sunday)
+      When days_of_week is set, generates events on each specified day.
     """
     events: list[RaidEvent] = []
     now = datetime.now(timezone.utc)
-    delta = timedelta(weeks=1)
-    if series.recurrence_rule and "biweekly" in series.recurrence_rule.lower():
-        delta = timedelta(weeks=2)
 
-    # Determine base start datetime
-    base = now.replace(hour=19, minute=0, second=0, microsecond=0)
+    # Parse start time
+    hour, minute = 19, 0
+    if series.start_time_local:
+        parts = series.start_time_local.split(":")
+        if len(parts) >= 2:
+            hour, minute = int(parts[0]), int(parts[1])
 
-    for i in range(count):
-        starts_at = base + delta * (i + 1)
-        ends_at = starts_at + timedelta(minutes=series.duration_minutes)
-        event = RaidEvent(
-            guild_id=series.guild_id,
-            series_id=series.id,
-            template_id=series.template_id,
-            title=series.title,
-            realm_name=series.realm_name,
-            starts_at_utc=starts_at,
-            ends_at_utc=ends_at,
-            raid_size=series.default_raid_size,
-            difficulty=series.default_difficulty,
-            status="open",
-            created_by=series.created_by,
-        )
-        db.session.add(event)
-        events.append(event)
+    # Parse days_of_week (0=Monday .. 6=Sunday)
+    target_days = None
+    if series.days_of_week:
+        try:
+            target_days = [int(d.strip()) for d in series.days_of_week.split(",") if d.strip()]
+        except ValueError:
+            target_days = None
+
+    if target_days:
+        # Generate events for each target day of the week
+        base = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        # Move to tomorrow to avoid past events
+        base += timedelta(days=1)
+        generated = 0
+        day_cursor = base
+        max_days = count * 14 + 14  # safety limit
+        checked = 0
+        while generated < count and checked < max_days:
+            if day_cursor.weekday() in target_days:
+                starts_at = day_cursor
+                ends_at = starts_at + timedelta(minutes=series.duration_minutes)
+                event = RaidEvent(
+                    guild_id=series.guild_id,
+                    series_id=series.id,
+                    template_id=series.template_id,
+                    title=series.title,
+                    realm_name=series.realm_name,
+                    starts_at_utc=starts_at,
+                    ends_at_utc=ends_at,
+                    raid_size=series.default_raid_size,
+                    difficulty=series.default_difficulty,
+                    status="open",
+                    created_by=series.created_by,
+                )
+                db.session.add(event)
+                events.append(event)
+                generated += 1
+            day_cursor += timedelta(days=1)
+            checked += 1
+    else:
+        # Original weekly/biweekly logic
+        delta = timedelta(weeks=1)
+        if series.recurrence_rule and "biweekly" in series.recurrence_rule.lower():
+            delta = timedelta(weeks=2)
+
+        base = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+        for i in range(count):
+            starts_at = base + delta * (i + 1)
+            ends_at = starts_at + timedelta(minutes=series.duration_minutes)
+            event = RaidEvent(
+                guild_id=series.guild_id,
+                series_id=series.id,
+                template_id=series.template_id,
+                title=series.title,
+                realm_name=series.realm_name,
+                starts_at_utc=starts_at,
+                ends_at_utc=ends_at,
+                raid_size=series.default_raid_size,
+                difficulty=series.default_difficulty,
+                status="open",
+                created_by=series.created_by,
+            )
+            db.session.add(event)
+            events.append(event)
 
     db.session.commit()
     return events
@@ -270,7 +340,7 @@ def create_event(guild_id: int, created_by: int, data: dict) -> RaidEvent:
         difficulty=data.get("difficulty", "normal"),
         status=data.get("status", "open"),
         raid_type=data.get("raid_type"),
-        instructions=data.get("instructions"),
+        instructions=_sanitize_field(data.get("instructions"), "instructions"),
     )
     close_at = data.get("close_signups_at")
     if close_at:
@@ -293,10 +363,14 @@ def update_event(event: RaidEvent, data: dict) -> RaidEvent:
         "difficulty", "status", "instructions", "raid_type", "close_signups_at",
         "raid_definition_id", "duration_minutes",
     }
+    # Sanitize text fields before applying
+    text_fields = {"instructions", "title"}
     for key, value in data.items():
         if key in allowed:
             if key in ("starts_at_utc", "ends_at_utc", "close_signups_at") and isinstance(value, str):
                 value = _ensure_utc(value)
+            elif key in text_fields and isinstance(value, str):
+                value = _sanitize_field(value, key)
             setattr(event, key, value)
     # Recompute ends_at_utc from duration if duration was provided
     if "duration_minutes" in data and event.starts_at_utc:
@@ -402,10 +476,24 @@ def list_events_by_range(guild_id: int, start: datetime, end: datetime) -> list[
     )
 
 
-def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[datetime] = None) -> RaidEvent:
-    """Duplicate an existing raid event. Optionally set a new start time."""
+def duplicate_event(
+    event: RaidEvent,
+    created_by: int,
+    new_starts_at: Optional[datetime] = None,
+    new_close_signups_at: Optional[datetime] = None,
+    copy_signups: bool = False,
+) -> RaidEvent:
+    """Duplicate an existing raid event. Optionally set a new start time,
+    close-signups time, and copy existing signups."""
     starts_at = new_starts_at or event.starts_at_utc + timedelta(weeks=1)
     duration = event.ends_at_utc - event.starts_at_utc
+
+    # Determine close_signups_at: use provided value, or preserve original offset
+    close_signups = new_close_signups_at
+    if close_signups is None and event.close_signups_at and event.starts_at_utc:
+        offset = event.starts_at_utc - event.close_signups_at
+        close_signups = starts_at - offset
+
     new_event = RaidEvent(
         guild_id=event.guild_id,
         series_id=event.series_id,
@@ -421,7 +509,29 @@ def duplicate_event(event: RaidEvent, created_by: int, new_starts_at: Optional[d
         raid_type=event.raid_type,
         instructions=event.instructions,
         created_by=created_by,
+        close_signups_at=close_signups,
     )
     db.session.add(new_event)
+    db.session.flush()  # get new_event.id for signups
+
+    if copy_signups:
+        from app.models.signup import Signup
+        originals = db.session.execute(
+            sa.select(Signup).where(Signup.raid_event_id == event.id)
+        ).scalars().all()
+        for s in originals:
+            dup = Signup(
+                tenant_id=s.tenant_id,
+                guild_id=s.guild_id,
+                raid_event_id=new_event.id,
+                user_id=s.user_id,
+                character_id=s.character_id,
+                chosen_spec=s.chosen_spec,
+                chosen_role=s.chosen_role,
+                note=s.note,
+                attendance_status="going",
+            )
+            db.session.add(dup)
+
     db.session.commit()
     return new_event

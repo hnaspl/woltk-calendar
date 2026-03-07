@@ -45,7 +45,12 @@
           <UsersTab v-else-if="activeTab === 'users'" />
           <RolesTab v-else-if="activeTab === 'roles'" />
           <GuildsTab v-else-if="activeTab === 'guilds'" />
+          <TenantsTab v-else-if="activeTab === 'tenants'" />
           <DefaultRaidDefinitionsTab v-else-if="activeTab === 'raid-definitions'" />
+          <ExpansionsTab v-else-if="activeTab === 'expansions'" />
+          <PluginsTab v-else-if="activeTab === 'plugins'" />
+          <PlansTab v-else-if="activeTab === 'plans'" />
+          <TranslationsTab v-else-if="activeTab === 'translations'" />
           <SettingsTab v-else-if="activeTab === 'settings'" />
         </KeepAlive>
       </template>
@@ -60,8 +65,13 @@ import DashboardTab from '@/components/admin/DashboardTab.vue'
 import UsersTab from '@/components/admin/UsersTab.vue'
 import RolesTab from '@/components/admin/RolesTab.vue'
 import GuildsTab from '@/components/admin/GuildsTab.vue'
+import TenantsTab from '@/components/admin/TenantsTab.vue'
 import DefaultRaidDefinitionsTab from '@/components/admin/DefaultRaidDefinitionsTab.vue'
+import ExpansionsTab from '@/components/admin/ExpansionsTab.vue'
 import SettingsTab from '@/components/admin/SettingsTab.vue'
+import TranslationsTab from '@/components/admin/TranslationsTab.vue'
+import PluginsTab from '@/components/admin/PluginsTab.vue'
+import PlansTab from '@/components/admin/PlansTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 
@@ -84,9 +94,24 @@ const icons = {
   raidDefs: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 10h16M4 14h16M4 18h16' })
   ]),
+  tenants: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' })
+  ]),
+  expansions: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z' })
+  ]),
   settings: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }),
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' })
+  ]),
+  plugins: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
+  ]),
+  plans: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' })
+  ]),
+  translations: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129' })
   ])
 }
 
@@ -95,7 +120,12 @@ const tabs = [
   { id: 'users', label: t('admin.users.title', { count: '' }).replace('()', '').trim(), icon: icons.users },
   { id: 'roles', label: t('admin.tabs.roles'), icon: icons.roles },
   { id: 'guilds', label: t('admin.guilds.tabTitle'), icon: icons.guilds },
+  { id: 'tenants', label: t('admin.tenants.tabTitle'), icon: icons.tenants },
   { id: 'raid-definitions', label: t('admin.raidDefinitions.tabTitle'), icon: icons.raidDefs },
+  { id: 'expansions', label: t('admin.expansions.title'), icon: icons.expansions },
+  { id: 'plugins', label: t('plugin.title'), icon: icons.plugins },
+  { id: 'plans', label: t('admin.plans.tabTitle'), icon: icons.plans },
+  { id: 'translations', label: t('admin.translations.tabTitle'), icon: icons.translations },
   { id: 'settings', label: t('admin.system.title'), icon: icons.settings },
 ]
 

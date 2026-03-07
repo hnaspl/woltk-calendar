@@ -27,7 +27,14 @@
             @change="calStore.setFilter('raidType', $event.target.value)"
           >
             <option value="">{{ t('calendar.allRaids') }}</option>
-            <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            <template v-if="raidTypesByExpansion.length">
+              <optgroup v-for="group in raidTypesByExpansion" :key="group.expansion" :label="group.label">
+                <option v-for="r in group.types" :key="r.value" :value="r.value">{{ r.label }}</option>
+              </optgroup>
+            </template>
+            <template v-else>
+              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </template>
           </select>
         </div>
 
@@ -39,8 +46,7 @@
             @change="calStore.setFilter('size', $event.target.value)"
           >
             <option value="">{{ t('calendar.allSizes') }}</option>
-            <option value="10">{{ t('calendar.tenMan') }}</option>
-            <option value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <option v-for="s in availableRaidSizes" :key="s" :value="s">{{ s }}-man</option>
           </select>
         </div>
 
@@ -63,7 +69,7 @@
           {{ t('calendar.clearFilters') }}
         </WowButton>
 
-        <WowButton v-if="permissions.can('create_events')" class="w-full text-sm" @click="openCreateModal">
+        <WowButton v-if="permissions.can('create_events')" class="w-full text-sm" @click="openCreateModal" :disabled="!guildStore.currentGuild">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -86,7 +92,7 @@
     </div>
 
     <!-- Schedule Raid Modal -->
-    <WowModal v-model="showCreateModal" :title="t('calendar.scheduleRaid')" size="md">
+    <WowModal v-model="showCreateModal" :title="t('calendar.scheduleRaid')" size="lg">
       <form @submit.prevent="createEvent" class="space-y-4">
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('calendar.guild') }}</label>
@@ -98,10 +104,11 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="eventForm.raid_definition_id" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onRaidDefChange">
-            <option value="">{{ t('calendar.selectRaidDef') }}</option>
-            <optgroup :label="t('calendar.builtInRaids')">
-              <option v-for="rd in builtinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
-            </optgroup>
+            <template v-for="group in raidDefsByExpansion" :key="group.expansion">
+              <optgroup :label="group.label">
+                <option v-for="rd in group.defs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+              </optgroup>
+            </template>
             <optgroup v-if="customDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in customDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
@@ -115,16 +122,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
-            <select v-model.number="eventForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="eventForm.raid_size" :disabled="selectedRaidSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in selectedRaidSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
+            <span class="text-[10px] text-text-muted">{{ selectedRaidSizes.length > 1 ? t('calendar.selectSize') : t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
-            <select v-model="eventForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="eventForm.difficulty" :disabled="!selectedRaidDef?.supports_heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
               <option value="normal">{{ t('calendar.normal') }}</option>
-              <option value="heroic">{{ t('calendar.heroic') }}</option>
+              <option v-if="selectedRaidDef?.supports_heroic" value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
         </div>
@@ -169,39 +176,134 @@ import WowModal from '@/components/common/WowModal.vue'
 import { useCalendarStore } from '@/stores/calendar'
 import { useGuildStore } from '@/stores/guild'
 import { usePermissions } from '@/composables/usePermissions'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
-import { RAID_TYPES } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
+import { groupRaidDefsByExpansion } from '@/constants'
 import * as eventsApi from '@/api/events'
 import * as raidDefsApi from '@/api/raidDefinitions'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
 
 const calStore = useCalendarStore()
 const guildStore = useGuildStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
 const router = useRouter()
 const { joinGuild, leaveGuild, on, off } = useSocket()
 const tzHelper = useTimezone()
 const { t } = useI18n()
+const constantsStore = useConstantsStore()
 
-const raidTypes = RAID_TYPES
+const { raidTypes: expansionRaidTypes } = useExpansionData()
+
+// Guild-specific raidTypes — loaded from guild constants when available
+const guildRaidTypes = ref([])
+
+// Use guild-specific raidTypes if loaded, otherwise fall back to constants store then expansion data
+const raidTypes = computed(() => {
+  if (guildRaidTypes.value.length) return guildRaidTypes.value
+  if (constantsStore.raidTypes.length) return constantsStore.raidTypes
+  return expansionRaidTypes.value
+})
+
+// Group raid types by expansion, derived from raid definitions' expansion field
+const raidTypesByExpansion = computed(() => {
+  const allTypes = raidTypes.value
+  if (!allTypes.length) return []
+  // Build raid_type code → expansion slug mapping from loaded raid definitions
+  const typeToExpansion = {}
+  for (const def of raidDefs.value) {
+    const code = def.raid_type || def.code
+    if (code && def.expansion && !typeToExpansion[code]) {
+      typeToExpansion[code] = def.expansion
+    }
+  }
+  // Group raid types by their expansion
+  const groups = {}
+  const ungrouped = []
+  for (const rt of allTypes) {
+    const exp = typeToExpansion[rt.value]
+    if (exp) {
+      if (!groups[exp]) groups[exp] = []
+      groups[exp].push(rt)
+    } else {
+      ungrouped.push(rt)
+    }
+  }
+  // If we couldn't map any types to expansions, return empty (fallback to flat list)
+  if (Object.keys(groups).length === 0) return []
+  const orderedSlugs = constantsStore.expansionSlugsDesc.length
+    ? constantsStore.expansionSlugsDesc
+    : Object.keys(groups).sort()
+  const result = orderedSlugs
+    .filter(exp => groups[exp]?.length)
+    .map(exp => ({ expansion: exp, label: constantsStore.expansionLabelMap[exp] || exp, types: groups[exp] }))
+  if (ungrouped.length) {
+    result.push({ expansion: '_other', label: t('calendar.customRaids'), types: ungrouped })
+  }
+  return result
+})
 
 const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref(null)
 const raidDefs = ref([])
+const guildExpansionSlugs = ref([])
 
-const builtinDefs = computed(() => raidDefs.value.filter(d => d.is_builtin))
-const customDefs = computed(() => raidDefs.value.filter(d => !d.is_builtin))
+const DEFAULT_RAID_SIZE = 25
+
+// Filter raid definitions by guild's enabled expansions
+const filteredRaidDefs = computed(() => {
+  if (!guildExpansionSlugs.value.length) return raidDefs.value
+  return raidDefs.value.filter(d => guildExpansionSlugs.value.includes(d.expansion))
+})
+
+const builtinDefs = computed(() => filteredRaidDefs.value.filter(d => d.is_builtin))
+const customDefs = computed(() => filteredRaidDefs.value.filter(d => !d.is_builtin))
+
+// Group builtin raids by expansion using constants store data (no hardcoded labels)
+const raidDefsByExpansion = computed(() =>
+  groupRaidDefsByExpansion(builtinDefs.value, constantsStore.expansionSlugsDesc, constantsStore.expansionLabelMap)
+)
+
+// Selected raid definition — for auto-populating size/difficulty
+const selectedRaidDef = computed(() =>
+  raidDefs.value.find(d => d.id === eventForm.raid_definition_id) ?? null
+)
+
+// Supported sizes for the currently selected raid definition
+const selectedRaidSizes = computed(() => {
+  const rd = selectedRaidDef.value
+  if (!rd) return availableRaidSizes.value
+  if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+    return [...rd.supported_sizes].sort((a, b) => a - b)
+  }
+  return [rd.default_raid_size ?? rd.size ?? DEFAULT_RAID_SIZE]
+})
+
+// Dynamic raid sizes — derive from available raid definitions
+const availableRaidSizes = computed(() => {
+  const sizes = new Set()
+  const defs = filteredRaidDefs.value.length ? filteredRaidDefs.value : raidDefs.value
+  for (const d of defs) {
+    sizes.add(d.default_raid_size ?? d.size ?? DEFAULT_RAID_SIZE)
+  }
+  if (sizes.size === 0) {
+    sizes.add(10)
+    sizes.add(DEFAULT_RAID_SIZE)
+  }
+  return [...sizes].sort((a, b) => a - b)
+})
 
 const eventForm = reactive({
   title: '',
   guild_id: null,
   realm_name: '',
   raid_definition_id: '',
-  raid_size: 25,
+  raid_size: DEFAULT_RAID_SIZE,
   starts_at_utc: '',
   duration_minutes: 180,
   difficulty: 'normal',
@@ -216,6 +318,7 @@ onMounted(async () => {
   if (guildStore.currentGuild) {
     tasks.push(guildStore.fetchMembers(guildStore.currentGuild.id))
     joinGuild(guildStore.currentGuild.id)
+    loadRaidDefsForGuild(guildStore.currentGuild.id)
   }
   await Promise.all(tasks)
   on('events_changed', handleEventsChanged)
@@ -237,13 +340,32 @@ onUnmounted(() => {
   stopGuildWatch()
 })
 
+function loadRaidDefsForGuild(guildId) {
+  raidDefsApi.getRaidDefinitions(guildId).then(defs => {
+    raidDefs.value = defs
+    // Auto-select first raid definition if none selected
+    if (!eventForm.raid_definition_id && defs.length) {
+      eventForm.raid_definition_id = defs[0].id
+      onRaidDefChange()
+    }
+  }).catch(err => { console.warn('Failed to load raid definitions', err) })
+  guildExpansionsApi.getGuildExpansions(guildId).then(res => {
+    const exps = res?.expansions ?? res ?? []
+    guildExpansionSlugs.value = exps.map(e => e.expansion_slug || e.slug).filter(Boolean)
+  }).catch(() => { guildExpansionSlugs.value = [] })
+  // Load guild-specific constants for raidTypes
+  guildExpansionsApi.getGuildConstants(guildId).then(data => {
+    if (data?.raid_types) {
+      guildRaidTypes.value = data.raid_types.map(r => ({ value: r.code, label: r.name }))
+    }
+  }).catch(() => { /* ignore — fall back to expansion data */ })
+}
+
 function openCreateModal() {
-  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: 25, starts_at_utc: '', duration_minutes: 180, difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
+  Object.assign(eventForm, { title: '', guild_id: guildStore.currentGuild?.id ?? null, realm_name: guildStore.currentGuild?.realm_name ?? '', raid_definition_id: '', raid_size: DEFAULT_RAID_SIZE, starts_at_utc: '', duration_minutes: 180, difficulty: 'normal', raid_type: '', close_signups_at: '', instructions: '' })
   createError.value = null
   showCreateModal.value = true
-  if (eventForm.guild_id) {
-    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
-  }
+  if (eventForm.guild_id) loadRaidDefsForGuild(eventForm.guild_id)
 }
 
 function onGuildSelectChange() {
@@ -251,9 +373,10 @@ function onGuildSelectChange() {
   if (selected) eventForm.realm_name = selected.realm_name
   eventForm.raid_definition_id = ''
   if (eventForm.guild_id) {
-    raidDefsApi.getRaidDefinitions(eventForm.guild_id).then(defs => { raidDefs.value = defs }).catch(err => { console.warn('Failed to load raid definitions', err) })
+    loadRaidDefsForGuild(eventForm.guild_id)
   } else {
     raidDefs.value = []
+    guildExpansionSlugs.value = []
   }
 }
 
@@ -261,8 +384,10 @@ function onRaidDefChange() {
   const rd = raidDefs.value.find(d => d.id === eventForm.raid_definition_id)
   if (rd) {
     eventForm.raid_type = rd.raid_type || rd.code || ''
-    eventForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    eventForm.raid_size = rd.default_raid_size ?? rd.size ?? DEFAULT_RAID_SIZE
     if (rd.default_duration_minutes) eventForm.duration_minutes = rd.default_duration_minutes
+    // Auto-set difficulty based on raid definition
+    eventForm.difficulty = rd.supports_heroic ? 'heroic' : 'normal'
   }
 }
 
@@ -297,7 +422,7 @@ async function createEvent() {
     }
     const newEvent = await eventsApi.createEvent(eventForm.guild_id, payload)
     showCreateModal.value = false
-    uiStore.showToast(t('calendar.raidScheduled'), 'success')
+    toast.success(t('calendar.raidScheduled'))
     await calStore.fetchEvents()
     router.push(`/raids/${newEvent.id}`)
   } catch (err) {

@@ -20,10 +20,9 @@ import re
 from urllib.parse import urlparse
 
 
-# Domains that are always accepted regardless of settings
-_BUILTIN_DOMAINS: frozenset[str] = frozenset({
-    "armory.warmane.com",
-})
+# No domains are hardcoded — admins configure allowed domains via settings.
+# When the setting is empty, any domain is accepted (open mode).
+_BUILTIN_DOMAINS: frozenset[str] = frozenset()
 
 # Reject obviously dangerous hostnames
 _BLOCKED_HOSTS: re.Pattern = re.compile(
@@ -46,7 +45,7 @@ def validate_armory_url(url: str, extra_allowed_domains: list[str] | None = None
     Parameters
     ----------
     url:
-        The URL to validate (e.g. ``http://armory.warmane.com/api``).
+        The URL to validate (e.g. ``http://armory.example.com/api``).
     extra_allowed_domains:
         Optional list of additional allowed domain names loaded from
         the ``armory_allowed_domains`` system setting.
@@ -55,6 +54,10 @@ def validate_armory_url(url: str, extra_allowed_domains: list[str] | None = None
         return "URL is required"
 
     url = url.strip()
+
+    # Auto-prepend https:// if no scheme is provided
+    if url and "://" not in url:
+        url = "https://" + url
 
     # ---- parse ----
     try:

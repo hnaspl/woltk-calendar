@@ -3,6 +3,7 @@
 Provides common patterns used across API endpoint handlers:
 - JSON body extraction
 - Required-field validation
+- System-level permission checks
 - Guild-scoped event lookup
 - Guild role map construction
 """
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 from flask import jsonify, request
 
+from app.extensions import db
 from app.i18n import _t
 
 
@@ -31,17 +33,55 @@ def validate_required(data: dict, *fields: str):
     return None
 
 
-def get_event_or_404(guild_id: int, event_id: int):
+def require_system_permission(perm_code: str):
+    """Check system-level (non-guild) permission for the current user.
+
+    Returns an error response tuple ``(jsonify(...), 403)`` when the
+    user lacks the permission, or ``None`` on success.
+
+    Usage::
+
+        @bp.post("/admin/action")
+        @login_required
+        def admin_action():
+            err = require_system_permission("manage_expansions")
+            if err:
+                return err
+            ...
+    """
+    from app.utils.permissions import has_permission
+    if not has_permission(None, perm_code):
+        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+    return None
+
+
+def get_event_or_404(guild_id: int, event_id: int, *, active_tenant_id: int | None = None):
     """Fetch a guild-scoped event by ID.
 
     Returns ``(event, None)`` on success or ``(None, error_response)`` when the
-    event does not exist or does not belong to the guild.
+    event does not exist or does not belong to the guild (or tenant).
+
+    When *active_tenant_id* is not provided, the current user's
+    ``active_tenant_id`` is used automatically (if available).
     """
     from app.services import event_service
 
     event = event_service.get_event(event_id)
     if event is None or event.guild_id != guild_id:
         return None, (jsonify({"error": _t("api.events.notFound")}), 404)
+
+    # Tenant isolation — auto-detect from current_user when not explicit
+    tid = active_tenant_id
+    if tid is None:
+        try:
+            from flask_login import current_user
+            tid = getattr(current_user, "active_tenant_id", None)
+        except RuntimeError:
+            pass  # Outside request context
+
+    if tid is not None and getattr(event, "tenant_id", None) is not None:
+        if event.tenant_id != tid:
+            return None, (jsonify({"error": _t("api.events.notFound")}), 404)
     return event, None
 
 
@@ -83,3 +123,36 @@ def build_guild_role_map(guild_id: int, user_ids: list[int]) -> dict:
         }
         for m in memberships
     }
+
+
+def get_or_404(model_class, resource_id, *, error_key="common.errors.notFound", validate=None):
+    """Generic 404 helper for any SQLAlchemy model.
+
+    Returns ``(obj, None)`` on success or ``(None, error_response)`` when the
+    resource is not found or fails *validate*.
+
+    Args:
+        model_class: SQLAlchemy model class.
+        resource_id: Primary key value.
+        error_key: i18n key for the error message.
+        validate: Optional callable ``(obj) -> bool``.  When provided the
+                  object must pass this check or a 404 is returned.  Use this
+                  for ownership / scope checks (e.g. ``validate=lambda o:
+                  o.guild_id == guild_id``).
+    """
+    obj = db.session.get(model_class, resource_id)
+    if obj is None:
+        return None, (jsonify({"error": _t(error_key)}), 404)
+    if validate is not None and not validate(obj):
+        return None, (jsonify({"error": _t(error_key)}), 404)
+    return obj, None
+
+
+def error_response(message, status_code=400):
+    """Build a standard JSON error response.
+
+    Usage::
+
+        return error_response("Something went wrong", 400)
+    """
+    return jsonify({"error": message}), status_code

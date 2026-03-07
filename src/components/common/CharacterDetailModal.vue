@@ -173,8 +173,8 @@
                   <a
                     v-for="(item, i) in equipment"
                     :key="i"
-                    :href="item.item ? `https://www.wowhead.com/wotlk/item=${item.item}` : undefined"
-                    :data-wowhead="item.item ? `item=${item.item}&domain=wotlk` : undefined"
+                    :href="item.item ? `${wowheadBase}/item=${item.item}` : undefined"
+                    :data-wowhead="item.item ? `item=${item.item}&domain=${wowheadItemDomain}` : undefined"
                     target="_blank"
                     class="equip-link flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#1a2035] transition-colors no-underline cursor-pointer"
                     @click.stop
@@ -191,8 +191,9 @@
                     </div>
                     <div class="flex-1 min-w-0">
                       <span
-                        class="text-[12px] font-medium truncate block"
+                        class="text-[12px] font-medium truncate block wowhead-item-name"
                         :class="itemQualityText(item)"
+                        :style="itemQualityStyle(item)"
                       >{{ item.name }}</span>
                       <div class="text-[10px] text-text-muted flex items-center gap-1.5">
                         <span>{{ equipSlotLabel(i) }}</span>
@@ -223,6 +224,7 @@
                       <span
                         class="text-[12px] font-medium truncate block"
                         :class="itemQualityText(item)"
+                        :style="itemQualityStyle(item)"
                       >{{ item.name }}</span>
                       <div class="text-[10px] text-text-muted flex items-center gap-1.5">
                         <span>{{ equipSlotLabel(i) }}</span>
@@ -246,22 +248,38 @@
 import { computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLabel } from '@/constants'
-import { refreshWowheadTooltips } from '@/composables/useWowheadTooltips'
+import { normalizeSpecName, getItemQuality, getItemQualityText, getItemQualityLabel, ITEM_QUALITY_HEX } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
+import { refreshWowheadTooltips, getWowheadDomain, getWowheadBase } from '@/composables/useWowheadTooltips'
 import { useFormatting } from '@/composables/useFormatting'
+import { useGuildStore } from '@/stores/guild'
 
 const { t } = useI18n()
+const { classSpecs } = useExpansionData()
+const guildStore = useGuildStore()
+
+/** Derive current expansion from guild's highest enabled expansion, fallback to prop or 'wotlk'. */
+const effectiveExpansion = computed(() => {
+  if (props.expansion && props.expansion !== 'wotlk') return props.expansion
+  const g = guildStore.currentGuild
+  if (g?.expansion) return g.expansion
+  return props.expansion
+})
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   character: { type: Object, default: null },
   useWowhead: { type: Boolean, default: true },
+  expansion: { type: String, default: 'wotlk' },
 })
 
 defineEmits(['update:modelValue'])
 
 const { getClassIcon, getClassColor, getSpecIcon, getRoleIcon, getProfessionIcon } = useWowIcons()
 const { formatDate } = useFormatting()
+
+const wowheadBase = computed(() => getWowheadBase(effectiveExpansion.value))
+const wowheadItemDomain = computed(() => getWowheadDomain(effectiveExpansion.value))
 
 const classIcon = computed(() => props.character?.class_name ? getClassIcon(props.character.class_name) : null)
 const classColor = computed(() => props.character?.class_name ? getClassColor(props.character.class_name) : '#ccc')
@@ -272,7 +290,7 @@ const talents = computed(() => {
   const cls = props.character?.class_name ?? ''
   return raw.map(t => ({
     ...t,
-    tree: normalizeSpecName(t.tree, cls) ?? t.tree,
+    tree: normalizeSpecName(t.tree, cls, classSpecs.value) ?? t.tree,
   }))
 })
 const glyphs = computed(() => meta.value.glyphs ?? [])
@@ -284,13 +302,13 @@ const hasStats = computed(() =>
 
 // Refresh Wowhead tooltips when modal opens or equipment changes (only if enabled)
 watch(() => props.modelValue, (visible) => {
-  if (visible && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips()
+  if (visible && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips(effectiveExpansion.value)
 })
 watch(equipment, (items) => {
-  if (props.modelValue && items.length > 0 && props.useWowhead) refreshWowheadTooltips()
+  if (props.modelValue && items.length > 0 && props.useWowhead) refreshWowheadTooltips(effectiveExpansion.value)
 })
 onMounted(() => {
-  if (props.modelValue && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips()
+  if (props.modelValue && equipment.value.length > 0 && props.useWowhead) refreshWowheadTooltips(effectiveExpansion.value)
 })
 
 // Equipment slot definitions with WoW-themed SVG paths and abbreviations
@@ -326,7 +344,15 @@ function slotIconClasses(item) {
 }
 
 function itemQualityText(item) {
+  if (item.quality == null) return ''
   return getItemQualityText(item)
+}
+
+function itemQualityStyle(item) {
+  const q = item.quality
+  if (q == null) return {}
+  const hex = ITEM_QUALITY_HEX[q]
+  return hex ? { color: hex } : {}
 }
 
 function qualityLabel(q) {

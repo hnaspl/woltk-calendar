@@ -135,13 +135,13 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as adminApi from '@/api/admin'
 import { useFormatting } from '@/composables/useFormatting'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const { formatDate } = useFormatting()
 
 const users = ref([])
@@ -172,9 +172,9 @@ async function toggleBlock(user) {
     const updated = await adminApi.updateUser(user.id, { is_active: !user.is_active })
     const idx = users.value.findIndex(u => u.id === user.id)
     if (idx !== -1) users.value[idx] = updated
-    uiStore.showToast(t(updated.is_active ? 'admin.system.toasts.userUnblocked' : 'admin.system.toasts.userBlocked'), 'success')
+    toast.success(t(updated.is_active ? 'admin.system.toasts.userUnblocked' : 'admin.system.toasts.userBlocked'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToUpdateUser'), 'error')
+    toast.error(t('admin.system.toasts.failedToUpdateUser'))
   }
 }
 
@@ -183,9 +183,9 @@ async function toggleAdmin(user) {
     const updated = await adminApi.updateUser(user.id, { is_admin: !user.is_admin })
     const idx = users.value.findIndex(u => u.id === user.id)
     if (idx !== -1) users.value[idx] = updated
-    uiStore.showToast(t(updated.is_admin ? 'admin.system.toasts.userPromoted' : 'admin.system.toasts.userDemoted'), 'success')
+    toast.success(t(updated.is_admin ? 'admin.system.toasts.userPromoted' : 'admin.system.toasts.userDemoted'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToUpdateAdmin'), 'error')
+    toast.error(t('admin.system.toasts.failedToUpdateAdmin'))
   }
 }
 
@@ -200,9 +200,9 @@ async function doDelete() {
     await adminApi.deleteUser(deleteTarget.value.id)
     users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
     showDeleteConfirm.value = false
-    uiStore.showToast(t('admin.system.toasts.userDeleted'), 'success')
+    toast.success(t('admin.system.toasts.userDeleted'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToDeleteUser'), 'error')
+    toast.error(t('admin.system.toasts.failedToDeleteUser'))
   } finally {
     deleting.value = false
   }
@@ -222,9 +222,9 @@ async function saveGuildLimit() {
     const idx = users.value.findIndex(u => u.id === guildLimitTarget.value.id)
     if (idx !== -1) users.value[idx].max_guilds_override = val
     showGuildLimitModal.value = false
-    uiStore.showToast(t('admin.users.guildLimitUpdated'), 'success')
+    toast.success(t('admin.users.guildLimitUpdated'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToUpdateUser'), 'error')
+    toast.error(t('admin.system.toasts.failedToUpdateUser'))
   } finally {
     savingGuildLimit.value = false
   }

@@ -19,6 +19,8 @@ from urllib.parse import quote, urlencode
 import requests
 import sqlalchemy as sa
 
+from app.constants import ROLE_LABELS
+from app.utils.bench_formatter import format_bench_entries
 from app.extensions import db
 from app.models.user import User
 from app.models.system_setting import SystemSetting
@@ -41,7 +43,7 @@ DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize"
 DISCORD_TOKEN_URL = f"{DISCORD_API_BASE}/oauth2/token"
 
 # The fixed path of the Discord OAuth2 callback endpoint.
-DISCORD_CALLBACK_PATH = "/api/v1/auth/discord/callback"
+DISCORD_CALLBACK_PATH = "/api/v2/auth/discord/callback"
 
 
 def _get_discord_settings() -> dict:
@@ -298,5 +300,138 @@ def get_or_create_discord_user(discord_info: dict) -> User:
         auth_provider="discord",
     )
     db.session.add(user)
-    db.session.commit()
+    db.session.flush()  # get user.id before creating tenant
+
+    # Auto-create tenant workspace for the new Discord user
+    from app.services import tenant_service
+    tenant_service.create_tenant(owner=user)
+
     return user
+
+
+# ---------------------------------------------------------------------------
+# Discord Webhook: Send raid details to a Discord channel
+# ---------------------------------------------------------------------------
+
+def send_raid_to_discord(webhook_url: str, event_data: dict, signups: list, *, site_url: str = "") -> bool:
+    """Send a rich embed about a raid event to a Discord channel via webhook.
+
+    Parameters
+    ----------
+    webhook_url : str
+        Discord webhook URL (https://discord.com/api/webhooks/...).
+    event_data : dict
+        Raid event data (title, starts_at_utc, raid_type, raid_size, etc.)
+        May include raid_definition_name, expansion, guild_name from the API.
+    signups : list[dict]
+        List of signup dicts with character info and lineup_status.
+    site_url : str
+        Base URL for generating links to the raid on the site.
+
+    Returns True on success, False on failure.
+    """
+    if not webhook_url or not webhook_url.startswith("https://discord.com/api/webhooks/"):
+        logger.warning("Invalid Discord webhook URL")
+        return False
+
+    # Build signup summary
+    going = [s for s in signups if s.get("lineup_status") == "going"]
+    bench = [s for s in signups if s.get("lineup_status") == "bench"]
+
+    # Group going by role
+    role_groups: dict[str, list[str]] = {}
+    for s in going:
+        role = s.get("chosen_role", "unknown")
+        char_name = s.get("character", {}).get("name", "Unknown")
+        class_name = s.get("character", {}).get("class_name", "")
+        level = s.get("character", {}).get("level", "")
+        entry = f"**{char_name}** — {class_name}"
+        if level:
+            entry = f"**{char_name}** (Lv{level}) — {class_name}"
+        if role not in role_groups:
+            role_groups[role] = []
+        role_groups[role].append(entry)
+
+    fields = []
+    for role, players in role_groups.items():
+        label = ROLE_LABELS.get(role, role.replace("_", " ").title())
+        value = "\n".join(players[:10])
+        if len(players) > 10:
+            value += f"\n*... and {len(players) - 10} more*"
+        fields.append({"name": f"{label} ({len(players)})", "value": value or "—", "inline": True})
+
+    # Composition summary
+    comp_parts = []
+    for role in ["main_tank", "off_tank", "healer", "melee_dps", "range_dps"]:
+        if role in role_groups:
+            label = ROLE_LABELS.get(role, role.replace("_", " ").title())
+            count = len(role_groups[role])
+            comp_parts.append(f"{label}: {count}")
+    if comp_parts:
+        fields.insert(0, {
+            "name": "Composition",
+            "value": " | ".join(comp_parts) + f" — **{len(going)}** total",
+            "inline": False,
+        })
+
+    if bench:
+        guild_id = event_data.get("guild_id")
+        bench_result = format_bench_entries(bench, guild_id=guild_id)
+        if bench_result:
+            fields.append({"name": f"Bench ({bench_result['count']})", "value": bench_result["text"], "inline": False})
+
+    title = event_data.get("title", "Raid Event")
+    raid_def_name = event_data.get("raid_definition_name", "")
+    raid_size = event_data.get("raid_size", "")
+    starts = event_data.get("starts_at_utc", "")
+    guild_name = event_data.get("guild_name", "")
+
+    description_lines = []
+    if starts:
+        description_lines.append(f"**Start:** {starts}")
+    info_parts = []
+    if raid_def_name:
+        info_parts.append(raid_def_name)
+    if raid_size:
+        info_parts.append(f"**{raid_size}-man**")
+    if info_parts:
+        description_lines.append(" · ".join(info_parts))
+    description_lines.append(f"**{len(going)}** in lineup · **{len(bench)}** on bench · **{len(signups)}** signed up")
+
+    if event_data.get("instructions"):
+        # Sanitize instructions before embedding in Discord message
+        from app.utils.sanitizer import check_dangerous_content
+        instructions = str(event_data["instructions"])
+        if check_dangerous_content(instructions) is None:
+            description_lines.append(f"\n*{instructions}*")
+
+    footer_text = guild_name if guild_name else "Raid Calendar"
+
+    embed = {
+        "title": title,
+        "description": "\n".join(description_lines),
+        "color": 0xFFD100,
+        "fields": fields,
+        "footer": {"text": footer_text},
+        "timestamp": starts if starts else None,
+    }
+
+    if site_url and event_data.get("id") and event_data.get("guild_id"):
+        embed["url"] = f"{site_url}/raids/{event_data['id']}"
+
+    # Remove None values from embed
+    embed = {k: v for k, v in embed.items() if v is not None}
+
+    payload = {
+        "embeds": [embed],
+    }
+
+    try:
+        resp = requests.post(webhook_url, json=payload, timeout=10)
+        if resp.status_code in (200, 204):
+            return True
+        logger.warning("Discord webhook failed: %s %s", resp.status_code, resp.text[:200])
+        return False
+    except Exception as exc:
+        logger.warning("Discord webhook error: %s", exc)
+        return False

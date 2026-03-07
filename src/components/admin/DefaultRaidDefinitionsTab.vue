@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-      <h2 class="wow-heading text-base">{{ t('admin.raidDefinitions.title', { count: definitions.length }) }}</h2>
+      <h2 class="wow-heading text-base">{{ t('admin.raidDefinitions.title', { count: filteredDefinitions.length }) }}</h2>
       <WowButton @click="openCreateModal">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -10,17 +10,35 @@
       </WowButton>
     </div>
 
+    <!-- Expansion filter -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+        :class="!selectedExpansion ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+        @click="selectedExpansion = null"
+      >{{ t('common.labels.all') }}</button>
+      <button
+        v-for="exp in expansions"
+        :key="exp.id"
+        type="button"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+        :class="selectedExpansion === exp.slug ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/50' : 'bg-bg-tertiary text-text-muted border-border-default hover:border-border-gold'"
+        @click="selectedExpansion = exp.slug"
+      >{{ exp.name }}</button>
+    </div>
+
     <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div v-for="i in 4" :key="i" class="h-32 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
     </div>
     <div v-else-if="error" class="p-4 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ error }}</div>
-    <div v-else-if="definitions.length === 0" class="text-center py-12 text-text-muted">
+    <div v-else-if="filteredDefinitions.length === 0" class="text-center py-12 text-text-muted">
       {{ t('admin.raidDefinitions.noDefinitions') }}
     </div>
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-      <WowCard v-for="d in definitions" :key="d.id">
+      <WowCard v-for="d in filteredDefinitions" :key="d.id">
         <div class="flex items-start gap-3 mb-3">
-          <img :src="getRaidIcon(d.raid_type)" :alt="d.raid_type" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
+          <img :src="getRaidIcon(d.code || d.raid_type)" :alt="d.name" class="w-10 h-10 sm:w-12 sm:h-12 rounded border border-border-default flex-shrink-0" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               <span class="font-bold text-text-primary truncate">{{ d.name }}</span>
@@ -28,6 +46,7 @@
             </div>
             <div class="flex items-center gap-1.5 mt-1">
               <RaidSizeBadge v-if="d.size" :size="d.size" />
+              <span v-if="d.expansion" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-700/40 uppercase">{{ d.expansion }}</span>
             </div>
           </div>
         </div>
@@ -72,7 +91,7 @@
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.raidType') }}</label>
             <select v-model="form.raid_type" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
               <option value="">{{ t('common.fields.select') }}</option>
-              <option v-for="r in raidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
+              <option v-for="r in allRaidTypes" :key="r.value" :value="r.value">{{ r.label }}</option>
             </select>
           </div>
         </div>
@@ -83,11 +102,22 @@
               <option value="">{{ t('common.fields.select') }}</option>
               <option :value="10">{{ t('calendar.tenMan') }}</option>
               <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+              <option :value="40">40-man</option>
+              <option :value="20">20-man</option>
             </select>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('raidDefinitions.defaultDuration') }}</label>
             <input v-model.number="form.default_duration_minutes" type="number" min="30" max="720" step="15" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">Expansion</label>
+            <select v-model="form.expansion" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option value="">{{ t('common.fields.select') }}</option>
+              <option v-for="exp in expansions" :key="exp.slug" :value="exp.slug">{{ exp.name }}</option>
+            </select>
           </div>
         </div>
         <div>
@@ -141,27 +171,57 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import RaidSizeBadge from '@/components/common/RaidSizeBadge.vue'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
+import { useConstantsStore } from '@/stores/constants'
 import { useWowIcons } from '@/composables/useWowIcons'
-import { RAID_TYPES } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
 import * as rdApi from '@/api/raidDefinitions'
+import { DEFAULT_ROLE_SLOT_COUNTS, ROLE_VALUES } from '@/constants'
 
 const { t } = useI18n()
-const uiStore = useUiStore()
+const toast = useToast()
+const constantsStore = useConstantsStore()
 const { getRaidIcon } = useWowIcons()
-const raidTypes = RAID_TYPES
+const { raidTypes } = useExpansionData()
 
 const definitions = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 const formError = ref(null)
+const selectedExpansion = ref(null)
+
+const expansions = computed(() => {
+  return [...constantsStore.expansions].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+})
+
+/** Build raid type options from existing definitions so all expansions are covered */
+const allRaidTypes = computed(() => {
+  const seen = new Map()
+  // Include expansion store raid types first
+  for (const r of raidTypes.value) {
+    seen.set(r.value, r.label)
+  }
+  // Add any types from loaded definitions not already present
+  for (const d of definitions.value) {
+    const code = d.raid_type || d.code
+    if (code && !seen.has(code)) {
+      seen.set(code, d.name)
+    }
+  }
+  return Array.from(seen.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
+})
+
+const filteredDefinitions = computed(() => {
+  if (!selectedExpansion.value) return definitions.value
+  return definitions.value.filter(d => d.expansion === selectedExpansion.value)
+})
 
 const showEditModal = ref(false)
 const editingDef = ref(null)
@@ -171,7 +231,10 @@ const showDeleteModal = ref(false)
 const deleteTarget = ref(null)
 
 function defaultForm() {
-  return { name: '', raid_type: '', size: '', default_duration_minutes: 180, main_tank_slots: 1, off_tank_slots: 1, melee_dps_slots: 0, healer_slots: 5, range_dps_slots: 18 }
+  const slotDefaults = Object.fromEntries(
+    ROLE_VALUES.map(r => [`${r}_slots`, DEFAULT_ROLE_SLOT_COUNTS[r]])
+  )
+  return { name: '', raid_type: '', size: '', expansion: '', default_duration_minutes: 180, ...slotDefaults }
 }
 
 async function loadDefinitions() {
@@ -196,16 +259,16 @@ function openCreateModal() {
 
 function openEditModal(d) {
   editingDef.value = d
+  const slotValues = Object.fromEntries(
+    ROLE_VALUES.map(r => [`${r}_slots`, d[`${r}_slots`] ?? DEFAULT_ROLE_SLOT_COUNTS[r]])
+  )
   form.value = {
     name: d.name,
     raid_type: d.raid_type || d.code || '',
     size: d.size || d.default_raid_size,
+    expansion: d.expansion || '',
     default_duration_minutes: d.default_duration_minutes ?? 180,
-    main_tank_slots: d.main_tank_slots ?? 1,
-    off_tank_slots: d.off_tank_slots ?? 1,
-    melee_dps_slots: d.melee_dps_slots ?? 0,
-    healer_slots: d.healer_slots ?? 5,
-    range_dps_slots: d.range_dps_slots ?? 18,
+    ...slotValues,
   }
   formError.value = null
   showEditModal.value = true
@@ -217,7 +280,7 @@ async function saveDefinition() {
     formError.value = t('raidDefinitions.toasts.nameTypeSizeRequired')
     return
   }
-  const totalSlots = (form.value.main_tank_slots || 0) + (form.value.off_tank_slots || 0) + (form.value.melee_dps_slots || 0) + (form.value.healer_slots || 0) + (form.value.range_dps_slots || 0)
+  const totalSlots = ROLE_VALUES.reduce((sum, r) => sum + (form.value[`${r}_slots`] || 0), 0)
   if (totalSlots > form.value.size) {
     formError.value = t('raidDefinitions.toasts.slotsExceedSize', { total: totalSlots, size: form.value.size })
     return
@@ -226,15 +289,15 @@ async function saveDefinition() {
   try {
     if (editingDef.value) {
       await rdApi.adminUpdateDefaultDefinition(editingDef.value.id, form.value)
-      uiStore.showToast(t('admin.raidDefinitions.updated'))
+      toast.info(t('admin.raidDefinitions.updated'))
     } else {
       await rdApi.adminCreateDefaultDefinition(form.value)
-      uiStore.showToast(t('admin.raidDefinitions.created'))
+      toast.info(t('admin.raidDefinitions.created'))
     }
     showEditModal.value = false
     await loadDefinitions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'))
   } finally {
     saving.value = false
   }
@@ -250,10 +313,10 @@ async function doDelete() {
   try {
     await rdApi.adminDeleteDefaultDefinition(deleteTarget.value.id)
     showDeleteModal.value = false
-    uiStore.showToast(t('admin.raidDefinitions.deleted'))
+    toast.info(t('admin.raidDefinitions.deleted'))
     await loadDefinitions()
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'), 'error')
+    toast.error(err?.response?.data?.error ?? t('admin.raidDefinitions.loadError'))
   } finally {
     saving.value = false
   }

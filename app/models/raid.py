@@ -22,6 +22,9 @@ class RaidDefinition(db.Model):
     __tablename__ = "raid_definitions"
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("guilds.id"), nullable=True
     )
@@ -33,6 +36,7 @@ class RaidDefinition(db.Model):
     supports_10: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     supports_25: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     supports_heroic: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    supported_sizes: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     is_builtin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     default_duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
@@ -44,6 +48,9 @@ class RaidDefinition(db.Model):
     healer_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     range_dps_slots: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    expansion_raid_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("expansion_raids.id"), nullable=True
+    )
     created_by: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("users.id"), nullable=True
     )
@@ -56,8 +63,24 @@ class RaidDefinition(db.Model):
     # Relationships
     guild = relationship("Guild", foreign_keys=[guild_id], lazy="select")
     creator = relationship("User", foreign_keys=[created_by], lazy="select")
+    expansion_raid = relationship("ExpansionRaid", foreign_keys=[expansion_raid_id], lazy="select")
+
+    def _get_supported_sizes(self) -> list[int]:
+        """Return list of supported sizes for this raid."""
+        if self.supported_sizes:
+            return sorted(int(s.strip()) for s in self.supported_sizes.split(",") if s.strip().isdigit())
+        # Fallback: derive from boolean flags
+        sizes = []
+        if self.supports_10:
+            sizes.append(10)
+        if self.supports_25:
+            sizes.append(25)
+        if not sizes:
+            sizes.append(self.default_raid_size)
+        return sorted(sizes)
 
     def to_dict(self) -> dict:
+        sizes = self._get_supported_sizes()
         return {
             "id": self.id,
             "guild_id": self.guild_id,
@@ -67,8 +90,9 @@ class RaidDefinition(db.Model):
             "category": self.category,
             "default_raid_size": self.default_raid_size,
             "size": self.default_raid_size,
-            "supports_10": self.supports_10,
-            "supports_25": self.supports_25,
+            "supported_sizes": sizes,
+            "supports_10": 10 in sizes,
+            "supports_25": 25 in sizes,
             "supports_heroic": self.supports_heroic,
             "is_builtin": self.is_builtin,
             "is_active": self.is_active,
@@ -81,6 +105,7 @@ class RaidDefinition(db.Model):
             "healer_slots": self.healer_slots,
             "range_dps_slots": self.range_dps_slots,
             "notes": self.notes,
+            "expansion_raid_id": self.expansion_raid_id,
             "created_by": self.created_by,
             "created_at": utc_iso(self.created_at),
         }
@@ -93,6 +118,9 @@ class RaidTemplate(db.Model):
     __tablename__ = "raid_templates"
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
     raid_definition_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_definitions.id"), nullable=False
@@ -103,6 +131,7 @@ class RaidTemplate(db.Model):
     expected_duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     target_roles_json: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     default_instructions: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    close_registration_minutes: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     created_by: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -143,6 +172,7 @@ class RaidTemplate(db.Model):
             "expected_duration_minutes": self.expected_duration_minutes,
             "target_roles": self.target_roles,
             "default_instructions": self.default_instructions,
+            "close_registration_minutes": self.close_registration_minutes,
             "is_active": self.is_active,
             "created_by": self.created_by,
             "created_at": utc_iso(self.created_at),
@@ -157,6 +187,9 @@ class EventSeries(db.Model):
     __tablename__ = "event_series"
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
     template_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("raid_templates.id"), nullable=True
@@ -165,6 +198,7 @@ class EventSeries(db.Model):
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     timezone: Mapped[str] = mapped_column(sa.String(64), nullable=False, default="UTC")
     recurrence_rule: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    days_of_week: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     start_time_local: Mapped[str | None] = mapped_column(sa.String(10), nullable=True)
     duration_minutes: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=180)
     default_raid_size: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=25)
@@ -198,6 +232,7 @@ class EventSeries(db.Model):
             "realm_name": self.realm_name,
             "timezone": self.timezone,
             "recurrence_rule": self.recurrence_rule,
+            "days_of_week": self.days_of_week.split(",") if self.days_of_week else [],
             "start_time_local": self.start_time_local,
             "duration_minutes": self.duration_minutes,
             "default_raid_size": self.default_raid_size,
@@ -219,6 +254,9 @@ class RaidEvent(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False, index=True)
     series_id: Mapped[int | None] = mapped_column(
         sa.Integer, sa.ForeignKey("event_series.id"), nullable=True

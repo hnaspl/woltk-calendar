@@ -13,6 +13,9 @@
       </div>
     </div>
 
+    <!-- Tenant Switcher -->
+    <TenantSwitcher />
+
     <!-- Guild Switcher -->
     <div class="px-4 py-3 border-b border-[#2a3450]">
       <label class="text-xs text-text-muted uppercase tracking-wider mb-1 block">{{ t('common.labels.guild') }}</label>
@@ -21,44 +24,67 @@
         class="w-full bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-2 py-1.5 focus:border-border-gold outline-none"
         @change="onGuildChange"
       >
-        <option v-if="!guildStore.guilds.length" value="">{{ t('guild.noGuilds') }}</option>
-        <option
-          v-for="g in guildStore.guilds"
-          :key="g.id"
-          :value="g.id"
-        >{{ g.name }} ({{ g.realm_name }})</option>
+        <option v-if="!visibleGuilds.length" value="">{{ t('guild.noGuilds') }}</option>
+        <!-- My created guilds -->
+        <optgroup v-if="myCreatedGuilds.length" :label="t('guild.myCreatedGuilds')">
+          <option
+            v-for="g in myCreatedGuilds"
+            :key="g.id"
+            :value="g.id"
+          >{{ g.name }} ({{ g.realm_name }})</option>
+        </optgroup>
+        <!-- Guilds I joined -->
+        <optgroup v-if="joinedGuilds.length" :label="t('guild.joinedGuilds')">
+          <option
+            v-for="g in joinedGuilds"
+            :key="g.id"
+            :value="g.id"
+          >{{ g.name }} ({{ g.realm_name }})</option>
+        </optgroup>
+        <!-- Flat list fallback (no role info available) -->
+        <template v-if="!myCreatedGuilds.length && !joinedGuilds.length && visibleGuilds.length">
+          <option
+            v-for="g in visibleGuilds"
+            :key="g.id"
+            :value="g.id"
+          >{{ g.name }} ({{ g.realm_name }})</option>
+        </template>
       </select>
 
-      <!-- Available guilds to join -->
-      <div v-if="availableGuilds.length > 0" class="mt-2">
-        <label class="text-[10px] text-text-muted uppercase tracking-wider mb-1 block">{{ t('guild.availableGuilds') }}</label>
-        <div class="space-y-1 max-h-32 overflow-y-auto">
-          <div
-            v-for="g in availableGuilds"
-            :key="g.id"
-            class="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded bg-bg-tertiary/50 border border-border-default"
-          >
-            <span class="text-text-muted truncate">{{ g.name }} <span class="text-[10px]">({{ g.realm_name }})</span></span>
-            <button
-              type="button"
-              class="text-[10px] text-accent-gold hover:text-yellow-300 transition-colors whitespace-nowrap font-medium"
-              :disabled="joiningGuildId === g.id"
-              @click="doJoinGuild(g)"
-            >{{ joiningGuildId === g.id ? t('common.labels.joining') : t('guild.join') }}</button>
-          </div>
-        </div>
-      </div>
-
       <button
-        v-if="canCreateGuild"
+        v-if="canCreateGuild && hasTenant && !guildLimitReached"
         type="button"
         class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-accent-gold hover:text-yellow-300 transition-colors py-1"
-        @click="showCreateGuild = true"
+        @click="showCreateGuild = true; _initCreateGuild()"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         {{ t('guild.createGuild') }}
+      </button>
+      <RouterLink
+        v-else-if="canCreateGuild && hasTenant && guildLimitReached"
+        to="/tenant/settings"
+        class="mt-2 w-full flex items-center justify-center gap-1 text-xs text-yellow-500/80 hover:text-yellow-400 transition-colors py-1"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        {{ t('guild.guildLimitReached') }}
+      </RouterLink>
+
+      <!-- Upgrade to tenant (for users without a tenant) -->
+      <button
+        v-if="!hasTenant"
+        type="button"
+        class="mt-2 w-full flex items-center justify-center gap-1.5 text-xs text-accent-gold hover:text-yellow-300 bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/30 rounded py-1.5 transition-colors"
+        :disabled="upgradingToTenant"
+        @click="handleUpgradeToTenant"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+        {{ upgradingToTenant ? t('common.labels.loading') : t('tenant.upgradeToTenant') }}
       </button>
     </div>
 
@@ -101,16 +127,50 @@
       <div class="relative bg-bg-secondary border border-border-default rounded-lg shadow-xl w-full max-w-md mx-4 p-6 z-10">
         <h3 class="wow-heading text-lg mb-4">{{ t('guild.createGuild') }}</h3>
 
-        <!-- Step 1: Lookup guild on Warmane -->
+        <!-- Step 1: Guild details & armory lookup -->
         <div v-if="!guildLookupDone" class="space-y-4">
           <p class="text-sm text-text-muted">{{ t('guild.createHelp') }}</p>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
-            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="lookupGuild" />
+            <input v-model="newGuild.name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.guildNamePlaceholder')" @keydown.enter.prevent="canDoLookup ? lookupGuild() : enterManually()" />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.armoryUrl') }}</label>
+            <input v-model="newGuild.armory_url" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.armoryUrlPlaceholder')" @blur="onArmoryUrlChange" />
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.armoryUrlHelp') }}</p>
+          </div>
+          <!-- Realm discovery status -->
+          <div v-if="newGuild.armory_url.trim()">
+            <div v-if="discoveringRealms" class="flex items-center gap-2 text-xs text-text-muted">
+              <div class="w-3 h-3 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin" />
+              {{ t('guild.discoveringRealms') }}
+            </div>
+            <div v-else-if="discoveredRealms.length > 0" class="text-xs text-green-400">
+              ✓ {{ t('guild.realmsDiscovered', { count: discoveredRealms.length }) }}
+            </div>
+          </div>
+          <!-- Realm hint input (always visible when armory URL is set, helps narrow search) -->
+          <div v-if="newGuild.armory_url.trim() && discoveredRealms.length === 0">
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.realmHint') }}</label>
+            <input v-model="lookupRealm" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmHintPlaceholder')" @keydown.enter.prevent="lookupGuild()" />
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.realmHintHelp') }}</p>
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('guild.expansion') }}</label>
+            <select v-model="newGuild.expansion_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+              <option v-for="exp in sortedExpansions" :key="exp.id" :value="exp.id">{{ exp.name }}</option>
+            </select>
+            <p class="text-xs text-text-muted mt-1">{{ t('guild.expansionHelp') }}</p>
+            <div v-if="newGuild.expansion_id && sortedExpansions.length > 1" class="mt-2 flex flex-wrap gap-1">
+              <span v-for="exp in includedExpansions" :key="exp.id"
+                class="px-2 py-0.5 rounded text-xs font-medium bg-green-900/30 text-green-300 border border-green-700/50">
+                ✓ {{ exp.name }}
+              </span>
+            </div>
           </div>
           <div v-if="guildLookupError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ guildLookupError }}</div>
           <div v-if="guildLookupNotFound" class="p-3 rounded bg-yellow-900/30 border border-yellow-600 text-yellow-300 text-sm">
-            {{ t('guild.notFound') }}
+            {{ t('guild.notFoundOnArmory') }}
           </div>
           <!-- Multiple realm matches -->
           <div v-if="guildLookupMatches.length > 1" class="space-y-2">
@@ -133,18 +193,21 @@
           <div class="flex justify-end gap-3">
             <button type="button" class="px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors" @click="showCreateGuild = false">{{ t('common.buttons.cancel') }}</button>
             <button v-if="guildLookupNotFound" type="button" class="px-4 py-2 text-sm bg-bg-tertiary text-text-muted border border-border-default rounded hover:border-border-gold hover:text-text-primary transition-colors" @click="enterManually">{{ t('guild.enterManually') }}</button>
-            <button type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
-              {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnWarmane') }}
+            <button v-if="canDoLookup" type="button" :disabled="lookingUpGuild || !newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="lookupGuild">
+              {{ lookingUpGuild ? t('common.labels.searching') : t('guild.searchOnArmory') }}
+            </button>
+            <button v-else type="button" :disabled="!newGuild.name.trim()" class="px-4 py-2 text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/50 rounded hover:bg-accent-gold/30 transition-colors disabled:opacity-50" @click="enterManually">
+              {{ t('common.buttons.continue') }}
             </button>
           </div>
         </div>
 
         <!-- Step 2: Confirm found guild or manual form -->
         <form v-else @submit.prevent="doCreateGuild" class="space-y-4">
-          <!-- Show Warmane match info -->
+          <!-- Show armory match info -->
           <div v-if="guildLookupMatch" class="p-3 rounded bg-green-900/20 border border-green-700 text-sm">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-green-300 font-medium">✓ {{ t('guild.foundOnWarmane') }}</span>
+              <span class="text-green-300 font-medium">✓ {{ t('guild.foundOnArmory') }}</span>
               <span v-if="guildLookupMatch.faction" class="px-2 py-0.5 rounded text-xs font-medium"
                 :class="guildLookupMatch.faction === 'Alliance' ? 'bg-blue-900/50 text-blue-300 border border-blue-600' : 'bg-red-900/50 text-red-300 border border-red-600'"
               >{{ guildLookupMatch.faction }}</span>
@@ -155,7 +218,7 @@
             ⚠ {{ t('guild.alreadyAddedWarning') }}
           </div>
           <div v-if="guildManualMode" class="p-3 rounded bg-yellow-900/20 border border-yellow-700 text-sm text-yellow-300">
-            {{ t('guild.manualEntry') }}
+            {{ t('guild.manualEntryInfo') }}
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.guildName') }}</label>
@@ -163,10 +226,11 @@
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.realmRequired') }}</label>
-            <select v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
+            <select v-if="selectedProviderRealms.length" v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :disabled="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }">
               <option value="">{{ t('common.fields.selectRealm') }}</option>
-              <option v-for="r in WARMANE_REALMS" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in selectedProviderRealms" :key="r" :value="r">{{ r }}</option>
             </select>
+            <input v-else v-model="newGuild.realm_name" required class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" :placeholder="t('guild.realmPlaceholder')" :readonly="!!guildLookupMatch" :class="{ 'opacity-70': !!guildLookupMatch }" />
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.faction') }}</label>
@@ -175,10 +239,6 @@
               <option value="Alliance">Alliance</option>
               <option value="Horde">Horde</option>
             </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <input id="allow-self-join" v-model="newGuild.allow_self_join" type="checkbox" class="w-4 h-4 rounded bg-bg-tertiary border border-border-default accent-accent-gold" />
-            <label for="allow-self-join" class="text-sm text-text-muted">{{ t('guild.allowSelfJoin') }}</label>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.timezone') }}</label>
@@ -205,13 +265,17 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+import { useTenantStore } from '@/stores/tenant'
 import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
+import { useConstantsStore } from '@/stores/constants'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
-import { WARMANE_REALMS } from '@/constants'
 import * as guildsApi from '@/api/guilds'
-import * as warmaneApi from '@/api/warmane'
+import * as armoryLookupApi from '@/api/armory_lookup'
+import * as tenantsApi from '@/api/tenants'
+import TenantSwitcher from '@/components/layout/TenantSwitcher.vue'
 
 const { t } = useI18n()
 
@@ -221,28 +285,53 @@ const { on, off } = useSocket()
 
 const authStore = useAuthStore()
 const guildStore = useGuildStore()
+const tenantStore = useTenantStore()
 const uiStore = useUiStore()
+const toast = useToast()
+const constantsStore = useConstantsStore()
 const router = useRouter()
 const route = useRoute()
 const permissions = usePermissions()
 
 const canManageGuild = computed(() => permissions.can('create_events'))
-const canCreateGuild = computed(() => permissions.can('create_guild'))
+const canCreateGuild = computed(() => permissions.canTenant('create_guild'))
+const hasTenant = computed(() => !!tenantStore.activeTenantId)
+
+// Check if tenant guild limit is reached
+const guildLimitReached = computed(() => {
+  const tenant = tenantStore.activeTenant
+  if (!tenant || !tenant.max_guilds) return false
+  return guildStore.guilds.length >= tenant.max_guilds
+})
+
+// Show all guilds where user is a member; filter out hidden guilds from non-members
+const visibleGuilds = computed(() => {
+  return guildStore.guilds.filter(g => g.visibility !== 'hidden')
+})
+
+// Separate guilds into "My created" vs "Joined"
+const myCreatedGuilds = computed(() => {
+  const userId = authStore.user?.id
+  if (!userId) return []
+  return visibleGuilds.value.filter(g =>
+    g.created_by === userId || g.my_role === 'owner'
+  )
+})
+
+const joinedGuilds = computed(() => {
+  const userId = authStore.user?.id
+  if (!userId) return []
+  return visibleGuilds.value.filter(g =>
+    g.created_by !== userId && g.my_role !== 'owner'
+  )
+})
+
+const upgradingToTenant = ref(false)
 
 const userInitial = computed(() => authStore.user?.username?.[0]?.toUpperCase() ?? '?')
 
-// Available guilds = all guilds minus the ones user is already in, excluding invite-only guilds
-// Use the is_member flag from the /guilds/all API response as the primary filter
-const availableGuilds = computed(() => {
-  const memberIds = new Set(guildStore.guilds.map(g => g.id))
-  return guildStore.allGuilds.filter(g => !g.is_member && !memberIds.has(g.id) && g.allow_self_join !== false)
-})
-
-const joiningGuildId = ref(null)
-
-// Load all guilds on mount so available guilds are visible
+// Load guilds on mount and listen for real-time updates
 onMounted(() => {
-  guildStore.fetchAllGuilds()
   on('guilds_changed', handleGuildsChanged)
   on('guild_changed', handleGuildChanged)
 })
@@ -254,25 +343,34 @@ onUnmounted(() => {
 
 function handleGuildsChanged() {
   guildStore.fetchGuilds()
-  guildStore.fetchAllGuilds()
 }
 
 function handleGuildChanged() {
   guildStore.fetchGuilds()
 }
 
-async function doJoinGuild(guild) {
-  joiningGuildId.value = guild.id
+async function handleUpgradeToTenant() {
+  upgradingToTenant.value = true
   try {
-    await guildsApi.joinGuild(guild.id)
-    await guildStore.fetchGuilds()
-    await guildStore.fetchAllGuilds()
-    if (!guildStore.currentGuild) guildStore.setCurrentGuild(guild)
-    uiStore.showToast(t('guild.toasts.joined', { name: guild.name }), 'success')
+    await tenantsApi.upgradeToTenant()
+    // Refresh tenants and user data
+    await tenantStore.fetchTenants()
+    // Set the new tenant as active
+    if (tenantStore.tenants.length > 0) {
+      const ownedTenant = tenantStore.tenants.find(t => t.owner_id === authStore.user?.id)
+      if (ownedTenant) {
+        await tenantStore.switchTenant(ownedTenant.id)
+      }
+    }
+    // Re-fetch user to get updated active_tenant_id
+    await authStore.fetchMe()
+    toast.success(t('tenant.upgradeSuccess'))
+    // Redirect to setup wizard for tenant configuration
+    router.push({ path: '/setup', query: { mode: 'tenant' } })
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('guild.toasts.failedToJoin'), 'error')
+    toast.error(err?.response?.data?.error || t('tenant.upgradeFailed'))
   } finally {
-    joiningGuildId.value = null
+    upgradingToTenant.value = false
   }
 }
 
@@ -311,6 +409,9 @@ const icons = {
   ]),
   system: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' })
+  ]),
+  search: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' })
   ])
 }
 
@@ -341,8 +442,7 @@ const navGroups = computed(() => {
     if (canManageGuild.value) {
       guildItems.push(
         { label: t('nav.raidDefinitions'), to: '/guild/raid-definitions', icon: icons.raids },
-        { label: t('nav.templates'), to: '/guild/templates', icon: icons.templates },
-        { label: t('nav.recurringRaids'), to: '/guild/series', icon: icons.series }
+        { label: t('nav.raidPlanning'), to: '/guild/templates', icon: icons.templates }
       )
     }
     if (hasGuildAdminAccess.value) {
@@ -390,7 +490,8 @@ function onGuildChange(e) {
 const showCreateGuild = ref(false)
 const creatingGuild = ref(false)
 const createGuildError = ref(null)
-const newGuild = reactive({ name: '', realm_name: '', faction: '', allow_self_join: true, timezone: 'Europe/Warsaw' })
+const lookupRealm = ref('')
+const newGuild = reactive({ name: '', realm_name: '', faction: '', timezone: 'Europe/Warsaw', armory_url: '', expansion_id: null })
 
 const GUILD_TIMEZONES = [
   'Europe/Warsaw', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -408,7 +509,86 @@ const GUILD_TIMEZONES = [
   'UTC',
 ]
 
-// Guild Warmane lookup state
+// Auto-detect armory provider from the URL
+const detectedProvider = computed(() => {
+  const url = newGuild.armory_url.trim().toLowerCase()
+  if (!url) return null
+  for (const provider of Object.keys(constantsStore.providerRealms)) {
+    if (url.includes(provider)) return provider
+  }
+  return null
+})
+
+// Realms for the detected provider (from constants store)
+const detectedProviderRealms = computed(() => {
+  if (!detectedProvider.value) return []
+  return constantsStore.providerRealms[detectedProvider.value] || []
+})
+
+// Realms for step 2 (uses discovered realms, then detected provider, then empty for manual)
+const selectedProviderRealms = computed(() => {
+  if (discoveredRealms.value.length > 0) return discoveredRealms.value
+  return detectedProviderRealms.value
+})
+
+// Dynamic realm discovery from armory URL
+const discoveringRealms = ref(false)
+const discoveredRealms = ref([])
+let _lastDiscoveredUrl = ''
+
+async function onArmoryUrlChange() {
+  let url = newGuild.armory_url.trim()
+  if (!url || url === _lastDiscoveredUrl) return
+  // Auto-prepend https:// if no protocol is provided
+  if (url && !url.match(/^https?:\/\//i)) {
+    url = 'https://' + url
+    newGuild.armory_url = url
+  }
+  _lastDiscoveredUrl = url
+  discoveringRealms.value = true
+  discoveredRealms.value = []
+  try {
+    const result = await armoryLookupApi.discoverRealms(url)
+    discoveredRealms.value = result.realms || []
+  } catch {
+    discoveredRealms.value = []
+  } finally {
+    discoveringRealms.value = false
+  }
+}
+
+// Can perform armory lookup: armory URL + either discovered/known realms or manual realm input
+const canDoLookup = computed(() => {
+  const url = newGuild.armory_url.trim()
+  if (!url) return false
+  // Always allow lookup when armory URL is present — the backend will
+  // discover realms automatically or use realm hints
+  return true
+})
+
+// Expansions sorted by sort_order descending (highest first)
+const sortedExpansions = computed(() => {
+  return [...constantsStore.expansions].sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0))
+})
+
+// Expansions that will be included when the selected expansion is chosen
+const includedExpansions = computed(() => {
+  const selected = sortedExpansions.value.find(e => e.id === newGuild.expansion_id)
+  if (!selected) return []
+  const selectedOrder = selected.sort_order ?? 0
+  return [...constantsStore.expansions]
+    .filter(e => (e.sort_order ?? 0) <= selectedOrder)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+})
+
+// Set default expansion to highest sort_order
+const _initCreateGuild = () => {
+  if (sortedExpansions.value.length > 0 && !newGuild.expansion_id) {
+    newGuild.expansion_id = sortedExpansions.value[0].id
+  }
+}
+
+// Guild armory lookup state
 const lookingUpGuild = ref(false)
 const guildLookupDone = ref(false)
 const guildLookupError = ref(null)
@@ -425,6 +605,9 @@ function resetCreateGuild() {
   guildLookupMatches.value = []
   guildManualMode.value = false
   createGuildError.value = null
+  lookupRealm.value = ''
+  discoveredRealms.value = []
+  _lastDiscoveredUrl = ''
   newGuild.realm_name = ''
   newGuild.faction = ''
 }
@@ -447,43 +630,54 @@ async function lookupGuild() {
   guildLookupMatch.value = null
   guildLookupMatches.value = []
 
-  const matches = []
-
-  // Search ALL Warmane realms
-  for (const realm of WARMANE_REALMS) {
-    try {
-      const data = await warmaneApi.lookupGuild(realm, name)
-      if (data) {
-        // Check if this guild is already added
-        const alreadyAdded = guildStore.allGuilds.some(
-          g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === realm.toLowerCase()
-        )
-        matches.push({ ...data, realm, alreadyAdded })
-      }
-    } catch (err) {
-      // 404 = not found on this realm, try next; other errors are real failures
-      if (err?.response?.status && err.response.status !== 404) {
-        lookingUpGuild.value = false
-        guildLookupError.value = err?.response?.data?.message ?? t('guild.toasts.failedToSearchWarmane')
-        return
-      }
-    }
-  }
-
-  lookingUpGuild.value = false
-
-  if (matches.length === 0) {
-    guildLookupNotFound.value = true
+  const armoryUrl = newGuild.armory_url.trim()
+  if (!armoryUrl) {
+    lookingUpGuild.value = false
+    guildLookupError.value = t('guild.armoryUrlRequired')
     return
   }
 
-  guildLookupMatches.value = matches
-
-  if (matches.length === 1) {
-    // Single match — auto-select
-    selectGuildMatch(matches[0])
+  // Collect realm hints from manual input and detected provider realms
+  const realmHints = []
+  const manualRealm = lookupRealm.value.trim()
+  if (manualRealm) realmHints.push(manualRealm)
+  if (detectedProviderRealms.value.length > 0) {
+    realmHints.push(...detectedProviderRealms.value)
   }
-  // Multiple matches: show selection UI (handled in template)
+
+  try {
+    // Use the unified search-guild endpoint which discovers realms + searches
+    const result = await armoryLookupApi.searchGuild(armoryUrl, name, realmHints)
+    const serverMatches = result.matches || []
+
+    // Mark already-added guilds
+    const matches = serverMatches.map(m => ({
+      ...m,
+      alreadyAdded: guildStore.allGuilds.some(
+        g => g.name.toLowerCase() === name.toLowerCase() && g.realm_name.toLowerCase() === m.realm.toLowerCase()
+      )
+    }))
+
+    lookingUpGuild.value = false
+
+    if (matches.length === 0) {
+      guildLookupNotFound.value = true
+      // If no realms were available and no manual hint given, prompt for realm
+      if (!result.realms_available && !manualRealm) {
+        guildLookupError.value = t('guild.noRealmsToSearch')
+      }
+      return
+    }
+
+    guildLookupMatches.value = matches
+
+    if (matches.length === 1) {
+      selectGuildMatch(matches[0])
+    }
+  } catch (err) {
+    lookingUpGuild.value = false
+    guildLookupError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('guild.toasts.failedToSearchArmory')
+  }
 }
 
 function selectGuildMatch(match) {
@@ -497,30 +691,33 @@ async function doCreateGuild() {
   createGuildError.value = null
   creatingGuild.value = true
   try {
+    const provider = detectedProvider.value || ''
     const guild = await guildsApi.createGuild({
       name: newGuild.name,
       realm_name: newGuild.realm_name,
       faction: newGuild.faction || null,
-      allow_self_join: newGuild.allow_self_join,
-      warmane_source: !!guildLookupMatch.value,
+      armory_source: !!guildLookupMatch.value,
+      armory_provider: provider,
+      armory_url: newGuild.armory_url.trim() || null,
+      expansion_id: newGuild.expansion_id,
       timezone: newGuild.timezone,
     })
     await guildStore.fetchGuilds()
-    await guildStore.fetchAllGuilds()
     guildStore.setCurrentGuild(guild)
     showCreateGuild.value = false
     newGuild.name = ''
     newGuild.realm_name = ''
     newGuild.faction = ''
-    newGuild.allow_self_join = true
     newGuild.timezone = 'Europe/Warsaw'
+    newGuild.armory_url = ''
+    newGuild.expansion_id = sortedExpansions.value[0]?.id ?? null
     guildLookupDone.value = false
     guildLookupMatch.value = null
     guildLookupMatches.value = []
     guildManualMode.value = false
     guildLookupError.value = null
     guildLookupNotFound.value = false
-    uiStore.showToast(t('guild.guildCreated'), 'success')
+    toast.success(t('guild.guildCreated'))
   } catch (err) {
     createGuildError.value = err?.response?.data?.message ?? t('guild.toasts.failedToCreate')
   } finally {

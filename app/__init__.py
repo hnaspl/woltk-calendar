@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 
-from flask import Flask, jsonify, send_from_directory, session
+from flask import Flask, g, jsonify, request, send_from_directory, session
 from flask_cors import CORS
 
 from config import get_config
@@ -27,7 +27,6 @@ def create_app(config_override: dict | None = None) -> Flask:
     _insecure_keys = {"dev-secret-key-change-me", "change-me-in-production"}
     if (
         not app.config.get("TESTING")
-        and not app.config.get("DEBUG")
         and app.config.get("SECRET_KEY") in _insecure_keys
     ):
         raise RuntimeError(
@@ -36,7 +35,8 @@ def create_app(config_override: dict | None = None) -> Flask:
         )
 
     # -------------------------------------------------------------- Logging
-    logging.basicConfig(level=app.config.get("LOG_LEVEL", "INFO"))
+    from app.logging_config import setup_logging
+    setup_logging(app)
 
     # -------------------------------------------------------------- i18n
     from app.i18n import init_i18n
@@ -101,6 +101,57 @@ def create_app(config_override: dict | None = None) -> Flask:
     def make_session_permanent():
         session.permanent = True
 
+    @app.before_request
+    def validate_tenant_header():
+        """Reject requests where X-Tenant-Id header doesn't match the user's active tenant.
+
+        This prevents cross-tenant data access via header manipulation.
+        """
+        from flask_login import current_user as _cu
+        if not hasattr(_cu, "active_tenant_id") or not _cu.is_authenticated:
+            return  # Not logged in or no tenant context
+        header_tid = request.headers.get("X-Tenant-Id", type=int)
+        if header_tid and getattr(_cu, "active_tenant_id", None) and header_tid != _cu.active_tenant_id:
+            return jsonify({"error": "Tenant mismatch"}), 403
+
+    @app.before_request
+    def resolve_tenant_from_subdomain():
+        """Resolve tenant from subdomain in the Host header.
+
+        If the app is accessed via ``<slug>.example.com``, look up the
+        tenant by slug and store it in ``g.tenant_from_subdomain``.
+        The frontend or API can use this to auto-switch context.
+
+        Requires ``APP_DOMAIN`` env-var (e.g. ``example.com``) to know
+        which part of the host is the base domain.
+        """
+        g.tenant_from_subdomain = None
+        base_domain = app.config.get("APP_DOMAIN") or os.environ.get("APP_DOMAIN", "")
+        if not base_domain:
+            return  # Subdomain routing not configured
+
+        host = request.host  # e.g. "my-guild.example.com" or "example.com:5000"
+        # Strip port for comparison
+        host_without_port = host.split(":")[0]
+        base_without_port = base_domain.split(":")[0]
+
+        if not host_without_port.endswith(f".{base_without_port}"):
+            return  # Not a subdomain request
+
+        # Extract the subdomain: "my-guild.example.com" → "my-guild"
+        # by removing the trailing ".example.com" (base_domain length + 1 for the dot)
+        subdomain = host_without_port.removesuffix(f".{base_without_port}")
+        if not subdomain or "." in subdomain:
+            return  # Empty or multi-level subdomain
+
+        from app.services import tenant_service
+        if tenant_service._is_reserved(subdomain):
+            return  # Reserved name — ignore silently
+
+        tenant = tenant_service.get_tenant_by_slug(subdomain)
+        if tenant and tenant.is_active:
+            g.tenant_from_subdomain = tenant
+
     @login_manager.user_loader
     def load_user(user_id: str):
         from app.models.user import User
@@ -126,6 +177,13 @@ def create_app(config_override: dict | None = None) -> Flask:
     from app.api.v1 import register_blueprints
     register_blueprints(app)
 
+    from app.api.v2 import register_blueprints as register_v2_blueprints
+    register_v2_blueprints(app)
+
+    # -------------------------------------------------- Plugin system
+    from app.plugins import init_plugins
+    init_plugins(app)
+
     # ------------------------------------------------- Error handlers
     @app.errorhandler(400)
     def bad_request(e):
@@ -150,7 +208,7 @@ def create_app(config_override: dict | None = None) -> Flask:
         return jsonify({"error": _t("common.errors.internalError")}), 500
 
     # ---------------------------------------- API health endpoint
-    @app.route("/api/v1/health")
+    @app.route("/api/v2/health")
     def health():
         return jsonify({"status": "ok"})
 
@@ -267,11 +325,37 @@ def _register_socketio_handlers() -> None:
         if guild_id is not None:
             leave_room(f"guild_{guild_id}")
 
+    @socketio.on("join_tenant")
+    def handle_join_tenant(data):
+        if not current_user.is_authenticated:
+            return
+        tenant_id = data.get("tenant_id")
+        if tenant_id is None:
+            return
+        # Validate user is a member of this tenant
+        from app.services import tenant_service
+        if not tenant_service.is_tenant_member(tenant_id, current_user.id) and not getattr(current_user, "is_admin", False):
+            return
+        join_room(f"tenant_{tenant_id}")
+
+    @socketio.on("leave_tenant")
+    def handle_leave_tenant(data):
+        if not current_user.is_authenticated:
+            return
+        tenant_id = data.get("tenant_id")
+        if tenant_id is not None:
+            leave_room(f"tenant_{tenant_id}")
+
     @socketio.on("connect")
     def handle_connect():
-        """Auto-join the user's personal notification room on connect."""
+        """Auto-join the user's personal and tenant-scoped notification rooms on connect."""
         if current_user.is_authenticated:
             join_room(f"user_{current_user.id}")
+            # Also join tenant-scoped user room for tenant-isolated notifications
+            tenant_id = getattr(current_user, "active_tenant_id", None)
+            if tenant_id:
+                join_room(f"tenant_{tenant_id}_user_{current_user.id}")
+                join_room(f"tenant_{tenant_id}")
 
 
 def _seed_system_settings_if_missing() -> int:
@@ -279,8 +363,16 @@ def _seed_system_settings_if_missing() -> int:
     from app.models.system_setting import SystemSetting
     defaults = {
         "wowhead_tooltips": "true",
-        "autosync_enabled": "false",
+        "autosync_enabled": "true",
         "autosync_interval_minutes": "60",
+        # Password policy – all enabled by default
+        "password_min_length": "8",
+        "password_require_uppercase": "true",
+        "password_require_lowercase": "true",
+        "password_require_digit": "true",
+        "password_require_special": "true",
+        # Email activation – enabled by default
+        "email_activation_required": "true",
     }
     seeded = 0
     for key, default_value in defaults.items():
@@ -288,12 +380,6 @@ def _seed_system_settings_if_missing() -> int:
         if not existing:
             db.session.add(SystemSetting(key=key, value=default_value))
             seeded += 1
-
-    # Seed max_guilds_per_user separately to preserve the return count
-    # contract expected by existing callers.
-    for key, default_value in {"max_guilds_per_user": "5"}.items():
-        if not db.session.get(SystemSetting, key):
-            db.session.add(SystemSetting(key=key, value=default_value))
 
     db.session.commit()
     return seeded
@@ -322,6 +408,45 @@ def _seed_permissions_if_empty(app: Flask) -> None:
     except Exception as exc:
         app.logger.warning("Failed to seed system settings: %s", exc)
 
+    # Seed expansion data if missing
+    try:
+        from app.models.expansion import Expansion
+        exp_count = db.session.execute(
+            sa.select(sa.func.count()).select_from(Expansion)
+        ).scalar()
+        if exp_count == 0:
+            from app.seeds.expansions import seed_expansions
+            exp_created = seed_expansions()
+            app.logger.info("Seeded %d expansion item(s).", exp_created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed expansions: %s", exc)
+
+    # Seed platform features if missing
+    try:
+        from app.models.tenant_feature import PlatformFeature
+        pf_count = db.session.execute(
+            sa.select(sa.func.count()).select_from(PlatformFeature)
+        ).scalar()
+        if pf_count == 0:
+            from app.seeds.platform_features import seed_platform_features
+            pf_created = seed_platform_features()
+            app.logger.info("Seeded %d platform feature(s).", pf_created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed platform features: %s", exc)
+
+    # Seed billing plans if missing
+    try:
+        from app.models.plan import Plan
+        plan_count = db.session.execute(
+            sa.select(sa.func.count()).select_from(Plan)
+        ).scalar()
+        if plan_count == 0:
+            from app.seeds.plans import seed_plans
+            plans_created = seed_plans()
+            app.logger.info("Seeded %d plan(s).", plans_created)
+    except Exception as exc:
+        app.logger.warning("Failed to seed plans: %s", exc)
+
 
 def _register_commands(app: Flask) -> None:
     import click
@@ -337,16 +462,6 @@ def _register_commands(app: Flask) -> None:
         db.create_all()
         click.echo("Created all tables.")
 
-        from app.seeds.raid_definitions import seed_raid_definitions
-        inserted = seed_raid_definitions()
-        click.echo(f"Seeded {inserted} raid definition(s).")
-
-        from app.seeds.admin_user import seed_admin_user
-        if seed_admin_user():
-            click.echo("Created default admin user.")
-        else:
-            click.echo("Admin user already exists, skipped.")
-
         from app.seeds.permissions import seed_permissions
         perm_count = seed_permissions()
         click.echo(f"Seeded {perm_count} role(s) with permissions.")
@@ -354,6 +469,29 @@ def _register_commands(app: Flask) -> None:
         seeded_settings = _seed_system_settings_if_missing()
         if seeded_settings:
             click.echo(f"Seeded {seeded_settings} system setting(s).")
+
+        from app.seeds.expansions import seed_expansions
+        exp_count = seed_expansions()
+        click.echo(f"Seeded {exp_count} expansion item(s).")
+
+        from app.seeds.plans import seed_plans
+        plan_count = seed_plans()
+        click.echo(f"Seeded {plan_count} plan(s).")
+
+        from app.seeds.platform_features import seed_platform_features
+        feat_count = seed_platform_features()
+        click.echo(f"Seeded {feat_count} platform feature(s).")
+
+        from app.seeds.raid_definitions import seed_raid_definitions
+        inserted = seed_raid_definitions()
+        click.echo(f"Seeded {inserted} raid definition(s).")
+
+        # Admin user seeded AFTER plans so tenant gets proper billing plan
+        from app.seeds.admin_user import seed_admin_user
+        if seed_admin_user():
+            click.echo("Created default admin user.")
+        else:
+            click.echo("Admin user already exists, skipped.")
 
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Admin email (or set ADMIN_EMAIL env var).")

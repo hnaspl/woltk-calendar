@@ -263,13 +263,13 @@ class TestDefaultRoleAutoPopulation:
         )
         assert char.default_role == "range_dps"
 
-    def test_warrior_gets_main_tank_default(self, seed, db):
-        """A Warrior with no explicit default_role gets 'main_tank' (first in list)."""
+    def test_warrior_gets_dps_default(self, seed, db):
+        """A Warrior with no explicit default_role gets 'melee_dps' (majority of specs are DPS)."""
         char = character_service.create_character(
             user_id=seed["user1"].id, guild_id=seed["guild"].id,
             data={"realm_name": "Icecrown", "name": "AutoWarrior", "class_name": "Warrior"},
         )
-        assert char.default_role == "main_tank"
+        assert char.default_role == "melee_dps"
 
     def test_explicit_role_preserved(self, seed, db):
         """An explicit default_role is not overwritten."""

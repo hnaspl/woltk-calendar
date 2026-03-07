@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.utils.dt import utc_iso
 
-from app.enums import Role, WowClass
+from app.enums import Role
 from app.extensions import db
 
 
@@ -21,12 +21,15 @@ class Character(db.Model):
     )
 
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id"), nullable=True
+    )
     user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("users.id"), nullable=False)
     guild_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("guilds.id"), nullable=False)
     realm_name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     name: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     class_name: Mapped[str] = mapped_column(
-        sa.Enum(WowClass, values_callable=lambda e: [x.value for x in e]),
+        sa.String(50),
         nullable=False,
     )
     primary_spec: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)

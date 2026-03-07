@@ -15,6 +15,11 @@
       <WowCard :gold="true">
         <h2 class="text-lg font-semibold text-text-primary mb-6">{{ t('auth.signIn') }}</h2>
 
+        <!-- Invite redirect banner -->
+        <div v-if="isInviteRedirect" class="mb-4 p-3 rounded bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-sm">
+          {{ t('auth.loginToAcceptInvite') }}
+        </div>
+
         <div v-if="error" class="mb-4 p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">
           {{ error }}
         </div>
@@ -61,6 +66,21 @@
             />
           </div>
 
+          <div class="flex items-center justify-between gap-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                id="remember-me"
+                v-model="rememberMe"
+                type="checkbox"
+                class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold accent-amber-500"
+              />
+              <span class="text-sm text-text-muted select-none">{{ t('auth.rememberMe') }}</span>
+            </label>
+            <RouterLink to="/forgot-password" class="text-xs text-accent-gold hover:text-yellow-400 transition-colors">
+              {{ t('auth.forgotPassword') }}
+            </RouterLink>
+          </div>
+
           <WowButton type="submit" :loading="loading" class="w-full mt-2">
             {{ t('auth.signIn') }}
           </WowButton>
@@ -68,7 +88,7 @@
 
         <p class="text-center text-sm text-text-muted mt-6">
           {{ t('auth.noAccount') }}
-          <RouterLink to="/register" class="text-accent-gold hover:text-yellow-400 transition-colors">
+          <RouterLink :to="registerLink" class="text-accent-gold hover:text-yellow-400 transition-colors">
             {{ t('auth.register') }}
           </RouterLink>
         </p>
@@ -78,8 +98,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/composables/useAuth'
 import { useWowIcons } from '@/composables/useWowIcons'
@@ -91,15 +111,27 @@ import WowButton from '@/components/common/WowButton.vue'
 const { t } = useI18n()
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
+const route = useRoute()
 
 const { login, isLoading, authError } = useAuth()
 
 const email = ref('')
 const password = ref('')
+const rememberMe = ref(true)
 const error = ref(null)
 const loading = ref(false)
 const discordEnabled = ref(false)
 const discordLoading = ref(false)
+
+const isInviteRedirect = computed(() => {
+  const redirect = route.query.redirect || ''
+  return redirect.startsWith('/invite/')
+})
+
+const registerLink = computed(() => {
+  const redirect = route.query.redirect
+  return redirect ? { path: '/register', query: { redirect } } : '/register'
+})
 
 onMounted(async () => {
   // Check URL params for Discord error
@@ -124,7 +156,7 @@ async function handleLogin() {
   error.value = null
   loading.value = true
   try {
-    await login(email.value, password.value)
+    await login(email.value, password.value, rememberMe.value)
   } catch (err) {
     error.value = err?.response?.data?.message ?? authError.value ?? t('auth.loginFailed')
   } finally {
@@ -134,6 +166,6 @@ async function handleLogin() {
 
 async function handleDiscordLogin() {
   // Direct navigation to backend endpoint which returns HTTP 302 to Discord
-  window.location.href = '/api/v1/auth/discord/login'
+  window.location.href = '/api/v2/auth/discord/login'
 }
 </script>

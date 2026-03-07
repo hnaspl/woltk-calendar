@@ -19,6 +19,10 @@ class Config:
     DEBUG: bool = False
     TESTING: bool = False
 
+    # --------------------------------------------------------------- Logging
+    LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+    LOG_DIR: str = os.environ.get("LOG_DIR", "")
+
     # -------------------------------------------------------------- Database
     SQLALCHEMY_DATABASE_URI: str = os.environ.get(
         "DATABASE_URL",
@@ -62,6 +66,11 @@ class Config:
     # ----------------------------------------------------------- APScheduler
     SCHEDULER_ENABLED: bool = os.environ.get("SCHEDULER_ENABLED", "true").lower() == "true"
     SCHEDULER_TIMEZONE: str = os.environ.get("SCHEDULER_TIMEZONE", "UTC")
+
+    # ------------------------------------------------ Tenant subdomain routing
+    # Set APP_DOMAIN (e.g. "example.com") to enable tenant subdomain routing.
+    # Requests to <slug>.example.com will auto-resolve the matching tenant.
+    APP_DOMAIN: str = os.environ.get("APP_DOMAIN", "")
 
 
 class DevelopmentConfig(Config):

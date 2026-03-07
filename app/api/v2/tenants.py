@@ -1,0 +1,358 @@
+"""Tenant API: CRUD, membership, invitations, active-tenant switching."""
+
+from __future__ import annotations
+
+from flask import Blueprint, jsonify
+from flask_login import current_user
+
+from app.extensions import db
+from app.i18n import _t
+from app.services import tenant_service, audit_log_service
+from app.utils.auth import login_required
+from app.utils.api_helpers import get_json, get_or_404, validate_required
+from app.utils.decorators import require_tenant_role
+from app.utils import notify
+
+bp = Blueprint("tenants_v2", __name__)
+invite_bp = Blueprint("invite_v2", __name__)
+active_tenant_bp = Blueprint("active_tenant_v2", __name__)
+
+
+# ---------------------------------------------------------------------------
+# Tenant CRUD
+# ---------------------------------------------------------------------------
+
+@bp.get("/")
+@login_required
+def list_tenants():
+    """List all tenants the current user belongs to, including user's role."""
+    return jsonify(tenant_service.list_tenants_with_role_for_user(current_user.id)), 200
+
+
+@bp.get("/<int:tenant_id>")
+@login_required
+@require_tenant_role("member")
+def get_tenant(tenant_id: int):
+    """Get tenant details (must be a member)."""
+    tenant = tenant_service.get_tenant(tenant_id)
+    if not tenant:
+        return jsonify({"error": _t("api.tenants.notFound")}), 404
+    return jsonify(tenant.to_dict()), 200
+
+
+@bp.put("/<int:tenant_id>")
+@login_required
+@require_tenant_role("admin")
+def update_tenant(tenant_id: int):
+    """Update tenant (owner or admin only)."""
+    tenant = tenant_service.get_tenant(tenant_id)
+    if not tenant:
+        return jsonify({"error": _t("api.tenants.notFound")}), 404
+    data = get_json()
+
+    # Track changed fields
+    changed_fields = []
+    for key in data:
+        if key in ("name", "description", "slug", "settings_json"):
+            old_val = getattr(tenant, key, None)
+            if old_val != data[key]:
+                changed_fields.append(key)
+
+    try:
+        tenant = tenant_service.update_tenant(tenant, data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    # Audit log + notifications
+    if changed_fields:
+        # Use readable labels for changed fields
+        _field_labels = {"name": "Name", "description": "Description", "slug": "Slug URL", "settings_json": "Settings"}
+        display_fields = [_field_labels.get(f, f) for f in changed_fields]
+        changes_summary = ", ".join(display_fields)
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="tenant_settings_updated",
+            tenant_id=tenant_id,
+            entity_type="tenant",
+            entity_name=tenant.name,
+            description=f"Updated: {changes_summary}",
+            change_data={"changed_fields": display_fields},
+        )
+        db.session.commit()
+        notify.notify_tenant_settings_changed(
+            tenant=tenant,
+            changed_by_user_id=current_user.id,
+            changed_by_username=current_user.username,
+            changes_summary=changes_summary,
+        )
+
+    return jsonify(tenant.to_dict()), 200
+
+
+@bp.delete("/<int:tenant_id>")
+@login_required
+@require_tenant_role("owner")
+def delete_tenant(tenant_id: int):
+    """Delete tenant (owner only)."""
+    tenant = tenant_service.get_tenant(tenant_id)
+    if not tenant:
+        return jsonify({"error": _t("api.tenants.notFound")}), 404
+    tenant_service.delete_tenant(tenant)
+    return jsonify({"message": _t("api.tenants.deleted")}), 200
+
+
+@bp.post("/upgrade")
+@login_required
+def upgrade_to_tenant():
+    """Create a tenant for users who registered without one.
+
+    This preserves existing guild memberships and creates a fresh
+    tenant workspace so the user can create their own guilds.
+    """
+    # Check if user already has a tenant they own
+    existing_tenants = tenant_service.list_tenants_for_user(current_user.id)
+    for t in existing_tenants:
+        if tenant_service.is_tenant_owner(t.id, current_user.id):
+            return jsonify({"error": _t("api.tenants.alreadyOwner")}), 400
+
+    tenant = tenant_service.create_tenant(owner=current_user)
+    return jsonify(tenant.to_dict()), 201
+
+
+@bp.get("/resolve-subdomain")
+def resolve_subdomain():
+    """Return the tenant resolved from the current subdomain (if any).
+
+    Uses the ``g.tenant_from_subdomain`` value set by the
+    ``resolve_tenant_from_subdomain`` before-request middleware.
+    No authentication required — this is how anonymous visitors
+    discover which tenant a subdomain belongs to.
+    """
+    from flask import g as flask_g
+    tenant = getattr(flask_g, "tenant_from_subdomain", None)
+    if tenant:
+        return jsonify(tenant.to_dict()), 200
+    return jsonify(None), 200
+
+
+@bp.get("/<int:tenant_id>/usage")
+@login_required
+@require_tenant_role("member")
+def get_tenant_usage(tenant_id: int):
+    """Get resource usage stats for the current user's tenant."""
+    from app.services import billing_service
+    usage = billing_service.get_tenant_usage(tenant_id)
+    return jsonify(usage), 200
+
+
+# ---------------------------------------------------------------------------
+# Membership
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:tenant_id>/members")
+@login_required
+@require_tenant_role("member")
+def list_members(tenant_id: int):
+    """List tenant members."""
+    members = tenant_service.list_members(tenant_id)
+    return jsonify([m.to_dict() for m in members]), 200
+
+
+@bp.post("/<int:tenant_id>/members")
+@login_required
+@require_tenant_role("admin")
+def add_member(tenant_id: int):
+    """Add a member to the tenant (admin only)."""
+    data = get_json()
+    err = validate_required(data, "user_id")
+    if err:
+        return err
+    role = data.get("role", "member")
+    try:
+        membership = tenant_service.add_member(tenant_id, data["user_id"], role)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(membership.to_dict()), 201
+
+
+@bp.put("/<int:tenant_id>/members/<int:user_id>")
+@login_required
+@require_tenant_role("admin")
+def update_member(tenant_id: int, user_id: int):
+    """Change a member's role (admin only)."""
+    membership = tenant_service.get_membership(tenant_id, user_id)
+    if not membership:
+        return jsonify({"error": _t("api.tenants.memberNotFound")}), 404
+    data = get_json()
+    err = validate_required(data, "role")
+    if err:
+        return err
+
+    old_role = membership.role
+    try:
+        membership = tenant_service.update_member_role(membership, data["role"])
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    # Audit log + notifications
+    new_role = data["role"]
+    from app.models.user import User
+    target_user = db.session.get(User, user_id)
+    target_username = target_user.username if target_user else f"User#{user_id}"
+    tenant = tenant_service.get_tenant(tenant_id)
+    if tenant:
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="tenant_member_role_changed",
+            tenant_id=tenant_id,
+            entity_type="tenant_member",
+            entity_name=target_username,
+            description=f"Changed {target_username}'s role to {new_role}",
+            change_data={"old_role": old_role, "new_role": new_role},
+        )
+        db.session.commit()
+        notify.notify_tenant_member_role_changed(
+            tenant=tenant,
+            target_user_id=user_id,
+            new_role=new_role,
+            changed_by_user_id=current_user.id,
+            changed_by_username=current_user.username,
+            target_username=target_username,
+        )
+
+    return jsonify(membership.to_dict()), 200
+
+
+@bp.delete("/<int:tenant_id>/members/<int:user_id>")
+@login_required
+@require_tenant_role("admin")
+def remove_member(tenant_id: int, user_id: int):
+    """Remove a member (admin only, cannot remove owner)."""
+    # Get user info before removal
+    from app.models.user import User
+    target_user = db.session.get(User, user_id)
+    target_username = target_user.username if target_user else f"User#{user_id}"
+    tenant = tenant_service.get_tenant(tenant_id)
+
+    try:
+        tenant_service.remove_member(tenant_id, user_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    # Audit log + notifications
+    if tenant:
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="tenant_member_removed",
+            tenant_id=tenant_id,
+            entity_type="tenant_member",
+            entity_name=target_username,
+            description=f"Removed {target_username} from {tenant.name}",
+        )
+        db.session.commit()
+        notify.notify_tenant_member_removed(
+            tenant=tenant,
+            removed_user_id=user_id,
+            removed_by_user_id=current_user.id,
+            removed_by_username=current_user.username,
+            target_username=target_username,
+        )
+
+    return jsonify({"message": _t("api.tenants.memberRemoved")}), 200
+
+
+# ---------------------------------------------------------------------------
+# Invitations
+# ---------------------------------------------------------------------------
+
+@bp.get("/<int:tenant_id>/invitations")
+@login_required
+@require_tenant_role("admin")
+def list_invitations(tenant_id: int):
+    """List tenant invitations (admin only)."""
+    invitations = tenant_service.list_invitations(tenant_id)
+    return jsonify([inv.to_dict(include_token=True) for inv in invitations]), 200
+
+
+@bp.post("/<int:tenant_id>/invitations")
+@login_required
+@require_tenant_role("admin")
+def create_invitation(tenant_id: int):
+    """Create a tenant invitation (admin only)."""
+    data = get_json()
+    try:
+        invitation = tenant_service.create_invitation(
+            tenant_id=tenant_id,
+            inviter_id=current_user.id,
+            role=data.get("role", "member"),
+            invitee_email=data.get("invitee_email"),
+            invitee_user_id=data.get("invitee_user_id"),
+            max_uses=data.get("max_uses"),
+            expires_in_days=data.get("expires_in_days", 7),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(invitation.to_dict(include_token=True)), 201
+
+
+@bp.delete("/<int:tenant_id>/invitations/<int:invitation_id>")
+@login_required
+@require_tenant_role("admin")
+def revoke_invitation(tenant_id: int, invitation_id: int):
+    """Revoke an invitation (admin only)."""
+    from app.models.tenant import TenantInvitation  # local to avoid circular import
+    invitation, err = get_or_404(TenantInvitation, invitation_id,
+                                 error_key="api.tenants.invitationNotFound",
+                                 validate=lambda inv: inv.tenant_id == tenant_id)
+    if err:
+        return err
+    tenant_service.revoke_invitation(invitation)
+    return jsonify({"message": _t("api.tenants.invitationRevoked")}), 200
+
+
+# ---------------------------------------------------------------------------
+# Accept invite (public — any logged-in user)
+# ---------------------------------------------------------------------------
+
+@invite_bp.post("/<token>")
+@login_required
+def accept_invite(token: str):
+    """Accept a tenant invitation by token."""
+    invitation = tenant_service.get_invitation_by_token(token)
+    if not invitation:
+        return jsonify({"error": _t("api.tenants.invalidToken")}), 404
+    try:
+        membership = tenant_service.accept_invitation(invitation, current_user)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(membership.to_dict()), 200
+
+
+# ---------------------------------------------------------------------------
+# Active tenant switching
+# ---------------------------------------------------------------------------
+
+@active_tenant_bp.get("/active-tenant")
+@login_required
+def get_active_tenant():
+    """Get the current user's active tenant."""
+    if current_user.active_tenant_id:
+        tenant = tenant_service.get_tenant(current_user.active_tenant_id)
+        if tenant:
+            return jsonify(tenant.to_dict()), 200
+    return jsonify(None), 200
+
+
+@active_tenant_bp.put("/active-tenant")
+@login_required
+def set_active_tenant():
+    """Switch the current user's active tenant."""
+    data = get_json()
+    err = validate_required(data, "tenant_id")
+    if err:
+        return err
+    try:
+        user = tenant_service.switch_active_tenant(current_user, data["tenant_id"])
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(user.to_dict()), 200

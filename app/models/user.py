@@ -29,9 +29,18 @@ class User(UserMixin, db.Model):
     language: Mapped[str] = mapped_column(sa.String(5), nullable=False, default="en")
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     is_admin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    email_verified: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    activation_token: Mapped[str | None] = mapped_column(sa.String(128), nullable=True, unique=True)
+    activation_token_expires_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
     max_guilds_override: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     auth_provider: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="local")
     discord_id: Mapped[str | None] = mapped_column(sa.String(64), unique=True, nullable=True)
+    active_tenant_id: Mapped[int | None] = mapped_column(
+        sa.Integer, sa.ForeignKey("tenants.id", use_alter=True, name="fk_user_active_tenant"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
@@ -48,6 +57,7 @@ class User(UserMixin, db.Model):
     memberships: Mapped[list[GuildMembership]] = relationship(
         "GuildMembership", back_populates="user", lazy="select"
     )
+    active_tenant = relationship("Tenant", foreign_keys=[active_tenant_id], lazy="select")
 
     def to_dict(self) -> dict:
         return {
@@ -59,8 +69,10 @@ class User(UserMixin, db.Model):
             "language": self.language,
             "is_active": self.is_active,
             "is_admin": self.is_admin,
+            "email_verified": self.email_verified,
             "max_guilds_override": self.max_guilds_override,
             "auth_provider": self.auth_provider,
+            "active_tenant_id": self.active_tenant_id,
             "created_at": utc_iso(self.created_at),
             "updated_at": utc_iso(self.updated_at),
         }
@@ -78,8 +90,10 @@ class User(UserMixin, db.Model):
             "language": self.language,
             "is_active": self.is_active,
             "is_admin": self.is_admin,
+            "email_verified": self.email_verified,
             "max_guilds_override": self.max_guilds_override,
             "auth_provider": self.auth_provider,
+            "active_tenant_id": self.active_tenant_id,
             "created_at": utc_iso(self.created_at),
             "updated_at": utc_iso(self.updated_at),
         }

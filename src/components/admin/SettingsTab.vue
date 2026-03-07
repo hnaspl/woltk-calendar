@@ -27,8 +27,8 @@
 
         <!-- Auto-Sync -->
         <div class="border-t border-border-default pt-4">
-          <h3 class="text-sm text-text-primary font-medium mb-3">{{ t('admin.system.warmaneSync') }}</h3>
-          <p class="text-text-muted text-xs mb-3">{{ t('admin.system.warmaneSyncHelp') }}</p>
+          <h3 class="text-sm text-text-primary font-medium mb-3">{{ t('admin.system.armorySync') }}</h3>
+          <p class="text-text-muted text-xs mb-3">{{ t('admin.system.armorySyncHelp') }}</p>
 
           <div class="space-y-3">
             <label class="flex items-center gap-3 cursor-pointer">
@@ -68,43 +68,157 @@
       </div>
     </WowCard>
 
-    <!-- Guild Limits -->
+    <!-- SMTP / Email Settings -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">{{ t('admin.settings.guildLimits') }}</h2>
+      <h2 class="wow-heading text-base mb-2">{{ t('admin.smtp.title') }}</h2>
+      <p class="text-text-muted text-xs mb-4">{{ t('admin.smtp.help') }}</p>
 
-      <div v-if="sysSettingsLoading" class="h-20 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else class="space-y-4 max-w-lg">
-        <div>
-          <label class="block text-sm text-text-primary mb-1">{{ t('admin.settings.maxGuildsPerUser') }}</label>
-          <p class="text-[10px] text-text-muted mb-2">{{ t('admin.settings.maxGuildsPerUserHelp') }}</p>
-          <input
-            v-model.number="settingsForm.max_guilds_per_user"
-            type="number"
-            min="1"
-            class="w-32 bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
-          />
+      <div class="space-y-4 max-w-lg">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.smtp.host') }}</label>
+            <input
+              v-model="settingsForm.smtp_host"
+              type="text"
+              placeholder="smtp.gmail.com"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.smtp.port') }}</label>
+            <input
+              v-model.number="settingsForm.smtp_port"
+              type="number"
+              min="1"
+              max="65535"
+              placeholder="587"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            />
+          </div>
         </div>
-        <div class="pt-2">
+
+        <label class="flex items-center gap-3 cursor-pointer">
+          <button
+            type="button"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+            :class="settingsForm.smtp_tls ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+            @click="settingsForm.smtp_tls = !settingsForm.smtp_tls"
+          >
+            <span
+              class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+              :class="settingsForm.smtp_tls ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+          <span class="text-sm text-text-primary">{{ t('admin.smtp.useTls') }}</span>
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.smtp.username') }}</label>
+            <input
+              v-model="settingsForm.smtp_username"
+              type="text"
+              :placeholder="t('admin.smtp.usernamePlaceholder')"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.smtp.password') }}</label>
+            <input
+              v-model="settingsForm.smtp_password"
+              type="password"
+              :placeholder="t('admin.smtp.passwordPlaceholder')"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.smtp.fromEmail') }}</label>
+            <input
+              v-model="settingsForm.smtp_from_email"
+              type="email"
+              placeholder="noreply@example.com"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-text-muted mb-1">{{ t('admin.smtp.fromName') }}</label>
+            <input
+              v-model="settingsForm.smtp_from_name"
+              type="text"
+              placeholder="Raid Calendar"
+              class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            />
+          </div>
+        </div>
+
+        <!-- Email activation toggle -->
+        <div class="border-t border-border-default pt-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <button
+              type="button"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+              :class="settingsForm.email_activation_required ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+              @click="settingsForm.email_activation_required = !settingsForm.email_activation_required"
+            >
+              <span
+                class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                :class="settingsForm.email_activation_required ? 'translate-x-6' : 'translate-x-1'"
+              />
+            </button>
+            <div>
+              <span class="text-sm text-text-primary">{{ t('admin.smtp.requireActivation') }}</span>
+              <p class="text-[10px] text-text-muted mt-0.5">{{ t('admin.smtp.requireActivationHelp') }}</p>
+            </div>
+          </label>
+        </div>
+
+        <div class="pt-2 flex items-center gap-3 flex-wrap">
           <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">{{ t('admin.system.saveSettings') }}</WowButton>
+          <WowButton variant="secondary" :loading="testingSmtp" @click="testSmtpConnection">{{ t('admin.smtp.testConnection') }}</WowButton>
+          <span v-if="smtpTestResult" class="text-xs" :class="smtpTestResult === 'ok' ? 'text-green-400' : 'text-red-400'">
+            {{ smtpTestResult === 'ok' ? '✓ ' + t('admin.smtp.testSuccess') : smtpTestResult }}
+          </span>
         </div>
       </div>
     </WowCard>
 
-    <!-- Armory Security -->
+    <!-- Password Policy -->
     <WowCard>
-      <h2 class="wow-heading text-base mb-4">{{ t('admin.settings.armoryAllowedDomains') }}</h2>
+      <h2 class="wow-heading text-base mb-2">{{ t('admin.passwordPolicy.title') }}</h2>
+      <p class="text-text-muted text-xs mb-4">{{ t('admin.passwordPolicy.help') }}</p>
 
-      <div v-if="sysSettingsLoading" class="h-20 rounded-lg bg-bg-secondary border border-border-default loading-pulse" />
-      <div v-else class="space-y-4 max-w-lg">
+      <div class="space-y-4 max-w-lg">
         <div>
-          <p class="text-[10px] text-text-muted mb-2">{{ t('admin.settings.armoryAllowedDomainsHelp') }}</p>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.passwordPolicy.minLength') }}</label>
           <input
-            v-model="settingsForm.armory_allowed_domains"
-            type="text"
-            placeholder="armory.warmane.com, armory.example.com"
-            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none placeholder:text-text-muted/50"
+            v-model.number="settingsForm.password_min_length"
+            type="number"
+            min="4"
+            max="128"
+            class="w-32 bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
           />
         </div>
+
+        <div class="space-y-3">
+          <label class="flex items-center gap-3 cursor-pointer" v-for="toggle in passwordToggles" :key="toggle.key">
+            <button
+              type="button"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+              :class="settingsForm[toggle.key] ? 'bg-accent-gold' : 'bg-bg-tertiary border border-border-default'"
+              @click="settingsForm[toggle.key] = !settingsForm[toggle.key]"
+            >
+              <span
+                class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                :class="settingsForm[toggle.key] ? 'translate-x-6' : 'translate-x-1'"
+              />
+            </button>
+            <span class="text-sm text-text-primary">{{ toggle.label }}</span>
+          </label>
+        </div>
+
         <div class="pt-2">
           <WowButton :loading="sysSettingsSaving" @click="saveAllSettings">{{ t('admin.system.saveSettings') }}</WowButton>
         </div>
@@ -112,7 +226,7 @@
     </WowCard>
 
     <!-- Discord OAuth Settings (Global Admin only) -->
-    <WowCard v-if="authStore.user?.is_admin">
+    <WowCard>
       <h2 class="wow-heading text-base mb-2">{{ t('admin.system.discord.title') }}</h2>
       <p class="text-text-muted text-xs mb-4">{{ t('admin.system.discord.help') }}</p>
 
@@ -128,7 +242,9 @@
               @click="copyCallbackUrl"
               class="shrink-0 text-xs bg-bg-tertiary border border-border-default hover:border-border-gold text-text-muted hover:text-text-primary rounded px-2 py-1.5 transition-colors"
               :title="t('common.buttons.copy')"
-            >📋</button>
+            >
+              {{ t('common.buttons.copy') }}
+            </button>
           </div>
         </div>
 
@@ -161,29 +277,51 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import * as adminApi from '@/api/admin'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 
 // System settings state (unified)
 const sysSettingsLoading = ref(true)
 const sysSettingsSaving = ref(false)
 const syncing = ref(false)
+const testingSmtp = ref(false)
+const smtpTestResult = ref(null)
 const settingsForm = ref({
   wowhead_tooltips: true,
-  autosync_enabled: false,
+  autosync_enabled: true,
   autosync_interval_minutes: 60,
-  max_guilds_per_user: 5,
-  armory_allowed_domains: '',
+  // SMTP
+  smtp_host: '',
+  smtp_port: 587,
+  smtp_tls: true,
+  smtp_username: '',
+  smtp_password: '',
+  smtp_from_email: '',
+  smtp_from_name: 'Raid Calendar',
+  email_activation_required: true,
+  // Password policy
+  password_min_length: 8,
+  password_require_uppercase: true,
+  password_require_lowercase: true,
+  password_require_digit: true,
+  password_require_special: true,
 })
+
+const passwordToggles = computed(() => [
+  { key: 'password_require_uppercase', label: t('admin.passwordPolicy.requireUppercase') },
+  { key: 'password_require_lowercase', label: t('admin.passwordPolicy.requireLowercase') },
+  { key: 'password_require_digit', label: t('admin.passwordPolicy.requireDigit') },
+  { key: 'password_require_special', label: t('admin.passwordPolicy.requireSpecial') },
+])
 
 // Discord OAuth settings state
 const discordLoading = ref(true)
@@ -202,9 +340,22 @@ onMounted(async () => {
     settingsForm.value = {
       wowhead_tooltips: settings.wowhead_tooltips !== 'false',
       autosync_enabled: settings.autosync_enabled === 'true',
-      autosync_interval_minutes: parseInt(settings.autosync_interval_minutes) || 60,
-      max_guilds_per_user: parseInt(settings.max_guilds_per_user) || 5,
-      armory_allowed_domains: settings.armory_allowed_domains || '',
+      autosync_interval_minutes: parseInt(settings.autosync_interval_minutes, 10) || 60,
+      // SMTP
+      smtp_host: settings.smtp_host || '',
+      smtp_port: parseInt(settings.smtp_port, 10) || 587,
+      smtp_tls: (settings.smtp_tls || 'true') !== 'false',
+      smtp_username: settings.smtp_username || '',
+      smtp_password: settings.smtp_password || '',
+      smtp_from_email: settings.smtp_from_email || '',
+      smtp_from_name: settings.smtp_from_name || 'Raid Calendar',
+      email_activation_required: settings.email_activation_required === 'true',
+      // Password policy
+      password_min_length: parseInt(settings.password_min_length, 10) || 8,
+      password_require_uppercase: settings.password_require_uppercase === 'true',
+      password_require_lowercase: settings.password_require_lowercase === 'true',
+      password_require_digit: settings.password_require_digit === 'true',
+      password_require_special: settings.password_require_special === 'true',
     }
   } catch {
     // ignore – defaults are fine
@@ -235,23 +386,28 @@ onMounted(async () => {
 async function saveAllSettings() {
   sysSettingsSaving.value = true
   try {
-    const updated = await adminApi.updateSystemSettings({
-      wowhead_tooltips: settingsForm.value.wowhead_tooltips,
-      autosync_enabled: settingsForm.value.autosync_enabled,
-      autosync_interval_minutes: settingsForm.value.autosync_interval_minutes,
-      max_guilds_per_user: settingsForm.value.max_guilds_per_user,
-      armory_allowed_domains: settingsForm.value.armory_allowed_domains,
-    })
+    const updated = await adminApi.updateSystemSettings(settingsForm.value)
     settingsForm.value = {
       wowhead_tooltips: updated.wowhead_tooltips !== 'false',
       autosync_enabled: updated.autosync_enabled === 'true',
-      autosync_interval_minutes: parseInt(updated.autosync_interval_minutes) || 60,
-      max_guilds_per_user: parseInt(updated.max_guilds_per_user) || 5,
-      armory_allowed_domains: updated.armory_allowed_domains || '',
+      autosync_interval_minutes: parseInt(updated.autosync_interval_minutes, 10) || 60,
+      smtp_host: updated.smtp_host || '',
+      smtp_port: parseInt(updated.smtp_port, 10) || 587,
+      smtp_tls: (updated.smtp_tls || 'true') !== 'false',
+      smtp_username: updated.smtp_username || '',
+      smtp_password: updated.smtp_password || '',
+      smtp_from_email: updated.smtp_from_email || '',
+      smtp_from_name: updated.smtp_from_name || 'Raid Calendar',
+      email_activation_required: updated.email_activation_required === 'true',
+      password_min_length: parseInt(updated.password_min_length, 10) || 8,
+      password_require_uppercase: updated.password_require_uppercase === 'true',
+      password_require_lowercase: updated.password_require_lowercase === 'true',
+      password_require_digit: updated.password_require_digit === 'true',
+      password_require_special: updated.password_require_special === 'true',
     }
-    uiStore.showToast(t('admin.system.toasts.settingsSaved'), 'success')
+    toast.success(t('admin.system.toasts.settingsSaved'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToSaveSettings'), 'error')
+    toast.error(t('admin.system.toasts.failedToSaveSettings'))
   } finally {
     sysSettingsSaving.value = false
   }
@@ -261,11 +417,26 @@ async function triggerManualSync() {
   syncing.value = true
   try {
     await adminApi.triggerSync()
-    uiStore.showToast(t('admin.system.toasts.syncCompleted'), 'success')
+    toast.success(t('admin.system.toasts.syncCompleted'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.syncFailed'), 'error')
+    toast.error(t('admin.system.toasts.syncFailed'))
   } finally {
     syncing.value = false
+  }
+}
+
+async function testSmtpConnection() {
+  testingSmtp.value = true
+  smtpTestResult.value = null
+  try {
+    // Save settings first to ensure the backend has the latest
+    await adminApi.updateSystemSettings(settingsForm.value)
+    const result = await adminApi.testSmtp()
+    smtpTestResult.value = result.success ? 'ok' : (result.error || t('admin.smtp.testFailed'))
+  } catch (err) {
+    smtpTestResult.value = err?.response?.data?.error || t('admin.smtp.testFailed')
+  } finally {
+    testingSmtp.value = false
   }
 }
 
@@ -273,9 +444,9 @@ async function saveDiscordSettings() {
   discordSaving.value = true
   try {
     await adminApi.updateDiscordSettings(discordForm.value)
-    uiStore.showToast(t('admin.system.toasts.discordSettingsSaved'), 'success')
+    toast.success(t('admin.system.toasts.discordSettingsSaved'))
   } catch {
-    uiStore.showToast(t('admin.system.toasts.failedToSaveDiscord'), 'error')
+    toast.error(t('admin.system.toasts.failedToSaveDiscord'))
   } finally {
     discordSaving.value = false
   }
@@ -284,7 +455,7 @@ async function saveDiscordSettings() {
 async function copyCallbackUrl() {
   try {
     await navigator.clipboard.writeText(discordCallbackUrl.value)
-    uiStore.showToast(t('admin.system.discord.callbackUrlCopied'), 'success')
+    toast.success(t('admin.system.discord.callbackUrlCopied'))
   } catch {
     // clipboard API may be blocked in non-HTTPS contexts; ignore silently
   }

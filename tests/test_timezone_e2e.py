@@ -468,7 +468,7 @@ class TestEventAPITimezone:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(tz_seed["admin"].id)
-            resp = client.get(f"/api/v1/guilds/{g.id}/events/{ev.id}")
+            resp = client.get(f"/api/v2/guilds/{g.id}/events/{ev.id}")
             assert resp.status_code == 200
             data = resp.get_json()
             parsed = datetime.fromisoformat(data["starts_at_utc"])
@@ -483,7 +483,7 @@ class TestEventAPITimezone:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(tz_seed["admin"].id)
-            resp = client.get(f"/api/v1/guilds/{g.id}/events/{ev.id}")
+            resp = client.get(f"/api/v2/guilds/{g.id}/events/{ev.id}")
             assert resp.status_code == 200
             data = resp.get_json()
             parsed = datetime.fromisoformat(data["starts_at_utc"])
@@ -495,7 +495,7 @@ class TestEventAPITimezone:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(tz_seed["admin"].id)
-            resp = client.post(f"/api/v1/guilds/{g.id}/events", json={
+            resp = client.post(f"/api/v2/guilds/{g.id}/events", json={
                 "title": "API Created Raid",
                 "realm_name": g.realm_name,
                 "starts_at_utc": "2026-03-15T23:00:00+00:00",
@@ -516,7 +516,7 @@ class TestEventAPITimezone:
                 sess["_user_id"] = str(tz_seed["admin"].id)
 
             for hour, title in [(14, "Afternoon"), (18, "Evening"), (22, "Night")]:
-                resp = client.post(f"/api/v1/guilds/{g.id}/events", json={
+                resp = client.post(f"/api/v2/guilds/{g.id}/events", json={
                     "title": title,
                     "realm_name": g.realm_name,
                     "starts_at_utc": f"2026-04-10T{hour:02d}:00:00+00:00",
@@ -527,7 +527,7 @@ class TestEventAPITimezone:
                 assert resp.status_code == 201
 
             # List all events and confirm all 3 exist
-            resp = client.get(f"/api/v1/guilds/{g.id}/events")
+            resp = client.get(f"/api/v2/guilds/{g.id}/events")
             assert resp.status_code == 200
             data = resp.get_json()
             apr10 = [
@@ -560,7 +560,7 @@ class TestCrossGuildTimezones:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(tz_seed["admin"].id)
-            resp = client.get("/api/v1/events")
+            resp = client.get("/api/v2/events")
             assert resp.status_code == 200
             data = resp.get_json()
             # Admin is in all 3 guilds, should see all 3 events
@@ -756,7 +756,7 @@ class TestMidnightEventHandling:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(tz_seed["admin"].id)
 
-            resp = client.post(f"/api/v1/guilds/{g.id}/events", json={
+            resp = client.post(f"/api/v2/guilds/{g.id}/events", json={
                 "title": "Midnight API Raid",
                 "realm_name": g.realm_name,
                 "starts_at_utc": "2026-03-16T00:00:00+00:00",
@@ -767,7 +767,7 @@ class TestMidnightEventHandling:
             assert resp.status_code == 201
             eid = resp.get_json()["id"]
 
-            resp2 = client.get(f"/api/v1/guilds/{g.id}/events/{eid}")
+            resp2 = client.get(f"/api/v2/guilds/{g.id}/events/{eid}")
             assert resp2.status_code == 200
             parsed = datetime.fromisoformat(resp2.get_json()["starts_at_utc"])
             assert parsed.hour == 0

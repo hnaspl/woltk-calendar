@@ -16,7 +16,7 @@ class TestSystemSettingsSeeding:
         from app import _seed_system_settings_if_missing
 
         seeded = _seed_system_settings_if_missing()
-        assert seeded == 3
+        assert seeded == 9
 
         wh = db.session.get(SystemSetting, "wowhead_tooltips")
         assert wh is not None
@@ -24,11 +24,26 @@ class TestSystemSettingsSeeding:
 
         ae = db.session.get(SystemSetting, "autosync_enabled")
         assert ae is not None
-        assert ae.value == "false"
+        assert ae.value == "true"
 
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai is not None
         assert ai.value == "60"
+
+        # Password policy defaults – all enabled
+        for key in ("password_require_uppercase", "password_require_lowercase",
+                    "password_require_digit", "password_require_special"):
+            setting = db.session.get(SystemSetting, key)
+            assert setting is not None, f"{key} was not seeded"
+            assert setting.value == "true", f"{key} should default to true"
+
+        ml = db.session.get(SystemSetting, "password_min_length")
+        assert ml is not None
+        assert ml.value == "8"
+
+        ea = db.session.get(SystemSetting, "email_activation_required")
+        assert ea is not None
+        assert ea.value == "true"
 
     def test_seed_does_not_overwrite_existing(self, app, ctx):
         """Re-seeding must NOT overwrite user-modified values."""
@@ -41,7 +56,7 @@ class TestSystemSettingsSeeding:
         wh = db.session.get(SystemSetting, "wowhead_tooltips")
         wh.value = "false"
         ae = db.session.get(SystemSetting, "autosync_enabled")
-        ae.value = "true"
+        ae.value = "false"
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         ai.value = "30"
         db.session.commit()
@@ -55,7 +70,7 @@ class TestSystemSettingsSeeding:
         assert wh.value == "false", "Wowhead tooltip setting was overwritten!"
 
         ae = db.session.get(SystemSetting, "autosync_enabled")
-        assert ae.value == "true", "Autosync enabled setting was overwritten!"
+        assert ae.value == "false", "Autosync enabled setting was overwritten!"
 
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai.value == "30", "Autosync interval setting was overwritten!"
@@ -69,7 +84,7 @@ class TestSystemSettingsSeeding:
         db.session.commit()
 
         seeded = _seed_system_settings_if_missing()
-        assert seeded == 2, "Should seed only the 2 missing settings"
+        assert seeded == 8, "Should seed only the 8 missing settings"
 
         # The existing one should be preserved
         wh = db.session.get(SystemSetting, "wowhead_tooltips")
@@ -77,7 +92,7 @@ class TestSystemSettingsSeeding:
 
         # The missing ones should be created with defaults
         ae = db.session.get(SystemSetting, "autosync_enabled")
-        assert ae.value == "false"
+        assert ae.value == "true"
 
         ai = db.session.get(SystemSetting, "autosync_interval_minutes")
         assert ai.value == "60"
@@ -95,6 +110,7 @@ class TestSystemSettingsAPI:
             email="admin@test.com",
             password_hash=bcrypt.generate_password_hash("pass").decode(),
             is_admin=True,
+            email_verified=True,
         )
         db.session.add(user)
         db.session.commit()
@@ -106,7 +122,7 @@ class TestSystemSettingsAPI:
         from app import _seed_system_settings_if_missing
         _seed_system_settings_if_missing()
 
-        client.post("/api/v1/auth/login", json={
+        client.post("/api/v2/auth/login", json={
             "email": "admin@test.com",
             "password": "pass",
         })
@@ -116,7 +132,7 @@ class TestSystemSettingsAPI:
         client = app.test_client()
         self._login_admin(client, db)
 
-        resp = client.get("/api/v1/admin/settings/system")
+        resp = client.get("/api/v2/admin/settings/system")
         assert resp.status_code == 200
         data = resp.get_json()
         assert "wowhead_tooltips" in data
@@ -128,7 +144,7 @@ class TestSystemSettingsAPI:
         self._login_admin(client, db)
 
         # Update all settings at once
-        resp = client.put("/api/v1/admin/settings/system", json={
+        resp = client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": False,
             "autosync_enabled": True,
             "autosync_interval_minutes": 30,
@@ -152,14 +168,14 @@ class TestSystemSettingsAPI:
         self._login_admin(client, db)
 
         # Set all settings
-        client.put("/api/v1/admin/settings/system", json={
+        client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": False,
             "autosync_enabled": True,
             "autosync_interval_minutes": 15,
         })
 
         # Update only wowhead
-        resp = client.put("/api/v1/admin/settings/system", json={
+        resp = client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": True,
         })
         assert resp.status_code == 200
@@ -176,7 +192,7 @@ class TestSystemSettingsAPI:
         self._login_admin(client, db)
 
         # Save custom values
-        client.put("/api/v1/admin/settings/system", json={
+        client.put("/api/v2/admin/settings/system", json={
             "wowhead_tooltips": False,
             "autosync_enabled": True,
             "autosync_interval_minutes": 120,
@@ -188,7 +204,7 @@ class TestSystemSettingsAPI:
         assert seeded == 0
 
         # Read back
-        resp = client.get("/api/v1/admin/settings/system")
+        resp = client.get("/api/v2/admin/settings/system")
         data = resp.get_json()
         assert data["wowhead_tooltips"] == "false"
         assert data["autosync_enabled"] == "true"

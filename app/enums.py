@@ -5,19 +5,6 @@ from __future__ import annotations
 from enum import Enum
 
 
-class WowClass(str, Enum):
-    DEATH_KNIGHT = "Death Knight"
-    DRUID = "Druid"
-    HUNTER = "Hunter"
-    MAGE = "Mage"
-    PALADIN = "Paladin"
-    PRIEST = "Priest"
-    ROGUE = "Rogue"
-    SHAMAN = "Shaman"
-    WARLOCK = "Warlock"
-    WARRIOR = "Warrior"
-
-
 class Role(str, Enum):
     MELEE_DPS = "melee_dps"
     MAIN_TANK = "main_tank"
@@ -47,6 +34,13 @@ class MemberStatus(str, Enum):
     ACTIVE = "active"
     INVITED = "invited"
     BANNED = "banned"
+    APPLIED = "applied"
+    DECLINED = "declined"
+
+
+class GuildVisibility(str, Enum):
+    OPEN = "open"
+    HIDDEN = "hidden"
 
 
 class JobStatus(str, Enum):

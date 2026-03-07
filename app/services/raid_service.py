@@ -8,6 +8,18 @@ import sqlalchemy as sa
 
 from app.extensions import db
 from app.models.raid import RaidDefinition
+from app.models.expansion import Expansion
+from app.utils.sanitizer import sanitize_text
+
+
+def _sanitize_field(value: str | None, field_name: str) -> str | None:
+    """Sanitize an optional text field, raising ValueError on dangerous content."""
+    if value is None:
+        return None
+    clean, error = sanitize_text(str(value), max_length=2000, field_name=field_name)
+    if error:
+        raise ValueError(error)
+    return clean
 
 
 def create_raid_definition(guild_id: int | None, created_by: int, data: dict) -> RaidDefinition:
@@ -37,7 +49,7 @@ def create_raid_definition(guild_id: int | None, created_by: int, data: dict) ->
         off_tank_slots=data.get("off_tank_slots"),
         healer_slots=data.get("healer_slots"),
         range_dps_slots=data.get("range_dps_slots"),
-        notes=data.get("notes"),
+        notes=_sanitize_field(data.get("notes"), "notes"),
     )
     db.session.add(rd)
     db.session.commit()
@@ -55,8 +67,11 @@ def update_raid_definition(rd: RaidDefinition, data: dict) -> RaidDefinition:
         "default_duration_minutes", "raid_type", "realm",
         "melee_dps_slots", "main_tank_slots", "off_tank_slots", "healer_slots", "range_dps_slots", "notes",
     }
+    text_fields = {"notes", "name"}
     for key, value in data.items():
         if key in allowed:
+            if key in text_fields and isinstance(value, str):
+                value = _sanitize_field(value, key)
             setattr(rd, key, value)
     # Map frontend 'size' field to default_raid_size
     if "size" in data and "default_raid_size" not in data:
@@ -77,9 +92,9 @@ def delete_raid_definition(rd: RaidDefinition) -> None:
 
 
 def find_definition_by_name(guild_id: int, name: str) -> Optional[RaidDefinition]:
-    """Find a raid definition by name (case-insensitive) for a guild or built-in."""
+    """Find a raid definition by name (case-insensitive) for a guild."""
     stmt = sa.select(RaidDefinition).where(
-        (RaidDefinition.guild_id == guild_id) | (RaidDefinition.guild_id.is_(None)),
+        RaidDefinition.guild_id == guild_id,
         sa.func.lower(RaidDefinition.name) == name.lower(),
         RaidDefinition.is_active.is_(True),
     )
@@ -87,11 +102,137 @@ def find_definition_by_name(guild_id: int, name: str) -> Optional[RaidDefinition
 
 
 def list_raid_definitions(guild_id: int) -> list[RaidDefinition]:
-    """Return guild-specific definitions plus built-in ones."""
+    """Return guild-specific definitions only.
+
+    Guild-scoped builtin definitions are created via expansion sync when a
+    guild enables expansions.  We no longer fall through to global
+    (guild_id=NULL) definitions because that caused duplicates.
+    """
     stmt = sa.select(RaidDefinition).where(
-        (RaidDefinition.guild_id == guild_id) | (RaidDefinition.guild_id.is_(None))
-    ).where(RaidDefinition.is_active.is_(True))
+        RaidDefinition.guild_id == guild_id,
+        RaidDefinition.is_active.is_(True),
+    )
     return list(db.session.execute(stmt).scalars().all())
+
+
+def list_default_raid_definitions() -> list[RaidDefinition]:
+    """Return all default (built-in, guild_id=NULL) raid definitions."""
+    stmt = sa.select(RaidDefinition).where(RaidDefinition.guild_id.is_(None))
+    return list(db.session.execute(stmt).scalars().all())
+
+
+def list_importable_definitions(guild_id: int) -> list[RaidDefinition]:
+    """Return global definitions whose code is NOT already in the guild.
+
+    Only returns definitions from the guild's enabled expansions.
+    This ensures the "Import" action never overwrites existing guild
+    customisations — only definitions that don't yet exist in the guild
+    are offered for import.
+    """
+    from app.services import expansion_service
+
+    # Get enabled expansion slugs for this guild
+    guild_exps = expansion_service.get_guild_expansions(guild_id)
+    enabled_slugs = set()
+    for ge in guild_exps:
+        exp = db.session.get(Expansion, ge.expansion_id)
+        if exp:
+            enabled_slugs.add(exp.slug)
+
+    # Codes already present in the guild
+    existing_codes = set(
+        db.session.execute(
+            sa.select(RaidDefinition.code).where(
+                RaidDefinition.guild_id == guild_id,
+                RaidDefinition.is_active.is_(True),
+            )
+        ).scalars().all()
+    )
+    # All active global definitions, filtered by enabled expansions
+    all_global = db.session.execute(
+        sa.select(RaidDefinition).where(
+            RaidDefinition.guild_id.is_(None),
+            RaidDefinition.is_active.is_(True),
+        )
+    ).scalars().all()
+    return [d for d in all_global if d.code not in existing_codes and d.expansion in enabled_slugs]
+
+
+def import_definition_to_guild(
+    source: RaidDefinition, guild_id: int, created_by: int
+) -> RaidDefinition:
+    """Import a global raid definition into the guild.
+
+    Unlike ``copy_raid_definition_to_guild`` (which always adds a
+    ``_copy`` suffix), this creates the definition with the **original**
+    code/name.  It refuses to import if a definition with the same code
+    already exists in the guild, so it can never overwrite guild
+    customisations.
+    """
+    # Safety check — refuse if code already exists in guild
+    existing = db.session.execute(
+        sa.select(RaidDefinition).where(
+            RaidDefinition.guild_id == guild_id,
+            RaidDefinition.code == source.code,
+            RaidDefinition.is_active.is_(True),
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise ValueError(
+            f"Raid definition '{source.name}' already exists in this guild"
+        )
+
+    # Check for soft-deleted version to re-activate
+    inactive = db.session.execute(
+        sa.select(RaidDefinition).where(
+            RaidDefinition.guild_id == guild_id,
+            RaidDefinition.code == source.code,
+            RaidDefinition.is_active.is_(False),
+        )
+    ).scalar_one_or_none()
+    if inactive is not None:
+        inactive.is_active = True
+        inactive.name = source.name
+        inactive.expansion = source.expansion
+        inactive.default_raid_size = source.default_raid_size
+        inactive.supports_10 = source.supports_10
+        inactive.supports_25 = source.supports_25
+        inactive.supports_heroic = source.supports_heroic
+        inactive.default_duration_minutes = source.default_duration_minutes
+        inactive.main_tank_slots = source.main_tank_slots
+        inactive.off_tank_slots = source.off_tank_slots
+        inactive.healer_slots = source.healer_slots
+        inactive.melee_dps_slots = source.melee_dps_slots
+        inactive.range_dps_slots = source.range_dps_slots
+        db.session.commit()
+        return inactive
+
+    rd = RaidDefinition(
+        guild_id=guild_id,
+        created_by=created_by,
+        code=source.code,
+        name=source.name,
+        expansion=source.expansion,
+        category=source.category or "raid",
+        default_raid_size=source.default_raid_size,
+        supports_10=source.supports_10,
+        supports_25=source.supports_25,
+        supports_heroic=source.supports_heroic,
+        is_builtin=True,
+        is_active=True,
+        default_duration_minutes=source.default_duration_minutes,
+        raid_type=source.raid_type,
+        realm=source.realm,
+        melee_dps_slots=source.melee_dps_slots,
+        main_tank_slots=source.main_tank_slots,
+        off_tank_slots=source.off_tank_slots,
+        healer_slots=source.healer_slots,
+        range_dps_slots=source.range_dps_slots,
+        notes=source.notes,
+    )
+    db.session.add(rd)
+    db.session.commit()
+    return rd
 
 
 def copy_raid_definition_to_guild(

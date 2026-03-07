@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as authApi from '@/api/auth'
+import { useTenantStore } from '@/stores/tenant'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -11,6 +12,29 @@ export const useAuthStore = defineStore('auth', () => {
   // (router guard + App.vue onMounted) share a single API request.
   let _fetchPromise = null
 
+  /** Helper to bootstrap tenant context after auth. */
+  function _bootstrapTenant(userData) {
+    try {
+      const tenantStore = useTenantStore()
+      if (userData?.active_tenant_id) {
+        tenantStore.activeTenantId = userData.active_tenant_id
+      }
+      tenantStore.fetchTenants()
+    } catch {
+      // Tenant store not yet initialized — skip
+    }
+  }
+
+  /** Helper to clear tenant context on logout. */
+  function _resetTenant() {
+    try {
+      const tenantStore = useTenantStore()
+      tenantStore.$reset()
+    } catch {
+      // Tenant store not yet initialized — skip
+    }
+  }
+
   async function fetchMe() {
     if (_fetchPromise) return _fetchPromise
 
@@ -18,19 +42,24 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     _fetchPromise = authApi.getMe()
-      .then(data => { user.value = data; return data })
+      .then(data => {
+        user.value = data
+        _bootstrapTenant(data)
+        return data
+      })
       .catch(err => { user.value = null; throw err })
       .finally(() => { loading.value = false; _fetchPromise = null })
 
     return _fetchPromise
   }
 
-  async function login(email, password) {
+  async function login(email, password, remember = true) {
     loading.value = true
     error.value = null
     try {
-      const data = await authApi.login({ email, password })
+      const data = await authApi.login({ email, password, remember })
       user.value = data.user ?? data
+      _bootstrapTenant(user.value)
     } catch (err) {
       error.value = err?.response?.data?.message || 'Login failed'
       throw err
@@ -39,12 +68,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(username, email, password) {
+  async function register(username, email, password, createTenant = true) {
     loading.value = true
     error.value = null
     try {
-      const data = await authApi.register({ username, email, password })
+      const data = await authApi.register({ username, email, password, create_tenant: createTenant })
+      // If activation is required, don't set user (they need to verify email first)
+      if (data.activation_required) {
+        return data
+      }
       user.value = data.user ?? data
+      _bootstrapTenant(user.value)
+      return data
     } catch (err) {
       error.value = err?.response?.data?.message || 'Registration failed'
       throw err
@@ -59,6 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
       await authApi.logout()
     } finally {
       user.value = null
+      _resetTenant()
       loading.value = false
     }
   }

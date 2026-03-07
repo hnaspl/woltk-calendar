@@ -10,8 +10,6 @@ export const createGuild = (payload) => api.post('/guilds', payload)
 
 export const updateGuild = (id, payload) => api.put(`/guilds/${id}`, payload)
 
-export const joinGuild = (guildId) => api.post(`/guilds/${guildId}/join`)
-
 export const getGuildMembers = (guildId) => api.get(`/guilds/${guildId}/members`)
 
 export const getAvailableUsers = (guildId, q = '') =>
@@ -29,8 +27,8 @@ export const removeMember = (guildId, userId) =>
 export const getMemberCharacters = (guildId, userId) =>
   api.get(`/guilds/${guildId}/members/${userId}/characters`)
 
-export const getWarmaneRoster = (guildId) =>
-  api.get(`/guilds/${guildId}/warmane-roster`)
+export const getArmoryRoster = (guildId) =>
+  api.get(`/guilds/${guildId}/armory-roster`)
 
 export const transferOwnership = (guildId, userId) =>
   api.post(`/guilds/${guildId}/transfer-ownership`, { user_id: userId })
@@ -68,3 +66,55 @@ export const banGuildMember = (guildId, userId) =>
 
 export const unbanGuildMember = (guildId, userId) =>
   api.post(`/guilds/${guildId}/unban/${userId}`)
+
+// ---------------------------------------------------------------------------
+// Guild invitations
+// ---------------------------------------------------------------------------
+
+export const getGuildInvitations = (guildId) =>
+  api.get(`/guilds/${guildId}/invitations`)
+
+export const createGuildInvitation = (guildId, payload) =>
+  api.post(`/guilds/${guildId}/invitations`, payload)
+
+export const revokeGuildInvitation = (guildId, invitationId) =>
+  api.delete(`/guilds/${guildId}/invitations/${invitationId}`)
+
+export const acceptGuildInvite = (token) =>
+  api.post(`/guild-invite/${token}`)
+
+// ---------------------------------------------------------------------------
+// Guild applications
+// ---------------------------------------------------------------------------
+
+export const getGuildApplications = (guildId) =>
+  api.get(`/guilds/${guildId}/applications`)
+
+export const approveApplication = (guildId, userId) =>
+  api.post(`/guilds/${guildId}/applications/${userId}/approve`)
+
+export const declineApplication = (guildId, userId) =>
+  api.post(`/guilds/${guildId}/applications/${userId}/decline`)
+
+// ---------------------------------------------------------------------------
+// Guild visibility
+// ---------------------------------------------------------------------------
+
+export const updateGuildVisibility = (guildId, visibility) =>
+  api.put(`/guilds/${guildId}/visibility`, { visibility })
+
+// ---------------------------------------------------------------------------
+// Class-role matrix
+// ---------------------------------------------------------------------------
+
+export const getClassRoleMatrix = (guildId) =>
+  api.get(`/guilds/${guildId}/class-role-matrix`)
+
+export const setClassRoleOverrides = (guildId, className, roles) =>
+  api.put(`/guilds/${guildId}/class-role-matrix/${className}`, { roles })
+
+export const resetClassRoleOverrides = (guildId, className) =>
+  api.delete(`/guilds/${guildId}/class-role-matrix/${className}`)
+
+export const resetClassRoleMatrix = (guildId) =>
+  api.delete(`/guilds/${guildId}/class-role-matrix`)

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGuildStore } from '@/stores/guild'
+import { useTenantStore } from '@/stores/tenant'
 import { useConstantsStore } from '@/stores/constants'
 
 const routes = [
@@ -15,6 +16,30 @@ const routes = [
     name: 'register',
     component: () => import('@/views/RegisterView.vue'),
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/activate',
+    name: 'activate',
+    component: () => import('@/views/ActivateView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/views/ForgotPasswordView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/views/ResetPasswordView.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/setup',
+    name: 'setup',
+    component: () => import('@/views/SetupWizardView.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/dashboard',
@@ -69,6 +94,30 @@ const routes = [
     redirect: '/admin'
   },
   {
+    path: '/tenant/settings',
+    name: 'tenant-settings',
+    component: () => import('@/views/TenantSettingsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/tenant/invites',
+    name: 'tenant-invites',
+    component: () => import('@/views/TenantInviteView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/invite/:token',
+    name: 'invite-accept',
+    component: () => import('@/views/InviteAcceptView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/guild-invite/:token',
+    name: 'guild-invite-accept',
+    component: () => import('@/views/GuildInviteAcceptView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/guild/settings',
     redirect: '/admin'
   },
@@ -86,9 +135,11 @@ const routes = [
   },
   {
     path: '/guild/series',
-    name: 'series',
-    component: () => import('@/views/SeriesView.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/guild/templates'
+  },
+  {
+    path: '/guild/recurring-raids',
+    redirect: '/guild/templates'
   },
   {
     path: '/',
@@ -124,6 +175,10 @@ router.beforeEach(async (to) => {
       // Bootstrap guild store so currentGuild & members are available for permissions
       if (authStore.user) {
         const guildStore = useGuildStore()
+        const tenantStore = useTenantStore()
+        // Bootstrap tenant store
+        await tenantStore.fetchTenants()
+        tenantStore.setActiveTenantFromUser(authStore.user)
         await guildStore.fetchGuilds()
       }
     } catch {

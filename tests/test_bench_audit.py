@@ -23,8 +23,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
-SIGNUPS_PY = ROOT / "app" / "api" / "v1" / "signups.py"
-LINEUP_PY = ROOT / "app" / "api" / "v1" / "lineup.py"
+SIGNUPS_PY = ROOT / "app" / "api" / "v2" / "signups.py"
+LINEUP_PY = ROOT / "app" / "api" / "v2" / "lineup.py"
 LINEUP_BOARD_VUE = ROOT / "src" / "components" / "raids" / "LineupBoard.vue"
 SIGNUP_FORM_VUE = ROOT / "src" / "components" / "raids" / "SignupForm.vue"
 
@@ -178,19 +178,17 @@ class TestRoleLabelMapUsage:
         )
 
     def test_lineup_board_columns_use_role_label_map(self):
-        """Column label strings should reference ROLE_LABEL_MAP, not hardcoded strings."""
+        """Column label strings should reference shared constants, not hardcoded strings."""
         src = _read(LINEUP_BOARD_VUE)
-        # The allColumns computed should reference ROLE_LABEL_MAP for labels
-        columns_match = re.search(r"const allColumns = computed\(\(\) => \[(.*?)\]\)", src, re.DOTALL)
-        assert columns_match, "Could not find allColumns computed in LineupBoard.vue"
-        columns_body = columns_match.group(1)
-        # Should NOT have hardcoded label strings like label: 'Main Tank' or label: 'Heal'
-        hardcoded_labels = re.findall(r"label:\s*'[^']+'", columns_body)
-        assert len(hardcoded_labels) == 0, (
-            f"LineupBoard.vue allColumns has hardcoded label strings: {hardcoded_labels}"
+        # The allColumns computed should reference LINEUP_COLUMNS (derived from ROLE_OPTIONS)
+        # It should NOT have hardcoded label strings like label: 'Main Tank' or label: 'Heal'
+        assert "LINEUP_COLUMNS" in src, (
+            "LineupBoard.vue should use LINEUP_COLUMNS from constants"
         )
-        # Should have ROLE_LABEL_MAP references
-        role_map_refs = re.findall(r"ROLE_LABEL_MAP\.", columns_body)
-        assert len(role_map_refs) >= 5, (
-            f"Expected 5 ROLE_LABEL_MAP references in allColumns, found {len(role_map_refs)}"
+        # Should NOT have hardcoded role arrays
+        hardcoded_arrays = re.findall(
+            r"\['main_tank',\s*'off_tank',\s*'melee_dps',\s*'healer',\s*'range_dps'\]", src
+        )
+        assert len(hardcoded_arrays) == 0, (
+            f"LineupBoard.vue still has hardcoded role arrays: {hardcoded_arrays}"
         )

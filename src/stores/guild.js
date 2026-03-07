@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import * as guildsApi from '@/api/guilds'
 
 export const useGuildStore = defineStore('guild', () => {
@@ -9,6 +9,27 @@ export const useGuildStore = defineStore('guild', () => {
   const members = ref([])
   const loading = ref(false)
   const error = ref(null)
+
+  // Watch for tenant switches — reload guild list (lazy to avoid circular dep)
+  let _tenantWatchSet = false
+  const _setupTenantWatch = () => {
+    if (_tenantWatchSet) return
+    try {
+      const { useTenantStore } = require('@/stores/tenant')
+      const tenantStore = useTenantStore()
+      watch(() => tenantStore.activeTenantId, (newId, oldId) => {
+        if (newId !== oldId && oldId !== null) {
+          currentGuild.value = null
+          members.value = []
+          fetchGuilds()
+        }
+      })
+      _tenantWatchSet = true
+    } catch {
+      // Tenant store not yet initialized — skip watcher
+    }
+  }
+  _setupTenantWatch()
 
   async function fetchGuilds() {
     loading.value = true
@@ -71,5 +92,7 @@ export const useGuildStore = defineStore('guild', () => {
     }
   }
 
-  return { guilds, allGuilds, currentGuild, members, loading, error, fetchGuilds, fetchAllGuilds, fetchGuild, setCurrentGuild, fetchMembers }
+  const currentGuildId = computed(() => currentGuild.value?.id ?? null)
+
+  return { guilds, allGuilds, currentGuild, currentGuildId, members, loading, error, fetchGuilds, fetchAllGuilds, fetchGuild, setCurrentGuild, fetchMembers }
 })

@@ -15,94 +15,104 @@
       <template v-else-if="event">
         <!-- Event header -->
         <WowCard :gold="true">
-          <div class="flex flex-col sm:flex-row items-start gap-4">
-            <img
-              :src="getRaidIcon(event.raid_type)"
-              :alt="event.raid_type"
-              class="w-14 h-14 sm:w-20 sm:h-20 rounded-lg border border-border-gold shadow-gold flex-shrink-0"
-            />
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap mb-2">
-                <h1 class="wow-heading text-lg sm:text-xl">{{ event.title }}</h1>
-                <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
-                <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.done') }}</span>
-                <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('common.status.cancelled') }}</span>
-              </div>
+          <div class="flex flex-col gap-4">
+            <!-- Top row: icon + title + badges -->
+            <div class="flex items-start gap-3 sm:gap-4">
+              <img
+                :src="getRaidIcon(event.raid_type)"
+                :alt="event.raid_type"
+                class="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg border border-border-gold shadow-gold flex-shrink-0"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 class="wow-heading text-base sm:text-lg md:text-xl break-words">{{ event.title }}</h1>
+                  <RaidSizeBadge v-if="event.raid_size || event.size" :size="event.raid_size ?? event.size" />
+                  <span v-if="event.status === 'completed'" class="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('raidDetail.done') }}</span>
+                  <span v-else-if="event.status === 'cancelled'" class="text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-0.5 rounded uppercase tracking-wider">{{ t('common.status.cancelled') }}</span>
+                </div>
 
-              <!-- Completed/cancelled event locked banner -->
-              <div v-if="event.status === 'completed' && hasAttendance" class="mt-2 px-3 py-2 rounded bg-green-900/20 border border-green-700/40 text-green-300 text-xs">
-                🔒 {{ t('raidDetail.completedLocked') }}
-              </div>
-              <div v-else-if="event.status === 'cancelled'" class="mt-2 px-3 py-2 rounded bg-red-900/20 border border-red-700/40 text-red-300 text-xs">
-                🔒 {{ t('raidDetail.cancelledLocked') }}
-              </div>
-
-              <!-- Informative details grid -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-6 gap-y-1.5 text-sm mt-2">
-                <div class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">📅</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.starts') }}</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+                <!-- Completed/cancelled event locked banner -->
+                <div v-if="event.status === 'completed' && hasAttendance" class="mt-2 px-3 py-2 rounded bg-green-900/20 border border-green-700/40 text-green-300 text-xs">
+                  🔒 {{ t('raidDetail.completedLocked') }}
                 </div>
-                <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">⏱️</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.duration') }}</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
-                </div>
-                <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">⚔️</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidTypeLabel(event.raid_type) }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">📝</span>
-                  <span>
-                    <strong class="text-text-primary">{{ t('raidDetail.signups') }}</strong>{{ ' ' }}
-                    <template v-if="event.status === 'locked' || event.is_locked">
-                      <span class="text-red-400 font-medium">{{ t('raidDetail.closed') }}</span>
-                    </template>
-                    <template v-else-if="event.status === 'cancelled'">
-                      <span class="text-red-400 font-medium">{{ t('common.status.cancelled') }}</span>
-                    </template>
-                    <template v-else-if="event.status === 'completed'">
-                      <span class="text-text-muted">{{ t('common.status.completed') }}</span>
-                    </template>
-                    <template v-else>
-                      <span class="text-green-400 font-medium">{{ t('common.status.open') }}</span>
-                    </template>
-                    <span class="ml-1 text-text-muted"> ({{ signups.length }} {{ t('raidDetail.signedUp') }})</span>
-                  </span>
-                </div>
-                <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">🔒</span>
-                  <span><strong class="text-text-primary">{{ t('raidDetail.signupsClose') }}</strong> {{ formatDateTime(event.close_signups_at) }}</span>
-                </div>
-                <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
-                  <span class="text-accent-gold">🌐</span>
-                  <span><strong class="text-text-primary">{{ t('common.labels.realmColon') }}</strong> {{ event.realm_name ?? event.realm }}</span>
+                <div v-else-if="event.status === 'cancelled'" class="mt-2 px-3 py-2 rounded bg-red-900/20 border border-red-700/40 text-red-300 text-xs">
+                  🔒 {{ t('raidDetail.cancelledLocked') }}
                 </div>
               </div>
-
-              <p v-if="event.instructions || event.description" class="mt-3 text-sm text-text-muted border-t border-border-default pt-2">
-                {{ event.instructions ?? event.description }}
-              </p>
             </div>
 
-            <!-- Officer actions -->
-            <div v-if="permissions.can('edit_events')" class="flex flex-wrap gap-1.5 sm:gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
-              <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">{{ t('common.buttons.edit') }}</WowButton>
-              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
-                {{ (event.status === 'locked' || event.is_locked) ? t('raidDetail.unlock') : t('raidDetail.lock') }}
-              </WowButton>
-              <WowButton variant="secondary" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
-              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
-                {{ t('raidDetail.markDone') }}
-              </WowButton>
-              <WowButton
-                v-if="event.status === 'completed' && permissions.can('record_attendance')"
-                variant="primary"
-                @click="showAttendanceModal = true"
-              >
-                {{ hasAttendance ? t('raidDetail.updateAttendance') : t('common.labels.recordAttendance') }}
-              </WowButton>
-              <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">{{ t('raidDetail.cancelEvent') }}</WowButton>
+            <!-- Details grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              <div class="flex items-center gap-2 text-text-muted">
+                <span class="text-accent-gold flex-shrink-0">📅</span>
+                <span class="break-words"><strong class="text-text-primary">{{ t('raidDetail.starts') }}</strong> {{ formatDateTime(event.starts_at_utc ?? event.start_time ?? event.date) }}</span>
+              </div>
+              <div v-if="event.duration_minutes" class="flex items-center gap-2 text-text-muted">
+                <span class="text-accent-gold flex-shrink-0">⏱️</span>
+                <span><strong class="text-text-primary">{{ t('raidDetail.duration') }}</strong> ~{{ formatDuration(event.duration_minutes) }}</span>
+              </div>
+              <div v-if="event.raid_type" class="flex items-center gap-2 text-text-muted">
+                <span class="text-accent-gold flex-shrink-0">⚔️</span>
+                <span><strong class="text-text-primary">{{ t('raidDetail.raid') }}</strong> {{ raidTypeLabel(event.raid_type, raidTypes) }}</span>
+              </div>
+              <div class="flex items-center gap-2 text-text-muted">
+                <span class="text-accent-gold flex-shrink-0">📝</span>
+                <span>
+                  <strong class="text-text-primary">{{ t('raidDetail.signups') }}</strong>{{ ' ' }}
+                  <template v-if="event.status === 'locked' || event.is_locked">
+                    <span class="text-red-400 font-medium">{{ t('raidDetail.closed') }}</span>
+                  </template>
+                  <template v-else-if="event.status === 'cancelled'">
+                    <span class="text-red-400 font-medium">{{ t('common.status.cancelled') }}</span>
+                  </template>
+                  <template v-else-if="event.status === 'completed'">
+                    <span class="text-text-muted">{{ t('common.status.completed') }}</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-green-400 font-medium">{{ t('common.status.open') }}</span>
+                  </template>
+                  <span class="ml-1 text-text-muted"> ({{ signups.length }} {{ t('raidDetail.signedUp') }})</span>
+                </span>
+              </div>
+              <div v-if="event.close_signups_at" class="flex items-center gap-2 text-text-muted">
+                <span class="text-accent-gold flex-shrink-0">🔒</span>
+                <span><strong class="text-text-primary">{{ t('raidDetail.signupsClose') }}</strong> {{ formatDateTime(event.close_signups_at) }}</span>
+              </div>
+              <div v-if="event.realm_name || event.realm" class="flex items-center gap-2 text-text-muted">
+                <span class="text-accent-gold flex-shrink-0">🌐</span>
+                <span><strong class="text-text-primary">{{ t('common.labels.realmColon') }}</strong> {{ event.realm_name ?? event.realm }}</span>
+              </div>
+            </div>
+
+            <p v-if="event.instructions || event.description" class="text-sm text-text-muted border-t border-border-default pt-2">
+              {{ event.instructions ?? event.description }}
+            </p>
+
+            <!-- Action buttons row -->
+            <div class="flex flex-wrap items-center gap-2 border-t border-border-default pt-3">
+
+              <template v-if="permissions.can('edit_events')">
+                <WowButton v-if="!(event.status === 'completed' && hasAttendance)" variant="secondary" @click="openEditModal">{{ t('common.buttons.edit') }}</WowButton>
+                <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="secondary" @click="toggleLock">
+                  {{ (event.status === 'locked' || event.is_locked) ? t('raidDetail.unlock') : t('raidDetail.lock') }}
+                </WowButton>
+                <WowButton variant="secondary" @click="openDuplicateModal">{{ t('raidDetail.duplicate') }}</WowButton>
+                <WowButton variant="secondary" @click="showDiscordModal = true" title="Send to Discord">
+                  <img :src="discordIcon" class="w-4 h-4 inline" alt="Discord" />
+                  Discord
+                </WowButton>
+                <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="primary" @click="markComplete">
+                  {{ t('raidDetail.markDone') }}
+                </WowButton>
+                <WowButton
+                  v-if="event.status === 'completed' && permissions.can('record_attendance')"
+                  variant="primary"
+                  @click="showAttendanceModal = true"
+                >
+                  {{ hasAttendance ? t('raidDetail.updateAttendance') : t('common.labels.recordAttendance') }}
+                </WowButton>
+                <WowButton v-if="event.status !== 'completed' && event.status !== 'cancelled'" variant="danger" @click="confirmCancel = true">{{ t('raidDetail.cancelEvent') }}</WowButton>
+              </template>
             </div>
           </div>
         </WowCard>
@@ -141,72 +151,112 @@
             />
             <!-- My signups list for switching active character -->
             <WowCard v-if="mySignups.length > 0">
-              <h3 class="wow-heading text-base mb-3">My Signups ({{ mySignups.length }})</h3>
-              <div class="space-y-2">
+              <h3 class="wow-heading text-base mb-4">{{ t('raidDetail.mySignupsTitle', { count: mySignups.length }) || `My Signups (${mySignups.length})` }}</h3>
+              <div class="space-y-4">
                 <div
                   v-for="s in mySignups"
                   :key="s.id"
                   class="space-y-2"
                 >
                   <div
-                    class="px-3 py-2.5 rounded border text-sm transition-colors"
+                    class="rounded-lg border transition-colors overflow-hidden"
                     :class="editingSignupId === s.id
-                      ? 'border-accent-gold bg-accent-gold/10'
-                      : 'border-border-default bg-bg-tertiary hover:border-border-gold'"
+                      ? 'border-accent-gold bg-accent-gold/5'
+                      : 'border-border-default bg-bg-tertiary hover:border-border-gold/40'"
                   >
-                    <div class="flex items-center gap-2">
-                      <img
-                        :src="getClassIcon(s.character?.class_name)"
-                        :alt="s.character?.class_name ?? ''"
-                        class="w-8 h-8 rounded flex-shrink-0"
-                      />
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <span class="font-medium" :style="{ color: getClassColor(s.character?.class_name) }">
-                            {{ s.character?.name ?? '?' }}
-                          </span>
-                          <ClassBadge v-if="s.character?.class_name" :class-name="s.character.class_name" />
-                          <RoleBadge :role="s.chosen_role" />
-                          <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-[10px] font-semibold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
-                            Bench{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
-                          </span>
-                          <span v-else-if="s.lineup_status === 'declined'" class="text-[10px] font-semibold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">declined</span>
-                          <span v-else class="text-[10px] font-semibold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">in lineup</span>
+                    <!-- Card body -->
+                    <div class="p-5 sm:p-6">
+                      <div class="flex items-start gap-5">
+                        <img
+                          :src="getClassIcon(s.character?.class_name)"
+                          :alt="s.character?.class_name ?? ''"
+                          class="w-16 h-16 rounded-lg border border-border-default flex-shrink-0"
+                        />
+                        <div class="flex-1 min-w-0">
+                          <!-- Name + status -->
+                          <div class="flex items-center gap-2.5 flex-wrap mb-3">
+                            <span class="text-lg sm:text-xl font-bold" :style="{ color: getClassColor(s.character?.class_name) }">
+                              {{ s.character?.name ?? '?' }}
+                            </span>
+                            <RoleBadge :role="s.chosen_role" />
+                            <span v-if="s.lineup_status === 'bench' || s.bench_info" class="text-xs font-semibold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded">
+                              {{ t('common.labels.bench') }}{{ s.bench_info ? ' #' + s.bench_info.queue_position : '' }}
+                            </span>
+                            <span v-else-if="s.lineup_status === 'declined'" class="text-xs font-semibold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">{{ t('common.labels.declined') }}</span>
+                            <span v-else class="text-xs font-semibold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">{{ t('common.labels.inLineup') }}</span>
+                          </div>
+
+                          <!-- Specs -->
+                          <div v-if="s.chosen_spec" class="flex items-center gap-2.5 flex-wrap mb-3">
+                            <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+                          </div>
+
+                          <!-- Professions -->
+                          <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-2.5 flex-wrap mb-3">
+                            <span
+                              v-for="prof in mySignupProfessions(s)"
+                              :key="prof.name"
+                              class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-bg-secondary border border-border-default rounded text-text-muted"
+                            >
+                              <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-4 h-4 rounded-sm" />
+                              {{ prof.name }} {{ prof.skill || '' }}
+                            </span>
+                          </div>
+
+                          <!-- Note -->
+                          <p v-if="s.note" class="text-sm text-text-muted italic mb-3">{{ s.note }}</p>
                         </div>
-                        <!-- Specializations -->
-                        <div v-if="s.chosen_spec" class="flex items-center gap-1 mt-1 flex-wrap">
-                          <SpecBadge v-for="sp in s.chosen_spec.split(',').map(x => x.trim()).filter(Boolean)" :key="sp" :spec="sp" :class-name="s.character?.class_name" />
+
+                        <!-- Right: Attendance status -->
+                        <div class="flex-shrink-0" v-if="event.status === 'open' || event.status === 'draft'">
+                          <div class="flex items-center gap-2">
+                            <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
+                            <select
+                              :value="s.attendance_status || 'going'"
+                              class="bg-bg-secondary border text-sm rounded-md px-3 py-1.5 outline-none cursor-pointer"
+                              :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).select || 'border-green-500/40 text-green-300'"
+                              @change="updateMyAttendanceStatus(s, $event.target.value)"
+                            >
+                              <option v-for="opt in playerAttendanceOptions" :key="opt.value" :value="opt.value">{{ t(opt.i18nKey) }}</option>
+                            </select>
+                          </div>
+                          <!-- Late minutes -->
+                          <div v-if="s.attendance_status === 'late'" class="mt-2 flex items-center gap-2 justify-end">
+                            <input
+                              type="number" min="1" max="120" step="5"
+                              :value="s.late_minutes || ''"
+                              placeholder="15"
+                              class="w-24 bg-bg-tertiary border border-border-default text-text-primary text-sm rounded px-3 py-1.5 outline-none focus:border-border-gold"
+                              @change="updateMyLateMinutes(s, $event.target.value)"
+                            />
+                            <span class="text-xs text-text-muted whitespace-nowrap">{{ t('signup.minutesLate') }}</span>
+                          </div>
                         </div>
-                        <!-- Professions with icons -->
-                        <div v-if="mySignupProfessions(s).length > 0" class="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span
-                            v-for="prof in mySignupProfessions(s)"
-                            :key="prof.name"
-                            class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 bg-[#1c2333] border border-[#2a3450] rounded text-text-muted"
-                          >
-                            <img :src="getProfessionIcon(prof.name)" :alt="prof.name" class="w-3.5 h-3.5 rounded-sm" />
-                            {{ prof.name }} {{ prof.skill || '' }}
+                        <!-- Read-only attendance when closed -->
+                        <div class="flex-shrink-0" v-else>
+                          <div class="flex items-center gap-2">
+                            <img :src="getAttendanceStatusIcon(s.attendance_status || 'going')" class="w-5 h-5 rounded-sm" :alt="ATTENDANCE_STATUS_LABEL_MAP[s.attendance_status || 'going']" />
+                            <span class="text-sm px-3 py-1.5 rounded-md"
+                                  :class="(ATTENDANCE_STATUS_STYLE[s.attendance_status || 'going'] || {}).badge || 'bg-green-500/10 text-green-300 border border-green-500/30'">
+                              {{ t(ATTENDANCE_STATUS_I18N_MAP[s.attendance_status || 'going']) }}
+                            </span>
+                          </div>
+                          <span v-if="s.attendance_status === 'late' && s.late_minutes" class="block text-xs text-amber-300 text-right mt-1">
+                            ~{{ s.late_minutes }} {{ t('signup.minutesLate') }}
                           </span>
                         </div>
-                      </div>
-                      <div class="flex flex-col gap-1 flex-shrink-0">
-                        <button
-                          v-if="event.status === 'open' || event.status === 'draft'"
-                          class="text-xs px-2 py-0.5 rounded border border-border-default hover:border-accent-gold text-text-muted hover:text-accent-gold transition-colors"
-                          @click="editingSignupId = editingSignupId === s.id ? null : s.id"
-                        >
-                          {{ editingSignupId === s.id ? 'Cancel Edit' : 'Edit' }}
-                        </button>
-                        <button
-                          v-if="event.status === 'open' || event.status === 'draft'"
-                          class="text-xs px-2 py-0.5 rounded border border-red-800 hover:border-red-500 text-red-400 hover:text-red-300 transition-colors"
-                          @click="leaveRaid(s)"
-                        >
-                          Leave Raid
-                        </button>
                       </div>
                     </div>
-                    <p v-if="s.note" class="text-text-muted text-[10px] italic mt-1.5 ml-10">📝 {{ s.note }}</p>
+
+                    <!-- Card footer: Action buttons -->
+                    <div v-if="event.status === 'open' || event.status === 'draft'" class="px-5 sm:px-6 py-3.5 bg-bg-secondary/40 border-t border-border-default/40 flex items-center gap-3 flex-wrap">
+                      <WowButton variant="secondary" class="text-xs !py-2 !px-4" @click="editingSignupId = editingSignupId === s.id ? null : s.id">
+                        {{ editingSignupId === s.id ? t('common.buttons.cancel') : t('common.buttons.edit') }}
+                      </WowButton>
+                      <WowButton variant="danger" class="text-xs !py-2 !px-4" @click="leaveRaid(s)">
+                        {{ t('raidDetail.leaveRaid') }}
+                      </WowButton>
+                    </div>
                   </div>
                   <!-- Pending character replacement request -->
                   <div
@@ -270,7 +320,7 @@
               :available-roles="availableRoles"
               @signup-updated="onSignupUpdated"
               @signup-removed="onSignupRemoved"
-              @signup-error="msg => uiStore.showToast(msg, 'error')"
+              @signup-error="msg => toast.error(msg)"
             />
             <CompositionSummary
               v-else
@@ -284,6 +334,7 @@
             />
           </div>
         </div>
+
       </template>
     </div>
 
@@ -297,10 +348,11 @@
         <div>
           <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.raidDefinition') }}</label>
           <select v-model.number="editForm.raid_definition_id" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none" @change="onEditRaidDefChange">
-            <option value="">{{ t('raidDetail.noneUseDefaults') }}</option>
-            <optgroup :label="t('calendar.builtInRaids')">
-              <option v-for="rd in editBuiltinDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
-            </optgroup>
+            <template v-for="group in editRaidDefsByExpansion" :key="group.expansion">
+              <optgroup :label="group.label">
+                <option v-for="rd in group.defs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
+              </optgroup>
+            </template>
             <optgroup v-if="editCustomDefs.length" :label="t('calendar.customRaids')">
               <option v-for="rd in editCustomDefs" :key="rd.id" :value="rd.id">{{ rd.name }} ({{ rd.default_raid_size ?? rd.size }}-man)</option>
             </optgroup>
@@ -310,16 +362,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.size') }}</label>
-            <select v-model.number="editForm.raid_size" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
-              <option :value="10">{{ t('calendar.tenMan') }}</option>
-              <option :value="25">{{ t('calendar.twentyFiveMan') }}</option>
+            <select v-model.number="editForm.raid_size" :disabled="editSelectedRaidSizes.length <= 1" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <option v-for="s in editSelectedRaidSizes" :key="s" :value="s">{{ s }}-man</option>
             </select>
+            <span class="text-[10px] text-text-muted">{{ editSelectedRaidSizes.length > 1 ? t('calendar.selectSize') : t('calendar.sizeFromRaid') }}</span>
           </div>
           <div>
             <label class="block text-xs text-text-muted mb-1">{{ t('calendar.difficulty') }}</label>
-            <select v-model="editForm.difficulty" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none">
+            <select v-model="editForm.difficulty" :disabled="!editSelectedRaidDef?.supports_heroic" class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none disabled:opacity-60 disabled:cursor-not-allowed">
               <option value="normal">{{ t('calendar.normal') }}</option>
-              <option value="heroic">{{ t('calendar.heroic') }}</option>
+              <option v-if="editSelectedRaidDef?.supports_heroic" value="heroic">{{ t('calendar.heroic') }}</option>
             </select>
           </div>
           <div>
@@ -360,6 +412,45 @@
       </template>
     </WowModal>
 
+    <!-- Duplicate Event modal -->
+    <WowModal v-model="showDuplicateModal" :title="t('raidDetail.duplicate')" size="md">
+      <form @submit.prevent="doDuplicate" class="space-y-4">
+        <p class="text-sm text-text-muted">{{ t('raidDetail.duplicateDescription') }}</p>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('common.fields.startDateTime') }} *</label>
+          <input
+            v-model="duplicateForm.starts_at"
+            type="datetime-local"
+            :min="todayDatetimeLocal"
+            required
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-xs text-text-muted mb-1">{{ t('calendar.closeSignupsAt') }}</label>
+          <input
+            v-model="duplicateForm.close_signups_at"
+            type="datetime-local"
+            :min="todayDatetimeLocal"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none"
+          />
+          <span class="text-[10px] text-text-muted">{{ t('calendar.closeSignupsHelp') }}</span>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="duplicateForm.copy_signups" type="checkbox" class="w-4 h-4 rounded border-border-default bg-bg-tertiary text-accent-gold focus:ring-accent-gold cursor-pointer" />
+          <span class="text-sm text-text-primary">{{ t('raidDetail.duplicateCopySignups') }}</span>
+        </label>
+        <p class="text-[10px] text-text-muted -mt-2 ml-6">{{ t('raidDetail.duplicateCopySignupsHelp') }}</p>
+        <div v-if="duplicateError" class="p-3 rounded bg-red-900/30 border border-red-600 text-red-300 text-sm">{{ duplicateError }}</div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <WowButton variant="secondary" @click="showDuplicateModal = false">{{ t('common.buttons.cancel') }}</WowButton>
+          <WowButton :loading="actionLoading" @click="doDuplicate">{{ t('raidDetail.duplicate') }}</WowButton>
+        </div>
+      </template>
+    </WowModal>
+
     <!-- Cancel confirmation modal -->
     <WowModal v-model="confirmCancel" :title="t('raidDetail.cancelEvent')" size="sm">
       <p class="text-text-muted mb-4">{{ t('raidDetail.cancelEventConfirm') }}</p>
@@ -392,6 +483,31 @@
       :event-id="event?.id"
       @saved="onAttendanceSaved"
     />
+
+    <!-- Discord Webhook Modal -->
+    <WowModal v-model="showDiscordModal" title="Send to Discord" size="sm">
+      <div class="space-y-4">
+        <p class="text-sm text-text-muted">
+          Send this raid's details, lineup, and composition to your guild's Discord channel.
+        </p>
+        <p v-if="!guildHasDiscordWebhook" class="text-xs text-amber-300 bg-amber-900/20 border border-amber-700 rounded px-3 py-2">
+          Discord webhook URL is not configured. Set it in Guild Settings before sending.
+        </p>
+        <div v-if="discordError" class="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded px-3 py-2">
+          {{ discordError }}
+        </div>
+        <div v-if="discordSuccess" class="text-xs text-green-400 bg-green-900/20 border border-green-800 rounded px-3 py-2">
+          Raid details sent to Discord!
+        </div>
+        <div class="flex justify-end gap-2">
+          <WowButton variant="secondary" @click="showDiscordModal = false">Cancel</WowButton>
+          <WowButton variant="primary" :disabled="!guildHasDiscordWebhook || discordSending" @click="sendToDiscord">
+            <img :src="discordIcon" class="w-4 h-4 inline" alt="" />
+            {{ discordSending ? 'Sending...' : 'Send' }}
+          </WowButton>
+        </div>
+      </div>
+    </WowModal>
   </AppShell>
 </template>
 
@@ -413,30 +529,44 @@ import LineupBoard from '@/components/raids/LineupBoard.vue'
 import AttendanceModal from '@/components/raids/AttendanceModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { useToast } from '@/composables/useToast'
 import { usePermissions } from '@/composables/usePermissions'
 import { useWowIcons } from '@/composables/useWowIcons'
 import { useSocket } from '@/composables/useSocket'
 import { useTimezone } from '@/composables/useTimezone'
 import { useFormatting } from '@/composables/useFormatting'
-import { RAID_TYPES, ROLE_LABEL_MAP, formatDuration, raidTypeLabel } from '@/constants'
+import { ROLE_LABEL_MAP, formatDuration, raidTypeLabel, groupRaidDefsByExpansion, ATTENDANCE_STATUS_OPTIONS, ATTENDANCE_STATUS_STYLE, ATTENDANCE_STATUS_LABEL_MAP, ATTENDANCE_STATUS_I18N_MAP } from '@/constants'
+import { useExpansionData } from '@/composables/useExpansionData'
+import { useConstantsStore } from '@/stores/constants'
 import * as eventsApi from '@/api/events'
 import * as signupsApi from '@/api/signups'
 import * as raidDefsApi from '@/api/raidDefinitions'
 import * as attendanceApi from '@/api/attendance'
+import * as guildExpansionsApi from '@/api/guild_expansions'
 import { useI18n } from 'vue-i18n'
+import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
 const route = useRoute()
 const router = useRouter()
 const guildStore = useGuildStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
+const toast = useToast()
 const permissions = usePermissions()
-const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon } = useWowIcons()
+const { getRaidIcon, getClassColor, getClassIcon, getProfessionIcon, getUiIcon } = useWowIcons()
 const { joinEvent, leaveEvent, on: socketOn, off: socketOff } = useSocket()
 const tz = useTimezone()
 const { formatDateTime } = useFormatting()
 const { t } = useI18n()
+const { raidTypes: expansionRaidTypes } = useExpansionData()
+const constantsStore = useConstantsStore()
+const guildRaidTypes = ref([])
+
+// Use guild-specific raid types → constants store → expansion data as fallback chain
+const raidTypes = computed(() => {
+  if (guildRaidTypes.value.length) return guildRaidTypes.value
+  if (constantsStore.raidTypes.length) return constantsStore.raidTypes
+  return expansionRaidTypes.value
+})
 
 const event = ref(null)
 const signups = ref([])
@@ -446,13 +576,28 @@ const error = ref(null)
 const actionLoading = ref(false)
 const confirmCancel = ref(false)
 const showEditModal = ref(false)
+const showDuplicateModal = ref(false)
+const duplicateError = ref(null)
+const duplicateForm = reactive({ starts_at: '', close_signups_at: '', copy_signups: false })
 const showLeaveModal = ref(false)
 const showAttendanceModal = ref(false)
+const showDiscordModal = ref(false)
+const discordSending = ref(false)
+const discordError = ref(null)
+const discordSuccess = ref(false)
+
+const guildHasDiscordWebhook = computed(() => {
+  const settings = guildStore.currentGuild?.settings
+  return !!(settings && settings.discord_webhook_url)
+})
+
+const playerAttendanceOptions = computed(() =>
+  ATTENDANCE_STATUS_OPTIONS.filter(o => o.value !== 'did_not_show')
+)
 const hasAttendance = ref(false)
 const leaveSignup = ref(null)
 const editError = ref(null)
 const editingSignupId = ref(null)
-const raidTypes = RAID_TYPES
 
 function mySignupProfessions(s) {
   return (s.character?.metadata?.professions ?? []).slice(0, 2)
@@ -461,6 +606,32 @@ function mySignupProfessions(s) {
 const editRaidDefs = ref([])
 const editBuiltinDefs = computed(() => editRaidDefs.value.filter(d => d.is_builtin))
 const editCustomDefs = computed(() => editRaidDefs.value.filter(d => !d.is_builtin))
+const editSelectedRaidDef = computed(() =>
+  editRaidDefs.value.find(d => d.id === editForm.raid_definition_id) ?? null
+)
+
+const editRaidDefsByExpansion = computed(() =>
+  groupRaidDefsByExpansion(editBuiltinDefs.value, constantsStore.expansionSlugsDesc, constantsStore.expansionLabelMap)
+)
+
+const editSelectedRaidSizes = computed(() => {
+  const rd = editSelectedRaidDef.value
+  if (!rd) return editAvailableRaidSizes.value
+  if (rd.supported_sizes && Array.isArray(rd.supported_sizes) && rd.supported_sizes.length) {
+    return [...rd.supported_sizes].sort((a, b) => a - b)
+  }
+  return [rd.default_raid_size ?? rd.size ?? 25]
+})
+
+const editAvailableRaidSizes = computed(() => {
+  const sizes = new Set()
+  const defs = editRaidDefs.value
+  for (const d of defs) {
+    sizes.add(d.default_raid_size ?? d.size ?? 25)
+  }
+  if (sizes.size === 0) { sizes.add(10); sizes.add(25) }
+  return [...sizes].sort((a, b) => a - b)
+})
 
 // Character replacement requests
 const replacementRequests = ref([])
@@ -495,6 +666,8 @@ const mySignedUpCharacterIds = computed(() =>
 )
 
 const bans = ref([])
+
+
 const bannedCharacterIds = computed(() =>
   bans.value.map(b => b.character_id)
 )
@@ -541,6 +714,15 @@ onMounted(async () => {
     ])
     event.value = ev
     signups.value = su
+    // Load guild-specific raid types for the header display
+    if (guildId.value) {
+      try {
+        const constData = await guildExpansionsApi.getGuildConstants(guildId.value)
+        if (constData?.raid_types) {
+          guildRaidTypes.value = constData.raid_types.map(r => ({ value: r.code, label: r.name }))
+        }
+      } catch { /* fallback to constants store */ }
+    }
     // Fetch bans for this event
     try { bans.value = await signupsApi.getBans(guildId.value, route.params.id) } catch { bans.value = [] }
     // Check if attendance has been recorded for this event
@@ -669,9 +851,9 @@ async function toggleLock() {
       event.value = updated
     }
     const nowLocked = event.value.status === 'locked'
-    uiStore.showToast(t(nowLocked ? 'raidDetail.toasts.eventLocked' : 'raidDetail.toasts.eventUnlocked'), 'success')
+    toast.success(t(nowLocked ? 'raidDetail.toasts.eventLocked' : 'raidDetail.toasts.eventUnlocked'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.actionFailed'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.actionFailed'))
   } finally {
     actionLoading.value = false
   }
@@ -682,9 +864,9 @@ async function markComplete() {
   try {
     await eventsApi.completeEvent(guildId.value, event.value.id)
     event.value.status = 'completed'
-    uiStore.showToast(t('raidDetail.toasts.eventCompleted'), 'success')
+    toast.success(t('raidDetail.toasts.eventCompleted'))
   } catch {
-    uiStore.showToast(t('raidDetail.toasts.failedToComplete'), 'error')
+    toast.error(t('raidDetail.toasts.failedToComplete'))
   } finally {
     actionLoading.value = false
   }
@@ -696,25 +878,79 @@ async function cancelEvent() {
     await eventsApi.cancelEvent(guildId.value, event.value.id)
     event.value.status = 'cancelled'
     confirmCancel.value = false
-    uiStore.showToast(t('raidDetail.toasts.eventCancelled'), 'warning')
+    toast.warning(t('raidDetail.toasts.eventCancelled'))
   } catch {
-    uiStore.showToast(t('raidDetail.toasts.failedToCancel'), 'error')
+    toast.error(t('raidDetail.toasts.failedToCancel'))
   } finally {
     actionLoading.value = false
   }
 }
 
 async function doDuplicate() {
+  duplicateError.value = null
+  if (!duplicateForm.starts_at) {
+    duplicateError.value = t('raidDetail.duplicateSelectDate')
+    return
+  }
+  if (duplicateForm.close_signups_at && new Date(duplicateForm.close_signups_at) >= new Date(duplicateForm.starts_at)) {
+    duplicateError.value = t('calendar.closeSignupsError')
+    return
+  }
   actionLoading.value = true
   try {
-    const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id)
-    uiStore.showToast(t('raidDetail.toasts.eventDuplicated'), 'success')
+    const payload = {
+      starts_at_utc: tz.guildLocalToUtc(duplicateForm.starts_at),
+      copy_signups: duplicateForm.copy_signups,
+    }
+    if (duplicateForm.close_signups_at) {
+      payload.close_signups_at = tz.guildLocalToUtc(duplicateForm.close_signups_at)
+    }
+    const newEvent = await eventsApi.duplicateEvent(guildId.value, event.value.id, payload)
+    showDuplicateModal.value = false
+    toast.success(t('raidDetail.toasts.eventDuplicated'))
     router.push({ name: 'raid-detail', params: { id: newEvent.id } })
   } catch {
-    uiStore.showToast(t('raidDetail.toasts.failedToDuplicate'), 'error')
+    toast.error(t('raidDetail.toasts.failedToDuplicate'))
   } finally {
     actionLoading.value = false
   }
+}
+
+const todayDatetimeLocal = computed(() => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const h = String(now.getHours()).padStart(2, '0')
+  const min = String(now.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${d}T${h}:${min}`
+})
+
+function openDuplicateModal() {
+  if (!event.value) return
+  // Default to 1 week later, same time
+  const origStart = event.value.starts_at_utc ?? event.value.start_time
+  let defaultStart = ''
+  if (origStart) {
+    const d = new Date(origStart)
+    d.setDate(d.getDate() + 7)
+    defaultStart = toLocalDatetime(d.toISOString())
+  }
+  // Default close_signups_at: same offset from start as original
+  let defaultClose = ''
+  if (event.value.close_signups_at && origStart) {
+    const origStartMs = new Date(origStart).getTime()
+    const origCloseMs = new Date(event.value.close_signups_at).getTime()
+    const offset = origStartMs - origCloseMs
+    if (defaultStart && offset > 0) {
+      const newStartMs = new Date(tz.guildLocalToUtc(defaultStart)).getTime()
+      const newCloseMs = newStartMs - offset
+      defaultClose = toLocalDatetime(new Date(newCloseMs).toISOString())
+    }
+  }
+  Object.assign(duplicateForm, { starts_at: defaultStart, close_signups_at: defaultClose, copy_signups: false })
+  duplicateError.value = null
+  showDuplicateModal.value = true
 }
 
 function toLocalDatetime(utcStr) {
@@ -748,6 +984,7 @@ function onEditRaidDefChange() {
   if (rd) {
     editForm.raid_type = rd.raid_type || rd.code || ''
     editForm.raid_size = rd.default_raid_size ?? rd.size ?? 25
+    editForm.difficulty = rd.supports_heroic ? 'heroic' : 'normal'
     if (rd.default_duration_minutes) editForm.duration_minutes = rd.default_duration_minutes
   }
 }
@@ -780,7 +1017,7 @@ async function saveEvent() {
     const updated = await eventsApi.updateEvent(guildId.value, event.value.id, payload)
     event.value = updated
     showEditModal.value = false
-    uiStore.showToast(t('raidDetail.toasts.eventUpdated'), 'success')
+    toast.success(t('raidDetail.toasts.eventUpdated'))
   } catch (err) {
     editError.value = err?.response?.data?.error ?? err?.response?.data?.message ?? t('raidDetail.toasts.failedToUpdate')
   } finally {
@@ -790,12 +1027,39 @@ async function saveEvent() {
 
 function onSignedUp(signup) {
   signups.value.push(signup)
-  uiStore.showToast(t('common.toasts.signedUp'), 'success')
+  toast.success(t('common.toasts.signedUp'))
 }
 
 function leaveRaid(signup) {
   leaveSignup.value = signup
   showLeaveModal.value = true
+}
+
+async function updateMyAttendanceStatus(signup, newStatus) {
+  try {
+    const payload = { attendance_status: newStatus }
+    const updated = await signupsApi.updateSignupStatus(guildId.value, event.value.id, signup.id, payload)
+    // Update local signup object
+    const idx = signups.value.findIndex(s => s.id === signup.id)
+    if (idx >= 0) {
+      signups.value[idx] = { ...signups.value[idx], attendance_status: newStatus, late_minutes: updated?.late_minutes ?? null }
+    }
+  } catch (err) {
+    toast.error(err?.response?.data?.error ?? 'Failed to update status')
+  }
+}
+
+async function updateMyLateMinutes(signup, minutes) {
+  try {
+    const payload = { attendance_status: 'late', late_minutes: parseInt(minutes, 10) || null }
+    await signupsApi.updateSignupStatus(guildId.value, event.value.id, signup.id, payload)
+    const idx = signups.value.findIndex(s => s.id === signup.id)
+    if (idx >= 0) {
+      signups.value[idx] = { ...signups.value[idx], late_minutes: parseInt(minutes, 10) || null }
+    }
+  } catch (err) {
+    toast.error(err?.response?.data?.error ?? 'Failed to update late minutes')
+  }
 }
 
 async function confirmLeaveRaid() {
@@ -816,9 +1080,9 @@ async function confirmLeaveRaid() {
       console.warn('Failed to reload signups', err)
       signups.value = signups.value.filter(s => s.id !== signupId)
     }
-    uiStore.showToast(t('raidDetail.toasts.leftRaid'), 'success')
+    toast.success(t('raidDetail.toasts.leftRaid'))
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('raidDetail.toasts.failedToLeave'), 'error')
+    toast.error(err?.response?.data?.message ?? t('raidDetail.toasts.failedToLeave'))
   } finally {
     actionLoading.value = false
   }
@@ -833,7 +1097,7 @@ async function onSignupUpdated(updated) {
     const idx = signups.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) signups.value[idx] = updated
   }
-  uiStore.showToast(t('raidDetail.toasts.signupUpdated'), 'success')
+  toast.success(t('raidDetail.toasts.signupUpdated'))
   editingSignupId.value = null
 }
 
@@ -847,7 +1111,7 @@ async function onSignupRemoved(signupId) {
   }
   // Refresh bans in case a permanent kick was applied
   try { bans.value = await signupsApi.getBans(guildId.value, event.value.id) } catch { /* ignore */ }
-  uiStore.showToast(t('raidDetail.toasts.signupRemoved'), 'success')
+  toast.success(t('raidDetail.toasts.signupRemoved'))
 }
 
 async function onLineupSaved(payload) {
@@ -858,7 +1122,7 @@ async function onLineupSaved(payload) {
     console.warn('Failed to reload signups after lineup save', err)
   }
   if (!payload?.auto) {
-    uiStore.showToast(t('raidDetail.toasts.lineupSaved'), 'success')
+    toast.success(t('raidDetail.toasts.lineupSaved'))
   }
 }
 
@@ -868,7 +1132,24 @@ function onLineupUpdated(counts) {
 
 function onAttendanceSaved() {
   hasAttendance.value = true
-  uiStore.showToast(t('raidDetail.toasts.attendanceRecorded'), 'success')
+  toast.success(t('raidDetail.toasts.attendanceRecorded'))
+}
+
+// --- Discord webhook ---
+async function sendToDiscord() {
+  if (!guildId.value || !event.value?.id) return
+  discordSending.value = true
+  discordError.value = null
+  discordSuccess.value = false
+  try {
+    await eventsApi.sendEventToDiscord(guildId.value, event.value.id)
+    discordSuccess.value = true
+    setTimeout(() => { showDiscordModal.value = false; discordSuccess.value = false }, 2000)
+  } catch (err) {
+    discordError.value = err?.response?.data?.error ?? 'Failed to send to Discord'
+  } finally {
+    discordSending.value = false
+  }
 }
 
 // --- Character replacement requests ---
@@ -892,12 +1173,15 @@ async function resolveReplacement(requestId, action) {
     // Reload signups and replacement requests
     signups.value = await signupsApi.getSignups(guildId.value, event.value.id)
     await loadReplacementRequests()
-    uiStore.showToast(
-      action === 'confirm' ? 'Character swap confirmed!' : 'Character swap declined.',
-      action === 'confirm' ? 'success' : 'info'
-    )
+    if (action === 'confirm') {
+      toast.success('Character swap confirmed!')
+    } else {
+      toast.info('Character swap declined.')
+    }
   } catch (err) {
-    uiStore.showToast(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'), 'error')
+    toast.error(err?.response?.data?.message ?? t('common.toasts.failedToProcessReplacement'))
   }
 }
 </script>
+
+

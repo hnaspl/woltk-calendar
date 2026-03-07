@@ -10,6 +10,7 @@ import sqlalchemy as sa
 
 from app.extensions import bcrypt, db
 from app.models.user import User
+from app.services import tenant_service
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,13 @@ def seed_admin_user(
     ).scalars().first()
 
     if existing is not None:
+        # Ensure existing admin has a tenant workspace
+        if existing.active_tenant_id is None:
+            try:
+                tenant_service.create_tenant(owner=existing)
+                logger.info("Created missing tenant for existing admin user '%s'.", existing.username)
+            except ValueError:
+                pass  # already owns a tenant (race condition guard)
         return False
 
     if not password:
@@ -60,4 +68,6 @@ def seed_admin_user(
     )
     db.session.add(user)
     db.session.commit()
+    tenant_service.create_tenant(owner=user)
+    logger.info("Created default admin user '%s' with tenant workspace.", username)
     return True
