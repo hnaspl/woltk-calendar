@@ -36,7 +36,7 @@ from app.utils.sanitizer import (
 logger = logging.getLogger(__name__)
 
 _TRANSLATIONS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "translations",
 )
 _SUPPORTED_LOCALES = ("en", "pl")
