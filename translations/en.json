@@ -2089,7 +2089,15 @@
     "characterCreateError": "Failed to create character.",
     "doneDesc": "Your account is ready. Head to the dashboard to explore your new raid management tools.",
     "goToDashboard": "Go to Dashboard",
-    "doneTitle": "You're All Set!"
+    "doneTitle": "You're All Set!",
+    "cancelSetup": "Cancel Setup",
+    "cancelSetupTitle": "Cancel Tenant Setup?",
+    "cancelSetupWarning": "Are you sure you want to cancel the setup process? This will permanently delete your guild panel and all associated data.",
+    "cancelSetupDetail": "Your tenant, guilds, and any settings created during this setup will be removed. You can always create a new guild panel later.",
+    "continueSetup": "Continue Setup",
+    "confirmCancel": "Delete & Cancel",
+    "setupCancelled": "Setup cancelled. Guild panel has been removed.",
+    "cancelError": "Failed to cancel setup. Please try again."
   },
   "auditLog": {
     "title": "Activity Log",

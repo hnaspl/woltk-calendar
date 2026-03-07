@@ -227,6 +227,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import * as guildsApi from '@/api/guilds'
 import * as adminApi from '@/api/admin'
 import * as guildRealmsApi from '@/api/guild_realms'
+import * as armoryLookupApi from '@/api/armory_lookup'
 import { useTimezone } from '@/composables/useTimezone'
 import discordIcon from '@/assets/icons/discord/discord-mark-white.svg'
 
@@ -412,11 +413,15 @@ let autoRefreshTimer = null
 const showCharDetailModal = ref(false)
 const charDetailTarget = ref(null)
 
-function openCharDetail(ch) {
+const fetchingCharDetail = ref(false)
+
+async function openCharDetail(ch) {
+  const realm = ch.realm || guildStore.currentGuild?.realm_name || ''
+  // Show modal immediately with basic roster data
   charDetailTarget.value = {
     name: ch.name,
     class_name: ch.class_name,
-    realm_name: ch.realm || guildStore.currentGuild?.realm_name || '',
+    realm_name: realm,
     default_role: ch.role || '',
     primary_spec: ch.spec || '',
     secondary_spec: ch.secondary_spec || '',
@@ -436,6 +441,42 @@ function openCharDetail(ch) {
     },
   }
   showCharDetailModal.value = true
+
+  // Fetch full character data from armory (equipment, talents, etc.)
+  if (realm && ch.name && guildStore.currentGuild?.id) {
+    fetchingCharDetail.value = true
+    try {
+      const fullData = await armoryLookupApi.lookupCharacter(realm, ch.name, guildStore.currentGuild.id)
+      if (fullData) {
+        charDetailTarget.value = {
+          name: fullData.name || ch.name,
+          class_name: fullData.class_name || ch.class_name,
+          realm_name: fullData.realm || realm,
+          default_role: ch.role || '',
+          primary_spec: ch.spec || '',
+          secondary_spec: ch.secondary_spec || '',
+          armory_url: fullData.armory_url || ch.armory_url || '',
+          level: fullData.level || ch.level,
+          metadata: {
+            level: fullData.level || ch.level,
+            race: fullData.race || ch.race,
+            faction: fullData.faction || ch.faction,
+            guild: fullData.guild || armoryGuildData.value?.name,
+            gear_score: fullData.gear_score || ch.gear_score,
+            achievement_points: fullData.achievement_points || ch.achievement_points,
+            honorable_kills: fullData.honorable_kills || ch.honorable_kills,
+            professions: fullData.professions || ch.professions || [],
+            talents: fullData.talents || ch.talents || [],
+            equipment: fullData.equipment || ch.equipment || [],
+          },
+        }
+      }
+    } catch {
+      // Keep basic roster data on failure — modal already visible
+    } finally {
+      fetchingCharDetail.value = false
+    }
+  }
 }
 
 async function fetchArmoryRoster() {

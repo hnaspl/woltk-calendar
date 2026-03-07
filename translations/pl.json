@@ -2089,7 +2089,15 @@
     "characterCreateError": "Nie udało się utworzyć postaci.",
     "doneTitle": "Wszystko gotowe!",
     "doneDesc": "Twoje konto jest gotowe. Przejdź do panelu, aby odkryć narzędzia do zarządzania rajdami.",
-    "goToDashboard": "Przejdź do panelu"
+    "goToDashboard": "Przejdź do panelu",
+    "cancelSetup": "Anuluj konfigurację",
+    "cancelSetupTitle": "Anulować konfigurację panelu?",
+    "cancelSetupWarning": "Czy na pewno chcesz anulować proces konfiguracji? Spowoduje to trwałe usunięcie panelu gildii i wszystkich powiązanych danych.",
+    "cancelSetupDetail": "Panel, gildie i wszelkie ustawienia utworzone podczas konfiguracji zostaną usunięte. Zawsze możesz utworzyć nowy panel gildii później.",
+    "continueSetup": "Kontynuuj konfigurację",
+    "confirmCancel": "Usuń i anuluj",
+    "setupCancelled": "Konfiguracja anulowana. Panel gildii został usunięty.",
+    "cancelError": "Nie udało się anulować konfiguracji. Spróbuj ponownie."
   },
   "auditLog": {
     "title": "Dziennik aktywności",
