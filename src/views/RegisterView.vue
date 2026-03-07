@@ -241,6 +241,7 @@ async function handleRegister() {
     if (result?.activation_required) {
       activationSuccess.value = true
     }
+    // useAuth composable handles redirect to /setup for non-activation flow
   } catch (err) {
     error.value = err?.response?.data?.error ?? err?.response?.data?.message ?? authError.value ?? t('auth.registrationFailed')
   } finally {

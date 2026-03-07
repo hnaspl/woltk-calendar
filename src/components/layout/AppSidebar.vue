@@ -365,6 +365,8 @@ async function handleUpgradeToTenant() {
     // Re-fetch user to get updated active_tenant_id
     await authStore.fetchMe()
     toast.success(t('tenant.upgradeSuccess'))
+    // Redirect to setup wizard for tenant configuration
+    router.push({ path: '/setup', query: { mode: 'tenant' } })
   } catch (err) {
     toast.error(err?.response?.data?.error || t('tenant.upgradeFailed'))
   } finally {

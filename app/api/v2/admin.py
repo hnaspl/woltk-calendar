@@ -355,19 +355,38 @@ def trigger_sync():
 @bp.get("/settings/system")
 @login_required
 def get_system_settings():
-    """Return all global system settings. Any logged-in user can read."""
-    return _system_settings_response()
+    """Return global system settings.
 
-
-def _system_settings_response():
-    """Build the system settings JSON response from the database."""
+    Non-admin users receive only public settings (wowhead, autosync, password
+    policy). Admin users receive all settings with sensitive values masked.
+    """
     from app.models.system_setting import SystemSetting
+
+    is_admin = getattr(current_user, "is_admin", False)
+
     rows = db.session.execute(db.select(SystemSetting)).scalars().all()
     settings = {r.key: r.value for r in rows}
-    # Mask sensitive values
-    if settings.get("smtp_password"):
-        settings["smtp_password"] = MASKED_SECRET
-    return jsonify(settings), 200
+
+    if is_admin:
+        # Admin sees everything, with sensitive values masked
+        if settings.get("smtp_password"):
+            settings["smtp_password"] = MASKED_SECRET
+        return jsonify(settings), 200
+
+    # Non-admin: only return safe, public-facing settings
+    PUBLIC_SETTING_KEYS = {
+        "wowhead_tooltips",
+        "autosync_enabled",
+        "autosync_interval_minutes",
+        "password_min_length",
+        "password_require_uppercase",
+        "password_require_lowercase",
+        "password_require_digit",
+        "password_require_special",
+        "email_activation_required",
+    }
+    safe_settings = {k: v for k, v in settings.items() if k in PUBLIC_SETTING_KEYS}
+    return jsonify(safe_settings), 200
 
 
 @bp.put("/settings/system")
@@ -455,7 +474,12 @@ def update_system_settings():
         from app.jobs.scheduler import _apply_autosync_schedule, get_autosync_config
         _apply_autosync_schedule(get_autosync_config())
 
-    return _system_settings_response()
+    # Return updated settings (admin-only endpoint, full response)
+    rows = db.session.execute(db.select(SystemSetting)).scalars().all()
+    updated = {r.key: r.value for r in rows}
+    if updated.get("smtp_password"):
+        updated["smtp_password"] = MASKED_SECRET
+    return jsonify(updated), 200
 
 
 # ---------------------------------------------------------------------------

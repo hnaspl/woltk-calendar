@@ -147,7 +147,6 @@ class TenantMembership(db.Model):
         if self.user is not None:
             result["username"] = self.user.username
             result["display_name"] = self.user.display_name
-            result["email"] = self.user.email
         return result
 
     def __repr__(self) -> str:

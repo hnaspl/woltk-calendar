@@ -23,8 +23,9 @@ export function useAuth() {
     if (result?.activation_required) {
       return result
     }
-    const redirect = router.currentRoute.value.query.redirect || '/dashboard'
-    router.push(redirect)
+    // New users → setup wizard; mode depends on whether they created a tenant
+    const mode = createTenant ? 'tenant' : 'player'
+    router.push({ path: '/setup', query: { mode } })
     return result
   }
 

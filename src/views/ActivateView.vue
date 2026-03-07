@@ -24,8 +24,8 @@
           </div>
           <h2 class="text-lg font-semibold text-text-primary mb-2">{{ t('auth.accountActivated') }}</h2>
           <p class="text-text-muted text-sm mb-4">{{ t('auth.accountActivatedDesc') }}</p>
-          <RouterLink to="/dashboard">
-            <WowButton class="w-full">{{ t('auth.goToDashboard') }}</WowButton>
+          <RouterLink :to="setupRoute">
+            <WowButton class="w-full">{{ t('setup.letsGetStarted') }}</WowButton>
           </RouterLink>
         </div>
 
@@ -46,10 +46,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useWowIcons } from '@/composables/useWowIcons'
+import { useAuthStore } from '@/stores/auth'
 import * as authApi from '@/api/auth'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
@@ -58,10 +59,18 @@ const { t } = useI18n()
 const { getRaidIcon } = useWowIcons()
 const logoIcon = getRaidIcon('icc')
 const route = useRoute()
+const authStore = useAuthStore()
 
 const loading = ref(true)
 const success = ref(false)
 const error = ref(null)
+
+// Determine setup mode from the activated user's data
+const setupRoute = computed(() => {
+  const user = authStore.user
+  const hasTenant = !!user?.active_tenant_id
+  return { path: '/setup', query: { mode: hasTenant ? 'tenant' : 'player' } }
+})
 
 onMounted(async () => {
   const token = route.query.token
@@ -72,7 +81,9 @@ onMounted(async () => {
   }
 
   try {
-    await authApi.activateAccount(token)
+    const data = await authApi.activateAccount(token)
+    // Backend auto-logs in the user — update auth store
+    authStore.user = data.user ?? data
     success.value = true
   } catch (err) {
     error.value = err?.response?.data?.error || t('auth.activationFailedDesc')

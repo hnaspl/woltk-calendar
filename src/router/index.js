@@ -36,6 +36,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/setup',
+    name: 'setup',
+    component: () => import('@/views/SetupWizardView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: () => import('@/views/DashboardView.vue'),
