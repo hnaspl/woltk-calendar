@@ -1,6 +1,6 @@
 <template>
   <AppShell>
-    <div class="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-5xl mx-auto">
+    <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <!-- Header -->
       <div>
         <h1 class="wow-heading text-xl sm:text-2xl">{{ t('tenant.invitesTitle') }}</h1>

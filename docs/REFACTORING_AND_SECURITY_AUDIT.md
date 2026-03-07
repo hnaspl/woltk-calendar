@@ -501,5 +501,46 @@ Centralized input sanitization utility reused across the entire backend. Blocks:
 | 23 | Discord embed sanitization | ✅ DONE | Covered by sanitizer |
 | 24 | Translation management system | ✅ DONE | 43 tests |
 | 25 | Guild ownership transfer limits | ✅ DONE | 17 tests |
+| 26 | Guild creation security hardening | ✅ DONE | 15 tests |
+| 27 | Registration default (create_tenant=false) | ✅ DONE | 2 tests |
+| 28 | TenantSettingsView full-width layout | ✅ DONE | — |
+| 29 | TenantInviteView full-width layout | ✅ DONE | — |
 
-**All items complete. 1,067 backend tests pass. Frontend builds clean. 0 security vulnerabilities.**
+---
+
+### Action 26: Guild Creation Security Hardening
+
+**Problem:** `guild_admin` role had `create_guild` and `delete_guild` permissions, enabling an infinite loop exploit: User A creates guild → promotes User B to guild_admin → User B creates another guild → promotes User C → repeat until tenant limit reached (or across tenants).
+
+**Fix:**
+- Removed `create_guild` and `delete_guild` from `guild_admin` role (now tenant-level only, in `tenant_admin`)
+- Guild creation endpoint changed from `has_any_guild_permission(create_guild)` to `is_tenant_admin()` check
+- Guild deletion endpoint changed from `has_permission(delete_guild)` to tenant admin/owner/creator check
+- `create_guild` service function accepts `skip_limit_check` parameter for global admin bypass
+- Global admin bypasses all checks at both API and service level
+
+**Tests:** `tests/test_guild_creation_security.py` — 15 tests covering:
+- Tenant owner/admin CAN create guilds ✅
+- Guild admin (guild-level) CANNOT create guilds ✅
+- Chain exploit prevention (A → B → C) ✅
+- Regular member blocked ✅
+- No-tenant user blocked ✅
+- Guild limit enforcement per tenant ✅
+- Global admin bypasses role AND limit checks ✅
+- Cross-tenant isolation ✅
+- Registration defaults (create_tenant=false) ✅
+- Rapid creation stress test ✅
+
+### Action 27: Registration Default Change
+
+- Frontend: `createTenant = ref(false)` (was `true`)
+- Backend: `create_tenant = data.get("create_tenant", False)` (was `True`)
+- EN translation: "I want to create my own guild management panel" (opt-in language)
+- PL translation: "Chcę stworzyć własny panel zarządzania gildiami" (opt-in language)
+
+### Action 28–29: Layout Improvements
+
+- **TenantSettingsView**: Removed back button, removed `max-w-3xl mx-auto` constraint, added responsive 2-column grid layout (settings + members left, plan & usage right)
+- **TenantInviteView**: Removed `max-w-5xl mx-auto` constraint, full-width responsive layout
+
+**All items complete. 1,082 backend tests pass. Frontend builds clean. 0 security vulnerabilities.**

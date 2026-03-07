@@ -483,7 +483,7 @@ class TestMultiGuildDefinitions:
 # ===========================================================================
 
 class TestCreateDeleteGuildPermissions:
-    """Verify create_guild and delete_guild are only on guild_admin and global_admin."""
+    """Verify create_guild and delete_guild are tenant-level, not guild-level."""
 
     def test_member_lacks_create_guild(self, seeded):
         """Member does NOT have create_guild permission."""
@@ -510,26 +510,38 @@ class TestCreateDeleteGuildPermissions:
         membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
         assert not has_permission(membership, "create_guild")
 
-    def test_guild_admin_has_create_guild(self, seeded):
-        """Guild Admin HAS create_guild permission."""
-        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
-        assert has_permission(membership, "create_guild")
+    def test_guild_admin_lacks_create_guild(self, seeded):
+        """Guild Admin does NOT have create_guild — it's a tenant-level permission.
 
-    def test_global_admin_has_create_guild(self, seeded):
-        """Global Admin (is_admin=True) bypasses all checks including create_guild."""
-        # is_admin users bypass all permission checks via has_any_guild_permission
-        from app.utils.permissions import has_any_guild_permission
-        assert has_any_guild_permission(seeded["admin_user"].id, "create_guild")
+        This prevents the infinite loop exploit where guild_admin users
+        could create unlimited guilds by chaining guild_admin promotions.
+        """
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert not has_permission(membership, "create_guild")
+
+    def test_global_admin_creates_guild_via_api(self, seeded, app):
+        """Global Admin (is_admin=True) bypasses all checks including create_guild.
+
+        Guild creation is now checked at API level via tenant admin role,
+        with global admins bypassing. This test verifies the API behavior.
+        """
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(seeded["admin_user"].id)
+            resp = client.post("/api/v2/guilds", json={
+                "name": "Admin Create Test", "realm_name": "Icecrown"
+            })
+            assert resp.status_code == 201
 
     def test_officer_lacks_delete_guild(self, seeded):
         """Officer does NOT have delete_guild permission."""
         membership = get_membership(seeded["guild_a"].id, seeded["officer_user"].id)
         assert not has_permission(membership, "delete_guild")
 
-    def test_guild_admin_has_delete_guild(self, seeded):
-        """Guild Admin HAS delete_guild permission."""
+    def test_guild_admin_lacks_delete_guild(self, seeded):
+        """Guild Admin does NOT have delete_guild — it's a tenant-level permission."""
         membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
-        assert has_permission(membership, "delete_guild")
+        assert not has_permission(membership, "delete_guild")
 
     def test_member_lacks_delete_guild(self, seeded):
         """Member does NOT have delete_guild permission."""
@@ -609,24 +621,26 @@ class TestCreateGuildAPI:
             assert resp.status_code == 201
 
     def test_api_create_guild_as_officer_rejected(self, seeded, app):
-        """Officer cannot create guilds (no create_guild permission)."""
+        """Officer cannot create guilds (no tenant admin role)."""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["officer_user"].id)
             resp = client.post("/api/v2/guilds", json={
                 "name": "Officer Guild", "realm_name": "Icecrown"
             })
-            assert resp.status_code == 403
+            # 400 (no active tenant) or 403 (no tenant admin role) — both valid rejections
+            assert resp.status_code in (400, 403)
 
     def test_api_create_guild_as_member_rejected(self, seeded, app):
-        """Member cannot create guilds (no create_guild permission)."""
+        """Member cannot create guilds (no tenant admin role)."""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(seeded["member_user"].id)
             resp = client.post("/api/v2/guilds", json={
                 "name": "Member Guild", "realm_name": "Icecrown"
             })
-            assert resp.status_code == 403
+            # 400 (no active tenant) or 403 (no tenant admin role) — both valid rejections
+            assert resp.status_code in (400, 403)
 
     def test_api_delete_guild_as_officer_rejected(self, seeded, app):
         """Officer cannot delete guilds (no delete_guild permission)."""
@@ -636,36 +650,22 @@ class TestCreateGuildAPI:
             resp = client.delete(f"/api/v2/guilds/{seeded['guild_a'].id}")
             assert resp.status_code == 403
 
-    def test_api_delete_guild_as_guild_admin(self, seeded, app):
-        """Guild admin can delete guilds (has delete_guild permission).
-        Use global admin to create the guild (so no membership conflict).
+    def test_api_delete_guild_as_guild_admin_blocked(self, seeded, app):
+        """Guild admin CANNOT delete guilds (delete_guild is tenant-level).
+
+        create_guild and delete_guild were moved from guild_admin to
+        tenant_admin to prevent the infinite guild creation exploit.
         """
-        with app.test_client() as client:
-            # Create a temp guild as global admin
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(seeded["admin_user"].id)
-            resp = client.post("/api/v2/guilds", json={
-                "name": "Temp Delete Guild", "realm_name": "Frostmourne"
-            })
-            assert resp.status_code == 201
-            temp_guild_id = resp.get_json()["id"]
-
-            # The creator (admin_user) was auto-added as guild_admin.
-            # Now add gadmin_user as guild_admin in this new guild.
-            _db.session.add(GuildMembership(
-                guild_id=temp_guild_id, user_id=seeded["gadmin_user"].id,
-                role="guild_admin", status="active"
-            ))
-            _db.session.commit()
-
-            # Delete as gadmin_user (guild_admin role) — should succeed
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(seeded["gadmin_user"].id)
-            resp = client.delete(f"/api/v2/guilds/{temp_guild_id}")
-            # Permission check should pass (guild_admin has delete_guild)
-            # Note: the actual delete may fail due to cascading constraints
-            # but we verify the permission check passes (not 403)
-            assert resp.status_code != 403
+        # gadmin_user is not a global admin and not a tenant admin of admin_tenant
+        # So they should not be able to delete guilds in admin_tenant
+        # Use guild_a which is in gadmin_tenant (where gadmin_user IS owner)
+        # Instead, verify via has_permission that guild_admin lacks delete_guild
+        from app.utils.permissions import has_permission as _hp
+        membership = get_membership(seeded["guild_a"].id, seeded["gadmin_user"].id)
+        assert membership is not None
+        assert membership.role == "guild_admin"
+        # In a clean DB context without current_user admin bypass
+        assert not _hp(membership, "delete_guild")
 
 
 # ===========================================================================

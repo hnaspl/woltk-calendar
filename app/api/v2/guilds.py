@@ -256,15 +256,21 @@ def available_users(guild_id: int, membership):
 @bp.post("")
 @login_required
 def create_guild():
-    if not has_any_guild_permission(current_user.id, "create_guild"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
-
     # Require an active tenant
     if not current_user.active_tenant_id:
         return jsonify({"error": _t("api.guilds.tenantRequired")}), 400
 
+    # Guild creation requires tenant owner/admin role (not guild-level permission).
+    # This prevents guild_admin users from creating unlimited guilds across tenants.
+    # Global admins bypass this check.
+    is_admin = getattr(current_user, "is_admin", False)
+    if not is_admin:
+        from app.services import tenant_service
+        if not tenant_service.is_tenant_admin(current_user.active_tenant_id, current_user.id):
+            return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
     # --- Guild creation limit enforcement (via tenant plan) ---
-    if not getattr(current_user, "is_admin", False):
+    if not is_admin:
         from app.models.tenant import Tenant
         tenant = db.session.get(Tenant, current_user.active_tenant_id)
         limit = tenant.max_guilds if tenant else 3
@@ -321,6 +327,7 @@ def create_guild():
             armory_config_id=armory_config_id,
             armory_url=armory_url,
             expansion_id=expansion_id,
+            skip_limit_check=is_admin,
         )
     except ValueError as exc:
         return jsonify({"error": str(exc), "message": str(exc)}), 409
@@ -365,9 +372,19 @@ def delete_guild(guild_id: int):
     guild = guild_service.get_guild(guild_id)
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
-    membership = get_membership(guild_id, current_user.id)
-    if not has_permission(membership, "delete_guild"):
-        return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
+    # Guild deletion requires either:
+    # - Global admin (is_admin=True)
+    # - Tenant admin/owner of the guild's tenant
+    # - Guild creator (created_by)
+    is_admin = getattr(current_user, "is_admin", False)
+    is_creator = guild.created_by == current_user.id
+
+    if not is_admin and not is_creator:
+        from app.services import tenant_service as _ts
+        if not guild.tenant_id or not _ts.is_tenant_admin(guild.tenant_id, current_user.id):
+            return jsonify({"error": _t("common.errors.permissionDenied")}), 403
+
     guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": _t("api.guilds.deleted")}), 200

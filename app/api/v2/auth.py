@@ -26,7 +26,7 @@ def register():
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
     display_name = data.get("display_name")
-    create_tenant = data.get("create_tenant", True)
+    create_tenant = data.get("create_tenant", False)
 
     if not email or not username or not password:
         return jsonify({"error": _t("auth.errors.emailRequired")}), 400

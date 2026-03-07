@@ -155,8 +155,10 @@ ROLE_PERMISSIONS = {
         "add_members", "remove_members", "update_member_roles",
         "invite_members", "approve_applications", "manage_guild_visibility",
         "manage_class_role_matrix", "update_guild_settings",
-        # Guild admin specifics
-        "create_guild", "delete_guild", "manage_guild_roles",
+        # Guild admin specifics (create_guild/delete_guild are tenant-level,
+        # not guild-level — moved to tenant_admin to prevent guild_admin
+        # users from creating unlimited guilds across tenants)
+        "manage_guild_roles",
         "manage_guild_expansions", "manage_guild_realms",
     ],
     "tenant_admin": [

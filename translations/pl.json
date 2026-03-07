@@ -252,8 +252,8 @@
     "goToDashboard": "Przejdź do panelu",
     "activationEmailSentTitle": "Sprawdź swoją pocztę",
     "activationEmailSentDesc": "Wysłaliśmy link aktywacyjny na Twój email. Kliknij link, aby aktywować konto. Jeśli nie aktywujesz w ciągu 3 dni, konto zostanie automatycznie usunięte.",
-    "createOwnWorkspace": "Stwórz własny panel zarządzania gildiami",
-    "createWorkspaceHelp": "Pozwoli Ci to tworzyć i zarządzać własnymi gildiami, planować rajdy, organizować skład i zapraszać graczy. Odznacz, jeśli chcesz jedynie dołączyć do istniejącej gildii przez zaproszenie.",
+    "createOwnWorkspace": "Chcę stworzyć własny panel zarządzania gildiami",
+    "createWorkspaceHelp": "Zaznacz, aby stworzyć swoje centrum dowodzenia do zarządzania gildiami, planowania rajdów, organizowania składu i zapraszania graczy. Pozostaw odznaczone, jeśli chcesz jedynie dołączyć do istniejącej gildii przez zaproszenie.",
     "policy": {
       "minLength": "Co najmniej {n} znaków",
       "uppercase": "Co najmniej jedna wielka litera (A-Z)",

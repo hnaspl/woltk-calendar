@@ -28,9 +28,10 @@ def create_guild(
     armory_config_id: Optional[int] = None,
     armory_url: Optional[str] = None,
     expansion_id: Optional[int] = None,
+    skip_limit_check: bool = False,
 ) -> Guild:
-    # Enforce guild limit if tenant is specified
-    if tenant_id is not None:
+    # Enforce guild limit if tenant is specified (admin bypass via skip_limit_check)
+    if tenant_id is not None and not skip_limit_check:
         from app.services import tenant_service
         tenant = tenant_service.get_tenant(tenant_id)
         if tenant:
