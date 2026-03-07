@@ -1234,7 +1234,12 @@
       "reverted": "Tłumaczenie przywrócone do domyślnego",
       "confirmRevert": "Przywrócić to tłumaczenie do wartości domyślnej? Niestandardowe nadpisanie zostanie usunięte.",
       "referenceValue": "Referencja (inny język)",
-      "enterTranslation": "Wprowadź wartość tłumaczenia..."
+      "enterTranslation": "Wprowadź wartość tłumaczenia...",
+      "variablesTitle": "Lista dozwolonych zmiennych",
+      "variablesHelp": "Użyj składni {nazwa_zmiennej} w wartościach tłumaczeń. Dozwolone są tylko wymienione poniżej zmienne. Tagi HTML, iniekcje skryptów, komendy powłoki i sztuczki z kodowaniem są blokowane przez filtr bezpieczeństwa.",
+      "variablesExamples": "Obsługiwane zmienne",
+      "securityNote": "Ostrzeżenie bezpieczeństwa",
+      "securityDetail": "Wszystkie wartości tłumaczeń są oczyszczane przed zapisem. Tagi HTML, JavaScript, komendy powłoki, obfuskacja kodowania i nieznane zmienne zastępcze są odrzucane. Można używać tylko dozwolonych zmiennych pokazanych powyżej."
     },
     "plans": {
       "tabTitle": "Plany",

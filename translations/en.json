@@ -1234,7 +1234,12 @@
       "reverted": "Translation reverted to default",
       "confirmRevert": "Revert this translation to its default value? The custom override will be deleted.",
       "referenceValue": "Reference (other language)",
-      "enterTranslation": "Enter translation value..."
+      "enterTranslation": "Enter translation value...",
+      "variablesTitle": "Allowed Variables Reference",
+      "variablesHelp": "Use {variable_name} syntax in translation values. Only the listed variables below are allowed. HTML tags, script injection, shell commands, and encoding tricks are blocked by the security filter.",
+      "variablesExamples": "Supported Variables",
+      "securityNote": "Security Warning",
+      "securityDetail": "All translation values are sanitized before saving. HTML tags, JavaScript, shell commands, encoding obfuscation, and unknown placeholder variables are rejected. Only the whitelisted variables shown above can be used."
     },
     "plans": {
       "tabTitle": "Plans",

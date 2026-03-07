@@ -373,6 +373,7 @@ const searchQuery = ref('')
 const viewMode = ref('all')
 const loading = ref(false)
 const saving = ref(false)
+const showVariablesHelp = ref(false)
 
 const stats = ref(null)
 const translations = ref({})
@@ -391,6 +392,42 @@ const addLocale = ref('')
 const addKey = ref('')
 const addValue = ref('')
 const addReferenceValue = ref('')
+
+// Variable examples for reference helper
+const variableExamples = {
+  name: 'User or item name',
+  count: 'Numeric count',
+  limit: 'Maximum allowed',
+  max: 'Maximum value',
+  realm: 'Game realm/server',
+  date: 'Formatted date',
+  time: 'Formatted time',
+  email: 'Email address',
+  username: 'Username',
+  role: 'User role',
+  guild: 'Guild name',
+  event: 'Event name',
+  character: 'Character name',
+  size: 'Size/quantity',
+  minutes: 'Minutes',
+  hours: 'Hours',
+  days: 'Days',
+  current: 'Current value',
+  total: 'Total value',
+  remaining: 'Remaining value',
+  status: 'Status text',
+  error: 'Error message',
+  message: 'Message text',
+  field: 'Field name',
+  value: 'Field value',
+  label: 'Label text',
+  title: 'Title text',
+  url: 'URL',
+  action: 'Action name',
+  target: 'Target name',
+  source: 'Source name',
+  type: 'Type name',
+}
 
 const filteredTranslations = computed(() => {
   const entries = Object.entries(translations.value)
