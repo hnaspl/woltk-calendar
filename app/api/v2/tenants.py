@@ -65,16 +65,18 @@ def update_tenant(tenant_id: int):
 
     # Audit log + notifications
     if changed_fields:
-        changes_summary = ", ".join(changed_fields)
+        # Use readable labels for changed fields
+        _field_labels = {"name": "Name", "description": "Description", "slug": "Slug URL", "settings_json": "Settings"}
+        display_fields = [_field_labels.get(f, f) for f in changed_fields]
+        changes_summary = ", ".join(display_fields)
         audit_log_service.log_action(
             user_id=current_user.id,
             action="tenant_settings_updated",
             tenant_id=tenant_id,
             entity_type="tenant",
-            entity_id=tenant_id,
             entity_name=tenant.name,
-            description=f"Updated panel settings: {changes_summary}",
-            change_data={"changed_fields": changed_fields},
+            description=f"Updated: {changes_summary}",
+            change_data={"changed_fields": display_fields},
         )
         db.session.commit()
         notify.notify_tenant_settings_changed(
@@ -204,9 +206,8 @@ def update_member(tenant_id: int, user_id: int):
             action="tenant_member_role_changed",
             tenant_id=tenant_id,
             entity_type="tenant_member",
-            entity_id=user_id,
             entity_name=target_username,
-            description=f"Changed {target_username}'s role from {old_role} to {new_role}",
+            description=f"Changed {target_username}'s role to {new_role}",
             change_data={"old_role": old_role, "new_role": new_role},
         )
         db.session.commit()
@@ -245,7 +246,6 @@ def remove_member(tenant_id: int, user_id: int):
             action="tenant_member_removed",
             tenant_id=tenant_id,
             entity_type="tenant_member",
-            entity_id=user_id,
             entity_name=target_username,
             description=f"Removed {target_username} from {tenant.name}",
         )

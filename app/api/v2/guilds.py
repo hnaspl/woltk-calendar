@@ -146,9 +146,8 @@ def admin_remove_member(guild_id: int, user_id: int):
         tenant_id=guild.tenant_id,
         guild_id=guild_id,
         entity_type="guild_member",
-        entity_id=user_id,
         entity_name=target_username,
-        description=f"Admin removed {target_username} from {guild.name}",
+        description=f"Removed {target_username} from {guild.name}",
     )
     db.session.commit()
     notify.notify_removed_from_guild(user_id, guild)
@@ -389,11 +388,21 @@ def update_guild(guild_id: int):
 
     # Track what changed for audit log
     changed_fields = []
+    _field_labels = {
+        "name": "Guild Name",
+        "realm_name": "Realm",
+        "faction": "Faction",
+        "region": "Region",
+        "visibility": "Visibility",
+        "timezone": "Timezone",
+        "allow_self_join": "Self-Join",
+        "settings_json": "Settings",
+    }
     for key in data:
-        if key in ("name", "realm_name", "faction", "region", "visibility", "timezone", "allow_self_join", "settings_json"):
+        if key in _field_labels:
             old_val = getattr(guild, key, None)
             if old_val != data[key]:
-                changed_fields.append(key)
+                changed_fields.append(_field_labels[key])
 
     guild = guild_service.update_guild(guild, data)
 
@@ -406,9 +415,8 @@ def update_guild(guild_id: int):
             tenant_id=guild.tenant_id,
             guild_id=guild_id,
             entity_type="guild",
-            entity_id=guild_id,
             entity_name=guild.name,
-            description=f"Updated guild settings: {changes_summary}",
+            description=f"Updated: {changes_summary}",
             change_data={"changed_fields": changed_fields},
         )
         db.session.commit()
@@ -543,9 +551,8 @@ def update_member(guild_id: int, user_id: int, membership):
                 tenant_id=guild.tenant_id,
                 guild_id=guild_id,
                 entity_type="guild_member",
-                entity_id=user_id,
                 entity_name=target_username,
-                description=f"Changed {target_username}'s role from {old_role} to {new_role}",
+                description=f"Changed {target_username}'s role to {new_role}",
                 change_data={"old_role": old_role, "new_role": new_role},
             )
             db.session.commit()
@@ -685,7 +692,6 @@ def remove_member(guild_id: int, user_id: int, membership):
         tenant_id=guild.tenant_id if guild else None,
         guild_id=guild_id,
         entity_type="guild_member",
-        entity_id=user_id,
         entity_name=target_username,
         description=f"Removed {target_username} from {guild.name if guild else 'guild'}",
     )
