@@ -838,7 +838,7 @@ async function lookupCharFromArmory() {
   charArmoryData.value = null
 
   try {
-    const data = await armoryLookupApi.lookupCharacter(realm, name, guildStore.currentGuildId)
+    const data = await armoryLookupApi.lookupCharacter(realm, name, guildStore.currentGuildId || null)
     if (data && data.name) {
       charArmoryData.value = data
       charForm.value.name = data.name

@@ -471,8 +471,9 @@ async function openCharDetail(ch) {
           },
         }
       }
-    } catch {
+    } catch (err) {
       // Keep basic roster data on failure — modal already visible
+      console.warn('Failed to fetch full character data:', err?.response?.data?.error || err?.message)
     } finally {
       fetchingCharDetail.value = false
     }
