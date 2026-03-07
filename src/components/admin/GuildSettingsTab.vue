@@ -175,6 +175,7 @@
                       <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.character') }}</th>
                       <th class="text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('common.fields.level') }}</th>
                       <th class="hidden sm:table-cell text-left px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider">{{ t('guild.settings.race') }}</th>
+                      <th class="text-center px-4 py-3 text-xs text-text-muted uppercase font-semibold tracking-wider w-20"></th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-border-default/60">
@@ -187,6 +188,11 @@
                       </td>
                       <td class="px-4 py-2.5 text-text-muted font-medium">{{ ch.level }}</td>
                       <td class="hidden sm:table-cell px-4 py-2.5 text-text-muted">{{ ch.race }}</td>
+                      <td class="px-4 py-2.5 text-center">
+                        <WowButton variant="secondary" class="text-xs py-1 px-2.5" @click="openCharDetail(ch)">
+                          🔍
+                        </WowButton>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -198,6 +204,12 @@
       </div>
     </div>
     </template>
+
+    <!-- Character Detail Modal -->
+    <CharacterDetailModal
+      v-model="showCharDetailModal"
+      :character="charDetailTarget"
+    />
   </div>
 </template>
 
@@ -206,6 +218,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
+import CharacterDetailModal from '@/components/common/CharacterDetailModal.vue'
 import { useGuildStore } from '@/stores/guild'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
@@ -394,6 +407,32 @@ const armoryError = ref(null)
 const armoryGuildData = ref(null)
 const lastRefreshed = ref(null)
 let autoRefreshTimer = null
+
+// Character detail modal
+const showCharDetailModal = ref(false)
+const charDetailTarget = ref(null)
+
+function openCharDetail(ch) {
+  charDetailTarget.value = {
+    name: ch.name,
+    class_name: ch.class_name,
+    realm_name: ch.realm || guildStore.currentGuild?.realm_name || '',
+    default_role: ch.role || '',
+    primary_spec: ch.spec || '',
+    secondary_spec: ch.secondary_spec || '',
+    armory_url: ch.armory_url || '',
+    level: ch.level,
+    metadata: ch.metadata ?? {
+      level: ch.level,
+      race: ch.race,
+      faction: ch.faction,
+      guild: armoryGuildData.value?.name,
+      gear_score: ch.gear_score,
+      achievement_points: ch.achievement_points,
+    },
+  }
+  showCharDetailModal.value = true
+}
 
 async function fetchArmoryRoster() {
   if (!guildStore.currentGuild?.id) return

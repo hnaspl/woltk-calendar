@@ -60,9 +60,9 @@ def set_class_overrides(guild_id: int, class_name: str, membership):
     if invalid:
         return jsonify({"error": _t("api.matrix.invalidRoles", roles=", ".join(invalid))}), 400
 
+    guild = guild_service.get_guild(guild_id)
     try:
         matrix_service.set_guild_overrides(guild_id, class_name, roles)
-        guild = guild_service.get_guild(guild_id)
         if guild:
             audit_log_service.log_action(
                 user_id=current_user.id,
@@ -97,9 +97,9 @@ def set_class_overrides(guild_id: int, class_name: str, membership):
 @require_guild_permission("manage_class_role_matrix")
 def reset_class(guild_id: int, class_name: str, membership):
     """Reset a class to expansion defaults (remove guild overrides)."""
+    guild = guild_service.get_guild(guild_id)
     try:
         matrix_service.reset_guild_class(guild_id, class_name)
-        guild = guild_service.get_guild(guild_id)
         if guild:
             audit_log_service.log_action(
                 user_id=current_user.id,
@@ -132,8 +132,8 @@ def reset_class(guild_id: int, class_name: str, membership):
 @require_guild_permission("manage_class_role_matrix")
 def reset_matrix(guild_id: int, membership):
     """Reset entire matrix to expansion defaults."""
-    matrix_service.reset_guild_matrix(guild_id)
     guild = guild_service.get_guild(guild_id)
+    matrix_service.reset_guild_matrix(guild_id)
     if guild:
         audit_log_service.log_action(
             user_id=current_user.id,

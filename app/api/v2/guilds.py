@@ -675,23 +675,21 @@ def remove_member(guild_id: int, user_id: int, membership):
 
     # Audit log
     guild = guild_service.get_guild(guild_id)
-    if guild:
-        audit_log_service.log_action(
-            user_id=current_user.id,
-            action="member_removed",
-            tenant_id=guild.tenant_id,
-            guild_id=guild_id,
-            entity_type="guild_member",
-            entity_id=user_id,
-            entity_name=target_username,
-            description=f"Removed {target_username} from {guild.name}",
-        )
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="member_removed",
+        tenant_id=guild.tenant_id if guild else None,
+        guild_id=guild_id,
+        entity_type="guild_member",
+        entity_id=user_id,
+        entity_name=target_username,
+        description=f"Removed {target_username} from {guild.name if guild else 'guild'}",
+    )
 
     db.session.commit()
-    # Notify the removed user
+    # Notify the removed user and tenant admins
     if guild:
         notify.notify_removed_from_guild(user_id, guild)
-        # Notify tenant admins
         notify.notify_member_removed_from_guild(
             removed_user_id=user_id,
             guild=guild,
