@@ -127,7 +127,12 @@ def activate_user(token: str) -> Optional[User]:
     if not user:
         return None
 
-    if user.activation_token_expires_at and datetime.now(timezone.utc) > user.activation_token_expires_at:
+    expires = user.activation_token_expires_at
+    if expires:
+        # SQLite may return offset-naive datetimes; treat them as UTC
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+    if expires and datetime.now(timezone.utc) > expires:
         return None
 
     user.email_verified = True

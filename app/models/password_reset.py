@@ -36,7 +36,11 @@ class PasswordResetToken(db.Model):
         """Return True if the token has not been used and has not expired."""
         if self.used_at is not None:
             return False
-        return datetime.now(timezone.utc) < self.expires_at
+        expires = self.expires_at
+        # SQLite may return offset-naive datetimes; treat them as UTC
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) < expires
 
     def __repr__(self) -> str:
         return f"<PasswordResetToken id={self.id} user_id={self.user_id}>"
