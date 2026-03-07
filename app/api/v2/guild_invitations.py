@@ -21,6 +21,13 @@ from app.utils import notify
 bp = Blueprint("guild_invitations_v2", __name__)
 guild_invite_accept_bp = Blueprint("guild_invite_accept_v2", __name__)
 
+
+def _get_username(user_id: int) -> str:
+    """Look up a user's username by ID, returning a fallback if not found."""
+    from app.models.user import User
+    user = db.session.get(User, user_id)
+    return user.username if user else f"User#{user_id}"
+
 # ---------------------------------------------------------------------------
 # Guild invitations (within guild admin panel)
 # ---------------------------------------------------------------------------
@@ -183,9 +190,7 @@ def approve_application(guild_id: int, user_id: int, membership):
         return jsonify({"error": _t("api.guilds.applicationNotFound")}), 404
     membership_result = guild_service.approve_application(target)
 
-    from app.models.user import User
-    target_user = db.session.get(User, user_id)
-    target_username = target_user.username if target_user else f"User#{user_id}"
+    target_username = _get_username(user_id)
 
     guild = guild_service.get_guild(guild_id)
     audit_log_service.log_action(
@@ -220,9 +225,7 @@ def decline_application(guild_id: int, user_id: int, membership):
     if not target:
         return jsonify({"error": _t("api.guilds.applicationNotFound")}), 404
 
-    from app.models.user import User
-    target_user = db.session.get(User, user_id)
-    target_username = target_user.username if target_user else f"User#{user_id}"
+    target_username = _get_username(user_id)
 
     membership_result = guild_service.decline_application(target)
 

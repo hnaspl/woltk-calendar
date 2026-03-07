@@ -21,6 +21,13 @@ from app.i18n import _t
 bp = Blueprint("guilds", __name__, url_prefix="/guilds")
 
 
+def _get_username(user_id: int) -> str:
+    """Look up a user's username by ID, returning a fallback if not found."""
+    from app.models.user import User
+    user = db.session.get(User, user_id)
+    return user.username if user else f"User#{user_id}"
+
+
 # ---------------------------------------------------------------------------
 # Guild collection
 # ---------------------------------------------------------------------------
@@ -113,9 +120,7 @@ def admin_update_member(guild_id: int, user_id: int):
         old_role = target.role
         target.role = new_role
 
-        from app.models.user import User
-        target_user = db.session.get(User, user_id)
-        target_username = target_user.username if target_user else f"User#{user_id}"
+        target_username = _get_username(user_id)
 
         audit_log_service.log_action(
             user_id=current_user.id,
@@ -159,9 +164,7 @@ def admin_remove_member(guild_id: int, user_id: int):
     if target is None:
         return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
 
-    from app.models.user import User
-    target_user = db.session.get(User, user_id)
-    target_username = target_user.username if target_user else f"User#{user_id}"
+    target_username = _get_username(user_id)
 
     db.session.delete(target)
     audit_log_service.log_action(
@@ -223,11 +226,8 @@ def admin_transfer_ownership(guild_id: int):
     if old_owner_membership is not None:
         old_owner_membership.role = "member"
 
-    from app.models.user import User
-    target_user = db.session.get(User, target_user_id)
-    target_username = target_user.username if target_user else f"User#{target_user_id}"
-    old_owner = db.session.get(User, old_owner_id)
-    old_owner_username = old_owner.username if old_owner else f"User#{old_owner_id}"
+    target_username = _get_username(target_user_id)
+    old_owner_username = _get_username(old_owner_id)
 
     audit_log_service.log_action(
         user_id=current_user.id,
@@ -254,17 +254,21 @@ def admin_delete_guild(guild_id: int):
     if guild is None:
         return jsonify({"error": _t("api.guilds.notFound")}), 404
 
+    guild_name = guild.name
+    tenant_id = guild.tenant_id
+
+    guild_service.delete_guild(guild)
+
     audit_log_service.log_action(
         user_id=current_user.id,
         action="guild_deleted",
-        tenant_id=guild.tenant_id,
+        tenant_id=tenant_id,
         entity_type="guild",
-        entity_name=guild.name,
-        description=f"Deleted guild {guild.name}",
+        entity_name=guild_name,
+        description=f"Deleted guild {guild_name}",
     )
     db.session.commit()
 
-    guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": _t("api.guilds.deleted")}), 200
 
@@ -514,17 +518,21 @@ def delete_guild(guild_id: int):
         if not guild.tenant_id or not _ts.is_tenant_admin(guild.tenant_id, current_user.id):
             return jsonify({"error": _t("common.errors.permissionDenied")}), 403
 
+    guild_name = guild.name
+    tenant_id = guild.tenant_id
+
+    guild_service.delete_guild(guild)
+
     audit_log_service.log_action(
         user_id=current_user.id,
         action="guild_deleted",
-        tenant_id=guild.tenant_id,
+        tenant_id=tenant_id,
         entity_type="guild",
-        entity_name=guild.name,
-        description=f"Deleted guild {guild.name}",
+        entity_name=guild_name,
+        description=f"Deleted guild {guild_name}",
     )
     db.session.commit()
 
-    guild_service.delete_guild(guild)
     emit_guilds_changed()
     return jsonify({"message": _t("api.guilds.deleted")}), 200
 
@@ -608,9 +616,7 @@ def update_member(guild_id: int, user_id: int, membership):
             notify.notify_guild_role_changed(user_id, guild, new_role)
 
             # Get target username for audit/notification
-            from app.models.user import User
-            target_user = db.session.get(User, user_id)
-            target_username = target_user.username if target_user else f"User#{user_id}"
+            target_username = _get_username(user_id)
 
             # Audit log
             audit_log_service.log_action(
@@ -720,11 +726,8 @@ def transfer_ownership(guild_id: int):
     if old_owner_membership is not None:
         old_owner_membership.role = "member"
 
-    from app.models.user import User
-    target_user = db.session.get(User, target_user_id)
-    target_username = target_user.username if target_user else f"User#{target_user_id}"
-    old_owner = db.session.get(User, old_owner_id)
-    old_owner_username = old_owner.username if old_owner else f"User#{old_owner_id}"
+    target_username = _get_username(target_user_id)
+    old_owner_username = _get_username(old_owner_id)
 
     audit_log_service.log_action(
         user_id=current_user.id,
@@ -762,9 +765,7 @@ def remove_member(guild_id: int, user_id: int, membership):
         return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
 
     # Get target username before deleting
-    from app.models.user import User
-    target_user = db.session.get(User, user_id)
-    target_username = target_user.username if target_user else f"User#{user_id}"
+    target_username = _get_username(user_id)
 
     db.session.delete(target)
 
