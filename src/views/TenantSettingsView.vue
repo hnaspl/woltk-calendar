@@ -129,6 +129,82 @@
                   class="text-xs text-yellow-500/80 mt-2">{{ t('admin.plans.upgradePrompt') }}</p>
               </div>
             </WowCard>
+
+            <!-- Activity Log -->
+            <WowCard>
+              <div class="flex items-center gap-2 mb-4">
+                <svg class="w-5 h-5 text-accent-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <h2 class="text-sm font-semibold text-text-primary">{{ t('auditLog.title') }}</h2>
+                <span v-if="auditLogs.length" class="ml-auto text-xs text-text-muted bg-bg-tertiary border border-border-default rounded-full px-2 py-0.5">{{ auditTotal }}</span>
+              </div>
+              <p class="text-xs text-text-muted mb-3">{{ t('auditLog.subtitle') }}</p>
+
+              <!-- Filter -->
+              <div class="mb-3">
+                <select
+                  v-model="auditFilter"
+                  class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-1.5 text-xs focus:border-border-gold outline-none"
+                  @change="loadAuditLogs(true)"
+                >
+                  <option value="">{{ t('auditLog.filterAll') }}</option>
+                  <option v-for="action in auditActions" :key="action" :value="action">
+                    {{ t(`auditLog.actions.${action}`, action) }}
+                  </option>
+                </select>
+              </div>
+
+              <div v-if="auditLoading && auditLogs.length === 0" class="py-4 text-center">
+                <div class="w-5 h-5 border-2 border-accent-gold/40 border-t-accent-gold rounded-full animate-spin mx-auto" />
+              </div>
+              <div v-else-if="auditLogs.length === 0" class="py-4 text-center text-sm text-text-muted">
+                {{ t('auditLog.noLogs') }}
+              </div>
+              <div v-else class="space-y-2">
+                <div
+                  v-for="entry in auditLogs"
+                  :key="entry.id"
+                  class="p-3 rounded-lg bg-bg-tertiary border border-border-default"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-blue-900/30 text-blue-300 border border-blue-700/50">
+                          {{ t(`auditLog.actions.${entry.action}`, entry.action) }}
+                        </span>
+                        <span class="text-xs text-text-muted">
+                          {{ t('auditLog.by') }}
+                          <span class="text-text-primary font-medium">{{ entry.username || 'Unknown' }}</span>
+                        </span>
+                      </div>
+                      <p class="text-sm text-text-primary mt-1">{{ entry.description }}</p>
+                      <div v-if="entry.change_data" class="mt-1.5">
+                        <div v-if="entry.change_data.changed_fields" class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-[10px] text-text-muted">{{ t('auditLog.changedFields') }}:</span>
+                          <span
+                            v-for="field in entry.change_data.changed_fields"
+                            :key="field"
+                            class="inline-flex px-1.5 py-0.5 rounded text-[10px] bg-bg-secondary text-text-muted border border-border-default"
+                          >{{ field }}</span>
+                        </div>
+                        <div v-if="entry.change_data.old_role" class="text-[10px] text-text-muted mt-0.5">
+                          {{ entry.change_data.old_role }} → {{ entry.change_data.new_role }}
+                        </div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] text-text-muted flex-shrink-0 whitespace-nowrap">{{ formatLogTime(entry.created_at) }}</span>
+                  </div>
+                </div>
+                <button
+                  v-if="auditLogs.length < auditTotal"
+                  type="button"
+                  class="w-full py-2 text-xs text-accent-gold hover:text-yellow-300 transition-colors"
+                  :disabled="auditLoading"
+                  @click="loadMoreLogs"
+                >{{ auditLoading ? '...' : t('auditLog.loadMore') }}</button>
+              </div>
+            </WowCard>
           </div>
         </div>
       </template>
@@ -145,11 +221,14 @@ import WowCard from '@/components/common/WowCard.vue'
 import WowButton from '@/components/common/WowButton.vue'
 import { useTenantStore } from '@/stores/tenant'
 import { usePlanLimits } from '@/composables/usePlanLimits'
+import { useTimezone } from '@/composables/useTimezone'
 import * as tenantsApi from '@/api/tenants'
+import * as auditLogsApi from '@/api/audit_logs'
 
 const { t } = useI18n()
 const tenantStore = useTenantStore()
 const { fetchUsage, usageInfo, shouldShowUpgrade, loadingUsage: usageLoading } = usePlanLimits()
+const tzHelper = useTimezone()
 
 const tenant = ref(null)
 const loading = ref(false)
@@ -160,6 +239,17 @@ const members = ref([])
 const membersLoading = ref(false)
 
 const form = ref({ name: '', description: '', slug: '' })
+
+// Audit log state
+const auditLogs = ref([])
+const auditTotal = ref(0)
+const auditLoading = ref(false)
+const auditFilter = ref('')
+const auditActions = [
+  'member_removed', 'member_role_changed', 'guild_settings_updated',
+  'matrix_class_updated', 'matrix_class_reset', 'matrix_reset',
+  'tenant_settings_updated', 'tenant_member_role_changed', 'tenant_member_removed',
+]
 
 async function fetchTenant() {
   if (!tenantStore.activeTenantId) return
@@ -215,9 +305,56 @@ async function doRemoveMember(m) {
   }
 }
 
+async function loadAuditLogs(reset = false) {
+  if (!tenantStore.activeTenantId) return
+  auditLoading.value = true
+  if (reset) {
+    auditLogs.value = []
+  }
+  try {
+    const params = {
+      limit: 20,
+      offset: reset ? 0 : auditLogs.value.length,
+    }
+    if (auditFilter.value) params.action = auditFilter.value
+    const res = await auditLogsApi.getTenantLogs(tenantStore.activeTenantId, params)
+    if (reset) {
+      auditLogs.value = res.logs
+    } else {
+      auditLogs.value.push(...res.logs)
+    }
+    auditTotal.value = res.total
+  } catch {
+    // ignore
+  } finally {
+    auditLoading.value = false
+  }
+}
+
+function loadMoreLogs() {
+  loadAuditLogs(false)
+}
+
+function formatLogTime(iso) {
+  if (!iso) return ''
+  const hasTimezone = iso.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(iso)
+  const normalized = hasTimezone ? iso : iso + 'Z'
+  const d = new Date(normalized)
+  if (isNaN(d.getTime())) return ''
+  const now = new Date()
+  const diffMs = now - d
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return t('common.time.justNow')
+  if (diffMin < 60) return t('common.time.minutesAgo', { n: diffMin })
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return t('common.time.hoursAgo', { n: diffH })
+  return tzHelper.formatGuildDate(d.toISOString())
+}
+
 onMounted(() => {
   fetchTenant()
   fetchMembers()
+  loadAuditLogs(true)
   if (tenantStore.activeTenantId) {
     fetchUsage(tenantStore.activeTenantId)
   }

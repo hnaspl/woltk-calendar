@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Stats Summary -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="wow-card p-4">
+      <WowCard>
         <div class="text-text-muted text-xs uppercase tracking-wide mb-1">{{ t('admin.translations.totalKeys') }}</div>
         <div class="flex items-baseline gap-3">
           <span v-for="locale in locales" :key="locale" class="text-lg font-bold text-text-primary">
@@ -10,8 +10,8 @@
             {{ stats?.locales?.[locale]?.total_keys ?? '—' }}
           </span>
         </div>
-      </div>
-      <div class="wow-card p-4">
+      </WowCard>
+      <WowCard>
         <div class="text-text-muted text-xs uppercase tracking-wide mb-1">{{ t('admin.translations.overrides') }}</div>
         <div class="flex items-baseline gap-3">
           <span v-for="locale in locales" :key="locale" class="text-lg font-bold text-text-primary">
@@ -19,90 +19,92 @@
             {{ stats?.locales?.[locale]?.override_count ?? 0 }}
           </span>
         </div>
-      </div>
-      <div class="wow-card p-4">
+      </WowCard>
+      <WowCard>
         <div class="text-text-muted text-xs uppercase tracking-wide mb-1">{{ t('admin.translations.missingKeys') }}</div>
         <div class="text-lg font-bold" :class="(stats?.total_missing ?? 0) > 0 ? 'text-red-400' : 'text-green-400'">
           {{ stats?.total_missing ?? 0 }}
           <span v-if="(stats?.total_missing ?? 0) === 0" class="text-sm font-normal">✓</span>
         </div>
-      </div>
+      </WowCard>
     </div>
 
     <!-- Controls -->
-    <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-      <!-- Locale selector -->
-      <div class="flex gap-2">
-        <button
-          v-for="locale in locales"
-          :key="locale"
-          type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          :class="selectedLocale === locale
-            ? 'bg-accent-gold text-bg-primary'
-            : 'bg-bg-tertiary text-text-muted hover:text-text-primary border border-border-default'"
-          @click="selectLocale(locale)"
-        >
-          {{ locale.toUpperCase() }}
-        </button>
-      </div>
+    <WowCard>
+      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <!-- Locale selector -->
+        <div class="flex gap-2">
+          <button
+            v-for="locale in locales"
+            :key="locale"
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors border"
+            :class="selectedLocale === locale
+              ? 'bg-accent-gold text-bg-primary border-accent-gold'
+              : 'bg-bg-tertiary text-text-muted hover:text-text-primary border-border-default hover:border-border-gold'"
+            @click="selectLocale(locale)"
+          >
+            {{ locale.toUpperCase() }}
+          </button>
+        </div>
 
-      <!-- Section filter -->
-      <select
-        v-model="selectedSection"
-        class="wow-input text-sm flex-1 max-w-xs"
-        @change="loadTranslations"
-      >
-        <option value="">{{ t('admin.translations.allSections') }}</option>
-        <option v-for="section in sections" :key="section" :value="section">
-          {{ section }}
-        </option>
-      </select>
+        <!-- Section filter -->
+        <select
+          v-model="selectedSection"
+          class="bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none flex-1 max-w-xs"
+          @change="loadTranslations"
+        >
+          <option value="">{{ t('admin.translations.allSections') }}</option>
+          <option v-for="section in sections" :key="section" :value="section">
+            {{ section }}
+          </option>
+        </select>
 
-      <!-- Search -->
-      <div class="relative flex-1 max-w-md">
-        <input
-          v-model="searchQuery"
-          type="text"
-          :placeholder="t('admin.translations.searchPlaceholder')"
-          class="wow-input text-sm w-full pl-8"
-        />
-        <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
+        <!-- Search -->
+        <div class="relative flex-1 max-w-md">
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="t('admin.translations.searchPlaceholder')"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none pl-8"
+          />
+          <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
 
-      <!-- View mode toggle -->
-      <div class="flex gap-1 bg-bg-tertiary rounded-lg p-0.5">
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-          :class="viewMode === 'all' ? 'bg-accent-gold text-bg-primary' : 'text-text-muted hover:text-text-primary'"
-          @click="viewMode = 'all'"
-        >
-          {{ t('admin.translations.viewAll') }}
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-          :class="viewMode === 'missing' ? 'bg-red-600 text-white' : 'text-text-muted hover:text-text-primary'"
-          @click="viewMode = 'missing'; loadMissing()"
-        >
-          {{ t('admin.translations.viewMissing') }}
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-          :class="viewMode === 'overrides' ? 'bg-blue-600 text-white' : 'text-text-muted hover:text-text-primary'"
-          @click="viewMode = 'overrides'; loadOverrides()"
-        >
-          {{ t('admin.translations.viewOverrides') }}
-        </button>
+        <!-- View mode toggle -->
+        <div class="flex gap-1 bg-bg-tertiary border border-border-default rounded-lg p-1">
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+            :class="viewMode === 'all' ? 'bg-accent-gold text-bg-primary' : 'text-text-muted hover:text-text-primary'"
+            @click="viewMode = 'all'"
+          >
+            {{ t('admin.translations.viewAll') }}
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+            :class="viewMode === 'missing' ? 'bg-red-600 text-white' : 'text-text-muted hover:text-text-primary'"
+            @click="viewMode = 'missing'; loadMissing()"
+          >
+            {{ t('admin.translations.viewMissing') }}
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+            :class="viewMode === 'overrides' ? 'bg-blue-600 text-white' : 'text-text-muted hover:text-text-primary'"
+            @click="viewMode = 'overrides'; loadOverrides()"
+          >
+            {{ t('admin.translations.viewOverrides') }}
+          </button>
+        </div>
       </div>
-    </div>
+    </WowCard>
 
     <!-- Variables Reference (collapsible) -->
-    <div class="wow-card overflow-hidden">
+    <WowCard :padded="false">
       <button
         type="button"
         class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-bg-tertiary transition-colors"
@@ -134,7 +136,7 @@
           <p class="text-xs text-text-muted">{{ t('admin.translations.securityDetail') }}</p>
         </div>
       </div>
-    </div>
+    </WowCard>
 
     <!-- Loading -->
     <div v-if="loading" class="text-center py-8">
@@ -144,12 +146,14 @@
 
     <!-- Missing translations view -->
     <template v-else-if="viewMode === 'missing'">
-      <div v-if="Object.keys(missingKeys).length === 0" class="wow-card p-6 text-center">
-        <p class="text-green-400 text-lg font-medium">{{ t('admin.translations.noMissing') }}</p>
-        <p class="text-text-muted text-sm mt-1">{{ t('admin.translations.allSynced') }}</p>
-      </div>
+      <WowCard v-if="Object.keys(missingKeys).length === 0">
+        <div class="text-center py-4">
+          <p class="text-green-400 text-lg font-medium">{{ t('admin.translations.noMissing') }}</p>
+          <p class="text-text-muted text-sm mt-1">{{ t('admin.translations.allSynced') }}</p>
+        </div>
+      </WowCard>
       <div v-else class="space-y-4">
-        <div v-for="(keys, group) in missingKeys" :key="group" class="wow-card overflow-hidden">
+        <WowCard v-for="(keys, group) in missingKeys" :key="group" :padded="false">
           <div class="px-4 py-3 bg-red-900/20 border-b border-border-default">
             <h3 class="text-sm font-medium text-red-400">
               {{ group.replace('missing_in_', '').toUpperCase() }} — {{ keys.length }} {{ t('admin.translations.keysMissing') }}
@@ -159,61 +163,63 @@
             <div
               v-for="key in keys"
               :key="key"
-              class="px-4 py-2 flex items-center justify-between gap-4 hover:bg-bg-tertiary"
+              class="px-4 py-2.5 flex items-center justify-between gap-4 hover:bg-bg-tertiary transition-colors"
             >
               <code class="text-xs text-text-muted font-mono break-all">{{ key }}</code>
               <button
                 type="button"
-                class="text-xs px-2 py-1 rounded bg-accent-gold/20 text-accent-gold hover:bg-accent-gold/30 whitespace-nowrap"
+                class="text-xs px-3 py-1.5 rounded-lg bg-accent-gold/20 text-accent-gold hover:bg-accent-gold/30 border border-accent-gold/30 whitespace-nowrap font-medium transition-colors"
                 @click="startAddMissing(group.replace('missing_in_', ''), key)"
               >
                 {{ t('admin.translations.addTranslation') }}
               </button>
             </div>
           </div>
-        </div>
+        </WowCard>
       </div>
     </template>
 
     <!-- Overrides view -->
     <template v-else-if="viewMode === 'overrides'">
-      <div v-if="overrides.length === 0" class="wow-card p-6 text-center">
-        <p class="text-text-muted">{{ t('admin.translations.noOverrides') }}</p>
-      </div>
-      <div v-else class="wow-card overflow-hidden">
+      <WowCard v-if="overrides.length === 0">
+        <div class="text-center py-4">
+          <p class="text-text-muted">{{ t('admin.translations.noOverrides') }}</p>
+        </div>
+      </WowCard>
+      <WowCard v-else :padded="false">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="bg-bg-tertiary">
-              <tr>
-                <th class="px-4 py-2 text-left text-text-muted font-medium text-xs">{{ t('admin.translations.locale') }}</th>
-                <th class="px-4 py-2 text-left text-text-muted font-medium text-xs">{{ t('admin.translations.key') }}</th>
-                <th class="px-4 py-2 text-left text-text-muted font-medium text-xs">{{ t('admin.translations.value') }}</th>
-                <th class="px-4 py-2 text-right text-text-muted font-medium text-xs">{{ t('admin.translations.actions') }}</th>
+            <thead>
+              <tr class="bg-bg-tertiary border-b border-border-default">
+                <th class="px-4 py-3 text-left text-text-muted font-medium text-xs uppercase tracking-wide">{{ t('admin.translations.locale') }}</th>
+                <th class="px-4 py-3 text-left text-text-muted font-medium text-xs uppercase tracking-wide">{{ t('admin.translations.key') }}</th>
+                <th class="px-4 py-3 text-left text-text-muted font-medium text-xs uppercase tracking-wide">{{ t('admin.translations.value') }}</th>
+                <th class="px-4 py-3 text-right text-text-muted font-medium text-xs uppercase tracking-wide">{{ t('admin.translations.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border-default">
-              <tr v-for="override in overrides" :key="override.id" class="hover:bg-bg-tertiary">
-                <td class="px-4 py-2">
-                  <span class="px-2 py-0.5 rounded text-xs font-medium bg-accent-gold/20 text-accent-gold">
+              <tr v-for="override in overrides" :key="override.id" class="hover:bg-bg-tertiary transition-colors">
+                <td class="px-4 py-3">
+                  <span class="px-2 py-0.5 rounded text-xs font-medium bg-accent-gold/20 text-accent-gold border border-accent-gold/30">
                     {{ override.locale.toUpperCase() }}
                   </span>
                 </td>
-                <td class="px-4 py-2">
+                <td class="px-4 py-3">
                   <code class="text-xs font-mono text-text-muted break-all">{{ override.key }}</code>
                 </td>
-                <td class="px-4 py-2 text-text-primary max-w-md truncate">{{ override.value }}</td>
-                <td class="px-4 py-2 text-right">
-                  <div class="flex gap-1 justify-end">
+                <td class="px-4 py-3 text-text-primary max-w-md truncate">{{ override.value }}</td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex gap-2 justify-end">
                     <button
                       type="button"
-                      class="text-xs px-2 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                      class="text-xs px-3 py-1.5 rounded-lg bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 border border-blue-700/50 font-medium transition-colors"
                       @click="startEdit(override.locale, override.key, override.value)"
                     >
                       {{ t('common.buttons.edit') }}
                     </button>
                     <button
                       type="button"
-                      class="text-xs px-2 py-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30"
+                      class="text-xs px-3 py-1.5 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-700/50 font-medium transition-colors"
                       @click="revertOverride(override.locale, override.key)"
                     >
                       {{ t('admin.translations.revert') }}
@@ -224,49 +230,51 @@
             </tbody>
           </table>
         </div>
-      </div>
+      </WowCard>
     </template>
 
     <!-- All translations view -->
     <template v-else>
-      <div v-if="filteredTranslations.length === 0" class="wow-card p-6 text-center">
-        <p class="text-text-muted">{{ t('admin.translations.noResults') }}</p>
-      </div>
-      <div v-else class="wow-card overflow-hidden">
-        <div class="px-4 py-2 bg-bg-tertiary border-b border-border-default text-xs text-text-muted">
+      <WowCard v-if="filteredTranslations.length === 0">
+        <div class="text-center py-4">
+          <p class="text-text-muted">{{ t('admin.translations.noResults') }}</p>
+        </div>
+      </WowCard>
+      <WowCard v-else :padded="false">
+        <div class="px-4 py-2.5 bg-bg-tertiary border-b border-border-default text-xs text-text-muted">
           {{ t('admin.translations.showing') }} {{ filteredTranslations.length }} / {{ Object.keys(translations).length }} {{ t('admin.translations.keys') }}
         </div>
         <div class="divide-y divide-border-default max-h-[600px] overflow-y-auto">
           <div
             v-for="[key, value] in filteredTranslations"
             :key="key"
-            class="px-4 py-2.5 hover:bg-bg-tertiary group"
+            class="px-4 py-3 hover:bg-bg-tertiary group transition-colors"
           >
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
                 <code class="text-xs font-mono text-accent-gold break-all">{{ key }}</code>
                 <div
                   v-if="editingKey !== key"
-                  class="text-sm text-text-primary mt-0.5 break-words cursor-pointer hover:text-accent-gold transition-colors"
+                  class="text-sm text-text-primary mt-1 break-words cursor-pointer hover:text-accent-gold transition-colors"
                   @click="startEdit(selectedLocale, key, value)"
                 >
                   {{ value || '—' }}
                 </div>
                 <!-- Inline edit -->
-                <div v-else class="mt-1 flex gap-2">
+                <div v-else class="mt-2 flex gap-2">
                   <textarea
                     ref="editTextarea"
                     v-model="editValue"
-                    class="wow-input text-sm flex-1 min-h-[36px]"
-                    rows="2"
+                    class="flex-1 min-h-[60px] bg-bg-tertiary border border-border-default text-text-primary rounded px-3 py-2 text-sm focus:border-border-gold outline-none resize-y"
+                    rows="3"
                     @keydown.meta.enter="saveEdit"
                     @keydown.ctrl.enter="saveEdit"
                     @keydown.escape="cancelEdit"
                   ></textarea>
-                  <div class="flex flex-col gap-1">
+                  <div class="flex flex-col gap-1.5">
                     <button
                       type="button"
-                      class="px-3 py-1 rounded bg-accent-gold text-bg-primary text-xs font-medium hover:bg-accent-gold/80"
+                      class="px-4 py-2 rounded-lg bg-accent-gold text-bg-primary text-xs font-medium hover:bg-accent-gold/80 transition-colors"
                       :disabled="saving"
                       @click="saveEdit"
                     >
@@ -274,7 +282,7 @@
                     </button>
                     <button
                       type="button"
-                      class="px-3 py-1 rounded bg-bg-tertiary text-text-muted text-xs hover:text-text-primary"
+                      class="px-4 py-2 rounded-lg bg-bg-tertiary border border-border-default text-text-muted text-xs hover:text-text-primary hover:border-border-gold transition-colors"
                       @click="cancelEdit"
                     >
                       {{ t('common.buttons.cancel') }}
@@ -285,7 +293,7 @@
               <button
                 v-if="editingKey !== key"
                 type="button"
-                class="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 rounded bg-bg-tertiary text-text-muted hover:text-text-primary transition-opacity"
+                class="opacity-0 group-hover:opacity-100 text-xs px-3 py-1.5 rounded-lg bg-bg-tertiary border border-border-default text-text-muted hover:text-text-primary hover:border-border-gold transition-all"
                 @click="startEdit(selectedLocale, key, value)"
               >
                 {{ t('common.buttons.edit') }}
@@ -293,51 +301,51 @@
             </div>
           </div>
         </div>
-      </div>
+      </WowCard>
     </template>
 
     <!-- Add missing translation modal -->
     <WowModal v-if="showAddModal" :title="t('admin.translations.addTranslation')" size="lg" @close="showAddModal = false">
       <div class="space-y-4">
         <div>
-          <label class="text-sm text-text-muted">{{ t('admin.translations.locale') }}</label>
-          <div class="mt-1 px-3 py-2 rounded bg-bg-tertiary text-sm font-medium text-accent-gold">
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.translations.locale') }}</label>
+          <div class="px-3 py-2 rounded-lg bg-bg-tertiary border border-border-default text-sm font-medium text-accent-gold">
             {{ addLocale.toUpperCase() }}
           </div>
         </div>
         <div>
-          <label class="text-sm text-text-muted">{{ t('admin.translations.key') }}</label>
-          <div class="mt-1 px-3 py-2 rounded bg-bg-tertiary">
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.translations.key') }}</label>
+          <div class="px-3 py-2 rounded-lg bg-bg-tertiary border border-border-default">
             <code class="text-sm font-mono text-text-primary">{{ addKey }}</code>
           </div>
         </div>
         <!-- Show reference value from other locale -->
         <div v-if="addReferenceValue">
-          <label class="text-sm text-text-muted">{{ t('admin.translations.referenceValue') }}</label>
-          <div class="mt-1 px-3 py-2 rounded bg-bg-tertiary text-sm text-text-muted italic">
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.translations.referenceValue') }}</label>
+          <div class="px-3 py-2 rounded-lg bg-bg-tertiary border border-border-default text-sm text-text-muted italic">
             {{ addReferenceValue }}
           </div>
         </div>
         <div>
-          <label class="text-sm text-text-muted">{{ t('admin.translations.value') }}</label>
+          <label class="block text-xs text-text-muted mb-1">{{ t('admin.translations.value') }}</label>
           <textarea
             v-model="addValue"
-            class="wow-input w-full text-sm mt-1"
+            class="w-full bg-bg-tertiary border border-border-default text-text-primary rounded-lg px-3 py-2 text-sm focus:border-border-gold outline-none resize-y mt-1"
             rows="3"
             :placeholder="t('admin.translations.enterTranslation')"
           ></textarea>
         </div>
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-2 pt-2">
           <button
             type="button"
-            class="px-4 py-2 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-sm"
+            class="px-4 py-2 rounded-lg bg-bg-tertiary border border-border-default text-text-muted hover:text-text-primary hover:border-border-gold text-sm transition-colors"
             @click="showAddModal = false"
           >
             {{ t('common.buttons.cancel') }}
           </button>
           <button
             type="button"
-            class="px-4 py-2 rounded-lg bg-accent-gold text-bg-primary font-medium text-sm hover:bg-accent-gold/80"
+            class="px-4 py-2 rounded-lg bg-accent-gold text-bg-primary font-medium text-sm hover:bg-accent-gold/80 transition-colors disabled:opacity-50"
             :disabled="!addValue.trim() || saving"
             @click="saveAddMissing"
           >
@@ -360,6 +368,7 @@ import {
   updateTranslation,
   deleteTranslationOverride,
 } from '@/api/admin'
+import WowCard from '@/components/common/WowCard.vue'
 import WowModal from '@/components/common/WowModal.vue'
 import { useToast } from '@/composables/useToast'
 

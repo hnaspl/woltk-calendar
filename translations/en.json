@@ -1640,7 +1640,39 @@
       "title": "{character} removed from {event}",
       "body": "Your character {character} was removed from {eventTitle} by {officer}."
     },
-    "yourCharacter": "your character"
+    "yourCharacter": "your character",
+    "memberRemovedAdmin": {
+      "title": "{targetUser} removed from {guildName} {guildTag}",
+      "body": "{actor} removed {targetUser} from {guildName}."
+    },
+    "guildSettingsChanged": {
+      "title": "{guildName} settings updated {guildTag}",
+      "body": "{actor} updated guild settings: {changes}"
+    },
+    "guildRoleChangedAdmin": {
+      "title": "{targetUser}'s role changed to {role} in {guildName} {guildTag}",
+      "body": "{actor} changed {targetUser}'s role to {role}."
+    },
+    "guildMatrixChanged": {
+      "title": "Class-role matrix updated for {guildName} {guildTag}",
+      "body": "{actor} {detail}."
+    },
+    "tenantSettingsChanged": {
+      "title": "{tenantName} settings updated",
+      "body": "{actor} updated panel settings: {changes}"
+    },
+    "tenantMemberRoleChanged": {
+      "title": "{targetUser}'s role changed in {tenantName}",
+      "body": "{actor} changed {targetUser}'s role to {role}."
+    },
+    "tenantRoleChanged": {
+      "title": "Your role changed in {tenantName}",
+      "body": "Your role in {tenantName} has been changed to {role}."
+    },
+    "tenantMemberRemovedAdmin": {
+      "title": "{targetUser} removed from {tenantName}",
+      "body": "{actor} removed {targetUser} from the panel."
+    }
   },
   "language": {
     "en": "English",
@@ -2053,5 +2085,26 @@
     "doneDesc": "Your account is ready. Head to the dashboard to explore your new raid management tools.",
     "goToDashboard": "Go to Dashboard",
     "doneTitle": "You're All Set!"
+  },
+  "auditLog": {
+    "title": "Activity Log",
+    "subtitle": "Actions performed by administrators",
+    "noLogs": "No activity recorded yet",
+    "loadMore": "Load more",
+    "filterAll": "All actions",
+    "actions": {
+      "member_removed": "Member removed",
+      "member_role_changed": "Role changed",
+      "guild_settings_updated": "Guild settings updated",
+      "matrix_class_updated": "Matrix class updated",
+      "matrix_class_reset": "Matrix class reset",
+      "matrix_reset": "Matrix reset",
+      "tenant_settings_updated": "Panel settings updated",
+      "tenant_member_role_changed": "Member role changed",
+      "tenant_member_removed": "Member removed"
+    },
+    "details": "Details",
+    "changedFields": "Changed fields",
+    "by": "by"
   }
 }

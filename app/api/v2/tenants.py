@@ -7,10 +7,11 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.i18n import _t
-from app.services import tenant_service
+from app.services import tenant_service, audit_log_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json, get_or_404, validate_required
 from app.utils.decorators import require_tenant_role
+from app.utils import notify
 
 bp = Blueprint("tenants_v2", __name__)
 invite_bp = Blueprint("invite_v2", __name__)
@@ -48,10 +49,41 @@ def update_tenant(tenant_id: int):
     if not tenant:
         return jsonify({"error": _t("api.tenants.notFound")}), 404
     data = get_json()
+
+    # Track changed fields
+    changed_fields = []
+    for key in data:
+        if key in ("name", "description", "slug", "settings_json"):
+            old_val = getattr(tenant, key, None)
+            if old_val != data[key]:
+                changed_fields.append(key)
+
     try:
         tenant = tenant_service.update_tenant(tenant, data)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    # Audit log + notifications
+    if changed_fields:
+        changes_summary = ", ".join(changed_fields)
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="tenant_settings_updated",
+            tenant_id=tenant_id,
+            entity_type="tenant",
+            entity_id=tenant_id,
+            entity_name=tenant.name,
+            description=f"Updated panel settings: {changes_summary}",
+            change_data={"changed_fields": changed_fields},
+        )
+        db.session.commit()
+        notify.notify_tenant_settings_changed(
+            tenant=tenant,
+            changed_by_user_id=current_user.id,
+            changed_by_username=current_user.username,
+            changes_summary=changes_summary,
+        )
+
     return jsonify(tenant.to_dict()), 200
 
 
@@ -153,10 +185,40 @@ def update_member(tenant_id: int, user_id: int):
     err = validate_required(data, "role")
     if err:
         return err
+
+    old_role = membership.role
     try:
         membership = tenant_service.update_member_role(membership, data["role"])
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    # Audit log + notifications
+    new_role = data["role"]
+    from app.models.user import User
+    target_user = db.session.get(User, user_id)
+    target_username = target_user.username if target_user else f"User#{user_id}"
+    tenant = tenant_service.get_tenant(tenant_id)
+    if tenant:
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="tenant_member_role_changed",
+            tenant_id=tenant_id,
+            entity_type="tenant_member",
+            entity_id=user_id,
+            entity_name=target_username,
+            description=f"Changed {target_username}'s role from {old_role} to {new_role}",
+            change_data={"old_role": old_role, "new_role": new_role},
+        )
+        db.session.commit()
+        notify.notify_tenant_member_role_changed(
+            tenant=tenant,
+            target_user_id=user_id,
+            new_role=new_role,
+            changed_by_user_id=current_user.id,
+            changed_by_username=current_user.username,
+            target_username=target_username,
+        )
+
     return jsonify(membership.to_dict()), 200
 
 
@@ -165,10 +227,37 @@ def update_member(tenant_id: int, user_id: int):
 @require_tenant_role("admin")
 def remove_member(tenant_id: int, user_id: int):
     """Remove a member (admin only, cannot remove owner)."""
+    # Get user info before removal
+    from app.models.user import User
+    target_user = db.session.get(User, user_id)
+    target_username = target_user.username if target_user else f"User#{user_id}"
+    tenant = tenant_service.get_tenant(tenant_id)
+
     try:
         tenant_service.remove_member(tenant_id, user_id)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    # Audit log + notifications
+    if tenant:
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="tenant_member_removed",
+            tenant_id=tenant_id,
+            entity_type="tenant_member",
+            entity_id=user_id,
+            entity_name=target_username,
+            description=f"Removed {target_username} from {tenant.name}",
+        )
+        db.session.commit()
+        notify.notify_tenant_member_removed(
+            tenant=tenant,
+            removed_user_id=user_id,
+            removed_by_user_id=current_user.id,
+            removed_by_username=current_user.username,
+            target_username=target_username,
+        )
+
     return jsonify({"message": _t("api.tenants.memberRemoved")}), 200
 
 

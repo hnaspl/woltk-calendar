@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 from app.extensions import db
 from app.models.guild import Guild, GuildMembership
-from app.services import guild_service
+from app.services import guild_service, audit_log_service
 from app.utils.auth import login_required
 from app.utils.api_helpers import get_json
 from app.utils.decorators import require_admin, require_guild_permission
@@ -135,9 +135,30 @@ def admin_remove_member(guild_id: int, user_id: int):
     if target is None:
         return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
 
+    from app.models.user import User
+    target_user = db.session.get(User, user_id)
+    target_username = target_user.username if target_user else f"User#{user_id}"
+
     db.session.delete(target)
+    audit_log_service.log_action(
+        user_id=current_user.id,
+        action="member_removed",
+        tenant_id=guild.tenant_id,
+        guild_id=guild_id,
+        entity_type="guild_member",
+        entity_id=user_id,
+        entity_name=target_username,
+        description=f"Admin removed {target_username} from {guild.name}",
+    )
     db.session.commit()
     notify.notify_removed_from_guild(user_id, guild)
+    notify.notify_member_removed_from_guild(
+        removed_user_id=user_id,
+        guild=guild,
+        removed_by_user_id=current_user.id,
+        removed_username=current_user.username,
+        target_username=target_username,
+    )
     return jsonify({"message": _t("api.guilds.memberRemoved")}), 200
 
 
@@ -361,7 +382,40 @@ def update_guild(guild_id: int):
     if not has_permission(membership, "update_guild_settings"):
         return jsonify({"error": _t("common.errors.permissionDenied")}), 403
     data = get_json()
+
+    # Track what changed for audit log
+    changed_fields = []
+    for key in data:
+        if key in ("name", "realm_name", "faction", "region", "visibility", "timezone", "allow_self_join", "settings_json"):
+            old_val = getattr(guild, key, None)
+            if old_val != data[key]:
+                changed_fields.append(key)
+
     guild = guild_service.update_guild(guild, data)
+
+    # Audit log
+    if changed_fields:
+        changes_summary = ", ".join(changed_fields)
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="guild_settings_updated",
+            tenant_id=guild.tenant_id,
+            guild_id=guild_id,
+            entity_type="guild",
+            entity_id=guild_id,
+            entity_name=guild.name,
+            description=f"Updated guild settings: {changes_summary}",
+            change_data={"changed_fields": changed_fields},
+        )
+        db.session.commit()
+        # Notify tenant admins
+        notify.notify_guild_settings_changed(
+            guild=guild,
+            changed_by_user_id=current_user.id,
+            changed_by_username=current_user.username,
+            changes_summary=changes_summary,
+        )
+
     emit_guild_changed(guild_id)
     return jsonify(guild.to_dict()), 200
 
@@ -465,12 +519,42 @@ def update_member(guild_id: int, user_id: int, membership):
         if not can_bypass_level and not is_creator and caller_role and target_role and target_role.level >= caller_role.level:
             return jsonify({"error": _t("api.guilds.cannotModifyHigherRole")}), 403
 
+    old_role = target.role
     target = guild_service.update_member(target, data)
     # Notify user if their role was changed
     if new_role and user_id != current_user.id:
         guild = guild_service.get_guild(guild_id)
         if guild:
             notify.notify_guild_role_changed(user_id, guild, new_role)
+
+            # Get target username for audit/notification
+            from app.models.user import User
+            target_user = db.session.get(User, user_id)
+            target_username = target_user.username if target_user else f"User#{user_id}"
+
+            # Audit log
+            audit_log_service.log_action(
+                user_id=current_user.id,
+                action="member_role_changed",
+                tenant_id=guild.tenant_id,
+                guild_id=guild_id,
+                entity_type="guild_member",
+                entity_id=user_id,
+                entity_name=target_username,
+                description=f"Changed {target_username}'s role from {old_role} to {new_role}",
+                change_data={"old_role": old_role, "new_role": new_role},
+            )
+            db.session.commit()
+
+            # Notify tenant admins
+            notify.notify_guild_role_changed_admin(
+                target_user_id=user_id,
+                guild=guild,
+                new_role=new_role,
+                changed_by_user_id=current_user.id,
+                changed_by_username=current_user.username,
+                target_username=target_username,
+            )
     return jsonify(target.to_dict()), 200
 
 
@@ -582,12 +666,39 @@ def remove_member(guild_id: int, user_id: int, membership):
     if target is None:
         return jsonify({"error": _t("api.guilds.memberNotFound")}), 404
 
+    # Get target username before deleting
+    from app.models.user import User
+    target_user = db.session.get(User, user_id)
+    target_username = target_user.username if target_user else f"User#{user_id}"
+
     db.session.delete(target)
-    db.session.commit()
-    # Notify the removed user
+
+    # Audit log
     guild = guild_service.get_guild(guild_id)
     if guild:
+        audit_log_service.log_action(
+            user_id=current_user.id,
+            action="member_removed",
+            tenant_id=guild.tenant_id,
+            guild_id=guild_id,
+            entity_type="guild_member",
+            entity_id=user_id,
+            entity_name=target_username,
+            description=f"Removed {target_username} from {guild.name}",
+        )
+
+    db.session.commit()
+    # Notify the removed user
+    if guild:
         notify.notify_removed_from_guild(user_id, guild)
+        # Notify tenant admins
+        notify.notify_member_removed_from_guild(
+            removed_user_id=user_id,
+            guild=guild,
+            removed_by_user_id=current_user.id,
+            removed_username=current_user.username,
+            target_username=target_username,
+        )
     return jsonify({"message": _t("api.guilds.memberRemoved")}), 200
 
 

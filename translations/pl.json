@@ -1640,7 +1640,39 @@
       "title": "{character} usunięty z {event}",
       "body": "Twoja postać {character} została usunięta z {eventTitle} przez {officer}."
     },
-    "yourCharacter": "twoja postać"
+    "yourCharacter": "twoja postać",
+    "memberRemovedAdmin": {
+      "title": "{targetUser} usunięty z {guildName} {guildTag}",
+      "body": "{actor} usunął {targetUser} z {guildName}."
+    },
+    "guildSettingsChanged": {
+      "title": "Ustawienia {guildName} zaktualizowane {guildTag}",
+      "body": "{actor} zaktualizował ustawienia gildii: {changes}"
+    },
+    "guildRoleChangedAdmin": {
+      "title": "Ranga {targetUser} zmieniona na {role} w {guildName} {guildTag}",
+      "body": "{actor} zmienił rangę {targetUser} na {role}."
+    },
+    "guildMatrixChanged": {
+      "title": "Macierz klas i ról zaktualizowana dla {guildName} {guildTag}",
+      "body": "{actor} {detail}."
+    },
+    "tenantSettingsChanged": {
+      "title": "Ustawienia {tenantName} zaktualizowane",
+      "body": "{actor} zaktualizował ustawienia panelu: {changes}"
+    },
+    "tenantMemberRoleChanged": {
+      "title": "Ranga {targetUser} zmieniona w {tenantName}",
+      "body": "{actor} zmienił rangę {targetUser} na {role}."
+    },
+    "tenantRoleChanged": {
+      "title": "Twoja ranga zmieniona w {tenantName}",
+      "body": "Twoja ranga w {tenantName} została zmieniona na {role}."
+    },
+    "tenantMemberRemovedAdmin": {
+      "title": "{targetUser} usunięty z {tenantName}",
+      "body": "{actor} usunął {targetUser} z panelu."
+    }
   },
   "language": {
     "en": "English",
@@ -2053,5 +2085,26 @@
     "doneTitle": "Wszystko gotowe!",
     "doneDesc": "Twoje konto jest gotowe. Przejdź do panelu, aby odkryć narzędzia do zarządzania rajdami.",
     "goToDashboard": "Przejdź do panelu"
+  },
+  "auditLog": {
+    "title": "Dziennik aktywności",
+    "subtitle": "Akcje wykonane przez administratorów",
+    "noLogs": "Brak zarejestrowanej aktywności",
+    "loadMore": "Załaduj więcej",
+    "filterAll": "Wszystkie akcje",
+    "actions": {
+      "member_removed": "Usunięto członka",
+      "member_role_changed": "Zmieniono rangę",
+      "guild_settings_updated": "Zaktualizowano ustawienia gildii",
+      "matrix_class_updated": "Zaktualizowano macierz klasy",
+      "matrix_class_reset": "Zresetowano macierz klasy",
+      "matrix_reset": "Zresetowano macierz",
+      "tenant_settings_updated": "Zaktualizowano ustawienia panelu",
+      "tenant_member_role_changed": "Zmieniono rangę członka",
+      "tenant_member_removed": "Usunięto członka"
+    },
+    "details": "Szczegóły",
+    "changedFields": "Zmienione pola",
+    "by": "przez"
   }
 }

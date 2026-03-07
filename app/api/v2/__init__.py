@@ -36,6 +36,7 @@ def register_blueprints(app: Flask) -> None:
         admin_plans,
         admin_tenants,
         admin_translations,
+        audit_logs,
         guild_expansions,
         guild_invitations,
         guild_matrix,
@@ -83,3 +84,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(guild_realms.bp, url_prefix=f"{prefix}/guilds")
     app.register_blueprint(plugins.bp, url_prefix=f"{prefix}/plugins")
     app.register_blueprint(admin_plans.public_plans_bp, url_prefix=f"{prefix}/plans")
+    app.register_blueprint(audit_logs.bp, url_prefix=f"{prefix}/audit-logs")
