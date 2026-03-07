@@ -499,23 +499,29 @@ def test_smtp_settings():
         return jsonify({"success": False, "error": _t("admin.smtp.notConfigured")}), 200
 
     cfg = get_smtp_config()
+    server = None
     try:
+        server = smtplib.SMTP(cfg["host"], cfg["port"], timeout=10)
         if cfg["tls"]:
             context = ssl.create_default_context()
-            server = smtplib.SMTP(cfg["host"], cfg["port"], timeout=10)
             server.starttls(context=context)
-        else:
-            server = smtplib.SMTP(cfg["host"], cfg["port"], timeout=10)
 
         if cfg["username"] and cfg["password"]:
             server.login(cfg["username"], cfg["password"])
 
         server.quit()
+        server = None
         return jsonify({"success": True}), 200
     except smtplib.SMTPAuthenticationError:
         return jsonify({"success": False, "error": _t("admin.smtp.authFailed")}), 200
     except (smtplib.SMTPException, OSError, TimeoutError) as exc:
         return jsonify({"success": False, "error": str(exc)}), 200
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
